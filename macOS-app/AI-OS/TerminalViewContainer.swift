@@ -16,34 +16,27 @@ struct TerminalViewContainer: NSViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
-    
+
     func makeNSView(context: Context) -> ClaudeTerminalView {
         let terminalView = ClaudeTerminalView(frame: .zero)
-        // 1. Grab your system's clean environment directly
-                var environment = ProcessInfo.processInfo.environment
-                
-                // 2. Inject styling and local proxy routing rules
-                environment["TERM"] = "xterm-256color"
-                environment["COLORTERM"] = "truecolor"
-                
-                // Explicitly pass your LiteLLM configurations down to the shell process
-                environment["ANTHROPIC_BASE_URL"] = "http://localhost:8082"
-                environment["ANTHROPIC_API_KEY"] = "using-openrouter"
-                
-                // Convert to the array format SwiftTerm expects
-                let envArgumentArray = environment.map { "\($0.key)=\($0.value)" }
-        
-        // 3. Launch an interactive login shell at ~ without hardcoding any paths
-        let homePath = NSHomeDirectory()
 
-        // 2. Start the process with the proper path anchor
+        // Inject environment: system defaults + our proxy config
+        var environment = ProcessInfo.processInfo.environment
+        environment["TERM"] = "xterm-256color"
+        environment["COLORTERM"] = "truecolor"
+        environment["ANTHROPIC_BASE_URL"] = "http://localhost:8082"
+        environment["ANTHROPIC_API_KEY"] = "using-openrouter"
+        let envArray = environment.map { "\($0.key)=\($0.value)" }
+
+        // Launch interactive Claude Code shell
+        let homePath = NSHomeDirectory()
         terminalView.startProcess(
             executable: "/bin/zsh",
             args: ["-l", "-c", "claude", "--dangerously-skip-permissions"],
-            environment: envArgumentArray,
+            environment: envArray,
             currentDirectory: homePath
         )
-        
+
         return terminalView
     }
 
