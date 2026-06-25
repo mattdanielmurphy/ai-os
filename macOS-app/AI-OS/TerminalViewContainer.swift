@@ -40,7 +40,7 @@ struct TerminalViewContainer: NSViewRepresentable {
         return terminalView
     }
 
-    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+    func updateNSView(_ nsView: ClaudeTerminalView, context: Context) {
         // No updates needed — the terminal manages its own rendering and I/O.
     }
 
