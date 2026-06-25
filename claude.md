@@ -1,47 +1,38 @@
-# Claude Profile & System Instructions
+# Personal AI OS - Workspace Guardrails & Protocols
 
-## Core Operating Rules
-1. **Context Initialization:** Read `AG_CONTEXT.md` at the project root before starting any work. If missing, create it. Update it with durable knowledge (bullet points only) after significant architectural changes.
-2. **Environment Restraints (Home Directory):** The home directory (`~`) is **never** a project root. Never initialize a git repository in `~` or its direct subdirectories.
-3. **Safety First:** **Never** use `rm`. Always use `mv [path] ~/.Trash/` (Exception: `node_modules`).
-4. **Tooling & Privacy:** Always use `pnpm`. Never use `npm`. All generated GitHub repositories must use the `--private` flag.
-5. **Local Scoping:** Never use system-level `/tmp`. Always create and use a local `./tmp` folder within the current project directory for temporary files or test scripts to prevent permission errors.
-6. **Token Protection & Builds:** Never run raw verbose compile/build commands (e.g., raw `xcodebuild`) that dump massive logs. Filter command outputs to print only the success status or relevant compiler error/warning highlights to protect the context window.
-7. **Feature Documentation:** When implementing features or fixes, always document new capabilities by updating the features list in `FEATURES.md` at the project root.
+## 1. Project Boundaries & Sandboxing
+* **Root Evaluation:** The project root is defined as the nearest ancestor directory containing a `.git` folder, `package.json`, `Cargo.toml`, `requirements.txt`, or `go.mod`. If absent, default to the current working directory.
+* **Home Directory Isolation:** NEVER evaluate the user root directory (`~`) as a project root. Repository initialization tasks inside `~` or its immediate subdirectories are strictly prohibited.
+* **Local Sandboxing:** Do not use system-level shared paths (e.g., `/tmp`). All runtime test scripts, exploratory snippets, and scratchpad calculations MUST be created and confined inside a local `./tmp/` directory within the active project root.
 
----
+## 2. Structural Safety & File Operations
+* **The Absolute `rm` Ban:** You are completely restricted from running raw destructive deletion commands (`rm` or `rm -rf`) anywhere on the filesystem.
+* **Trash Redirection:** To delete an item, force file relocations into the local system trash via: `mv [path] ~/.Trash/`. (Exception: Automated purging of local `node_modules` folders is permitted).
+* **Privacy:** All automated or semi-automated GitHub repository generation tasks must append the `--private` flag.
+* **Tooling:** Use `pnpm` exclusively for all package management. `npm` and `yarn` are strictly prohibited.
 
-## Environment & Paths
-- **User Projects Root:** `/Users/matthewmurphy/projects/`
-- **Active Core Project (ai-os):** `/Users/matthewmurphy/projects/ai-os`
-- **Personal Notes (Obsidian iCloud):** `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`
-- **Global Suggestions Config:** `~/.ai-os/suggestions.json`
+## 3. Knowledge Routing & Context
+* **Context Verification:** Before executing any codebase edits, read `AG_CONTEXT.md` at the project root. If missing, initialize it immediately. Update it with concise, bulleted durable knowledge after significant system design changes.
+* **Features Ledger:** When features are implemented or bugs resolved, update the `FEATURES.md` ledger at the project root.
+* **Obsidian Injection:** When commanded to "save to notes", bypass literal interpretations of "note" and the active working directory. Format the payload as Markdown and explicitly save it to:
+    `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/User_Note_YYYY-MM-DD_HHMMSS.md`
 
----
+## 4. Execution & Interaction Hooks
+* **Shell Input Deflection:** Escape exclamation points (`\!`) in all command strings to block shell history expansion errors.
+* **Exploratory Investigations:** Default to temporal sorting via `ls -lt` or `ls -t` to pull relevant code files into view instantly.
+* **Iteration Bounds:** Protect against runaway loops by adhering to these iteration caps based on query complexity:
+    * Lite Tier: 3 Iterations
+    * Flash Tier: 5 Iterations
+    * Heavy Tier: 15 Iterations
 
-## Project Detection
-1. **Root Rule:** A "Project Root" is defined as the nearest ancestor containing a `.git` folder, `package.json`, `Cargo.toml`, `requirements.txt`, or `go.mod`.
-2. **Fallback:** If no project root is found, default to the current working directory, provided it does not violate the Home Directory rule.
-
----
-
-## Agent Work Logs & Session Continuity
-Maintain a strict history of agentic attempts across sessions to preserve state.
-
-1. **Log Directory:** Locate and maintain `.agent-logs/` at the project root.
-2. **Fresh Thread Context:** When waking up in a fresh thread with insufficient context, always read the two most recent log files in `.agent-logs/` to piece together codebase state.
-3. **Session Read:** Before starting a bug fix or feature, scan past logs to understand historical failures, architectural discoveries, and "What Didn't Work" to avoid repeating mistakes.
-4. **Session Write:** At the end of every session involving code changes, create a new log file:
-   - **Naming Convention:** `.agent-logs/YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
-   - **Required Sections:**
-     - `## Goal`: Target objective.
-     - `## Changes Made`: Files modified and why.
-     - `## What Worked`: Confirmed fixes.
-     - `## What Didn't Work / Known Issues`: Failed approaches and tech debt.
-     - `## Architecture Notes`: Non-obvious codebase mechanics.
-
----
-
-## Auto-Commit Protocol
-- **Behavior:** Immediately following code changes and log creation, generate a concise, technical git commit message.
-- **Execution:** Run `git add . && git commit -m "[message]"` autonomously.	
+## 5. The Agent Work Logs Protocol
+* **Thread Ingestion:** At the start of a fresh session, immediately parse the most recent 2 log files inside `.agent-logs/` to reconstruct recent architectural findings.
+* **Log Compilation:** At the end of every session containing code modifications, generate a Markdown log in `.agent-logs/` named `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`.
+* **Mandatory Log Schema:** The log must contain these exact headers:
+    * `## Goal` (User requirements summary)
+    * `## Changes Made` (Tracking log of modified files and reasoning)
+    * `## What Worked` (Confirmed resolutions/features)
+    * `## What Didn't Work / Known Issues` (Failed designs, dead-ends, dangling bugs)
+    * `## Architecture Notes` (Discoveries on codebase mechanics/library behaviors)
+* **Auto-Commit:** Upon successful log generation, instantly bundle modifications and execute:
+    `git add . && git commit -m "[Technical summary of modifications and log compilation]"`
