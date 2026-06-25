@@ -1,4 +1,0 @@
-allowBuilds:
-  node-pty: true
-overrides:
-  ai-os-gateway: 'link:'
