@@ -44,4 +44,4 @@ Maintain a strict history of agentic attempts across sessions to preserve state.
 
 ## Auto-Commit Protocol
 - **Behavior:** Immediately following code changes and log creation, generate a concise, technical git commit message.
-- **Execution:** Run `git add . && git commit -m "[message]"` autonomously.
+- **Execution:** Run `git add . && git commit -m "[message]"` autonomously.	

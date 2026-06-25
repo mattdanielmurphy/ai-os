@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { FinancialGovernor, ProcessWatchdog, killActiveProcesses } from './circuitBreaker.js';
+import { FinancialGovernor, ProcessWatchdog } from './circuitBreaker.js';
 import { GatewayLogger, colors } from './logger.js';
-import { WarmPtySession, cleanPtyOutput } from './ptyWrapper.js';
+import { WarmPtySession } from './ptyWrapper.js';
 import { calculateCost, formatTokens, loadPricing } from './pricing.js';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
 
 import { DeterministicSandbox } from './sandbox.js';
 import { extractMetadata } from './extractor.js';
@@ -100,11 +100,10 @@ const ptySession = new WarmPtySession(undefined, logger);
 function autoCommit(message) {
   try {
     execSync('git add .', { stdio: 'ignore' });
-    // Check if there are staged changes to commit
     const status = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
     if (status) {
       logger.debug(`Auto-committing changes: "${message}"`);
-      execSync(`git commit -m "${message}"`, { stdio: 'ignore' });
+      execSync('git commit -m "$msg"', { env: { ...process.env, msg: message }, stdio: 'ignore' });
     } else {
       logger.debug(`No changes to commit.`);
     }
@@ -317,127 +316,6 @@ function modifyContext(pathDeclaration) {
 }
 
 
-/**
- * Call Gemini API via agy CLI using PTY
- */
-/*
-async function callGemini(model, systemInstruction, promptOrContents, useJson = false) {
-  let promptText = '';
-  if (systemInstruction) {
-    promptText += `${systemInstruction}\n\n`;
-  }
-  
-  if (Array.isArray(promptOrContents)) {
-    promptText += JSON.stringify(promptOrContents);
-  } else {
-    promptText += promptOrContents;
-  }
-
-  return new Promise((resolve, reject) => {
-    const args = ['--model', model || 'gemini-3.1-pro-low', '--dangerously-skip-permissions', '-p', '-'];
-    
-    if (typeof updateTuiStats === 'function') {
-      updateTuiStats('Executing task via agy...');
-    }
-
-    const child = spawn('/Users/matthewmurphy/.local/bin/agy', args, {
-      cwd: '/tmp',
-      env: process.env,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    child.stdin.write(promptText);
-    child.stdin.end();
-
-    let outputBuffer = '';
-    let resolved = false;
-
-    function extractJson(str) {
-      const match = str.match(/```json\n([\s\S]*?)\n```/);
-      if (match) {
-        try {
-          JSON.parse(match[1]);
-          return match[1];
-        } catch(e) {}
-      }
-      let startObj = str.indexOf('{');
-      let startArr = str.indexOf('[');
-      let startIndex = (startObj !== -1 && startArr !== -1) ? Math.min(startObj, startArr) : Math.max(startObj, startArr);
-      let endObj = str.lastIndexOf('}');
-      let endArr = str.lastIndexOf(']');
-      let endIndex = Math.max(endObj, endArr);
-      if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-        try {
-          const cleanStr = str.slice(startIndex, endIndex + 1).replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
-          JSON.parse(cleanStr);
-          return cleanStr;
-        } catch(e) {}
-      }
-      return null;
-    }
-
-    child.stdout.on('data', (data) => {
-      outputBuffer += data.toString();
-      
-      if (outputBuffer.trim().startsWith('Error: ')) {
-         if (!resolved) {
-             resolved = true;
-             child.kill();
-             resolve({ text: outputBuffer.trim(), usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } });
-         }
-         return;
-      }
-      
-      if (useJson && !resolved) {
-         const extracted = extractJson(outputBuffer);
-         if (extracted) {
-             resolved = true;
-             child.kill();
-             resolve({ text: extracted, usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } });
-         }
-      }
-      
-      if (!resolved && outputBuffer.includes('[END_OF_RESPONSE]')) {
-         resolved = true;
-         child.kill();
-         let finalOutput = outputBuffer.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '').replace('[END_OF_RESPONSE]', '').trim();
-         if (useJson) {
-           const extracted = extractJson(finalOutput);
-           if (extracted) finalOutput = extracted;
-         }
-         resolve({ text: finalOutput, usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } });
-      }
-    });
-
-    child.stderr.on('data', (data) => {
-      const chunk = data.toString();
-      if (chunk.trim().startsWith('Error: ') && !resolved) {
-         resolved = true;
-         child.kill();
-         resolve({ text: chunk.trim(), usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } });
-      }
-    });
-
-    child.on('exit', (code) => {
-      if (!resolved) {
-        resolved = true;
-        const cleanStr = outputBuffer.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
-        resolve({ text: cleanStr, usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } });
-      }
-    });
-
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        child.kill();
-        const cleanStr = outputBuffer.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
-        resolve({ text: cleanStr || "Timeout waiting for agy response", usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } });
-      }
-    }, 120000);
-  });
-}
-*/
-
 function extractJson(str) {
   const match = str.match(/```json\n([\s\S]*?)\n```/);
   if (match) {
@@ -525,7 +403,47 @@ async function callGemini(model, systemInstruction, promptOrContents, useJson = 
 
 
 /**
- * Direct API Action Executor (Fallback when agy is unavailable/rate-limited)
+ * Explanation synthesis system instruction — reused across tiers.
+ */
+const EXPLAIN_SYSTEM_INSTRUCTION = `
+  You are the friendly executive responder for the AI-OS Gateway.
+  Analyze the overall goal and the full execution history of steps taken.
+  Summarize what actions were taken to accomplish the goal, highlight any tests or verifications performed, and state clearly if the goal succeeded.
+
+  CRITICAL: If the user's request was to retrieve information (like a file list, file content, or command output), you MUST include that specific information in your response. Do not just say you found it; show it.
+
+  Keep the tone helpful, professional, and very concise.
+
+  CRITICAL BUG REPORTING DIRECTIVE:
+  If the user requested an investigation or fix for a bug:
+  - You must explicitly articulate findings from the code review/execution logs (i.e. whether a bug was found, what it was, or if no bug was detected).
+  - If no code-level bug matching the description could be found, explicitly state this, provide a rationale, and suggest alternative hypotheses (e.g., browser-specific behaviors, environmental factors, user input details) or request clarification. Never leave a bug investigation unaddressed or without clear findings.
+
+  CRITICAL COMPLETION MARKER:
+  You MUST output the exact string [END_OF_RESPONSE] at the very end of your message. This acts as an EOF marker for the pipeline. Do not forget this.
+`;
+
+async function synthesizeResponse(userInput, historyText, executionText, fallbackText = 'Command executed successfully.', model = DEFAULT_MODEL) {
+  const explainPrompt = `
+    Conversation History:
+    ${historyText}
+
+    User Request: "${userInput}"
+    Execution History:
+    ${executionText}
+  `;
+
+  try {
+    const { text: rawResponseText } = await callGemini(model, EXPLAIN_SYSTEM_INSTRUCTION, explainPrompt);
+    return rawResponseText.replace('[END_OF_RESPONSE]', '').trim();
+  } catch (err) {
+    logger.warn(`Failed to synthesize response. Falling back to last execution output. Error: ${err.message}`);
+    return fallbackText;
+  }
+}
+
+/**
+ * Synthesizes a final response from execution history and updates shared state.
  */
 async function executeInstructionDirectly(instruction, sandbox, logger, state, activeProjectRoot, budgetMode = 'ARCHITECTURAL', projectContext = {}, modelOverride = null) {
   logger.info(`Executing instruction via Direct API: "${instruction}"`);
@@ -1174,112 +1092,35 @@ ${h.result}`).join('\n\n') : 'None'}
       logger.warn(`Orchestrator reached maximum iteration limit (${maxIterations}) without completion.`);
     }
 
-    // Synthesize final response explaining what was done and confirming completion
-    logger.info(`Synthesizing execution response...`);
-    const explainSystemInstruction = `
-      You are the friendly executive responder for the AI-OS Gateway.
-      Analyze the overall goal and the full execution history of steps taken.
-      Summarize what actions were taken to accomplish the goal, highlight any tests or verifications performed, and state clearly if the goal succeeded.
-      
-      CRITICAL: If the user's request was to retrieve information (like a file list, file content, or command output), you MUST include that specific information in your response. Do not just say you found it; show it.
-      
-      Keep the tone helpful, professional, and very concise.
-      
-      CRITICAL BUG REPORTING DIRECTIVE:
-      If the user requested an investigation or fix for a bug:
-      - You must explicitly articulate findings from the code review/execution logs (i.e. whether a bug was found, what it was, or if no bug was detected).
-      - If no code-level bug matching the description could be found, explicitly state this, provide a rationale, and suggest alternative hypotheses (e.g., browser-specific behaviors, environmental factors, user input details) or request clarification. Never leave a bug investigation unaddressed or without clear findings.
-      
-      CRITICAL COMPLETION MARKER:
-      You MUST output the exact string [END_OF_RESPONSE] at the very end of your message. This acts as an EOF marker for the pipeline. Do not forget this.
-    `;
-    const explainPrompt = `
-      Conversation History:
-      ${historyText}
+    const execText = executionHistory.map((h, i) => `Step ${i + 1}:\nInstruction: ${h.instruction}\nResult:\n${h.result}`).join('\n\n');
+    const responseText = await synthesizeResponse(userInput, historyText, execText, lastPtyResult || 'Command executed successfully.');
 
-      User Request: "${userInput}"
-      Execution History:
-      ${executionHistory.map((h, i) => `Step ${i + 1}:
-Instruction: ${h.instruction}
-Result:
-${h.result}`).join('\n\n')}
-    `;
-    
-    let responseText;
-    try {
-      const { text: rawResponseText } = await callGemini(DEFAULT_MODEL, explainSystemInstruction, explainPrompt);
-      responseText = rawResponseText.replace('[END_OF_RESPONSE]', '').trim();
-    } catch (err) {
-      logger.warn(`Failed to synthesize response. Falling back to last terminal output. Error: ${err.message}`);
-      responseText = lastPtyResult || 'Command executed successfully.';
-    }
-    
     // Record spend for explanation call
     governor.recordSpend('tier1_flash_lite', 800, 200);
-    const explainSpend = calculateCost('gemini-2.5-flash-lite', 800, 200);
-    currentQueryCost += explainSpend;
-    threadCost += explainSpend;
-    
+    currentQueryCost += calculateCost('gemini-2.5-flash-lite', 800, 200);
+    threadCost += calculateCost('gemini-2.5-flash-lite', 800, 200);
+
     chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
     chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
 
     logger.showResponse(responseText, 'TIER3_HEAVY');
   } else {
     logger.info(`Executing request via Gemini Direct API...`);
-    logger.debug(`Dispatching task to Gemini direct API node [${modelToUse || DEFAULT_MODEL}]...`);
-    
-    resultText = await executeInstructionDirectly(decision.sanitized_directive || userInput, sandbox, logger, state, activeProjectRoot, budgetMode, { agContext, features, recentLogs }, modelToUse);
-    
-    // Synthesize final response explaining what was done and confirming completion
-    logger.info(`Synthesizing execution response...`);
-    const explainSystemInstruction = `
-      You are the friendly executive responder for the AI-OS Gateway.
-      Analyze the overall goal and the full execution history of steps taken.
-      Summarize what actions were taken to accomplish the goal, highlight any tests or verifications performed, and state clearly if the goal succeeded.
-      
-      CRITICAL: If the user's request was to retrieve information (like a file list, file content, or command output), you MUST include that specific information in your response. Do not just say you found it; show it.
-      
-      Keep the tone helpful, professional, and very concise.
-      
-      CRITICAL BUG REPORTING DIRECTIVE:
-      If the user requested an investigation or fix for a bug:
-      - You must explicitly articulate findings from the code review/execution logs (i.e. whether a bug was found, what it was, or if no bug was detected).
-      - If no code-level bug matching the description could be found, explicitly state this, provide a rationale, and suggest alternative hypotheses (e.g., browser-specific behaviors, environmental factors, user input details) or request clarification. Never leave a bug investigation unaddressed or without clear findings.
-      
-      CRITICAL COMPLETION MARKER:
-      You MUST output the exact string [END_OF_RESPONSE] at the very end of your message. This acts as an EOF marker for the pipeline. Do not forget this.
-    `;
-    const explainPrompt = `
-      Conversation History:
-      ${historyText}
 
-      User Request: "${userInput}"
-      Execution History:
-      ${resultText}
-    `;
-    
-    let responseText;
-    try {
-      const { text: rawResponseText } = await callGemini(modelToUse || DEFAULT_MODEL, explainSystemInstruction, explainPrompt);
-      responseText = rawResponseText.replace('[END_OF_RESPONSE]', '').trim();
-    } catch (err) {
-      logger.warn(`Failed to synthesize response. Falling back to last execution output. Error: ${err.message}`);
-      responseText = resultText || 'Command executed successfully.';
-    }
-    
+    resultText = await executeInstructionDirectly(decision.sanitized_directive || userInput, sandbox, logger, state, activeProjectRoot, budgetMode, { agContext, features, recentLogs }, modelToUse);
+
+    const responseText = await synthesizeResponse(userInput, historyText, resultText, resultText || 'Command executed successfully.', modelToUse || DEFAULT_MODEL);
+
     state.latest_milestone = `Processed: ${userInput}`;
     governor.recordSpend('tier1_flash_lite', 1000, 400);
-    const directExplainSpend = calculateCost('gemini-2.5-flash-lite', 1000, 400);
-    currentQueryCost += directExplainSpend;
-    threadCost += directExplainSpend;
-    
+    currentQueryCost += calculateCost('gemini-2.5-flash-lite', 1000, 400);
+    threadCost += calculateCost('gemini-2.5-flash-lite', 1000, 400);
+
     chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
     chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
-    
+
     logger.showResponse(responseText, decision.target_tier);
   }
-
-  // Save the updated state ledger back to disk
   fs.writeFileSync(path.join(PROJECT_ROOT, 'state_ledger.json'), JSON.stringify(state, null, 2), 'utf8');
 
   // 5. Version Control Staging
