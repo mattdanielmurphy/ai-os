@@ -17,6 +17,16 @@ All system paths are absolute. The authoritative base is:
 * **Level 2 (Global Harness):** `ai-os` CLI wrapper at `/Users/matthewmurphy/projects/ai-os/bin/ai-os` provides environment anchoring (`$AI_OS_HOME`), home-directory symlink guardrails, and transparent `claude` delegation.
 * **Level 2.5 (Global Home Anchoring):** To prevent `/resume` directory mismatch errors and maintain global access, the core system configuration files and logging directories are symlinked from `~/projects/ai-os/` directly into the user root directory (`~`). All future configuration extensions, scripts, or operational databases must be built to recognize `~` as the active execution anchor, ensuring they do not break when the agent traverses downstream into project subdirectories like `projects/CockBand` or `projects/StudyEngine`.
 
+## 🛑 Mandatory Post-Response Protocol
+At the absolute end of EVERY single turn/message response, after you have provided your answer, you MUST immediately execute the following command using your terminal tool to print the exact OpenRouter transaction metrics:
+
+```bash
+python3 /Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py
+```
+
+Append the exact terminal stdout directly to the bottom of your response so the user can verify the micro-penny cost and token data for the exchange. Do not omit this step under any circumstances.
+
 ## Durable Knowledge Map
 * **2026-06-24:** Level 2 global harness established. Absolute path routing enforced across all knowledge files. `packageManager` pinned to `pnpm@11.2.2`. Global `ai-os` binary registered via `pnpm link --global`.
 * **2026-06-24:** "Notes" semantics hardened in CLAUDE.md §3. The word "notes" now exclusively routes to the Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`. "Recent notes" trigger added — lists vault contents by recency. Agent work logs and personal notes are explicitly decoupled; never conflated.
+* **2026-06-25:** Cost-tracking protocol installed. Python script at `scripts/get_last_cost.py` computes per-message cost via delta tracking against OpenRouter's credits endpoint (the `activity` endpoint requires a management key). Mandatory post-response protocol added — agent must run the script at the end of every turn and append the output to its response.
