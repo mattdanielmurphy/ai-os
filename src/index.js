@@ -52,6 +52,7 @@ let modeVal = null;
 let filePath = null;
 let listSuggestions = false;
 let resolveSuggestionId = null;
+let resolveLatest = false;
 let cliModel = null;
 const queryArgs = [];
 
@@ -69,6 +70,8 @@ for (let i = 0; i < args.length; i++) {
     isInteractive = true;
   } else if (arg === '--suggestions' || arg === '-suggestions') {
     listSuggestions = true;
+  } else if (arg === '--resolve-latest') {
+    resolveLatest = true;
   } else if (arg.startsWith('--resolve-suggestion=')) {
     resolveSuggestionId = parseInt(arg.split('=')[1], 10);
   } else if (arg.startsWith('--model=')) {
@@ -1524,9 +1527,38 @@ function startRepl() {
       process.exit(0);
     }
 
+    if (resolveLatest) {
+      const suggestions = loadGlobalSuggestions();
+      const pending = suggestions.filter(s => s.status === 'pending');
+      if (pending.length === 0) {
+        logger.info("No pending suggestions found.");
+        process.exit(0);
+      }
+      const latest = pending.sort((a, b) => b.id - a.id)[0];
+      resolveSuggestionId = latest.id;
+    }
+
     if (resolveSuggestionId !== null) {
-      markSuggestionResolved(resolveSuggestionId);
-      logger.info(`Suggestion ID ${resolveSuggestionId} marked as resolved.`);
+      const suggestions = loadGlobalSuggestions();
+      const suggestion = suggestions.find(s => s.id === resolveSuggestionId);
+      if (!suggestion) {
+        logger.error(`Suggestion ID ${resolveSuggestionId} not found.`);
+        process.exit(1);
+      }
+
+      activeResolveId = resolveSuggestionId;
+      logger.info(`Resolving Suggestion ${resolveSuggestionId}...`);
+      logger.info(`Switching workspace target to: ${suggestion.project_root}`);
+
+      const { state: activeState } = readContext();
+      activeState.project_target_root = suggestion.project_root;
+      fs.writeFileSync(path.join(PROJECT_ROOT, 'state_ledger.json'), JSON.stringify(activeState, null, 2), 'utf8');
+      sandbox = new DeterministicSandbox(suggestion.project_root);
+
+      const queryPrompt = `Resolve the following suggestion:\nRecommendation: "${suggestion.recommendation}"\nOriginal Context/Query: "${suggestion.query}"`;
+
+      await processGatewayRequest(queryPrompt, null);
+      ptySession.close();
       process.exit(0);
     }
 
