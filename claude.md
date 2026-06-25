@@ -32,6 +32,7 @@ The `ai-os` binary (registered via `pnpm link --global`) sets `$AI_OS_HOME` to `
 * **Keyword Hijack Override (Native Memory Bypass):** When the user asks about "my notes", "personal notes", "saved notes", or equivalent phrasing, do NOT default to looking for a local `MEMORY.md` or native Claude Code project memory. You must explicitly bypass native memory interpretations and instead check the absolute Obsidian directory path:
     `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`
     If you need to list, read, or find notes, use the shell tool to run `ls` or query that specific iCloud Obsidian directory directly — never reference Claude's native `MEMORY.md` or session memory as the notes source.
+* **Identity Matrix Override (Native Local Memory Override):** The workspace identity matrix at `/Users/matthewmurphy/projects/ai-os/MEMORY.md` and its `/Users/matthewmurphy/projects/ai-os/memory/` directory are the authoritative source for user identity, project context, and knowledge routing. These overrides native Claude Code file-based memory (`CLAUDE.md` local memory or session memory defaults). See `memory/claude-md-override.md` for the full precedence rules.
 
 ## 4. Execution & Interaction Hooks
 * **Shell Input Deflection:** Escape exclamation points (`\!`) in all command strings to block shell history expansion errors.
