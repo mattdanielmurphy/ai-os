@@ -177,6 +177,13 @@ function resolveMostRecentSuggestion() {
   
   // Find the most recent pending suggestion (highest ID)
   const mostRecent = pending.reduce((max, s) => s.id > max.id ? s : max, pending[0]);
+  
+  // Apply rulebook updates if present
+  if (mostRecent.proposed_rulebook_rule) {
+    modifyRulebook(mostRecent.proposed_rulebook_rule);
+    console.log(colors.green(`✅ Added rule to rulebook: ${mostRecent.proposed_rulebook_rule}`));
+  }
+  
   markSuggestionResolved(mostRecent.id);
   console.log(colors.green(`✅ Suggestion #${mostRecent.id} marked as resolved.`));
 }
@@ -545,12 +552,18 @@ async function executeInstructionDirectly(instruction, sandbox, logger, state, a
     3. When you have completed the instruction fully, return {"action": "done", "explanation": "Instruction completed successfully"}.
     4. **Directory Consideration & Nesting:** If the active directory is a generic parent directory (like ~/projects or /Users/matthewmurphy/projects), NEVER write files or initialize git repositories directly in it. You MUST first run a command or write files to create a dedicated, appropriately-named subfolder, switch to it, and work inside that subfolder. However, if the active directory is already a specific project directory (such as a subfolder under projects, e.g. /Users/matthewmurphy/projects/now-music, or contains files like package.json, src/, index.js, etc.), do NOT create a new project directory or subfolder. You must work directly within the active project directory.
     5. **No Command Misuse:** Never call internal actions like "read_file", "write_file", "list_dir", or "done" as shell commands (e.g. do NOT set "action": "run_command" and "command": "read_file ..."). Use the proper "action" values directly in the JSON response.
-    6. **No "rm" allowed:** Running "rm" commands is strictly prohibited. The system will reject it.
-    7. **Write File Content Requirement:** When using the "write_file" action, you MUST provide the complete, full new file content in the "file_content" field. The "file_content" field must never be empty, null, or undefined. Do not write partial or placeholder code.
-    8. **External Path Approval:** If an action requires writing to a path outside the active project root or standard user directories (Documents, Desktop, etc.), you must explicitly state the path and the reason in your explanation.
-    9. **Robust macOS Path Handling:** When dealing with paths containing spaces (like iCloud/Obsidian), always wrap the path in double quotes.
-    10. **Golden Command for "Most Recent File":** To find the most recently modified non-hidden file in a directory, use: \`ls -t "/path/to/dir/" | grep -v / | grep -v "^\\." | head -n 1\`. This is more reliable than complex \`find\` pipes.
-    11. **Robust Directory Listing:** To list directories by modification time, prefer \`ls -t -d /path/*/ | xargs -n 1 basename\` over complex \`sed\` or \`awk\` pipelines which often fail on hidden files or specific shell environments.
+    6. **Action Structure Clarification:** 
+       - 'done' is a top-level action indicating task completion
+       - NEVER include 'done' in shell command strings
+       - Internal actions (done/read_file/write_file/list_dir) are:
+         - Top-level JSON fields
+         - NOT part of 'run_command' strings
+    7. **No "rm" allowed:** Running "rm" commands is strictly prohibited. The system will reject it.
+    8. **Write File Content Requirement:** When using the "write_file" action, you MUST provide the complete, full new file content in the "file_content" field. The "file_content" field must never be empty, null, or undefined. Do not write partial or placeholder code.
+    9. **External Path Approval:** If an action requires writing to a path outside the active project root or standard user directories (Documents, Desktop, etc.), you must explicitly state the path and the reason in your explanation.
+    10. **Robust macOS Path Handling:** When dealing with paths containing spaces (like iCloud/Obsidian), always wrap the path in double quotes.
+    11. **Golden Command for "Most Recent File":** To find the most recently modified non-hidden file in a directory, use: \`ls -t "/path/to/dir/" | grep -v / | grep -v "^\\." | head -n 1\`. This is more reliable than complex \`find\` pipes.
+    12. **Robust Directory Listing:** To list directories by modification time, prefer \`ls -t -d /path/*/ | xargs -n 1 basename\` over complex \`sed\` or \`awk\` pipelines which often fail on hidden files or specific shell environments.
     ${budgetMode === 'LEAN' ? `
     CRITICAL LEAN BUDGET CONSTRAINT:
     The budget mode is set to LEAN. You must strictly limit all tool executions to single-file write configurations and complete the entire task in a single step.` : ''}
@@ -1482,6 +1495,12 @@ function startRepl() {
             activeState.project_target_root = suggestion.project_root;
             fs.writeFileSync(path.join(PROJECT_ROOT, 'state_ledger.json'), JSON.stringify(activeState, null, 2), 'utf8');
             sandbox = new DeterministicSandbox(suggestion.project_root);
+            
+            // Apply rulebook update if exists
+            if (suggestion.proposed_rulebook_rule) {
+              modifyRulebook(suggestion.proposed_rulebook_rule);
+              console.log(colors.green(`✅ Added rule to rulebook: ${suggestion.proposed_rulebook_rule}`));
+            }
             
             const queryPrompt = `Resolve the following suggestion:\nRecommendation: "${suggestion.recommendation}"\nOriginal Context/Query: "${suggestion.query}"`;
             
