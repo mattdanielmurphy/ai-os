@@ -902,6 +902,7 @@ async function processGatewayRequest(userInput, attachedFilePath = null, rlInter
       - If a task has architectural, scale, budget or setup ambiguity (e.g. choice between simple standalone canvas vs Vite build scaffolding, or other architectural options), you MUST set "requires_clarification" to true, provide a clear "clarification_message" explaining the ambiguity, and provide options in "clarification_options".
       - Do NOT trigger clarification for straightforward document creation/modification tasks (such as creating AG_CONTEXT.md, rulebook updates, or simple code changes) unless there is a genuine technological stack/framework ambiguity.
       - Inspect the Active Project Root Directory Listing in the prompt to understand the project structure; do not guess or hallucinate project details.
+      - **Plural vs Singular Requests:** When the user asks for "most recent note" (singular), you should return exactly one note. When the user asks for "most recent notes" (plural), you should return multiple. Always check the user's exact wording.
 
       If a task requires deep contextual understanding of a workspace or complex planning, you MUST assign it to TIER3_HEAVY and set the sanitized_directive to explain the problem to the underlying agent. Do not attempt to guess commands here.
       
