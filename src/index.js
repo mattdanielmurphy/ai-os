@@ -1569,35 +1569,8 @@ function startRepl() {
     }
 
     if (resolveSuggestionId !== null) {
-      const suggestions = loadGlobalSuggestions();
-      const suggestion = suggestions.find(s => s.id === resolveSuggestionId);
-      if (!suggestion) {
-        logger.error(`Suggestion ID ${resolveSuggestionId} not found.`);
-        process.exit(1);
-      }
-      if (suggestion.status !== 'pending') {
-        logger.warn(`Suggestion ID ${resolveSuggestionId} is already ${suggestion.status}.`);
-      }
-
-      activeResolveId = resolveSuggestionId;
-      logger.info(`Resolving Suggestion ${resolveSuggestionId}...`);
-      logger.info(`Switching workspace target to: ${suggestion.project_root}`);
-
-      // Update state project root to match suggestion
-      const stateLedgerPath = path.join(PROJECT_ROOT, 'state_ledger.json');
-      let state = {};
-      if (fs.existsSync(stateLedgerPath)) {
-        state = JSON.parse(fs.readFileSync(stateLedgerPath, 'utf8'));
-      }
-      state.project_target_root = suggestion.project_root;
-      fs.writeFileSync(stateLedgerPath, JSON.stringify(state, null, 2), 'utf8');
-
-      const queryPrompt = `Resolve the following suggestion:
-Recommendation: "${suggestion.recommendation}"
-Original Context/Query: "${suggestion.query}"`;
-
-      await processGatewayRequest(queryPrompt, null);
-      ptySession.close();
+      markSuggestionResolved(resolveSuggestionId);
+      logger.info(`Suggestion ID ${resolveSuggestionId} marked as resolved.`);
       process.exit(0);
     }
 
