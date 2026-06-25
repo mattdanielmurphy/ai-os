@@ -18,3 +18,4 @@ All system paths are absolute. The authoritative base is:
 
 ## Durable Knowledge Map
 * **2026-06-24:** Level 2 global harness established. Absolute path routing enforced across all knowledge files. `packageManager` pinned to `pnpm@11.2.2`. Global `ai-os` binary registered via `pnpm link --global`.
+* **2026-06-24:** "Notes" semantics hardened in CLAUDE.md §3. The word "notes" now exclusively routes to the Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`. "Recent notes" trigger added — lists vault contents by recency. Agent work logs and personal notes are explicitly decoupled; never conflated.

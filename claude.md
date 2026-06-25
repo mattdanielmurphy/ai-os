@@ -23,7 +23,11 @@ The `ai-os` binary (registered via `pnpm link --global`) sets `$AI_OS_HOME` to `
 ## 3. Knowledge Routing & Context
 * **Context Verification:** Before executing any codebase edits, read `/Users/matthewmurphy/projects/ai-os/AG_CONTEXT.md`. If missing, initialize it immediately. Update it with concise, bulleted durable knowledge after significant system design changes.
 * **Features Ledger:** When features are implemented or bugs resolved, update the ledger at `/Users/matthewmurphy/projects/ai-os/FEATURES.md`.
-* **Obsidian Injection:** When commanded to "save to notes", bypass literal interpretations of "note" and the active working directory. Format the payload as Markdown and explicitly save it to:
+* **Notes = Obsidian Vault (ALWAYS):** The word "notes" in any context (recent notes, show notes, save notes, find notes, etc.) refers exclusively to the Obsidian vault at:
+    `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`
+    It NEVER means agent logs, code comments, or any other directory. "Agent work logs" and "notes" are entirely separate concepts — never conflate them.
+* **"Recent notes" Trigger:** When the user says "recent notes" (or equivalent), immediately run `ls -lt` on the Obsidian vault path above and present the latest files grouped by recency. Show filenames, modification dates, and a brief preview of content where practical.
+* **Obsidian Injection (Save):** When told to "save" something to notes, bypass all other interpretations. Format as Markdown and write to:
     `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/User_Note_YYYY-MM-DD_HHMMSS.md`
 
 ## 4. Execution & Interaction Hooks
