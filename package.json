@@ -8,6 +8,7 @@
   },
   "type": "module",
   "scripts": {
+    "dev": "pnpm run start",
     "start": "node src/index.js",
     "test": "node test/test_gateway.js"
   },
