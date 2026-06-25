@@ -54,6 +54,7 @@ If you are an agent modifying this project, you must strictly adhere to the foll
 - **Output:** A JSON array of suggestion objects.
 
 ## Environment & Paths
+- Obsidian Personal Notes: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/
 - Personal Notes: ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/
 - User Projects Root: /Users/matthewmurphy/projects/
 - ai-os: /Users/matthewmurphy/projects/ai-os
