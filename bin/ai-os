@@ -1,23 +1,24 @@
-#!/usr/bin/env bash
-# bin/ai-os - Personal AI OS CLI Wrapper
-# Routes all invocations through the AI OS workspace harness
+#!/bin/bash
 
-set -euo pipefail
+# Kill any existing session with this name to avoid overlapping threads
+tmux kill-session -t ai_os 2>/dev/null
 
-# --- Environment Anchoring ---
-AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
-export AI_OS_HOME
+# Initialize your core environment values
+export ANTHROPIC_BASE_URL="http://127.0.0.1:8000"
+export ANTHROPIC_API_KEY="liteLLM-local"
+export CLAUDE_CODE_ENABLE_TELEMETRY="1"
 
-CURRENT_DIR="$(pwd)"
+# 1. Start a new headless tmux workspace session
+tmux new-session -d -s ai_os -n "Workspace"
 
-# --- Safety Guardrail: Home Directory Symlink ---
-# If invoked from ~ where CLAUDE.md may be missing, link the authoritative one
-if [ "$CURRENT_DIR" = "$HOME" ]; then
-  if [ ! -f "$HOME/CLAUDE.md" ]; then
-    ln -sf "$AI_OS_HOME/CLAUDE.md" "$HOME/CLAUDE.md"
-    echo "ai-os: Created symlink ~/CLAUDE.md -> $AI_OS_HOME/CLAUDE.md" >&2
-  fi
-fi
+# 2. Split the window vertically, dedicating the bottom 15% to your tracking engine
+tmux split-window -v -p 15
 
-# --- Invoke Native Claude ---
-exec claude --dangerously-skip-permissions "$@"
+# 3. In the top primary pane (0), immediately run Claude Code
+tmux send-keys -t ai_os:0.0 "claude" C-m
+
+# 4. In the bottom telemetry pane (1), kick off your billing math monitor layout
+tmux send-keys -t ai_os:0.1 "echo 'AI-OS Financial Bezel Loaded. Monitoring DeepSeek V4-Flash lines...'" C-m
+
+# 5. Connect your terminal window cleanly to the configured session
+tmux attach-session -t ai_os

@@ -35,7 +35,8 @@ This CLAUDE.md is symlinked into `~` as `~/CLAUDE.md` and is therefore the agent
     It NEVER means agent logs, code comments, or any other directory. "Agent work logs" and "notes" are entirely separate concepts — never conflate them.
 * **"Recent notes" Trigger:** When the user says "recent notes" (or equivalent), immediately run `ls -lt` on the Obsidian vault path above and present the latest files grouped by recency. Show filenames, modification dates, and a brief preview of content where practical.
 * **Obsidian Injection (Save):** When told to "save" something to notes, bypass all other interpretations. Format as Markdown and write to:
-    `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/User_Note_YYYY-MM-DD_HHMMSS.md`
+    `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/<Human-Readable Title>.md`
+    Use a descriptive, human-friendly filename derived from the content (e.g. `Space Facts 🚀.md`, `Recipe Ideas.md`, `Guitar Chords Notes.md`). NEVER use robotic timestamp-based names like `User_Note_YYYY-MM-DD_HHMMSS.md`. After saving, provide a clickable file link using an absolute `file://` URL so the user can open it directly.
 * **Keyword Hijack Override (Native Memory Bypass):** When the user asks about "my notes", "personal notes", "saved notes", or equivalent phrasing, do NOT default to looking for a local `MEMORY.md` or native Claude Code project memory. You must explicitly bypass native memory interpretations and instead check the absolute Obsidian directory path:
     `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`
     If you need to list, read, or find notes, use the shell tool to run `ls` or query that specific iCloud Obsidian directory directly — never reference Claude's native `MEMORY.md` or session memory as the notes source.
