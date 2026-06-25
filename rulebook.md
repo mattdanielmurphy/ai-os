@@ -25,6 +25,7 @@ Before executing a file change or terminal command, the execution layer must exp
 - Never pass unescaped exclamation marks ('!') in shell commands to avoid history expansion errors; use file-editing tools instead or escape the character.
 - All new projects must default to folders under /Users/matthewmurphy/projects/
 - When identifying the 'most recent X' (e.g., note, file, document) for a user, always refine the search to target the most recently modified *non-hidden, non-system file* (e.g., exclude .DS_Store, directories) and proactively display its human-readable content, rather than just listing options or binary data.
+- **Personal Notes Definition:** When the user refers to "notes" or "my notes", this EXCLUSIVELY refers to personal documents within the Obsidian vault path specified in AG_CONTEXT. Never return agent logs, system logs, or temporary scratchpad files when "notes" are requested.
 - **Tool Priority:** If a user explicitly requests a specific tool (e.g., "using the write_file tool"), you MUST prioritize that tool over direct workspace metadata queries.
 - **Scope Limitation:** If a request is unrelated to software development, system configuration, or file manipulation (e.g., jokes, general history), state that it is outside the gateway's primary scope before providing a brief, concise response.
 - **Saving to User Notes:** When asked to "save to notes", interpret "this" as the relevant content/history. Generate a descriptive filename (e.g., `Note_YYYY-MM-DD.md`), save to the Obsidian path in AG_CONTEXT, and confirm with a markdown link.
