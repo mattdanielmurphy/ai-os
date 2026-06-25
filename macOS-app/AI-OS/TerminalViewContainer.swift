@@ -16,34 +16,35 @@ struct TerminalViewContainer: NSViewRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
+    
+    func makeNSView(context: Context) -> ClaudeTerminalView {
+        let terminalView = ClaudeTerminalView(frame: .zero)
+        // 1. Grab your system's clean environment directly
+                var environment = ProcessInfo.processInfo.environment
+                
+                // 2. Inject styling and local proxy routing rules
+                environment["TERM"] = "xterm-256color"
+                environment["COLORTERM"] = "truecolor"
+                
+                // Explicitly pass your LiteLLM configurations down to the shell process
+                environment["ANTHROPIC_BASE_URL"] = "http://localhost:8082"
+                environment["ANTHROPIC_API_KEY"] = "using-openrouter"
+                
+                // Convert to the array format SwiftTerm expects
+                let envArgumentArray = environment.map { "\($0.key)=\($0.value)" }
+        
+        // 3. Launch an interactive login shell at ~ without hardcoding any paths
+        let homePath = NSHomeDirectory()
 
-    func makeNSView(context: Context) -> LocalProcessTerminalView {
-        let terminal = LocalProcessTerminalView(frame: .zero)
-
-        // Build the environment — start with inherited vars, then override
-        // so the spawned `claude` CLI talks to our local liteLLM proxy.
-        var env = ProcessInfo.processInfo.environment
-        env["ANTHROPIC_BASE_URL"] = "http://127.0.0.1:8000"
-        env["ANTHROPIC_API_KEY"] = "liteLLM-local"
-        env["CLAUDE_CODE_ENABLE_TELEMETRY"] = "1"
-
-        // Force color support inside the raw PTY canvas
-        env["TERM"] = "xterm-256color"
-        env["COLORTERM"] = "truecolor"
-
-        // Clear out any real Anthropic keys that might confuse routing
-        env.removeValue(forKey: "USER_ANTHROPIC_API_KEY")
-
-        // SwiftTerm's startProcess expects environment as ["KEY=VALUE"] array
-        let envArray: [String] = env.map { "\($0.key)=\($0.value)" }
-
-        terminal.startProcess(
+        // 2. Start the process with the proper path anchor
+        terminalView.startProcess(
             executable: "/bin/zsh",
-            args: ["-l"],
-            environment: envArray
+            args: ["-l", "-c", "claude", "--dangerously-skip-permissions"],
+            environment: envArgumentArray,
+            currentDirectory: homePath
         )
-
-        return terminal
+        
+        return terminalView
     }
 
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
