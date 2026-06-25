@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# bin/triage - Context-saving wrapper for verbose commands
+
+# 1. Shell Input Deflection: Escape exclamation points to prevent history expansion errors
+CLEAN_ARGS=()
+for arg in "$@"; do
+  # Replace literal ! with \!
+  CLEAN_ARGS+=("${arg//\!/\\!}")
+done
+
+# 2. Run command and capture output streams
+OUTPUT_FILE=$(mktemp)
+ERR_FILE=$(mktemp)
+
+# Execute the intended subcommand (e.g., pnpm build, cargo build)
+"${CLEAN_ARGS[@]}" > "$OUTPUT_FILE" 2> "$ERR_FILE"
+STATUS=$?
+
+# 3. Compiler Log Slicing Engine
+if [ $STATUS -eq 0 ]; then
+  echo "✓ Command succeeded cleanly."
+  # Print just the tail end of success logs if they exist
+  tail -n 5 "$OUTPUT_FILE"
+else
+  echo "✗ Command failed with exit code $STATUS. Slicing logs for context conservation:"
+  echo "--- ERROR HIGHLIGHTS ---"
+  # Pull only relevant error/warning highlights, or default to the last 15 lines
+  if grep -Ei "error|failed|exception|severe" "$ERR_FILE" > /dev/null; then
+    grep -Ei -C 2 "error|failed|exception|severe" "$ERR_FILE" | head -n 30
+  else
+    tail -n 15 "$ERR_FILE"
+  fi
+  echo "------------------------"
+fi
+
+rm -f "$OUTPUT_FILE" "$ERR_FILE"
+exit $STATUS

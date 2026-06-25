@@ -1,0 +1,16 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+overrides:
+  ai-os: 'link:'
+
+importers:
+
+  .:
+    dependencies:
+      ai-os:
+        specifier: 'link:'
+        version: 'link:'
