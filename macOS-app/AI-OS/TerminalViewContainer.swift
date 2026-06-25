@@ -17,7 +17,7 @@ struct TerminalViewContainer: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
-        let terminal = LocalProcessTerminalView()
+        let terminal = LocalProcessTerminalView(frame: .zero)
 
         // Build the environment — start with inherited vars, then override
         // so the spawned `claude` CLI talks to our local liteLLM proxy.

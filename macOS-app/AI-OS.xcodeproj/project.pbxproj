@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5C78F4A02FED0D1300508D91 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 5C78F49F2FED0D1300508D91 /* SwiftTerm */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		5CE6E05D2FED0406001D4727 /* AI-OS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "AI-OS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C78F4A02FED0D1300508D91 /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,7 +70,7 @@
 			);
 			name = "AI-OS";
 			packageProductDependencies = (
-				5CE6E06C2FED0D26001D4727 /* SwiftTerm */,
+				5C78F49F2FED0D1300508D91 /* SwiftTerm */,
 			);
 			productName = "AI-OS";
 			productReference = 5CE6E05D2FED0406001D4727 /* AI-OS.app */;
@@ -95,13 +100,13 @@
 			);
 			mainGroup = 5CE6E0542FED0406001D4727;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5C78F49E2FED0D1300508D91 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5CE6E05E2FED0406001D4727 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			remotePackages = (
-				5CE6E06B2FED0D26001D4727 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
-			);
 			targets = (
 				5CE6E05C2FED0406001D4727 /* AI-OS */,
 			);
@@ -254,6 +259,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -286,6 +292,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -337,24 +344,23 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		5CE6E06B2FED0D26001D4727 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+		5C78F49E2FED0D1300508D91 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 1.5.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5CE6E06C2FED0D26001D4727 /* XCSwiftPackageProductDependency "SwiftTerm" */ = {
+		5C78F49F2FED0D1300508D91 /* SwiftTerm */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 5CE6E06B2FED0D26001D4727 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
-			productName = "SwiftTerm";
+			package = 5C78F49E2FED0D1300508D91 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = 5CE6E0552FED0406001D4727 /* Project object */;
 }
