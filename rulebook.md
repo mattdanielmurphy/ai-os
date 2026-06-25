@@ -21,6 +21,7 @@ Before executing a file change or terminal command, the execution layer must exp
 1. "Did I interpret the user's implicit intent, or did I blindly map their words to a literal command?" (e.g., If they say 'projects', are they tracking directories or active code codebases?)
 2. "What are the edge cases of the code layout I am about to run?"
 3. "Does this choice match the explicit rules listed in the current project rulebook.md?"
+4. "Quantity and Granularity: Did the user ask for a list/plurality (summary/metadata) or a specific item/singular (full content)? Avoid dumping large file contents unless explicitly requested or implied by a singular 'the most recent' query."
 
 - Never pass unescaped exclamation marks ('!') in shell commands to avoid history expansion errors; use file-editing tools instead or escape the character.
 - All new projects must default to folders under /Users/matthewmurphy/projects/
