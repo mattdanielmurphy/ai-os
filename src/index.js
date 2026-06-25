@@ -542,7 +542,7 @@ async function executeInstructionDirectly(instruction, sandbox, logger, state, a
     8. **External Path Approval:** If an action requires writing to a path outside the active project root or standard user directories (Documents, Desktop, etc.), you must explicitly state the path and the reason in your explanation.
     9. **Robust macOS Path Handling:** When dealing with paths containing spaces (like iCloud/Obsidian), always wrap the path in double quotes.
     10. **Golden Command for "Most Recent File":** To find the most recently modified non-hidden file in a directory, use: \`ls -t "/path/to/dir/" | grep -v / | grep -v "^\\." | head -n 1\`. This is more reliable than complex \`find\` pipes.
-    11. **Robust Directory Listing:** To list directories by modification time, prefer `ls -t -d /path/*/ | xargs -n 1 basename` over complex `sed` or `awk` pipelines which often fail on hidden files or specific shell environments.
+    11. **Robust Directory Listing:** To list directories by modification time, prefer \`ls -t -d /path/*/ | xargs -n 1 basename\` over complex \`sed\` or \`awk\` pipelines which often fail on hidden files or specific shell environments.
     ${budgetMode === 'LEAN' ? `
     CRITICAL LEAN BUDGET CONSTRAINT:
     The budget mode is set to LEAN. You must strictly limit all tool executions to single-file write configurations and complete the entire task in a single step.` : ''}
