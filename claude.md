@@ -9,6 +9,13 @@ ai-os [claude-args...]
 
 The `ai-os` binary (registered via `pnpm link --global`) sets `$AI_OS_HOME` to `/Users/matthewmurphy/projects/ai-os` and invokes native `claude`. When run from `$HOME`, it automatically symlinks `/Users/matthewmurphy/projects/ai-os/CLAUDE.md` → `~/CLAUDE.md` if missing.
 
+### 0.1 Home-Origin Execution Contract
+This CLAUDE.md is symlinked into `~` as `~/CLAUDE.md` and is therefore the agent's first directive regardless of `cwd`. Execution loops may originate from `$HOME` before navigating down into specific project directories (e.g., `projects/CockBand`, `projects/StudyEngine`). The agent must:
+
+* **Expect home-sourced launches:** Treat `~` as a valid entry point — do not reject execution from `$HOME`. The `ai-os` wrapper and the symlink chain ensure all absolute paths resolve correctly regardless of starting directory.
+* **Resolve through the symlink:** When CLAUDE.md is read from `~/CLAUDE.md`, the effective project root is always `/Users/matthewmurphy/projects/ai-os` (the symlink target's canonical parent).
+* **Route all scaffolding from the project root:** Even when launched from `~`, anchoring, scratch files, logs, and feature documentation must all resolve against `/Users/matthewmurphy/projects/ai-os/`.
+
 ## 1. Project Boundaries & Sandboxing
 * **Root Evaluation:** The authoritative project root is `/Users/matthewmurphy/projects/ai-os`. All knowledge routing, logs, and temporary assets are anchored to this absolute path.
 * **Home Directory Isolation:** NEVER evaluate the user root directory (`~`) as a project root. Repository initialization tasks inside `~` or its immediate subdirectories are strictly prohibited.

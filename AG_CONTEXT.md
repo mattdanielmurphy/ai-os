@@ -15,6 +15,7 @@ All system paths are absolute. The authoritative base is:
 * **Level 1 (Native TUI):** Relies on declarative workspace definitions (`/Users/matthewmurphy/projects/ai-os/CLAUDE.md`) to enforce bounds, sandboxing, and persistent documentation routing.
 * **Level 2 (Interception Hooks):** Implements systemic file-based context coordination via `/Users/matthewmurphy/projects/ai-os/.agent-logs/` to offload context memory onto the disk, allowing disposable thread sessions.
 * **Level 2 (Global Harness):** `ai-os` CLI wrapper at `/Users/matthewmurphy/projects/ai-os/bin/ai-os` provides environment anchoring (`$AI_OS_HOME`), home-directory symlink guardrails, and transparent `claude` delegation.
+* **Level 2.5 (Global Home Anchoring):** To prevent `/resume` directory mismatch errors and maintain global access, the core system configuration files and logging directories are symlinked from `~/projects/ai-os/` directly into the user root directory (`~`). All future configuration extensions, scripts, or operational databases must be built to recognize `~` as the active execution anchor, ensuring they do not break when the agent traverses downstream into project subdirectories like `projects/CockBand` or `projects/StudyEngine`.
 
 ## Durable Knowledge Map
 * **2026-06-24:** Level 2 global harness established. Absolute path routing enforced across all knowledge files. `packageManager` pinned to `pnpm@11.2.2`. Global `ai-os` binary registered via `pnpm link --global`.

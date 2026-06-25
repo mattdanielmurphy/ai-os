@@ -28,3 +28,12 @@
 * **Section 3 in CLAUDE.md:** Added "Keyword Hijack Override (Native Memory Bypass)" guardrail under Knowledge Routing & Context.
 * Forces all "my notes" / "personal notes" / "saved notes" queries to bypass Claude Code's native `MEMORY.md` and session memory entirely.
 * Routes all note-related lookups exclusively to the iCloud Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`.
+
+### [2026-06-24] Phase 2.5: Global Home Anchoring & Symlink Architecture
+* **4-way home-directory symlink tree established:** All four core project pointers now symlinked from `~/projects/ai-os/` directly into `~`:
+  - `~/CLAUDE.md` → `projects/ai-os/CLAUDE.md`
+  - `~/AG_CONTEXT.md` → `projects/ai-os/AG_CONTEXT.md`
+  - `~/FEATURES.md` → `projects/ai-os/FEATURES.md`
+  - `~/.agent-logs` → `projects/ai-os/.agent-logs`
+* **AG_CONTEXT.md §Phase Constraints:** "Global Home Anchoring (Level 2.5)" documents that all future config extensions and operational databases must recognize `~` as the active execution anchor so they survive traversal into downstream project subdirectories.
+* **CLAUDE.md §0.1:** "Home-Origin Execution Contract" added — defines that the agent may be launched from `$HOME`, must resolve all scaffolding against the canonical project root, and must treat `~` as a valid entry point (not a sandbox violation).
