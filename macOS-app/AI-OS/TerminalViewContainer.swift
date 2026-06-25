@@ -26,10 +26,13 @@ struct TerminalViewContainer: NSViewRepresentable {
         env["ANTHROPIC_API_KEY"] = "liteLLM-local"
         env["CLAUDE_CODE_ENABLE_TELEMETRY"] = "1"
 
+        // SwiftTerm's startProcess expects environment as ["KEY=VALUE"] array
+        let envArray: [String] = env.map { "\($0.key)=\($0.value)" }
+
         terminal.startProcess(
             executable: "/bin/zsh",
             args: ["-l", "-c", "claude"],
-            environment: env
+            environment: envArray
         )
 
         return terminal
