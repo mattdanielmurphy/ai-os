@@ -597,7 +597,6 @@ ${h.result}`).join('\n\n') : 'None'}
 
     if (!decision.action || decision.action === 'undefined') {
       logger.warn(`Model returned undefined action. Forcing termination to prevent loop.`);
-      result = "Error: Action was undefined. Please provide a valid action from the allowed list.";
       done = true;
       break;
     }
