@@ -902,7 +902,9 @@ async function processGatewayRequest(userInput, attachedFilePath = null, rlInter
 
       If a task requires deep contextual understanding of a workspace or complex planning, you MUST assign it to TIER3_HEAVY and set the sanitized_directive to explain the problem to the underlying agent. Do not attempt to guess commands here.
       
-      - For simple, non-destructive exploratory requests (e.g. "describe the files in this dir", "what is this project", "list the files"), you MUST assign it to TIER1_LITE and set complexity to "trivial". Only use TIER3_HEAVY for complex, multi-step actions or deep architectural debugging.
+      - For simple, non-destructive exploratory requests (e.g. "describe the files in this dir", "what is this project", "list the files", "most recent notes"), you should attempt to provide a "direct_response" here in Triage if the context provided is sufficient. 
+      - ONLY use TIER1_LITE for extremely high-context, dead-easy tasks that require NO tool calls. 
+      - If ANY tool calls (run_command, read_file, etc.) are required, you MUST NOT use TIER1_LITE. Use TIER2_FLASH or TIER3_HEAVY instead.
     `;
 
     const triagePrompt = `
