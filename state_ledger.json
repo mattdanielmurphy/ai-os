@@ -1,0 +1,11 @@
+{
+  "project_target_root": "/Users/matthewmurphy/projects/ai-os",
+  "latest_milestone": "Processed: list the projects I have",
+  "recent_compilation_failures": [],
+  "live_quota_metrics": {
+    "session_spend_usd": 0,
+    "max_spend_limit_usd": 1,
+    "tokens_consumed": 0
+  },
+  "active_task": "Updating AG_CONTEXT.md and creating GEMINI.md for global agent instructions."
+}

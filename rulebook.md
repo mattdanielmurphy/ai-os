@@ -1,0 +1,30 @@
+# Gateway Living Rulebook
+
+## Permanent Preferences
+- **System OS:** macOS
+- **Package Manager:** `pnpm` exclusively (NEVER use `npm` or `yarn`).
+- **Repositories:** All generated GitHub repos MUST be configured with `--private`.
+
+## Development Constraints
+- **File Deletion:** Never use `rm`. All operations route to macOS `~/.Trash/` via the Gateway sandbox.
+- **Root Restrictions:** No repositories initialized in the `~` home directory.
+- **Temporary Files:** Use local project `./tmp` directory for all sandbox runs, NOT system-level `/tmp`.
+- **Logs:** Verbose compiler logs must be intercepted and stripped; only successes or hard errors are passed to context.
+- **Directory Consideration & Nesting:** When asked to create new tools, files, or utilities, if the active directory is a generic parent folder (e.g. `~/projects`), do not write files directly there. Create a dedicated subfolder for the target project/utility, and place all files/subdirectories inside it.
+
+## Style Configurations
+- Favor deterministic ES Modules (`type: "module"`) over CommonJS for Node.js scripts.
+- Prefer asynchronous `fs.promises` or localized `execSync` for pure OS-level file extractions where appropriate.
+
+## Pre-Flight Critique
+Before executing a file change or terminal command, the execution layer must explicitly run through this internal critique loop:
+1. "Did I interpret the user's implicit intent, or did I blindly map their words to a literal command?" (e.g., If they say 'projects', are they tracking directories or active code codebases?)
+2. "What are the edge cases of the code layout I am about to run?"
+3. "Does this choice match the explicit rules listed in the current project rulebook.md?"
+
+- Never pass unescaped exclamation marks ('!') in shell commands to avoid history expansion errors; use file-editing tools instead or escape the character.
+- All new projects must default to folders under /Users/matthewmurphy/projects/
+- When identifying the 'most recent X' (e.g., note, file, document) for a user, always refine the search to target the most recently modified *non-hidden, non-system file* (e.g., exclude .DS_Store, directories) and proactively display its human-readable content, rather than just listing options or binary data.
+- **Tool Priority:** If a user explicitly requests a specific tool (e.g., "using the write_file tool"), you MUST prioritize that tool over direct workspace metadata queries.
+- **Scope Limitation:** If a request is unrelated to software development, system configuration, or file manipulation (e.g., jokes, general history), state that it is outside the gateway's primary scope before providing a brief, concise response.
+- **Saving to User Notes:** When asked to "save to notes", interpret "this" as the relevant content/history. Generate a descriptive filename (e.g., `Note_YYYY-MM-DD.md`), save to the Obsidian path in AG_CONTEXT, and confirm with a markdown link.

@@ -1,0 +1,89 @@
+# Project Features
+
+## AI-OS Gateway Features
+- **0-Token Metadata Extractor:** Extracts critical file metadata (size, lines, tail/head, mime) locally using macOS system utilities, completely bypassing token cost for initial context triage.
+- **Deterministic Tool Layer:**
+  - Enforces filepath sandboxing restricting operations to the project root.
+  - Intercepts all destructive operations and safe-deletes files by moving them to the macOS `~/.Trash` instead of executing permanent deletions.
+  - Human-in-the-loop intercept for modifications to key system files like `rulebook.md`.
+  - Enforces strict validation on `write_file` actions, rejecting `undefined`, `null`, or missing `file_path` and `file_content` to prevent tool waste.
+  - Trains task executors to always write the complete new content of files in `file_content` when using `write_file`.
+- **Runaway Log Slicer & Process Watchdog:**
+  - Truncates massive log outputs in real-time, capping stream buffers to save token context.
+  - Implements process execution watchdogs with hard-timeout terminations to stop runaway infinite loops.
+  - Incorporates a financial token ceiling governor that triggers hard shutdowns if session token cost is breached.
+- **Warm PTY Multiplexer Session:**
+  - Spawns and keeps alive a warm background `node-pty` session (interactive `bash` session simulating `agy` under a custom prompt).
+  - Programmatically interacts with the shell via stdin, resolves start-up and execution race conditions using Promises with built-in watchdog timeouts, and runs `/clear` commands to reset context memory.
+  - **Dynamic Command Translation:** Translates natural language user requests into precise shell commands using Gemini before executing them in the PTY session.
+  - **Clean Output Parsing:** Automatically filters out command echoing and prompt noise, returning only the pure command execution results.
+- **Single-Pass Command Triage & Translation**: When routing to `TIER3_HEAVY`, the triage model directly generates the translated macOS shell commands in a single JSON payload. This bypasses the subsequent translation LLM call entirely, reducing latency by one full LLM turn (~33% faster execution).
+- **Workspace-Aware Triage Routing**: Triage rules explicitly route workspace/codebase troubleshooting requests, bug reports, and rendering issues (such as broken layouts or non-functional logic) to `TIER3_HEAVY`. This guarantees tool access (filesystem read/write and command execution) for diagnostic tasks even when commands/files are not explicitly requested.
+- **Direct API Execution Fallback**: Implements the `executeInstructionDirectly` execution loop in `TIER1_LITE` and `TIER2_FLASH` modes, ensuring filesystem changes and command executions are actually run through the sandboxed shell wrapper instead of just returning raw command text.
+- **Enriched Execution Node Context**: Provides the execution node (`TIER1_LITE`/`TIER2_FLASH`) with access to the State Ledger Context and Attached File Metadata, resolving context blindness during simple queries.
+- **Dynamic Model Selection**: Dynamically loads `process.env.GEMINI_MODEL` with a fallback to `gemini-2.5-flash` so the entire engine runs on the user's preferred cognitive model.
+- **Dual Execution Modes (Debug and User Mode)**:
+  - **User Mode**: Displays clean, high-level dynamic progress indicators and presents the final response wrapped in a premium visual interface, hiding background implementation telemetry.
+  - **Debug Mode**: Displays detailed background system telemetry (such as state ledger loading, PTY session events, API triage routing, and Git auto-commits) in quiet, dimmed styles, utilizing dynamic horizontal section dividers that adjust to terminal resizing.
+  - **Configuration**: Fully configurable via command line flags (`--mode=user`/`--mode=debug`, `--user`, `--debug`) or the `GATEWAY_MODE` key in `.env`.
+- **Command Output Explanation Synthesis**:
+  - In `TIER3_HEAVY` (Warm PTY Session), the gateway automatically passes the command executed and its stdout/stderr to Gemini.
+  - Synthesizes a friendly, concise, conversational completion message (e.g. "I completed your request, the folder is there") rather than printing blank lines or raw terminal outputs.
+  - **Critical Bug Reporting Directive**: Mandates that the final responder explicitly articulate findings from code review/execution logs during bug investigations, and propose alternative hypotheses or request clarification if no code-level bug is detected.
+- **Robust CLI Argument Parsing**:
+  - Loops over all command line arguments to identify and extract any option flags (`--user`, `--debug`, `--interactive`, `-i`, `--mode=`, `--file=`) regardless of their position.
+  - Automatically filters out all option flags and joins the remaining non-flag arguments with spaces to form the query, making commands like `pnpm start create a folder here --user` run flawlessly.
+- **Interactive Multi-Turn REPL**:
+  - Launching the gateway without a query (e.g., `pnpm start` or with `--interactive`/`-i`) starts an interactive REPL.
+  - **Rich TUI Dashboard REPL**: Replaces the custom raw readline loop with a full-screen Dashboard built using `neo-blessed`. Includes a scrollable Chat/Logs pane (with mouse scroll wheel and `PageUp`/`PageDown` keyboard scrolling support), a real-time Status & Cost sidebar tracking query/thread costs and tokens, and an interactive prompt textarea.
+  - **Bracketed Paste Mode**: Enables terminal bracketed paste sequences (`\x1b[?2004h`) and intercepts raw stdin data to buffer pastes, allowing users to copy and paste large multiline code blocks cleanly without triggering premature submission.
+  - **TUI Dialogs**: Replaces command-line prompts (such as option clarification and self-reflection accept/ignore decisions) with elegant full-screen overlay dialogs (option list selectors and binary question cards) navigated via keys or mouse clicks.
+  - Maintains a warm background PTY multiplexer session and accumulates `chatHistory` dynamically across turns, enabling context-aware follow-up questions (e.g. "now delete it").
+- **Multi-Directory Portability (.env Resolution)**:
+  - Automatically loads the `.env` configuration file from both the codebase installation directory (using `import.meta.url`) and the current working directory.
+  - Enables invoking the gateway from any directory on the system without losing `GEMINI_API_KEY` configuration.
+- **Locked Triage Routing Protocol**: The triage model is completely stripped of command-generation power, outputting a strict JSON payload containing complexity assessment, target tier routing, and a sanitized directive.
+- **Warm agy Process Execution**: Directly executes the Antigravity `agy` CLI tool inside the warm `node-pty` session using the sanitized triage directive, bypassing local command generation and exploiting flat-rate reasoning.
+- **Pre-Flight Critique Loop**: Embeds a deterministic self-correction loop in the rulebook and direct API system instructions to query intent, evaluate codebase edge cases, and verify rulebook alignment before any write or execute action.
+- **Token Metrics Logging**: Displays precise token usage (Prompt, Completion, Total) for the current query and cumulative thread tokens at the end of each gateway response.
+- **Interactive REPL Commands**: Adds interactive commands:
+  - `/clear`: Resets chat history and thread-level token counters, and clears the log pane.
+  - `/settings`: Lists and dynamically modifies active configuration variables (Mode, Model, Target Project Root) printed directly inside the TUI log.
+- **ANSI Terminal Markdown Rendering**: Dynamically parses and styles standard markdown syntax elements (headers, bold font, inline code, list bullets, code blocks) in terminal outputs using ANSI console color codes.
+- **Dynamic Model-based Token Costing**:
+  - Fetches up-to-date pricing dynamically from OpenRouter (`https://openrouter.ai/api/v1/models`) with a background-loading strategy and local cache file (`./tmp/pricing_cache.json`) to guarantee instant startups.
+  - Matches the model called to the cached or fallback pricing database and calculates accurate query and thread costs.
+- **Concise Token Metrics Formatting**: Formats large token numbers concisely (e.g., `21k` instead of `21091`) in metrics reports to keep console feedback readable.
+- **Self-Reflection & Rule Recommendation Loop**:
+  - Automatically runs a macro diagnostic via the Tier 2 model at the end of each session.
+  - Audits for Tool Waste (timed-out or repetitive commands), Context Bleed (token spikes), and Implicit Preferences (user habits).
+  - Displays suggestions in a structured UI Candidate Card and prompts the user to Accept ([A]) or Ignore ([I]).
+  - Upon acceptance, appends rules to `rulebook.md` or environment paths to `AG_CONTEXT.md` securely using sandbox writes.
+- **Global Suggestions Database & One-by-One Resolution**:
+  - Automatically persists all self-reflection optimization suggestions to a global database (`~/.ai-os/suggestions.json`) including project context, original query, and suggestion details.
+  - Adds CLI flags (`--suggestions` to list pending suggestions, `--resolve-suggestion=<id>` to resolve/execute suggestions) and REPL commands (`/suggestions` and `/suggestions resolve <id>`) to run and resolve optimization recommendations one by one with automatically loaded context in the correct workspace directory.
+- **Dynamic Clarification State & Budget Boundary Variables**:
+  - Adds optional schema fields `requires_clarification`, `clarification_message`, and `clarification_options` to the triage model's response.
+  - Halts the gateway execution when ambiguity is detected, prompting the user to select an option (e.g. Lean Path vs Architectural Path).
+  - **Readline Conflict Resolution**: Pauses the active REPL readline interface and reuses it for the clarification/audit prompt options, resolving character-duplication bugs and input leakage back to the main command router.
+  - Translates user choices into boundary variables (`[BUDGET_MODE: LEAN]` or `[BUDGET_MODE: ARCHITECTURAL]`) injected into execution layer system prompts.
+  - Strictly limits execution loops to a single iteration and limits tool actions to single-file configuration in `LEAN` mode.
+- **Fail-Safe Circuit Breaker**:
+  - **Zero-Token Proactive check**: Reads the local `~/.gemini/antigravity-cli/settings.json` file in under 1ms to identify if the baseline quota is depleted (`quota_status === 'depleted'` with G1 credits disabled) and bypasses the PTY session to drop to Direct API Fallback directly.
+  - **PTY Stream Sniffing**: Uses a live regex monitor on standard output during execution to capture `RESOURCE_EXHAUSTED` or other depletion strings immediately, killing the background process and throwing an `AGY_QUOTA_DEPLETED` error.
+  - **Graceful Fallback**: Intercepts PTY depletion errors to seamlessly switch to direct API execution, ensuring uninterrupted execution streams.
+  - **TUI Compatibility**: In TUI mode, aborts and cancellations are gracefully displayed in the log window without throwing unhandled exceptions.
+- **Directory Consideration & Nesting Rule**: Enforces that when creating new tools, files, or utilities, if the active directory is a generic parent folder, the gateway and direct API executor will automatically create a dedicated sub-directory to avoid cluttering parent workspaces.
+- **Context Documentation and Thread Continuity**: Global rules mandate that agents write detailed summaries of user interactions and decisions into logs and context files, allowing a fresh thread to resume work with complete continuity.
+- **Pre-execution Command Validation**:
+  - Intercepts shell commands before execution to check against the rulebook's forbidden commands (such as `rm`).
+  - Detects syntax errors where the model mistakenly attempts to execute internal gateway actions (like `read_file`, `write_file`, `list_dir`, `done`, `run_command`) as shell commands, blocking them and providing helpful educational messages.
+- **Interactive REPL Enhancements**:
+  - **Shift+Enter Multiline Support**: Pressing `Shift+Enter` (or a linefeed `\n`) inserts a newline into the command input buffer rather than submitting, enabling complex, multiline prompts.
+  - **Escape-based Execution Cancellation**: Pressing `Esc` during execution immediately aborts Gemini API fetches, kills active child processes, cancels the active background PTY tasks, and displays the last sent message.
+  - **Saved Thread History**: Persists the chat history of every session/thread under `~/.ai-os/threads/thread_[timestamp].json`.
+- **Persistent Global Prompt History**: Saves all user prompts across sessions to `~/.ai-os/prompt_history.json`, enabling Arrow-Up completion and command history navigation even in brand new threads.
+- **Global CLI Command (`ai-os`)**: Configured the gateway with a standard Node.js shebang and registered the `bin` entry in `package.json`, allowing the gateway to be linked globally via `pnpm link --global` and executed from anywhere on the system using `ai-os`.
+- **Triage Bypass & Custom Model Direct Execution**:
+  - Adds support for `--model=<model>` / `-m <model>` CLI flag and `/settings model <model>` REPL configuration.
+  - Specifying a custom model completely bypasses the complexity assessment and Executive Triage, routing the request directly to the Direct API execution engine using that specified model.
