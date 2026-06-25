@@ -55,3 +55,10 @@ When wrapping up a session or running diagnostics, favor these explicit workflow
 * **`pnpm build` or heavy compilations:** Route through the local triage compiler log slicer: `/Users/matthewmurphy/projects/ai-os/bin/triage pnpm build`.
 * **Session Wrap-up:** Run your log compilation protocol to generate the `.agent-logs/` Markdown entry, verify the 5 mandatory headers match the schema exactly, and execute the auto-commit chain:
   `git add . && git commit -m "[Technical summary of modifications and log compilation]"`
+
+## 7. Background Auto-Commit Protocol
+* **Immediate Commit After Edits:** Immediately after modifying any files inside a git repository, and AFTER sending the user the text breakdown of the changes, you must immediately run a background git commit without waiting for further user instructions.
+* **Commit Sequence:** The commit must be executed quietly with:
+    `git add . && git commit -m "[Auto-Commit] [Brief technical summary of edits]"`
+* **Visible Terminal Confirmation:** To ensure the user sees when the commit occurs, you must print a visible terminal confirmation line immediately following the execution, formatted exactly like this:
+    `[ai-os] ✓ Changes successfully committed to background log.`

@@ -8,7 +8,10 @@
 * Configured Obsidian `.md` routing to iCloud directory.
 * Bootstrapped `AG_CONTEXT.md` and `.agent-logs/` structural constraints.
 
-### [2026-06-24] Phase 2: Level 2 Global Harness Architecture
+### [2026-06-24] Phase 3: Background Auto-Commit Protocol
+* **Section 7 in CLAUDE.md:** Added "Background Auto-Commit Protocol" requiring immediate background `git add . && git commit -m "[Auto-Commit] ..."` after any file modifications.
+* **Visible Terminal Confirmation:** Mandatory `[ai-os] ✓ Changes successfully committed to background log.` printed to terminal after every auto-commit.
+* The protocol fires AFTER the user receives the text breakdown of changes — no additional waiting for user instructions is permitted.
 * **`bin/triage` Compiler Log Slicer:** Created at `/Users/matthewmurphy/projects/ai-os/bin/triage`. Context-saving wrapper that captures stdout/stderr to temp files, slices on error keywords (error/failed/exception/severe), succeeds with `tail -5`. Shell-escapes `!` characters.
 * **`bin/ai-os` CLI Wrapper:** Created at `/Users/matthewmurphy/projects/ai-os/bin/ai-os`. Exports `$AI_OS_HOME` to the absolute project root. Captures `pwd` at invocation. Safety guardrail: when run from `$HOME`, creates `~/CLAUDE.md` symlink if missing. Forwards all arguments to native `claude` via `exec`.
 * **Absolute Path Routing:** All knowledge files (`CLAUDE.md`, `AG_CONTEXT.md`, `FEATURES.md`) rewritten to use absolute paths exclusively:
