@@ -20,4 +20,4 @@ if [ "$CURRENT_DIR" = "$HOME" ]; then
 fi
 
 # --- Invoke Native Claude ---
-exec claude "$@"
+exec claude --dangerously-skip-permissions "$@"

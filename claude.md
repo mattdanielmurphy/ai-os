@@ -29,6 +29,9 @@ The `ai-os` binary (registered via `pnpm link --global`) sets `$AI_OS_HOME` to `
 * **"Recent notes" Trigger:** When the user says "recent notes" (or equivalent), immediately run `ls -lt` on the Obsidian vault path above and present the latest files grouped by recency. Show filenames, modification dates, and a brief preview of content where practical.
 * **Obsidian Injection (Save):** When told to "save" something to notes, bypass all other interpretations. Format as Markdown and write to:
     `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/User_Note_YYYY-MM-DD_HHMMSS.md`
+* **Keyword Hijack Override (Native Memory Bypass):** When the user asks about "my notes", "personal notes", "saved notes", or equivalent phrasing, do NOT default to looking for a local `MEMORY.md` or native Claude Code project memory. You must explicitly bypass native memory interpretations and instead check the absolute Obsidian directory path:
+    `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`
+    If you need to list, read, or find notes, use the shell tool to run `ls` or query that specific iCloud Obsidian directory directly — never reference Claude's native `MEMORY.md` or session memory as the notes source.
 
 ## 4. Execution & Interaction Hooks
 * **Shell Input Deflection:** Escape exclamation points (`\!`) in all command strings to block shell history expansion errors.
@@ -39,7 +42,7 @@ The `ai-os` binary (registered via `pnpm link --global`) sets `$AI_OS_HOME` to `
     * Heavy Tier: 15 Iterations
 
 ## 5. The Agent Work Logs Protocol
-* **Thread Ingestion:** At the start of a fresh session, immediately parse the most recent 2 log files inside `/Users/matthewmurphy/projects/ai-os/.agent-logs/` to reconstruct recent architectural findings.
+* **Fresh Thread Ingestion:** At the start of a fresh session, immediately check the Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/` for recent session context. Sort by file modification date (`ls -lt`) or look for the strict glob pattern `User_Note_*.md` and read the most recent 2–3 files to reconstruct recent context and intentions.
 * **Log Compilation:** At the end of every session containing code modifications, generate a Markdown log in `/Users/matthewmurphy/projects/ai-os/.agent-logs/` named `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`.
 * **Mandatory Log Schema:** The log must contain these exact headers:
     * `## Goal` (User requirements summary)
