@@ -37,6 +37,15 @@ export function validateCommand(command) {
         reason: `Command execution blocked. You attempted to use the internal action '${firstToken}' as a shell command ('run_command ${trimmedCmd}'). This is invalid syntax. To read, write, or list directories, set the "action" field in your JSON response directly (e.g., {"action": "${firstToken}", "file_path": "..."}).`
       };
     }
+
+    // New validation: Check for reserved action names within the command string
+    const reservedActions = ['done', 'read_file', 'write_file', 'list_dir', 'run_command'];
+    if (reservedActions.some(action => trimmedCmd.includes(action))) {
+      return {
+        allowed: false,
+        reason: `Command contains reserved API action names - use direct JSON actions instead`
+      };
+    }
   }
   
   return { allowed: true };
