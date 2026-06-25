@@ -487,6 +487,9 @@ async function callGemini(model, systemInstruction, promptOrContents, useJson = 
 
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 503) {
+        return { text: `Error: Gemini API 503 Service Unavailable. Triggering immediate fallback.`, usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } };
+      }
       return { text: `Error: Gemini API Error: ${response.status} ${response.statusText} - ${errText}`, usage: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0 } };
     }
 
@@ -589,6 +592,13 @@ ${h.result}`).join('\n\n') : 'None'}
     } catch (err) {
       logger.error(`Failed to get action decision from Gemini: ${err.message}`);
       return `Failed to execute instruction: ${err.message}`;
+    }
+
+    if (!decision.action || decision.action === 'undefined') {
+      logger.warn(`Model returned undefined action. Forcing termination to prevent loop.`);
+      result = "Error: Action was undefined. Please provide a valid action from the allowed list.";
+      done = true;
+      break;
     }
 
     if (decision.action === 'done') {
@@ -1131,7 +1141,7 @@ ${h.result}`).join('\n\n') : 'None'}
         try {
           // Warm PTY execution of agy with a 5-minute timeout to allow full execution
           const ptyRawResult = await ptySession.executeCommand(commandToRun, 300000);
-          if (!ptyRawResult || ptyRawResult.trim() === "" || ptyRawResult.includes("quota") || ptyRawResult.includes("Error") || ptyRawResult.includes("UNAVAILABLE") || ptyRawResult.includes("exceeded")) {
+          if (!ptyRawResult || ptyRawResult.trim() === "" || ptyRawResult.includes("quota") || ptyRawResult.includes("Error") || ptyRawResult.includes("503") || ptyRawResult.includes("UNAVAILABLE") || ptyRawResult.includes("exceeded")) {
             logger.warn(`Agent execution returned empty, error, or quota exceeded. Falling back to Direct API Executor...`);
             useFallback = true;
           } else {
