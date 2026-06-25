@@ -166,6 +166,21 @@ function markSuggestionResolved(id) {
   }
 }
 
+function resolveMostRecentSuggestion() {
+  const suggestions = loadGlobalSuggestions();
+  const pending = suggestions.filter(s => s.status === 'pending');
+  
+  if (pending.length === 0) {
+    console.log(colors.green('🎉 No pending suggestions found.'));
+    return;
+  }
+  
+  // Find the most recent pending suggestion (highest ID)
+  const mostRecent = pending.reduce((max, s) => s.id > max.id ? s : max, pending[0]);
+  markSuggestionResolved(mostRecent.id);
+  console.log(colors.green(`✅ Suggestion #${mostRecent.id} marked as resolved.`));
+}
+
 function handleSuggestionsCommand() {
   const suggestions = loadGlobalSuggestions();
   const pending = suggestions.filter(s => s.status === 'pending');
@@ -185,6 +200,9 @@ function handleSuggestionsCommand() {
   });
   console.log(`\n${colors.bold}${colors.lightBlue}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`);
   console.log(`To resolve a suggestion, run: ai-os --resolve-suggestion=<id>\n`);
+  console.log(`\n${colors.bold}${colors.cyan}Available commands:${colors.reset}`);
+  console.log(`  ${colors.yellow}/resolve-recent-suggestion${colors.reset} - Mark most recent pending suggestion as resolved`);
+  console.log(`  ${colors.yellow}/suggestions resolve <id>${colors.reset} - Resolve specific suggestion ID\n`);
 }
 
 // Global Token Counters
@@ -1415,10 +1433,19 @@ function startRepl() {
 
   rl.prompt();
 
+  console.log(`\n${colors.bold}${colors.cyan}New command available:${colors.reset}`);
+  console.log(`  Type ${colors.yellow}/resolve-recent-suggestion${colors.reset} to mark the most recent optimization suggestion as resolved\n`);
+
   rl.on('line', async (line) => {
     const trimmed = line.trim();
     if (trimmed === 'exit' || trimmed === 'quit') {
       rl.close();
+      return;
+    }
+
+    if (trimmed === '/resolve-recent-suggestion') {
+      resolveMostRecentSuggestion();
+      rl.prompt();
       return;
     }
 
