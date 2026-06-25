@@ -74,7 +74,7 @@ final class ClaudeTerminalView: LocalProcessTerminalView {
             let isUpper = delta > 0 // positive = finger/mouse moves up
 
             // Alternate screen (TUI) → forward as keyboard sequences
-            if terminal.isDisplayBufferAlternate {
+            if terminal.isCurrentBufferAlternate {
                 let absDelta = abs(delta)
                 if absDelta >= 3 {
                     // Page Up   = ESC [ 5 ~
