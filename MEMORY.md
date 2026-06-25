@@ -5,3 +5,4 @@ This file is the root index for the session memory system. Each entry below link
 ---
 
 - [Workspace Identity](memory/workspace-identity.md) — Matt's role, projects, constraints, and knowledge routing
+- [Obsidian Note Naming](memory/obsidian-note-naming.md) — Use human-readable filenames with clickable links when saving notes
