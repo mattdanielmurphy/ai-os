@@ -222,20 +222,7 @@ function readContext() {
  * Reads the local settings file or runs a rapid, truncated diagnostic check.
  */
 function checkAgyHealth() {
-  try {
-    const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-    const settingsPath = path.join(homeDir, '.gemini/antigravity-cli/settings.json');
-    
-    if (fs.existsSync(settingsPath)) {
-      const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-      if (settings.use_g1_credits === 'off' && settings.quota_status === 'depleted') {
-        return { healthy: false, reason: "Baseline quota exhausted and G1 overage credits are disabled." };
-      }
-    }
-    return { healthy: true };
-  } catch (e) {
-    return { healthy: true };
-  }
+  return { healthy: false, reason: "agy CLI integration is explicitly disabled." };
 }
 
 /**
@@ -1033,15 +1020,10 @@ async function processGatewayRequest(userInput, attachedFilePath = null, rlInter
       await ptySession.start();
     }
 
-    // Check agy CLI health
+    // agy CLI is explicitly disabled
     let agyWorking = false;
     const agyHealth = checkAgyHealth();
-    if (!agyHealth.healthy) {
-      logger.warn(`[WARN] ${agyHealth.reason} Bypassing agy CLI and dropping to Direct API Fallback...`);
-    } else {
-      agyWorking = true;
-      logger.info("agy CLI is healthy and available based on settings.");
-    }
+    logger.info(`[SYSTEM] ${agyHealth.reason} Using Direct API Fallback.`);
 
     const goal = userInput;
     let completed = false;
@@ -1129,37 +1111,9 @@ ${h.result}`).join('\n\n') : 'None'}
       logger.info(`Sending instruction to agent: "${nextInstruction}"`);
 
       let ptyResult = "";
-      let useFallback = !agyWorking;
-
-      if (!useFallback) {
-        const commandToRun = iteration === 1
-          ? `/Users/matthewmurphy/.local/bin/agy --dangerously-skip-permissions --print ${JSON.stringify(nextInstruction)}`
-          : `/Users/matthewmurphy/.local/bin/agy --dangerously-skip-permissions --continue --print ${JSON.stringify(nextInstruction)}`;
-
-        logger.debug(`Executing command: ${commandToRun}`);
-        
-        try {
-          // Warm PTY execution of agy with a 5-minute timeout to allow full execution
-          const ptyRawResult = await ptySession.executeCommand(commandToRun, 300000);
-          if (!ptyRawResult || ptyRawResult.trim() === "" || ptyRawResult.includes("quota") || ptyRawResult.includes("Error") || ptyRawResult.includes("503") || ptyRawResult.includes("UNAVAILABLE") || ptyRawResult.includes("exceeded")) {
-            logger.warn(`Agent execution returned empty, error, or quota exceeded. Falling back to Direct API Executor...`);
-            useFallback = true;
-          } else {
-            ptyResult = cleanPtyOutput(ptyRawResult, commandToRun);
-          }
-        } catch (execErr) {
-          if (execErr.message === "AGY_QUOTA_DEPLETED") {
-            logger.warn("[ALERT] Quota ceiling detected live in PTY stream. Activating Direct API Fallback Subagent...");
-          } else {
-            logger.warn(`Agent execution failed or timed out: ${execErr.message}. Falling back to Direct API Executor...`);
-          }
-          useFallback = true;
-        }
-      }
-
-      if (useFallback) {
-        ptyResult = await executeInstructionDirectly(nextInstruction, sandbox, logger, state, activeProjectRoot, budgetMode, { agContext, features, recentLogs, directoryStructure });
-      }
+      
+      // Always use Direct API Fallback as agy is disabled
+      ptyResult = await executeInstructionDirectly(nextInstruction, sandbox, logger, state, activeProjectRoot, budgetMode, { agContext, features, recentLogs, directoryStructure });
       
       lastPtyResult = ptyResult;
 
