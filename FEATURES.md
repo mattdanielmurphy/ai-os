@@ -43,3 +43,7 @@
 * **Functional Bug Fix (Pty Commands):** Enabled `disableStdin: true` in frontend Terminal config. Wrapped commands with `\r\n` carriage returns to correctly signal command execution to the `zsh` process.
 * **Global Home Anchoring Bootloader:** Created `/Users/matthewmurphy/projects/ai-os/bin/ai-os` wrapper script executing the standard home symlink tree (`~/CLAUDE.md`, `~/MEMORY.md`, `~/memory`) before launching `pnpm tauri dev`.
 * **Engine Toggle UI & Routing:** Implemented visual switch between `Claude (Native)` and `Agy (Orchestrated)` in `index.html`. Added state management in `src/main.ts` that dynamically prefixes inputs with `agy "[command]"` when routing to the Orchestrator, executing as-is for Claude.
+
+### [2026-06-26] Phase 2: PTY Geometry Sync & Carriage Return Fix
+* **Carriage Return Correction:** Changed command execution suffix in `src/main.ts` from `\r\n` to `\r` to prevent PTY duplicate empty prompts.
+* **PTY Geometry Synchronization:** Implemented `resize_pty` command in Rust backend (`src-tauri/src/main.rs`) and hooked it up to `FitAddon`'s resize trigger in frontend `src/main.ts` to dynamic adjust `zsh` size, enabling correct terminal scrolling behaviour.

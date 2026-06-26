@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI OS</title>
+    <script type="module" crossorigin src="/assets/index-CSXkJFAa.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BPaDqJ7X.css">
+  </head>
+  <body class="bg-gray-900 text-white font-sans h-screen flex flex-col m-0">
+    <!-- Top Terminal Area -->
+    <div id="terminal-container" class="flex-grow p-4 bg-black overflow-hidden"></div>
+
+    <!-- Bottom Engine Toggle & Input Area -->
+    <div class="flex flex-col border-t border-gray-700 bg-gray-800">
+        
+        <!-- The Engine Toggle -->
+        <div class="flex gap-6 p-2 px-4 text-sm font-semibold border-b border-gray-700">
+            <span class="text-gray-400">ENGINE:</span>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="engine" value="claude" checked class="accent-blue-500">
+                <span class="text-blue-400">Claude (Native)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="engine" value="agy" class="accent-green-500">
+                <span class="text-green-400">Agy (Orchestrated)</span>
+            </label>
+        </div>
+
+        <!-- The Text Input -->
+        <textarea 
+            id="prompt-input" 
+            class="w-full h-24 p-4 bg-gray-800 text-white outline-none resize-none"
+            placeholder="Type a command or prompt... (Enter to send, Shift+Enter for newline)"
+        ></textarea>
+    </div>
+
+  </body>
+</html>
