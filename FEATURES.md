@@ -47,3 +47,8 @@
 ### [2026-06-26] Phase 2: PTY Geometry Sync & Carriage Return Fix
 * **Carriage Return Correction:** Changed command execution suffix in `src/main.ts` from `\r\n` to `\r` to prevent PTY duplicate empty prompts.
 * **PTY Geometry Synchronization:** Implemented `resize_pty` command in Rust backend (`src-tauri/src/main.rs`) and hooked it up to `FitAddon`'s resize trigger in frontend `src/main.ts` to dynamic adjust `zsh` size, enabling correct terminal scrolling behaviour.
+
+### [2026-06-26] Phase 3: Agy Orchestrator Integration
+* **Terminal Layout Fix:** Swapped terminal-container classes to `flex-grow bg-black overflow-hidden min-h-0 relative p-2` in `index.html` to prevent bottom-row obscuration.
+* **Agy Binary Registration:** Registered `agy` global binary in `package.json` and ran `pnpm link --global .` to update system mapping.
+* **Orchestrator Core Script:** Created the executable `bin/agy` bash orchestrator which routes user prompts to the local OpenRouter proxy (LiteLLM on port 4000) requesting strict unified diffs and applies them surgically using native `patch`.
