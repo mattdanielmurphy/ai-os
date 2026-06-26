@@ -10,10 +10,23 @@
     <div id="terminal-container" class="flex-grow p-4 bg-black overflow-hidden"></div>
 
     <!-- Bottom input pane -->
-    <div class="h-32 bg-[#12131c] border-t border-[#222436] p-3 flex flex-col justify-between">
+    <div class="bg-[#12131c] border-t border-[#222436] p-3 flex flex-col gap-2">
+      <!-- Engine toggle control bar -->
+      <div class="flex items-center gap-4 text-xs font-mono select-none px-1 py-0.5">
+        <span class="text-gray-400">ENGINE:</span>
+        <div class="flex items-center bg-[#1d1f2e] border border-[#2d3147] rounded-md p-0.5">
+          <button id="engine-claude" class="px-3 py-1 rounded text-white bg-[#3b4261] font-semibold transition-all duration-150">
+            Claude (Native)
+          </button>
+          <button id="engine-agy" class="px-3 py-1 rounded text-gray-400 hover:text-gray-200 font-semibold transition-all duration-150">
+            Agy (Orchestrated)
+          </button>
+        </div>
+      </div>
+
       <textarea
         id="prompt-input"
-        class="w-full h-full bg-transparent border-0 text-[#f1f1f4] focus:ring-0 resize-none outline-none font-mono text-sm leading-relaxed placeholder-gray-500"
+        class="w-full h-24 bg-transparent border-0 text-[#f1f1f4] focus:ring-0 resize-none outline-none font-mono text-sm leading-relaxed placeholder-gray-500"
         placeholder="Type a command and press Enter (Shift+Enter for newline)..."
         spellcheck="false"
       ></textarea>

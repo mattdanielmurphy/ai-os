@@ -1,24 +1,13 @@
 #!/bin/bash
 
-# Kill any existing session with this name to avoid overlapping threads
-tmux kill-session -t ai_os 2>/dev/null
+# Enforce environment anchoring
+AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
 
-# Initialize your core environment values
-export ANTHROPIC_BASE_URL="http://127.0.0.1:8000"
-export ANTHROPIC_API_KEY="liteLLM-local"
-export CLAUDE_CODE_ENABLE_TELEMETRY="1"
+# Guarantee symlink guardrails forcing project root rules into ~
+ln -sf "$AI_OS_HOME/CLAUDE.md" "$HOME/CLAUDE.md"
+ln -sf "$AI_OS_HOME/MEMORY.md" "$HOME/MEMORY.md"
+ln -sfn "$AI_OS_HOME/memory" "$HOME/memory"
 
-# 1. Start a new headless tmux workspace session
-tmux new-session -d -s ai_os -n "Workspace"
-
-# 2. Split the window vertically, dedicating the bottom 15% to your tracking engine
-tmux split-window -v -p 15
-
-# 3. In the top primary pane (0), immediately run Claude Code
-tmux send-keys -t ai_os:0.0 "claude" C-m
-
-# 4. In the bottom telemetry pane (1), kick off your billing math monitor layout
-tmux send-keys -t ai_os:0.1 "echo 'AI-OS Financial Bezel Loaded. Monitoring DeepSeek V4-Flash lines...'" C-m
-
-# 5. Connect your terminal window cleanly to the configured session
-tmux attach-session -t ai_os
+# Start the dev interface or Tauri application
+cd "$AI_OS_HOME"
+pnpm tauri dev

@@ -37,3 +37,9 @@
   - `~/.agent-logs` → `projects/ai-os/.agent-logs`
 * **AG_CONTEXT.md §Phase Constraints:** "Global Home Anchoring (Level 2.5)" documents that all future config extensions and operational databases must recognize `~` as the active execution anchor so they survive traversal into downstream project subdirectories.
 * **CLAUDE.md §0.1:** "Home-Origin Execution Contract" added — defines that the agent may be launched from `$HOME`, must resolve all scaffolding against the canonical project root, and must treat `~` as a valid entry point (not a sandbox violation).
+
+### [2026-06-26] Phase 1 & 2: Tauri PTY Debugging, Global Anchoring, & Engine Toggle
+* **Visual Bug Fix (White Box):** Imported `@xterm/xterm/css/xterm.css` directly at the top of `src/main.ts` to solve the Vite bundling issue hiding the xterm textarea helper.
+* **Functional Bug Fix (Pty Commands):** Enabled `disableStdin: true` in frontend Terminal config. Wrapped commands with `\r\n` carriage returns to correctly signal command execution to the `zsh` process.
+* **Global Home Anchoring Bootloader:** Created `/Users/matthewmurphy/projects/ai-os/bin/ai-os` wrapper script executing the standard home symlink tree (`~/CLAUDE.md`, `~/MEMORY.md`, `~/memory`) before launching `pnpm tauri dev`.
+* **Engine Toggle UI & Routing:** Implemented visual switch between `Claude (Native)` and `Agy (Orchestrated)` in `index.html`. Added state management in `src/main.ts` that dynamically prefixes inputs with `agy "[command]"` when routing to the Orchestrator, executing as-is for Claude.
