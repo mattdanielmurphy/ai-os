@@ -1,109 +1,24 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>xterm.js Proof of Concept</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI OS</title>
+  </head>
+  <body class="flex flex-col h-screen overflow-hidden bg-[#0d0e15] text-[#f1f1f4]">
+    <!-- Main terminal pane -->
+    <div id="terminal-container" class="flex-grow p-4 bg-black overflow-hidden"></div>
 
-        <!-- 1. Include the core styling and scripts via modern unpkg CDN -->
-        <link
-            rel="stylesheet"
-            href="https://unpkg.com/@xterm/xterm/css/xterm.css"
-        />
-        <script src="https://unpkg.com/@xterm/xterm/lib/xterm.js"></script>
-        <script src="https://unpkg.com/@xterm/addon-fit/lib/addon-fit.js"></script>
+    <!-- Bottom input pane -->
+    <div class="h-32 bg-[#12131c] border-t border-[#222436] p-3 flex flex-col justify-between">
+      <textarea
+        id="prompt-input"
+        class="w-full h-full bg-transparent border-0 text-[#f1f1f4] focus:ring-0 resize-none outline-none font-mono text-sm leading-relaxed placeholder-gray-500"
+        placeholder="Type a command and press Enter (Shift+Enter for newline)..."
+        spellcheck="false"
+      ></textarea>
+    </div>
 
-        <style>
-            body {
-                margin: 0;
-                background-color: #1a1a1a;
-                color: #ffffff;
-                font-family:
-                    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-                    sans-serif;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-            }
-            h2 {
-                padding: 10px 20px;
-                margin: 0;
-                font-size: 1rem;
-                background-color: #111;
-                border-bottom: 1px solid #333;
-            }
-            /* Container that forces the grid layout */
-            #terminal-container {
-                flex-grow: 1;
-                padding: 15px;
-                box-sizing: border-box;
-                background-color: #000;
-            }
-        </style>
-    </head>
-    <body>
-        <h2>xterm.js Viewport Sandbox (Scrolling & Resize Proof)</h2>
-        <div id="terminal-container"></div>
-
-        <script>
-            // 2. Instantiate the terminal with standard look-and-feel preferences
-            const term = new Terminal({
-                cursorBlink: true,
-                fontSize: 14,
-                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-                theme: {
-                    background: '#000000',
-                    foreground: '#ffffff',
-                },
-            })
-
-            // 3. Instantiate and load the layout fitting addon
-            const fitAddon = new FitAddon.FitAddon()
-            term.loadAddon(fitAddon) //
-
-            // 4. Mount the canvas directly into our wrapper container
-            term.open(document.getElementById('terminal-container')) //
-            fitAddon.fit() //
-
-            // 5. Populate the text buffer with hundreds of dummy lines to test trackpad scrolling
-            term.writeln(
-                '\x1b[1;32m✓ Terminal initialized successfully.\x1b[0m'
-            )
-            term.writeln(
-                'Try scrolling up and down using your trackpad or mouse wheel...'
-            )
-            term.writeln(
-                '------------------------------------------------------------------'
-            )
-
-            for (let i = 1; i <= 200; i++) {
-                term.writeln(
-                    `Log entry line context #${i} : Testing alternate buffer isolation patterns.`
-                )
-            }
-
-            term.write('\r\n$ ')
-
-            // 6. Basic keyboard echo loop (Mimics user input)
-            // This fires when typing or pasting. Notice that mouse wheel adjustments
-            // DO NOT echo raw character strings here.
-            term.onData((data) => {
-                //
-                // If the user hits enter, wrap back down to a fresh line simulation
-                if (data === '\r') {
-                    term.write('\r\n$ ')
-                } else if (data === '\x7f') {
-                    // Handle Backspace
-                    term.write('\b \b')
-                } else {
-                    term.write(data) //
-                }
-            })
-
-            // 7. Keep the geometry accurate if the wrapper resizing adjusts
-            window.addEventListener('resize', () => {
-                fitAddon.fit() //
-            })
-        </script>
-    </body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
