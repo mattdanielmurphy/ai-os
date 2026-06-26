@@ -4,8 +4,7 @@
   "description": "Personal AI OS — global CLI harness for Claude Code workspace automation",
   "private": true,
   "bin": {
-    "ai-os": "./bin/ai-os",
-    "agy": "./bin/agy"
+    "ai-os": "./bin/ai-os"
   },
   "packageManager": "pnpm@11.2.2",
   "engines": {

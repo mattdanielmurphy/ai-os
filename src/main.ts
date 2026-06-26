@@ -70,10 +70,9 @@ textarea?.addEventListener('keydown', (e) => {
             // send text verbatim. (If they aren't, this sends raw shell commands).
             commandToExecute = rawInput
         } else if (currentEngine === 'agy') {
-            // Agy is an orchestrator. We wrap the payload in quotes
-            // and pass it as an argument to the agy binary.
+            // Run the prompt in the real agy CLI non-interactively
             const escapedInput = rawInput.replace(/"/g, '\\"')
-            commandToExecute = `agy "${escapedInput}"`
+            commandToExecute = `agy --add-dir=$PWD --prompt "${escapedInput}" --dangerously-skip-permissions`
         }
 
         // Send formatted string to Rust, appended with newline to execute
