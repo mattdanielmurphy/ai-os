@@ -1,13 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Enforce environment anchoring
-AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
+# 1. Absolute anchor point
+export AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
 
-# Guarantee symlink guardrails forcing project root rules into ~
-ln -sf "$AI_OS_HOME/CLAUDE.md" "$HOME/CLAUDE.md"
-ln -sf "$AI_OS_HOME/MEMORY.md" "$HOME/MEMORY.md"
-ln -sfn "$AI_OS_HOME/memory" "$HOME/memory"
+# 2. Global anchoring guardrails
+# Ensures that wherever this is run, ~ has the exact same context
+echo "[ai-os] Enforcing absolute context guardrails in ~/"
+ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md
+ln -sf "$AI_OS_HOME/MEMORY.md" ~/MEMORY.md
+ln -sfn "$AI_OS_HOME/memory" ~/memory
 
-# Start the dev interface or Tauri application
-cd "$AI_OS_HOME"
+# 3. Launch the App
+# (For now we launch the dev server, later this will run the compiled binary)
+cd "$AI_OS_HOME" || exit
+echo "[ai-os] Launching interface..."
 pnpm tauri dev

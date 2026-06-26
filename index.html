@@ -5,31 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI OS</title>
   </head>
-  <body class="flex flex-col h-screen overflow-hidden bg-[#0d0e15] text-[#f1f1f4]">
-    <!-- Main terminal pane -->
+  <body class="bg-gray-900 text-white font-sans h-screen flex flex-col m-0">
+    <!-- Top Terminal Area -->
     <div id="terminal-container" class="flex-grow p-4 bg-black overflow-hidden"></div>
 
-    <!-- Bottom input pane -->
-    <div class="bg-[#12131c] border-t border-[#222436] p-3 flex flex-col gap-2">
-      <!-- Engine toggle control bar -->
-      <div class="flex items-center gap-4 text-xs font-mono select-none px-1 py-0.5">
-        <span class="text-gray-400">ENGINE:</span>
-        <div class="flex items-center bg-[#1d1f2e] border border-[#2d3147] rounded-md p-0.5">
-          <button id="engine-claude" class="px-3 py-1 rounded text-white bg-[#3b4261] font-semibold transition-all duration-150">
-            Claude (Native)
-          </button>
-          <button id="engine-agy" class="px-3 py-1 rounded text-gray-400 hover:text-gray-200 font-semibold transition-all duration-150">
-            Agy (Orchestrated)
-          </button>
+    <!-- Bottom Engine Toggle & Input Area -->
+    <div class="flex flex-col border-t border-gray-700 bg-gray-800">
+        
+        <!-- The Engine Toggle -->
+        <div class="flex gap-6 p-2 px-4 text-sm font-semibold border-b border-gray-700">
+            <span class="text-gray-400">ENGINE:</span>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="engine" value="claude" checked class="accent-blue-500">
+                <span class="text-blue-400">Claude (Native)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="engine" value="agy" class="accent-green-500">
+                <span class="text-green-400">Agy (Orchestrated)</span>
+            </label>
         </div>
-      </div>
 
-      <textarea
-        id="prompt-input"
-        class="w-full h-24 bg-transparent border-0 text-[#f1f1f4] focus:ring-0 resize-none outline-none font-mono text-sm leading-relaxed placeholder-gray-500"
-        placeholder="Type a command and press Enter (Shift+Enter for newline)..."
-        spellcheck="false"
-      ></textarea>
+        <!-- The Text Input -->
+        <textarea 
+            id="prompt-input" 
+            class="w-full h-24 p-4 bg-gray-800 text-white outline-none resize-none"
+            placeholder="Type a command or prompt... (Enter to send, Shift+Enter for newline)"
+        ></textarea>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

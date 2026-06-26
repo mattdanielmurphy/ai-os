@@ -1,117 +1,82 @@
-import { invoke } from "@tauri-apps/api/tauri";
-import { listen } from "@tauri-apps/api/event";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-
-// Import styles
+import { invoke } from '@tauri-apps/api/tauri';
+import { listen } from '@tauri-apps/api/event';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import "./styles.css";
 
-interface PtyPayload {
-  data: string;
+// 1. Terminal Setup
+const term = new Terminal({
+    cursorBlink: true,
+    fontSize: 14,
+    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    theme: { background: '#000000', foreground: '#ffffff' },
+    disableStdin: true // Locks xterm from receiving raw keyboard inputs
+});
+
+const fitAddon = new FitAddon();
+term.loadAddon(fitAddon);
+
+const container = document.getElementById('terminal-container');
+if (container) {
+    term.open(container);
+    fitAddon.fit();
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  const terminalContainer = document.getElementById("terminal-container");
-  const promptInput = document.getElementById("prompt-input") as HTMLTextAreaElement;
+window.addEventListener('resize', () => fitAddon.fit());
 
-  if (!terminalContainer || !promptInput) {
-    console.error("Required DOM elements not found!");
-    return;
-  }
-
-  // Initialize xterm
-  const term = new Terminal({
-    cursorBlink: true,
-    fontSize: 13,
-    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-    theme: {
-      background: '#0d0e15',
-      foreground: '#f1f1f4',
-      cursor: '#f1f1f4',
-      selectionBackground: '#2a2b3d',
-    },
-    disableStdin: true, // Lock the terminal from receiving direct keystrokes
-  });
-
-  const fitAddon = new FitAddon();
-  term.loadAddon(fitAddon);
-  term.open(terminalContainer);
-  fitAddon.fit();
-
-  // Listen for window resize
-  window.addEventListener("resize", () => {
-    fitAddon.fit();
-  });
-
-  // Listen to PTY outputs from Rust
-  listen<PtyPayload>("pty-output", (event) => {
+// 2. Listen to Backend PTY events
+listen<{ data: string }>('pty-output', (event) => {
     term.write(event.payload.data);
-  });
+});
 
-  // State variable for the active engine
-  let currentEngine: "claude" | "agy" = "claude";
+// 3. UI State Management
+let currentEngine: 'claude' | 'agy' = 'claude';
+const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]');
 
-  // Toggle button references
-  const btnClaude = document.getElementById("engine-claude");
-  const btnAgy = document.getElementById("engine-agy");
+engineRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        currentEngine = (e.target as HTMLInputElement).value as 'claude' | 'agy';
+    });
+});
 
-  function setEngine(engine: "claude" | "agy") {
-    currentEngine = engine;
-    if (engine === "claude") {
-      if (btnClaude) {
-        btnClaude.className = "px-3 py-1 rounded text-white bg-[#3b4261] font-semibold transition-all duration-150";
-      }
-      if (btnAgy) {
-        btnAgy.className = "px-3 py-1 rounded text-gray-400 hover:text-gray-200 font-semibold transition-all duration-150";
-      }
-    } else {
-      if (btnClaude) {
-        btnClaude.className = "px-3 py-1 rounded text-gray-400 hover:text-gray-200 font-semibold transition-all duration-150";
-      }
-      if (btnAgy) {
-        btnAgy.className = "px-3 py-1 rounded text-white bg-[#3b4261] font-semibold transition-all duration-150";
-      }
-    }
-  }
+// 4. Input Interception & Routing
+const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement;
 
-  btnClaude?.addEventListener("click", () => setEngine("claude"));
-  btnAgy?.addEventListener("click", () => setEngine("agy"));
+textarea?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Stop a visual line break
+        
+        const rawInput = textarea.value.trim();
+        if (!rawInput) return;
 
-  // Listen to keyboard entry on the textarea
-  promptInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // Stop carriage return in textarea
-      const rawInput = promptInput.value.trim();
-      if (rawInput !== "") {
-        let payload = "";
-        if (currentEngine === "claude") {
-          payload = rawInput + "\r\n";
-        } else {
-          // Escape quotes for command-line arguments
-          const escapedInput = rawInput.replace(/"/g, '\\"');
-          payload = `agy "${escapedInput}"\r\n`;
+        let commandToExecute = '';
+
+        if (currentEngine === 'claude') {
+            // Claude acts as a REPL environment. If the user is in Claude, 
+            // send text verbatim. (If they aren't, this sends raw shell commands).
+            commandToExecute = rawInput;
+        } else if (currentEngine === 'agy') {
+            // Agy is an orchestrator. We wrap the payload in quotes 
+            // and pass it as an argument to the agy binary.
+            const escapedInput = rawInput.replace(/"/g, '\\"');
+            commandToExecute = `agy "${escapedInput}"`;
         }
 
-        // Send command to the PTY
-        invoke("write_to_pty", { data: payload })
-          .catch((err) => {
-            console.error("Failed to write to PTY:", err);
-            term.write(`\r\n\x1b[31mError writing to shell: ${err}\x1b[0m\r\n`);
-          });
-        promptInput.value = "";
-      }
+        // Send formatted string to Rust, appended with newline to execute
+        invoke('write_to_pty', { data: commandToExecute + '\r\n' })
+            .catch((err) => {
+                console.error("Failed to write to PTY:", err);
+                term.write(`\r\n\x1b[31mError writing to shell: ${err}\x1b[0m\r\n`);
+            });
+        textarea.value = '';
     }
-  });
+});
 
-  // Focus prompt input by default
-  promptInput.focus();
-  document.addEventListener("click", () => {
-    // Focus textarea if user clicks somewhere, for convenience,
-    // but allow selecting text in terminal if needed.
+// 5. Focus Management
+textarea?.focus();
+document.addEventListener("click", () => {
     const selection = window.getSelection();
     if (!selection || selection.toString() === "") {
-      promptInput.focus();
+        textarea?.focus();
     }
-  });
 });

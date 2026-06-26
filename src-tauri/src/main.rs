@@ -1,84 +1,75 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
+use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
-use std::io::Write;
-use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
-use serde::Serialize;
-use tauri::{Manager, State};
+use tauri::Manager;
 
+// FIX 1: We store a boxed Writer instead of the raw MasterPty
 struct AppState {
-    master_pty: Arc<Mutex<Box<dyn MasterPty + Send + Sync>>>,
-    // Keep child alive so it doesn't get dropped immediately
-    _child: Mutex<Box<dyn Child + Send + Sync>>,
+    pty_writer: Arc<Mutex<Box<dyn Write + Send>>>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, serde::Serialize)]
 struct Payload {
     data: String,
 }
 
 #[tauri::command]
-fn write_to_pty(data: String, state: State<'_, AppState>) -> Result<(), String> {
-    let mut master = state.master_pty.lock().map_err(|e| e.to_string())?;
-    master.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
-    master.flush().map_err(|e| e.to_string())?;
+fn write_to_pty(data: String, state: tauri::State<AppState>) -> Result<(), String> {
+    let mut writer = state.pty_writer.lock().map_err(|e| e.to_string())?;
+    
+    // Now write_all and flush will work because the trait bounds are satisfied
+    writer.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+    writer.flush().map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 
 fn main() {
-    // Initialize PTY system
-    let pty_system = native_pty_system();
-    let master = pty_system
-        .openpicker(PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .expect("failed to open pty");
+    let pty_system = NativePtySystem::default();
 
-    // Spawn macOS default zsh
-    let mut cmd = CommandBuilder::new("/bin/zsh");
-    // Ensure we start in the user home or projects directory to be clean
-    cmd.cwd(std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/Users/matthewmurphy/projects/ai-os")));
-    let child = master.spawn_reader_and_writer(cmd).expect("failed to spawn shell");
+    // FIX 2: openpicker was a hallucination. The correct method is openpty.
+    let pair = pty_system.openpty(PtySize {
+        rows: 24,
+        cols: 80,
+        pixel_width: 0,
+        pixel_height: 0,
+    }).expect("Failed to open PTY");
 
-    let master_writer = master.try_clone_writer().expect("failed to clone master writer");
-    let mut reader = master.try_clone_reader().expect("failed to clone master reader");
+    let cmd = CommandBuilder::new("/bin/zsh");
+    let _child = pair.slave.spawn_command(cmd).expect("Failed to spawn shell");
 
-    let app_state = AppState {
-        master_pty: Arc::new(Mutex::new(master_writer)),
-        _child: Mutex::new(child),
-    };
+    // FIX 3: We must clone the reader and writer out of the master PTY 
+    let reader = pair.master.try_clone_reader().expect("Failed to clone reader");
+    let writer = pair.master.take_writer().expect("Failed to take writer");
+
+    // Store the writer in our thread-safe state
+    let pty_writer = Arc::new(Mutex::new(writer));
 
     tauri::Builder::default()
-        .manage(app_state)
-        .invoke_handler(tauri::generate_handler![write_to_pty])
+        .manage(AppState {
+            pty_writer: pty_writer.clone(),
+        })
         .setup(|app| {
             let app_handle = app.handle();
             
-            // Spawn background thread to read from PTY
+            // Spawn the read loop in a background thread
             std::thread::spawn(move || {
+                let mut reader = reader;
                 let mut buf = [0u8; 1024];
                 loop {
                     match reader.read(&mut buf) {
-                        Ok(n) => {
-                            if n == 0 {
-                                break;
-                            }
+                        Ok(n) if n > 0 => {
                             let data = String::from_utf8_lossy(&buf[..n]).to_string();
-                            let _ = app_handle.emit_all("pty-output", Payload { data });
+                            // emit_all works here because we are on Tauri v1
+                            app_handle.emit_all("pty-output", Payload { data }).ok();
                         }
-                        Err(_) => {
-                            break;
-                        }
+                        _ => break,
                     }
                 }
             });
-
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![write_to_pty])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
