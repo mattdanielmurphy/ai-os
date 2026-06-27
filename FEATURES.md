@@ -143,3 +143,8 @@
 ### [2026-06-27] Default CLI Wrapper Mode & CLI Development Script
 * **Default CLI execution:** Modified the global `bin/ai-os` wrapper to default to the native CLI terminal agent (`exec claude "$@"`) rather than Tauri GUI. Added a `--gui` flag to explicitly launch the Tauri GUI.
 * **`pnpm cli` development command:** Registered a new `"cli": "./bin/ai-os --cli"` script in `package.json` to allow developers to run the terminal-based agent directly via `pnpm cli`.
+
+### [2026-06-27] Default Agy CLI, Intercepted Help, and Parallelized PTYs
+* **Default Agy CLI:** Modified the `ai-os` global wrapper to default to the Orchestrated `agy` CLI agent instead of Claude. Supports `--claude` flag to explicitly request Claude.
+* **Intercepted `--help`:** Captured `-h` and `--help` flags in `bin/ai-os` to display custom CLI help text for `ai-os` itself, preventing it from forwarding to sub-agents.
+* **Parallelized PTY Spawning:** Refactored Tauri Rust backend `switch_active_project` to concurrently spawn the mini-terminal PTY and active engine PTY in separate OS threads, cutting startup/tab loading latency in half. Cached `is_tmux_available` check via `OnceLock`.
