@@ -52,3 +52,10 @@
 * **Terminal Layout Fix:** Swapped terminal-container classes to `flex-grow bg-black overflow-hidden min-h-0 relative p-2` in `index.html` to prevent bottom-row obscuration.
 * **Agy Binary Registration:** Registered `agy` global binary in `package.json` and ran `pnpm link --global .` to update system mapping.
 * **Orchestrator Core Script:** Created the executable `bin/agy` bash orchestrator which routes user prompts to the local OpenRouter proxy (LiteLLM on port 4000) requesting strict unified diffs and applies them surgically using native `patch`.
+
+### [2026-06-26] Phase 4: Context Integration, Cost Telemetry, & Engine Routing
+* **Engine Label Update:** Updated `index.html` toggle text to explicitly show `DeepSeek V4 Flash (Claude Code)` and `Agy (Orchestrated)`.
+* **Knowledge Routing Hook:** Added automatic inline prompt injection in `src/main.ts` that enforces Obsidian path constraint (`/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`) whenever the query contains the keyword "notes".
+* **Fixed Engine Routing:** Configured `src/main.ts` to route to Claude Code (`claude -p "[prompt]"`) or Orchestrated Agy (`agy --add-dir=$PWD --prompt "[prompt]" --dangerously-skip-permissions`).
+* **Cost Telemetry Execution:** Chained the `/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py` cost tracking script to PTY executions in `src/main.ts` via zsh sequential execution (`;`).
+* **macOS Profiling on Boot:** Updated `bin/ai-os` to automatically generate a static system profile (`memory/macOS_profile.md`) containing SPStorageDataType and active LaunchAgents on app startup.

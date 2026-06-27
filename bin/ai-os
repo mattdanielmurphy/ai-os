@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 
-# 1. Absolute anchor point
 export AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
 
-# 2. Global anchoring guardrails
-# Ensures that wherever this is run, ~ has the exact same context
 echo "[ai-os] Enforcing absolute context guardrails in ~/"
 ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md
 ln -sf "$AI_OS_HOME/MEMORY.md" ~/MEMORY.md
 ln -sfn "$AI_OS_HOME/memory" ~/memory
 
-# 3. Launch the App
-# (For now we launch the dev server, later this will run the compiled binary)
+# PHASE 4: macOS Profiling
+# Generate a static state document of the environment on boot
+PROFILE_PATH="$AI_OS_HOME/memory/macOS_profile.md"
+echo "[ai-os] Generating macOS system profile..."
+echo "# macOS System Profile (Auto-Generated)" > "$PROFILE_PATH"
+echo "## Storage & Volumes" >> "$PROFILE_PATH"
+system_profiler SPStorageDataType >> "$PROFILE_PATH" 2>/dev/null
+echo "## Active LaunchAgents" >> "$PROFILE_PATH"
+ls -la ~/Library/LaunchAgents >> "$PROFILE_PATH" 2>/dev/null
+
 cd "$AI_OS_HOME" || exit
 echo "[ai-os] Launching interface..."
 pnpm tauri dev

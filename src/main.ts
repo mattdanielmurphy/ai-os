@@ -64,35 +64,42 @@ const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement
 
 textarea?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault() // Stop a visual line break
+        e.preventDefault();
+        
+        const rawInput = textarea.value.trim();
+        if (!rawInput) return;
 
-        const rawInput = textarea.value.trim()
-        if (!rawInput) return
+        let processedInput = rawInput;
 
-        let commandToExecute = ''
-
-        if (currentEngine === 'claude') {
-            // Claude acts as a REPL environment. If the user is in Claude,
-            // send text verbatim. (If they aren't, this sends raw shell commands).
-            commandToExecute = rawInput
-        } else if (currentEngine === 'agy') {
-            // Run the prompt in the real agy CLI non-interactively
-            const escapedInput = rawInput.replace(/"/g, '\\"')
-            commandToExecute = `agy --add-dir=$PWD --prompt "${escapedInput}" --dangerously-skip-permissions`
+        // PHASE 4 HOOK: Obsidian Knowledge Routing
+        // If the user mentions notes, inject a strict system override into the prompt
+        if (processedInput.toLowerCase().includes('notes')) {
+            processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`;
         }
 
-        // Send formatted string to Rust, appended with newline to execute
-        invoke('write_to_pty', { data: commandToExecute + '\r' }).catch(
-            (err) => {
-                console.error('Failed to write to PTY:', err)
-                term.write(
-                    `\r\n\x1b[31mError writing to shell: ${err}\x1b[0m\r\n`
-                )
-            }
-        )
-        textarea.value = ''
+        // Escape quotes and flatten newlines so the bash command doesn't break
+        const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
+        let commandToExecute = '';
+
+        // FIXED ENGINE ROUTING
+        if (currentEngine === 'claude') {
+            // Force Claude Code CLI execution
+            commandToExecute = `claude -p "${escapedInput}"`;
+        } else if (currentEngine === 'agy') {
+            // Use the correct headless Antigravity syntax
+            commandToExecute = `agy --add-dir=$PWD --prompt "${escapedInput}" --dangerously-skip-permissions`;
+        }
+
+        // PHASE 4 HOOK: Cost Telemetry Execution
+        // Chain the python script to the end of the zsh command using standard bash sequential execution (;)
+        const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
+        commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
+
+        // Send to the PTY (\r executes the line)
+        invoke('write_to_pty', { data: commandToExecute + '\r' });
+        textarea.value = '';
     }
-})
+});
 
 // 5. Focus Management
 textarea?.focus()
