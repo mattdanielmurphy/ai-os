@@ -14,16 +14,18 @@ interface Project {
     name: string;
     color: string;
     lastActive: number; // timestamp
+    engine: 'claude' | 'agy';
+    promptDraft?: string;
 }
 
 // ----------------------------------------------------
 // 2. Global State Management
 // ----------------------------------------------------
 let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
-let isTerminalMode: boolean = false; // '!' mode
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
-const terminalBuffers: Record<string, string> = {};
+const engineBuffers: Record<string, string> = {};
+const miniTermBuffers: Record<string, string> = {};
 
 let pauseStatus: 'Running' | 'Pending' | 'Paused' = 'Running';
 const pauseBtnEl = document.getElementById('pause-btn');
@@ -60,17 +62,17 @@ listen<{ project_path: string, status: 'Running' | 'Pending' | 'Paused' }>('paus
     }
 });
 
-// Hardcoded initial projects list mapped with unique random colors
+// Hardcoded initial projects list mapped with unique random colors and default engines
 const initialProjects: Project[] = [
-    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now() },
-    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000 },
-    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000 },
-    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000 },
-    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000 },
-    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000 },
-    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000 },
-    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000 },
-    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000 }
+    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now(), engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000, engine: 'claude' },
+    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000, engine: 'claude' }
 ];
 
 // Load projects from localStorage or use initial list
@@ -78,7 +80,12 @@ let projects: Project[] = (() => {
     const saved = localStorage.getItem('ai-os-projects');
     if (saved) {
         try {
-            return JSON.parse(saved);
+            const list = JSON.parse(saved);
+            // Ensure all loaded projects have the engine property
+            return list.map((p: any) => ({
+                engine: 'claude',
+                ...p
+            }));
         } catch (e) {
             console.error('Failed to parse saved projects:', e);
         }
@@ -91,38 +98,60 @@ const saveProjects = () => {
 };
 
 // ----------------------------------------------------
-// 3. Terminal Setup & Integration
+// 3. Terminals Setup & Integration
 // ----------------------------------------------------
+
+// Engine TUI Terminal
 const term = new Terminal({
     cursorBlink: true,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     theme: { background: '#000000', foreground: '#ffffff' },
-})
-
+});
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
 
-// Handle direct input to terminal
 term.onData((data) => {
-    // Write direct key input to the PTY for the active project
-    invoke('write_to_pty', { data, projectPath: activeProject }).catch((err) => {
-        console.error('Failed to write direct key input to PTY:', err);
+    invoke('write_to_pty', { data, projectPath: activeProject, terminalType: 'engine' }).catch((err) => {
+        console.error('Failed to write key to Engine PTY:', err);
     });
 });
 
-// Helper function to fit and sync geometry with Rust
+// Mini Terminal
+const miniTerm = new Terminal({
+    cursorBlink: true,
+    fontSize: 12,
+    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    theme: { background: '#000000', foreground: '#10b981' }, // pastel green font for distinct look
+});
+const miniFitAddon = new FitAddon();
+miniTerm.loadAddon(miniFitAddon);
+
+miniTerm.onData((data) => {
+    invoke('write_to_pty', { data, projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
+        console.error('Failed to write key to Mini PTY:', err);
+    });
+});
+
 const resizePty = () => {
     fitAddon.fit();
-    invoke('resize_pty', { rows: term.rows, cols: term.cols, projectPath: activeProject }).catch((err) => {
-        console.error('Failed to resize PTY:', err);
+    miniFitAddon.fit();
+    invoke('resize_pty', { rows: term.rows, cols: term.cols, projectPath: activeProject, terminalType: 'engine' }).catch((err) => {
+        console.error('Failed to resize Engine PTY:', err);
+    });
+    invoke('resize_pty', { rows: miniTerm.rows, cols: miniTerm.cols, projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
+        console.error('Failed to resize Mini PTY:', err);
     });
 };
 
 const container = document.getElementById('terminal-container');
 if (container) {
     term.open(container);
-    // Add custom cursor styling logic or layout adjustments
+}
+
+const miniContainer = document.getElementById('mini-terminal-container');
+if (miniContainer) {
+    miniTerm.open(miniContainer);
 }
 
 window.addEventListener('resize', () => {
@@ -130,30 +159,76 @@ window.addEventListener('resize', () => {
 });
 
 // Listen to Backend PTY events
-listen<{ data: string, project_path: string }>('pty-output', (event) => {
-    const { data, project_path } = event.payload;
+listen<{ data: string, project_path: string, terminal_type: string }>('pty-output', (event) => {
+    const { data, project_path, terminal_type } = event.payload;
+    
+    // Choose correct buffer
+    const buffers = terminal_type === 'mini' ? miniTermBuffers : engineBuffers;
     
     // Append to cache buffer
-    if (!terminalBuffers[project_path]) {
-        terminalBuffers[project_path] = '';
+    if (!buffers[project_path]) {
+        buffers[project_path] = '';
     }
-    terminalBuffers[project_path] += data;
-    // Limit cache size to prevent massive leaks (~100k characters)
-    if (terminalBuffers[project_path].length > 100000) {
-        terminalBuffers[project_path] = terminalBuffers[project_path].substring(terminalBuffers[project_path].length - 50000);
+    buffers[project_path] += data;
+    // Limit cache size to prevent massive leaks
+    if (buffers[project_path].length > 100000) {
+        buffers[project_path] = buffers[project_path].substring(buffers[project_path].length - 50000);
     }
 
     // Only write output on screen if it belongs to the currently active project
     if (project_path === activeProject) {
-        term.write(data);
+        if (terminal_type === 'mini') {
+            miniTerm.write(data);
+        } else {
+            term.write(data);
+        }
     }
 });
 
 // ----------------------------------------------------
-// 4. UI Rendering: Sidebar & Project Swapper
+// 4. Splitter Drag Resizing Panel
+// ----------------------------------------------------
+const splitter = document.getElementById('pane-splitter');
+const panesContainer = document.getElementById('panes-container');
+
+if (splitter && miniContainer && panesContainer) {
+    let isDragging = false;
+    
+    splitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'row-resize';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const containerRect = panesContainer.getBoundingClientRect();
+        const newMiniHeight = containerRect.bottom - e.clientY - (splitter.offsetHeight / 2);
+        
+        const minHeight = 50;
+        const maxHeight = containerRect.height * 0.8;
+        
+        if (newMiniHeight >= minHeight && newMiniHeight <= maxHeight) {
+            miniContainer.style.height = `${newMiniHeight}px`;
+            resizePty();
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+        }
+    });
+}
+
+// ----------------------------------------------------
+// 5. UI Rendering: Sidebar & Project Swapper
 // ----------------------------------------------------
 const projectsListEl = document.getElementById('projects-list');
 const currentDirPathEl = document.getElementById('current-dir-path');
+const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement;
 
 const renderProjects = () => {
     if (!projectsListEl) return;
@@ -218,22 +293,45 @@ const renderProjects = () => {
 
 // Switch active project workspace
 const switchToProject = async (path: string) => {
+    // Save draft and engine setting of the current project before switching
+    const currentProj = projects.find(p => p.path === activeProject);
+    if (currentProj) {
+        currentProj.promptDraft = textarea ? textarea.value : '';
+        currentProj.engine = currentEngine;
+    }
+
     activeProject = path;
     
-    // Update lastActive timestamp
-    const proj = projects.find(p => p.path === path);
-    if (proj) {
-        proj.lastActive = Date.now();
+    // Update lastActive timestamp & restore state
+    const nextProj = projects.find(p => p.path === path);
+    if (nextProj) {
+        nextProj.lastActive = Date.now();
+        if (textarea) {
+            textarea.value = nextProj.promptDraft || '';
+        }
+        if (nextProj.engine) {
+            currentEngine = nextProj.engine;
+            const radio = document.querySelector(`input[name="engine"][value="${nextProj.engine}"]`) as HTMLInputElement;
+            if (radio) {
+                radio.checked = true;
+            }
+        }
         saveProjects();
     }
     
-    // Clear terminal screen and dump cached history
+    // Clear terminal screens and dump cached history
     term.reset();
-    if (terminalBuffers[path]) {
-        term.write(terminalBuffers[path]);
+    if (engineBuffers[path]) {
+        term.write(engineBuffers[path]);
     } else {
-        // First boot of shell, or empty cache.
-        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to project session at: ${path}...\x1b[0m\r\n`);
+        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${path}...\x1b[0m\r\n`);
+    }
+
+    miniTerm.reset();
+    if (miniTermBuffers[path]) {
+        miniTerm.write(miniTermBuffers[path]);
+    } else {
+        miniTerm.write(`\r\n\x1b[1;32m[ai-os] Connecting to Shell session at: ${path}...\x1b[0m\r\n`);
     }
 
     if (currentDirPathEl) {
@@ -257,7 +355,7 @@ const switchToProject = async (path: string) => {
             }
             if (startupCmd) {
                 setTimeout(() => {
-                    invoke('write_to_pty', { data: startupCmd, projectPath: path });
+                    invoke('write_to_pty', { data: startupCmd, projectPath: path, terminalType: 'engine' });
                 }, 500);
             }
         }
@@ -268,6 +366,7 @@ const switchToProject = async (path: string) => {
     // Restore or initialize PTY geometry sync
     resizePty();
     renderProjects();
+    adjustHeight();
 };
 
 // Add project button
@@ -297,7 +396,8 @@ addProjectBtn?.addEventListener('click', async () => {
         path: cleanPath,
         name,
         color: randomColor,
-        lastActive: Date.now()
+        lastActive: Date.now(),
+        engine: 'claude'
     };
     
     projects.push(newProj);
@@ -306,40 +406,22 @@ addProjectBtn?.addEventListener('click', async () => {
 });
 
 // ----------------------------------------------------
-// 5. Engine Toggle & Routing
+// 6. Engine Toggle & Routing
 // ----------------------------------------------------
 let currentEngine: 'claude' | 'agy' = 'claude'
 const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]')
 
 engineRadios.forEach((radio) => {
     radio.addEventListener('change', (e) => {
-        currentEngine = (e.target as HTMLInputElement).value as 'claude' | 'agy'
-    })
-})
-
-// ----------------------------------------------------
-// 6. Mode Switch: Terminal Mode VS Prompt Mode
-// ----------------------------------------------------
-const modeBadgeEl = document.getElementById('mode-badge');
-const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement;
-const terminalExitHintEl = document.getElementById('terminal-exit-hint');
-
-const setMode = (terminalMode: boolean) => {
-    isTerminalMode = terminalMode;
-    if (modeBadgeEl) {
-        if (terminalMode) {
-            modeBadgeEl.textContent = 'Terminal Mode';
-            modeBadgeEl.className = 'px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
-            textarea.placeholder = "Terminal command mode active. Type command (e.g. 'ls', 'git status', 'exit') and Enter...";
-            terminalExitHintEl?.classList.remove('hidden');
-        } else {
-            modeBadgeEl.textContent = 'Prompt Mode';
-            modeBadgeEl.className = 'px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30';
-            textarea.placeholder = "Type a command or prompt... (Type '!' at start for Terminal Mode, Enter to send)";
-            terminalExitHintEl?.classList.add('hidden');
+        currentEngine = (e.target as HTMLInputElement).value as 'claude' | 'agy';
+        // Persist setting on the active project
+        const currentProj = projects.find(p => p.path === activeProject);
+        if (currentProj) {
+            currentProj.engine = currentEngine;
+            saveProjects();
         }
-    }
-};
+    });
+});
 
 // ----------------------------------------------------
 // 7. Input Interception & Routing
@@ -353,50 +435,14 @@ const adjustHeight = () => {
 };
 
 textarea?.addEventListener('keydown', async (e) => {
-    // If escape key is pressed, exit terminal mode
-    if (e.key === 'Escape' && isTerminalMode) {
-        setMode(false);
-        textarea.value = '';
-        adjustHeight();
-        return;
-    }
-
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         
         let rawInput = textarea.value;
-        
-        // Check for '!' trigger at the beginning to change modes
-        if (rawInput.trim().startsWith('!')) {
-            // strip out ! and change mode to terminal mode
-            const cmd = rawInput.trim().substring(1).trim();
-            setMode(true);
-            textarea.value = cmd;
-            adjustHeight();
-            return;
-        }
-
         const trimmedInput = rawInput.trim();
         if (!trimmedInput) return;
 
-        // If in terminal mode and user types 'exit', exit terminal mode
-        if (isTerminalMode && (trimmedInput === 'exit' || trimmedInput === 'exit()')) {
-            setMode(false);
-            textarea.value = '';
-            adjustHeight();
-            return;
-        }
-
-        if (isTerminalMode) {
-            // Write command directly to active project shell PTY
-            const dataToSend = trimmedInput + '\r';
-            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject });
-            textarea.value = '';
-            adjustHeight();
-            return;
-        }
-
-        // --- Prompt Mode Engine Routing Logic ---
+        // Prompt Mode Engine Routing Logic
         let processedInput = trimmedInput;
 
         // Obsidian Knowledge Routing
@@ -414,7 +460,7 @@ textarea?.addEventListener('keydown', async (e) => {
         if (isRunning) {
             // Send prompt raw directly to the running interactive interface (stdin)
             const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
-            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject });
+            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'engine' });
         } else {
             // Escape quotes and flatten newlines so the bash command doesn't break
             const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
@@ -435,13 +481,13 @@ textarea?.addEventListener('keydown', async (e) => {
 
             if (isBypass) {
                 // Send command to active project PTY without clearing
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject });
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: 'engine' });
             } else {
                 // Send clear context command
-                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject });
+                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'engine' });
                 await new Promise((resolve) => setTimeout(resolve, 450));
                 // Send command
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject });
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: 'engine' });
             }
         }
 
@@ -475,11 +521,16 @@ textarea?.focus();
 document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     const selection = window.getSelection();
-    const isTerminalClick = container?.contains(target);
+    
+    // Focus appropriate terminal or textarea
+    const isEngineTermClick = container?.contains(target);
+    const isMiniTermClick = miniContainer?.contains(target);
     const isSidebarClick = document.getElementById('projects-sidebar')?.contains(target);
 
-    if (isTerminalClick) {
+    if (isEngineTermClick) {
         term.focus();
+    } else if (isMiniTermClick) {
+        miniTerm.focus();
     } else if (!isSidebarClick && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && (!selection || selection.toString() === '')) {
         textarea?.focus();
     }
@@ -490,4 +541,3 @@ document.addEventListener('click', (e) => {
     await switchToProject(activeProject);
     renderProjects();
 })();
-
