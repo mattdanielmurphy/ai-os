@@ -96,8 +96,8 @@ textarea?.addEventListener('keydown', async (e) => {
             // Force Claude Code CLI execution
             commandToExecute = `claude -p "${escapedInput}"`;
         } else if (currentEngine === 'agy') {
-            // Use the correct headless Antigravity syntax
-            commandToExecute = `agy --add-dir=$PWD --prompt "${escapedInput}" --dangerously-skip-permissions`;
+            // Use the correct interactive Antigravity syntax
+            commandToExecute = `agy --add-dir=$PWD -i "${escapedInput}" --dangerously-skip-permissions`;
         }
 
         // PHASE 4 HOOK: Cost Telemetry Execution
