@@ -4,7 +4,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 53.68 GB (53 681 856 512 bytes)
+      Free: 53.62 GB (53 619 335 168 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Update/mnt1
       File System: APFS
@@ -23,7 +23,7 @@ Storage:
 
     Data:
 
-      Free: 53.68 GB (53 681 856 512 bytes)
+      Free: 53.62 GB (53 619 335 168 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Data
       File System: APFS
@@ -42,7 +42,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 53.68 GB (53 681 856 512 bytes)
+      Free: 53.62 GB (53 619 335 168 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /
       File System: APFS
