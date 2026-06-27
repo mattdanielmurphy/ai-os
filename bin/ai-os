@@ -18,5 +18,12 @@ echo "## Active LaunchAgents" >> "$PROFILE_PATH"
 ls -la ~/Library/LaunchAgents >> "$PROFILE_PATH" 2>/dev/null
 
 cd "$AI_OS_HOME" || exit
-echo "[ai-os] Launching interface..."
-pnpm tauri dev
+
+if [ "$1" = "--cli" ]; then
+    shift
+    echo "[ai-os] Launching native terminal agent..."
+    exec claude "$@"
+else
+    echo "[ai-os] Launching GUI interface..."
+    pnpm tauri dev
+fi
