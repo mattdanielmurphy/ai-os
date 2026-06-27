@@ -25,12 +25,12 @@ CLIENT_SECRET = "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"
 
 def get_antigravity_quota():
     if not TOKEN_PATH.exists():
-        return 1.0, 1.0
+        return None, None, False
     
     try:
         token_data = json.loads(TOKEN_PATH.read_text())
     except Exception:
-        return 1.0, 1.0
+        return None, None, False
 
     token_info = token_data.get("token", {})
     refresh_token_val = token_info.get("refresh_token")
@@ -38,7 +38,7 @@ def get_antigravity_quota():
     expiry_str = token_info.get("expiry")
 
     if not refresh_token_val:
-        return 1.0, 1.0
+        return None, None, False
 
     is_expired = True
     if expiry_str:
@@ -75,7 +75,7 @@ def get_antigravity_quota():
             pass
 
     if not access_token:
-        return 1.0, 1.0
+        return None, None, False
 
     quota_url = "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
     req = urllib.request.Request(
@@ -88,8 +88,9 @@ def get_antigravity_quota():
         method="POST"
     )
     
-    quota_5h = 1.0
-    quota_week = 1.0
+    quota_5h = None
+    quota_week = None
+    is_real = False
     try:
         with urllib.request.urlopen(req) as res:
             resp = json.loads(res.read().decode())
@@ -99,12 +100,36 @@ def get_antigravity_quota():
                 fraction = bucket.get("remainingFraction", 1.0)
                 if model_id == "gemini-2.5-pro":
                     quota_5h = fraction
+                    is_real = True
                 elif model_id == "gemini-2.5-flash":
                     quota_week = fraction
+                    is_real = True
     except Exception:
         pass
 
-    return quota_5h, quota_week
+    return quota_5h, quota_week, is_real
+
+def get_local_quotas():
+    try:
+        db = telemetry_db.load_db()
+        turns = db.get("agy_turns", [])
+    except Exception:
+        turns = []
+    
+    now = time.time()
+    five_hours_ago = now - 5 * 3600
+    one_week_ago = now - 7 * 24 * 3600
+    
+    turns_5h = [t for t in turns if t >= five_hours_ago]
+    turns_week = [t for t in turns if t >= one_week_ago]
+    
+    quota_5h_rem = max(0, LIMIT_5H - len(turns_5h))
+    quota_week_rem = max(0, LIMIT_WEEK - len(turns_week))
+    
+    quota_5h_pct = (quota_5h_rem / LIMIT_5H)
+    quota_week_pct = (quota_week_rem / LIMIT_WEEK)
+    
+    return quota_5h_pct, quota_week_pct
 
 def get_stats():
     db = telemetry_db.load_db()
@@ -135,16 +160,25 @@ def main():
     
     if args.agent == "agy":
         cost_turn, cost_total = get_stats()
-        quota_5h, quota_week = get_antigravity_quota()
+        quota_5h, quota_week, is_real = get_antigravity_quota()
         
-        quota_5h_pct = int(quota_5h * 100)
-        quota_week_pct = int(quota_week * 100)
+        if not is_real or quota_5h is None or quota_week is None:
+            quota_5h_pct_val, quota_week_pct_val = get_local_quotas()
+            quota_5h_pct = int(quota_5h_pct_val * 100)
+            quota_week_pct = int(quota_week_pct_val * 100)
+            real_tag_5h = ""
+            real_tag_week = ""
+        else:
+            quota_5h_pct = int(quota_5h * 100)
+            quota_week_pct = int(quota_week * 100)
+            real_tag_5h = " (Real)"
+            real_tag_week = " (Real)"
         
         print("[AGY TELEMETRY]")
         print(f"Delegated Sub-Model Cost (Turn): ${cost_turn:.4f}")
         print(f"Delegated Sub-Model Cost (Total): ${cost_total:.4f}")
-        print(f"AGY Quota Remaining (5hr): {quota_5h_pct}% (Real)")
-        print(f"AGY Quota Remaining (Weekly): {quota_week_pct}% (Real)***")
+        print(f"AGY Quota Remaining (5hr): {quota_5h_pct}%{real_tag_5h}")
+        print(f"AGY Quota Remaining (Weekly): {quota_week_pct}%{real_tag_week}***")
     else:
         cost_turn, cost_total = get_stats()
         print(f"[TELEMETRY] Sub-Model Cost This Turn: ${cost_turn:.4f} | Total Delegated Cost: ${cost_total:.4f}")
