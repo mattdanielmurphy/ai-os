@@ -26,7 +26,8 @@ let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
 let isTerminalMode: boolean = false;
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
-const engineBuffers: Record<string, string> = {};
+const claudeBuffers: Record<string, string> = {};
+const agyBuffers: Record<string, string> = {};
 const miniTermBuffers: Record<string, string> = {};
 
 let pauseStatus: 'Running' | 'Pending' | 'Paused' = 'Running';
@@ -66,15 +67,15 @@ listen<{ project_path: string, status: 'Running' | 'Pending' | 'Paused' }>('paus
 
 // Hardcoded initial projects list mapped with unique random colors and default engines
 const initialProjects: Project[] = [
-    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now(), engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000, engine: 'claude', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000, engine: 'claude', isTerminalMode: false }
+    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now(), engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000, engine: 'agy', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000, engine: 'agy', isTerminalMode: false }
 ];
 
 // Load projects from localStorage or use initial list
@@ -85,7 +86,7 @@ let projects: Project[] = (() => {
             const list = JSON.parse(saved);
             // Ensure all loaded projects have the engine and isTerminalMode properties
             return list.map((p: any) => ({
-                engine: 'claude',
+                engine: 'agy',
                 isTerminalMode: false,
                 ...p
             }));
@@ -115,7 +116,7 @@ const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
 
 term.onData((data) => {
-    invoke('write_to_pty', { data, projectPath: activeProject, terminalType: 'engine' }).catch((err) => {
+    invoke('write_to_pty', { data, projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
         console.error('Failed to write key to Engine PTY:', err);
     });
 });
@@ -201,7 +202,12 @@ listen<{ data: string, project_path: string, terminal_type: string }>('pty-outpu
     const { data, project_path, terminal_type } = event.payload;
     
     // Choose correct buffer
-    const buffers = terminal_type === 'mini' ? miniTermBuffers : engineBuffers;
+    let buffers = miniTermBuffers;
+    if (terminal_type === 'claude') {
+        buffers = claudeBuffers;
+    } else if (terminal_type === 'agy') {
+        buffers = agyBuffers;
+    }
     
     // Append to cache buffer
     if (!buffers[project_path]) {
@@ -217,7 +223,7 @@ listen<{ data: string, project_path: string, terminal_type: string }>('pty-outpu
     if (project_path === activeProject) {
         if (terminal_type === 'mini') {
             miniTerm.write(data);
-        } else {
+        } else if (terminal_type === currentEngine) {
             term.write(data);
         }
     }
@@ -327,6 +333,9 @@ const renderProjects = () => {
                 // Delete project
                 projects = projects.filter(p => p.path !== project.path);
                 saveProjects();
+                invoke('close_project_session', { projectPath: project.path }).catch((err) => {
+                    console.error('Failed to close project session in Rust:', err);
+                });
                 // If deleted active, switch to first available
                 if (activeProject === project.path && projects.length > 0) {
                     switchToProject(projects[0].path);
@@ -387,8 +396,9 @@ const switchToProject = async (path: string) => {
     
     // Clear terminal screens and dump cached history
     term.reset();
-    if (engineBuffers[path]) {
-        term.write(engineBuffers[path]);
+    const activeBuffers = currentEngine === 'claude' ? claudeBuffers : agyBuffers;
+    if (activeBuffers[path]) {
+        term.write(activeBuffers[path]);
     } else {
         term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${path}...\x1b[0m\r\n`);
     }
@@ -409,7 +419,7 @@ const switchToProject = async (path: string) => {
     
     // Request Rust backend to load/switch the project shell session
     try {
-        const result = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { projectPath: path });
+        const result = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { projectPath: path, engine: currentEngine });
         
         // Auto-spawn active engine if this session is brand new (e.g. fresh tmux session)
         if (result.is_new_session) {
@@ -421,7 +431,7 @@ const switchToProject = async (path: string) => {
             }
             if (startupCmd) {
                 setTimeout(() => {
-                    invoke('write_to_pty', { data: startupCmd, projectPath: path, terminalType: 'engine' });
+                    invoke('write_to_pty', { data: startupCmd, projectPath: path, terminalType: currentEngine });
                 }, 500);
             }
         }
@@ -463,7 +473,7 @@ addProjectBtn?.addEventListener('click', async () => {
         name,
         color: randomColor,
         lastActive: Date.now(),
-        engine: 'claude',
+        engine: 'agy',
         isTerminalMode: false
     };
     
@@ -475,11 +485,11 @@ addProjectBtn?.addEventListener('click', async () => {
 // ----------------------------------------------------
 // 7. Engine Toggle & Routing
 // ----------------------------------------------------
-let currentEngine: 'claude' | 'agy' = 'claude'
+let currentEngine: 'claude' | 'agy' = 'agy'
 const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]')
 
 engineRadios.forEach((radio) => {
-    radio.addEventListener('change', (e) => {
+    radio.addEventListener('change', async (e) => {
         currentEngine = (e.target as HTMLInputElement).value as 'claude' | 'agy';
         // Persist setting on the active project
         const currentProj = projects.find(p => p.path === activeProject);
@@ -487,6 +497,42 @@ engineRadios.forEach((radio) => {
             currentProj.engine = currentEngine;
             saveProjects();
         }
+        
+        // Reset terminal screen and show matching engine buffer
+        term.reset();
+        const activeBuffers = currentEngine === 'claude' ? claudeBuffers : agyBuffers;
+        if (activeBuffers[activeProject]) {
+            term.write(activeBuffers[activeProject]);
+        } else {
+            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${activeProject}...\x1b[0m\r\n`);
+        }
+
+        try {
+            // Lazy spawn or switch to the engine on backend
+            const result = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
+                projectPath: activeProject, 
+                engine: currentEngine 
+            });
+
+            // Auto-spawn active engine if this session is brand new (e.g. fresh tmux session)
+            if (result.is_new_session) {
+                let startupCmd = '';
+                if (currentEngine === 'claude') {
+                    startupCmd = 'claude\r';
+                } else if (currentEngine === 'agy') {
+                    startupCmd = 'agy --add-dir=$PWD --dangerously-skip-permissions\r';
+                }
+                if (startupCmd) {
+                    setTimeout(() => {
+                        invoke('write_to_pty', { data: startupCmd, projectPath: activeProject, terminalType: currentEngine });
+                    }, 500);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to toggle engine session on backend:', err);
+        }
+        
+        resizePty();
     });
 });
 
@@ -544,7 +590,7 @@ textarea?.addEventListener('keydown', async (e) => {
         if (isRunning) {
             // Send prompt raw directly to the running interactive interface (stdin)
             const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
-            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'engine' });
+            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
         } else {
             // Escape quotes and flatten newlines so the bash command doesn't break
             const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
@@ -565,13 +611,13 @@ textarea?.addEventListener('keydown', async (e) => {
 
             if (isBypass) {
                 // Send command to active project PTY without clearing
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: 'engine' });
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
             } else {
                 // Send clear context command
-                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'engine' });
+                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
                 await new Promise((resolve) => setTimeout(resolve, 450));
                 // Send command
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: 'engine' });
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
             }
         }
 

@@ -6,9 +6,12 @@ use tauri::Manager;
 
 // Project session containing its own PTY channels and shell process details
 struct ProjectSession {
-    engine_writer: Box<dyn Write + Send>,
-    engine_master: Box<dyn MasterPty + Send>,
-    engine_pid: u32,
+    claude_writer: Option<Box<dyn Write + Send>>,
+    claude_master: Option<Box<dyn MasterPty + Send>>,
+    claude_pid: Option<u32>,
+    agy_writer: Option<Box<dyn Write + Send>>,
+    agy_master: Option<Box<dyn MasterPty + Send>>,
+    agy_pid: Option<u32>,
     mini_writer: Box<dyn Write + Send>,
     mini_master: Box<dyn MasterPty + Send>,
     mini_pid: u32,
@@ -47,24 +50,19 @@ fn has_tmux_session(session_name: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn get_tmux_session_name(project_path: &str, is_mini: bool) -> String {
+fn get_tmux_session_name(project_path: &str, terminal_type: &str) -> String {
     let sanitized: String = project_path
         .chars()
         .map(|c| if c.is_alphanumeric() { c } else { '_' })
         .collect();
-    if is_mini {
-        format!("ai_os_mini_{}", sanitized.trim_matches('_'))
-    } else {
-        format!("ai_os_{}", sanitized.trim_matches('_'))
-    }
+    format!("ai_os_{}_{}", terminal_type, sanitized.trim_matches('_'))
 }
 
 // Spawns a single PTY session
 fn spawn_single_pty(
     project_path: &str,
-    is_mini: bool,
-    app_handle: &tauri::AppHandle,
     terminal_type: &str,
+    app_handle: &tauri::AppHandle,
 ) -> Result<(Box<dyn Write + Send>, Box<dyn MasterPty + Send>, u32, bool), String> {
     let pty_system = NativePtySystem::default();
     let pair = pty_system.openpty(PtySize {
@@ -76,7 +74,7 @@ fn spawn_single_pty(
 
     let mut is_new_tmux = false;
     let cmd = if is_tmux_available() {
-        let session_name = get_tmux_session_name(project_path, is_mini);
+        let session_name = get_tmux_session_name(project_path, terminal_type);
         if !has_tmux_session(&session_name) {
             is_new_tmux = true;
         }
@@ -121,36 +119,35 @@ fn spawn_single_pty(
     Ok((writer, pair.master, shell_pid, is_new_tmux))
 }
 
-// Spawns new shell PTYs (engine & mini) for a specific project directory
-fn spawn_project_pty(
+fn ensure_engine_pty(
     project_path: &str,
+    engine: &str,
     app_handle: &tauri::AppHandle,
-    sessions_ref: Arc<Mutex<HashMap<String, ProjectSession>>>,
+    session: &mut ProjectSession,
 ) -> Result<(u32, bool), String> {
-    let (engine_writer, engine_master, engine_pid, is_new_tmux) = 
-        spawn_single_pty(project_path, false, app_handle, "engine")?;
-        
-    let (mini_writer, mini_master, mini_pid, _) = 
-        spawn_single_pty(project_path, true, app_handle, "mini")?;
-
-    // Store in sessions map
-    {
-        let mut sessions = sessions_ref.lock().map_err(|e| e.to_string())?;
-        sessions.insert(
-            project_path.to_string(),
-            ProjectSession {
-                engine_writer,
-                engine_master,
-                engine_pid,
-                mini_writer,
-                mini_master,
-                mini_pid,
-                project_path: project_path.to_string(),
-            },
-        );
+    if engine == "claude" {
+        if session.claude_pid.is_none() {
+            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "claude", app_handle)?;
+            session.claude_writer = Some(writer);
+            session.claude_master = Some(master);
+            session.claude_pid = Some(pid);
+            Ok((pid, is_new))
+        } else {
+            Ok((session.claude_pid.unwrap(), false))
+        }
+    } else if engine == "agy" {
+        if session.agy_pid.is_none() {
+            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "agy", app_handle)?;
+            session.agy_writer = Some(writer);
+            session.agy_master = Some(master);
+            session.agy_pid = Some(pid);
+            Ok((pid, is_new))
+        } else {
+            Ok((session.agy_pid.unwrap(), false))
+        }
+    } else {
+        Err(format!("Unknown engine: {}", engine))
     }
-
-    Ok((engine_pid, is_new_tmux))
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -161,37 +158,58 @@ struct SwitchResult {
 
 #[tauri::command]
 fn initialize_project_session(project_path: String, state: tauri::State<AppState>) -> Result<u32, String> {
-    let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    if let Some(session) = sessions.get(&project_path) {
-        return Ok(session.engine_pid);
+    let app_handle = state.app_handle.clone();
+    let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+    if !sessions.contains_key(&project_path) {
+        let (mini_writer, mini_master, mini_pid, _) = spawn_single_pty(&project_path, "mini", &app_handle)?;
+        sessions.insert(
+            project_path.clone(),
+            ProjectSession {
+                claude_writer: None,
+                claude_master: None,
+                claude_pid: None,
+                agy_writer: None,
+                agy_master: None,
+                agy_pid: None,
+                mini_writer,
+                mini_master,
+                mini_pid,
+                project_path: project_path.clone(),
+            },
+        );
     }
-    drop(sessions); // release lock before spawning to avoid deadlock
-
-    let (pid, _) = spawn_project_pty(&project_path, &state.app_handle, state.sessions.clone())?;
+    let session = sessions.get_mut(&project_path).unwrap();
+    let (pid, _) = ensure_engine_pty(&project_path, "agy", &app_handle, session)?;
     Ok(pid)
 }
 
 #[tauri::command]
-fn switch_active_project(project_path: String, state: tauri::State<AppState>) -> Result<SwitchResult, String> {
-    let mut is_new_session = false;
-    let mut shell_pid = 0;
+fn switch_active_project(project_path: String, engine: String, state: tauri::State<AppState>) -> Result<SwitchResult, String> {
+    let app_handle = state.app_handle.clone();
 
-    // First, ensure the session exists. If not, create it.
-    let exists = {
-        let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-        if let Some(session) = sessions.get(&project_path) {
-            shell_pid = session.engine_pid;
-            true
-        } else {
-            false
-        }
-    };
-
-    if !exists {
-        let (pid, is_new) = spawn_project_pty(&project_path, &state.app_handle, state.sessions.clone())?;
-        shell_pid = pid;
-        is_new_session = is_new;
+    let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+    let is_new_proj = !sessions.contains_key(&project_path);
+    if is_new_proj {
+        let (mini_writer, mini_master, mini_pid, _) = spawn_single_pty(&project_path, "mini", &app_handle)?;
+        sessions.insert(
+            project_path.clone(),
+            ProjectSession {
+                claude_writer: None,
+                claude_master: None,
+                claude_pid: None,
+                agy_writer: None,
+                agy_master: None,
+                agy_pid: None,
+                mini_writer,
+                mini_master,
+                mini_pid,
+                project_path: project_path.clone(),
+            },
+        );
     }
+
+    let session = sessions.get_mut(&project_path).unwrap();
+    let (shell_pid, is_new_session) = ensure_engine_pty(&project_path, &engine, &app_handle, session)?;
 
     let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
     *active = Some(project_path);
@@ -206,13 +224,21 @@ fn write_to_pty(data: String, project_path: String, terminal_type: String, state
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     if let Some(session) = sessions.get_mut(&project_path) {
         let writer = if terminal_type == "mini" {
-            &mut session.mini_writer
+            Some(&mut session.mini_writer)
+        } else if terminal_type == "claude" {
+            session.claude_writer.as_mut()
+        } else if terminal_type == "agy" {
+            session.agy_writer.as_mut()
         } else {
-            &mut session.engine_writer
+            None
         };
-        writer.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
-        writer.flush().map_err(|e| e.to_string())?;
-        Ok(())
+        if let Some(w) = writer {
+            w.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+            w.flush().map_err(|e| e.to_string())?;
+            Ok(())
+        } else {
+            Err(format!("PTY session not initialized for: {}", terminal_type))
+        }
     } else {
         Err(format!("No PTY session found for project: {}", project_path))
     }
@@ -222,17 +248,22 @@ fn write_to_pty(data: String, project_path: String, terminal_type: String, state
 fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String, state: tauri::State<AppState>) -> Result<(), String> {
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     if let Some(session) = sessions.get(&project_path) {
-        let master = if terminal_type == "mini" {
-            &session.mini_master
-        } else {
-            &session.engine_master
-        };
-        master.resize(PtySize {
+        let size = PtySize {
             rows,
             cols,
             pixel_width: 0,
             pixel_height: 0,
-        }).map_err(|e| e.to_string())?;
+        };
+        if terminal_type == "mini" {
+            session.mini_master.resize(size).map_err(|e| e.to_string())?;
+        } else {
+            if let Some(ref claude_master) = session.claude_master {
+                let _ = claude_master.resize(size);
+            }
+            if let Some(ref agy_master) = session.agy_master {
+                let _ = agy_master.resize(size);
+            }
+        }
         Ok(())
     } else {
         Err(format!("No PTY session found for project: {}", project_path))
@@ -243,7 +274,17 @@ fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String,
 fn is_engine_running(engine: String, project_path: String, state: tauri::State<AppState>) -> Result<bool, String> {
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     let shell_pid = match sessions.get(&project_path) {
-        Some(s) => s.engine_pid,
+        Some(s) => {
+            if engine == "claude" {
+                s.claude_pid
+            } else {
+                s.agy_pid
+            }
+        }
+        None => return Ok(false),
+    };
+    let shell_pid = match shell_pid {
+        Some(pid) => pid,
         None => return Ok(false),
     };
     drop(sessions);
@@ -399,11 +440,19 @@ struct PauseStatusPayload {
 }
 
 #[tauri::command]
-fn toggle_process_pause(project_path: String, pause: bool, state: tauri::State<AppState>) -> Result<(), String> {
+fn toggle_process_pause(project_path: String, engine: String, pause: bool, state: tauri::State<AppState>) -> Result<(), String> {
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     let session = sessions.get(&project_path)
         .ok_or_else(|| format!("No active session for path: {}", project_path))?;
-    let shell_pid = session.engine_pid;
+    let shell_pid = if engine == "claude" {
+        session.claude_pid
+    } else {
+        session.agy_pid
+    };
+    let shell_pid = match shell_pid {
+        Some(pid) => pid,
+        None => return Err(format!("Engine {} is not running", engine)),
+    };
     drop(sessions);
 
     if shell_pid == 0 {
@@ -461,6 +510,20 @@ fn toggle_process_pause(project_path: String, pause: bool, state: tauri::State<A
     Ok(())
 }
 
+#[tauri::command]
+fn close_project_session(project_path: String, state: tauri::State<AppState>) -> Result<(), String> {
+    let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+    if let Some(_) = sessions.remove(&project_path) {
+        for term_type in &["claude", "agy", "mini"] {
+            let session_name = get_tmux_session_name(&project_path, term_type);
+            let _ = std::process::Command::new("tmux")
+                .args(&["kill-session", "-t", &session_name])
+                .status();
+        }
+    }
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -484,7 +547,8 @@ fn main() {
             write_to_pty,
             resize_pty,
             is_engine_running,
-            toggle_process_pause
+            toggle_process_pause,
+            close_project_session
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
