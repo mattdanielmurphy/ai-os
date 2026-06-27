@@ -101,3 +101,9 @@
 * **Rules Ledger Cleanup:** Cleaned up `~/.gemini/GEMINI.md` by stripping out Claude-specific rules and established a clean, dedicated `/Users/matthewmurphy/projects/ai-os/CLAUDE.md` containing global rules and Claude-specific cost telemetry guidelines.
 * **PTY Terminal `rm` Hook:** Created `.zshrc_aios` and `.zshrc` in the project root to intercept the `rm` command, redirecting users to use `mv <file> ~/.Trash/` instead, and exported `ZDOTDIR` in the bootloader `bin/ai-os` to load these custom hooks.
 * **Advanced macOS Profiling:** Enhanced the system profiling in the `bin/ai-os` bootloader to collect connected display specifications (`system_profiler SPDisplaysDataType`) and active Hammerspoon configuration entries (`~/.hammerspoon/init.lua`) into the generated `memory/macOS_profile.md` log.
+
+### [2026-06-27] Phase 6: Accurate Telemetry, Quota Tracking, & Sub-Model Costing
+* **Centralized Telemetry Database:** Implemented `scripts/telemetry_db.py` to record sub-model LiteLLM calls (with prompt/completion token details and DeepSeek-based pricing calculations) and track `agy` execution turns in a local database `~/.ai-os-telemetry.json`.
+* **Orchestrator Cost Interception:** Modified `scripts/mechanical_editor.py` to intercept the `usage` block from the LiteLLM API response and log metrics to `telemetry_db.py` on success.
+* **Smart Cost & Quota Reporter:** Rewrote `scripts/get_last_cost.py` to support `--agent claude` and `--agent agy` flags, outputting sub-model metrics for Claude, and logging turns while tracking rolling turn limits (50 turns/5hr and 200 turns/weekly) for Agy.
+* **System Telemetry Rules:** Injected new agent rules using `append_system_rule.py` to require Agy and Claude to run `get_last_cost.py` at the end of every turn.

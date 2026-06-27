@@ -6,3 +6,4 @@
 
 ## CLAUDE-SPECIFIC RULES
 - Cost Telemetry: At the end of every single turn, you MUST call `/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py` to report token usage and cost.
+- Cost Telemetry: At the end of every single turn, you MUST run /Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py --agent claude to report the true delegated cost.

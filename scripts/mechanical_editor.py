@@ -29,6 +29,22 @@ def call_litellm(prompt, response_format=None):
         with urllib.request.urlopen(req) as response:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
+            
+            # Extract usage metrics
+            prompt_tokens = res_json.get("usage", {}).get("prompt_tokens", 0)
+            completion_tokens = res_json.get("usage", {}).get("completion_tokens", 0)
+            model = res_json.get("model", "unknown")
+            
+            # Log metrics if telemetry available
+            try:
+                import sys
+                from pathlib import Path
+                sys.path.append(str(Path(__file__).parent))
+                import telemetry_db
+                telemetry_db.log_sub_model_cost(model, prompt_tokens, completion_tokens)
+            except Exception as e:
+                print(f"Warning: Failed to log telemetry: {e}", file=sys.stderr)
+            
             return res_json["choices"][0]["message"]["content"]
     except urllib.error.URLError as e:
         print(f"Error connecting to LiteLLM proxy: {e}", file=sys.stderr)

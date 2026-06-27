@@ -1,90 +1,78 @@
 #!/usr/bin/env python3
-"""
-Track per-message OpenRouter cost by computing deltas from the credits endpoint.
-
-Stores the last-known total usage in .last_usage so each invocation can
-report the cost of the single exchange since the last call.
-"""
-
 import json
 import os
-import urllib.request
-import urllib.error
 import sys
+import time
+import datetime
+import argparse
 from pathlib import Path
 
-API_KEY = os.getenv("OPENROUTER_API_KEY")
-STATE_FILE = Path(__file__).parent / ".last_usage"
+# Add parent directory to sys.path to import telemetry_db
+sys.path.append(str(Path(__file__).parent))
+try:
+    import telemetry_db
+except ImportError:
+    # Fallback if telemetry_db is in the same directory but sys.path isn't updated
+    pass
 
+LIMIT_5H = 50
+LIMIT_WEEK = 200
 
-def fetch_total_usage():
-    """Return (total_usage, remaining_credits) from OpenRouter, or None on error."""
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
-    req = urllib.request.Request(
-        "https://openrouter.ai/api/v1/credits",
-        headers=headers,
-        method="GET",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            body = json.loads(resp.read().decode())
-    except (urllib.error.URLError, json.JSONDecodeError) as e:
-        return None, None
-
-    data = body.get("data", {})
-    total = data.get("total_usage")
-    credits = data.get("total_credits")
-    return total, credits
-
+def get_stats():
+    db = telemetry_db.load_db()
+    sub_model_costs = db.get("sub_model_costs", [])
+    agy_turns = db.get("agy_turns", [])
+    
+    now = time.time()
+    ten_minutes_ago = now - 600
+    
+    # Calculate midnight today (local time)
+    local_midnight = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    
+    cost_turn = 0.0
+    cost_total = 0.0
+    
+    for item in sub_model_costs:
+        ts = item.get("timestamp", 0)
+        cost = item.get("calculated_cost", 0.0)
+        if ts >= ten_minutes_ago:
+            cost_turn += cost
+        if ts >= local_midnight:
+            cost_total += cost
+            
+    return cost_turn, cost_total, agy_turns
 
 def main():
-    if not API_KEY:
-        print("⚠️  [Cost] OPENROUTER_API_KEY not set")
-        return
-
-    current, remaining_budget = fetch_total_usage()
-    if current is None:
-        print("⚠️  [Cost] Could not reach OpenRouter credits endpoint")
-        return
-
-    # Read previous total from state file
-    previous = None
-    if STATE_FILE.exists():
-        try:
-            previous = float(STATE_FILE.read_text().strip())
-        except (ValueError, OSError):
-            pass
-
-    # Save current for next invocation
-    STATE_FILE.write_text(str(current))
-
-    if previous is None:
-        print(f"── OpenRouter ──────────────────────")
-        print(f"  Total usage:   ${current:.6f}")
-        if remaining_budget is not None:
-            print(f"  Remaining:     ${remaining_budget - current:.6f}")
-        print(f"────────────────────────────────────")
-        return
-
-    delta = current - previous
-    if delta < 0:
-        # Usage reset or data issue — show running total
-        print(f"── OpenRouter ──────────────────────")
-        print(f"  Total usage:  ${current:.6f}")
-        print(f"────────────────────────────────────")
-        return
-
-    # Print clean usage summary with dollar cost and estimated remaining credits
-    print(f"── This Message ────────────────────")
-    print(f"  Cost:        ${delta:.6f}")
-    print(f"  Total spent: ${current:.6f}")
-    if remaining_budget is not None:
-        print(f"  Remaining:   ${remaining_budget - current:.6f}")
-    print(f"────────────────────────────────────")
-
+    parser = argparse.ArgumentParser(description="AI-OS Smart Cost Reporter")
+    parser.add_argument("--agent", choices=["agy", "claude"], default="claude", help="Agent type to report for")
+    args = parser.parse_args()
+    
+    if args.agent == "agy":
+        # Log a new AGY turn first
+        telemetry_db.log_agy_turn()
+        
+        # Calculate stats
+        cost_turn, cost_total, agy_turns = get_stats()
+        
+        now = time.time()
+        five_hours_ago = now - (5 * 3600)
+        seven_days_ago = now - (7 * 24 * 3600)
+        
+        turns_5h = sum(1 for ts in agy_turns if ts >= five_hours_ago)
+        turns_week = sum(1 for ts in agy_turns if ts >= seven_days_ago)
+        
+        rem_5h = max(0, LIMIT_5H - turns_5h)
+        rem_week = max(0, LIMIT_WEEK - turns_week)
+        
+        print("[AGY TELEMETRY]")
+        print(f"Delegated Sub-Model Cost (Turn): ${cost_turn:.4f}")
+        print(f"Delegated Sub-Model Cost (Total): ${cost_total:.4f}")
+        print(f"AGY Quota Remaining (5hr): {rem_5h}/{LIMIT_5H}")
+        print(f"AGY Quota Remaining (Weekly): {rem_week}/{LIMIT_WEEK}")
+        
+    else:  # claude
+        cost_turn, cost_total, _ = get_stats()
+        print(f"[TELEMETRY] Sub-Model Cost This Turn: ${cost_turn:.4f} | Total Delegated Cost: ${cost_total:.4f}")
 
 if __name__ == "__main__":
     main()

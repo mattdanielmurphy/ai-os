@@ -21,7 +21,7 @@ All system paths are absolute. The authoritative base is:
 At the absolute end of EVERY single turn/message response, after you have provided your answer, you MUST immediately execute the following command using your terminal tool to print the exact OpenRouter transaction metrics:
 
 ```bash
-python3 /Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py
+python3 /Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py --agent claude
 ```
 
 Append the exact terminal stdout directly to the bottom of your response so the user can verify the micro-penny cost and token data for the exchange. Do not omit this step under any circumstances.
@@ -30,3 +30,4 @@ Append the exact terminal stdout directly to the bottom of your response so the 
 * **2026-06-24:** Level 2 global harness established. Absolute path routing enforced across all knowledge files. `packageManager` pinned to `pnpm@11.2.2`. Global `ai-os` binary registered via `pnpm link --global`.
 * **2026-06-24:** "Notes" semantics hardened in CLAUDE.md §3. The word "notes" now exclusively routes to the Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`. "Recent notes" trigger added — lists vault contents by recency. Agent work logs and personal notes are explicitly decoupled; never conflated.
 * **2026-06-25:** Cost-tracking protocol installed. Python script at `scripts/get_last_cost.py` computes per-message cost via delta tracking against OpenRouter's credits endpoint (the `activity` endpoint requires a management key). Mandatory post-response protocol added — agent must run the script at the end of every turn and append the output to its response.
+* **2026-06-27:** Centralized telemetry database and smart cost reporter deployed. Tracks sub-model LiteLLM requests, calculates costs using DeepSeek pricing, logs execution turns, and calculates rolling quotas for the premium `agy` interface. Added rules to require agents to run `get_last_cost.py` with appropriate agent flag at the end of every turn.
