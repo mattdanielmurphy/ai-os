@@ -524,6 +524,84 @@ fn close_project_session(project_path: String, state: tauri::State<AppState>) ->
     Ok(())
 }
 
+#[tauri::command]
+fn select_directory() -> Result<Option<String>, String> {
+    use tauri::api::dialog::blocking::FileDialogBuilder;
+    let path = FileDialogBuilder::new()
+        .pick_folder();
+    match path {
+        Some(path) => Ok(Some(path.to_string_lossy().to_string())),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+fn create_new_project(name: String, git_repo_name: String) -> Result<String, String> {
+    use std::fs;
+    use std::process::Command;
+    use std::path::Path;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let projects_dir = Path::new(&home).join("projects");
+    if !projects_dir.exists() {
+        fs::create_dir_all(&projects_dir).map_err(|e| format!("Failed to create projects directory: {}", e))?;
+    }
+
+    let project_path = projects_dir.join(&name);
+    if project_path.exists() {
+        return Err("Project directory already exists".to_string());
+    }
+
+    fs::create_dir_all(&project_path).map_err(|e| format!("Failed to create project directory: {}", e))?;
+
+    // git init
+    let output = Command::new("git")
+        .arg("init")
+        .current_dir(&project_path)
+        .output()
+        .map_err(|e| format!("Failed to run git init: {}", e))?;
+    if !output.status.success() {
+        return Err(format!("git init failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    // Create README.md
+    let readme_content = format!("# {}\n", name);
+    fs::write(project_path.join("README.md"), readme_content)
+        .map_err(|e| format!("Failed to write README.md: {}", e))?;
+
+    // git add README.md
+    let output = Command::new("git")
+        .args(&["add", "README.md"])
+        .current_dir(&project_path)
+        .output()
+        .map_err(|e| format!("Failed to run git add: {}", e))?;
+    if !output.status.success() {
+        return Err(format!("git add failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    // git commit -m "Initial commit"
+    let output = Command::new("git")
+        .args(&["commit", "-m", "Initial commit"])
+        .current_dir(&project_path)
+        .output()
+        .map_err(|e| format!("Failed to run git commit: {}", e))?;
+    if !output.status.success() {
+        return Err(format!("git commit failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    // gh repo create <git_repo_name> --private --source=. --remote=origin --push
+    let output = Command::new("gh")
+        .args(&["repo", "create", &git_repo_name, "--private", "--source=.", "--remote=origin", "--push"])
+        .current_dir(&project_path)
+        .output()
+        .map_err(|e| format!("Failed to run gh repo create: {}", e))?;
+    if !output.status.success() {
+        return Err(format!("gh repo create failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    Ok(project_path.to_string_lossy().to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -548,7 +626,9 @@ fn main() {
             resize_pty,
             is_engine_running,
             toggle_process_pause,
-            close_project_session
+            close_project_session,
+            select_directory,
+            create_new_project
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

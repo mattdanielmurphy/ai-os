@@ -445,41 +445,166 @@ const switchToProject = async (path: string) => {
     adjustHeight();
 };
 
-// Add project button
+// Add project modal and logic
+const addProjectModal = document.getElementById('add-project-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const btnChoiceExisting = document.getElementById('btn-choice-existing');
+const btnChoiceNew = document.getElementById('btn-choice-new');
+const newProjectForm = document.getElementById('new-project-form');
+const newProjNameInput = document.getElementById('new-proj-name') as HTMLInputElement;
+const newProjGitInput = document.getElementById('new-proj-git') as HTMLInputElement;
+const btnSubmitNewProject = document.getElementById('btn-submit-new-project') as HTMLButtonElement;
+
+const openModal = () => {
+    if (!addProjectModal) return;
+    addProjectModal.classList.remove('hidden');
+    // Force browser reflow to trigger CSS transitions
+    addProjectModal.offsetHeight;
+    addProjectModal.classList.remove('opacity-0');
+    addProjectModal.classList.add('opacity-100');
+    
+    const modalContent = addProjectModal.querySelector('.transform');
+    if (modalContent) {
+        modalContent.classList.remove('scale-95');
+        modalContent.classList.add('scale-100');
+    }
+    
+    // Reset modal state
+    if (newProjectForm) newProjectForm.classList.add('hidden');
+    if (newProjNameInput) newProjNameInput.value = '';
+    if (newProjGitInput) newProjGitInput.value = '';
+};
+
+const closeModal = () => {
+    if (!addProjectModal) return;
+    addProjectModal.classList.remove('opacity-100');
+    addProjectModal.classList.add('opacity-0');
+    
+    const modalContent = addProjectModal.querySelector('.transform');
+    if (modalContent) {
+        modalContent.classList.remove('scale-100');
+        modalContent.classList.add('scale-95');
+    }
+    
+    // Hide modal element after transition completes
+    setTimeout(() => {
+        addProjectModal.classList.add('hidden');
+    }, 300);
+};
+
+// Toggle modal visibility
 const addProjectBtn = document.getElementById('add-project-btn');
-addProjectBtn?.addEventListener('click', async () => {
-    const pathInput = prompt('Enter absolute path to the project directory:');
-    if (!pathInput) return;
-    
-    const cleanPath = pathInput.trim();
-    if (!cleanPath) return;
-    
-    // Extract project name from path
-    const name = cleanPath.split('/').pop() || 'unknown-project';
-    
-    // Check if already exists
-    const existing = projects.find(p => p.path === cleanPath);
-    if (existing) {
+addProjectBtn?.addEventListener('click', openModal);
+closeModalBtn?.addEventListener('click', closeModal);
+
+// Close modal when clicking on the backdrop (outside modal content)
+addProjectModal?.addEventListener('click', (e) => {
+    if (e.target === addProjectModal) {
+        closeModal();
+    }
+});
+
+// Helper to choose random color for project card
+const getRandomProjectColor = () => {
+    const colors = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#6366f1', '#14b8a6', '#a855f7'];
+    return colors[Math.floor(Math.random() * colors.length)];
+};
+
+// Open Existing Project via File Picker
+btnChoiceExisting?.addEventListener('click', async () => {
+    try {
+        const selectedDir = await invoke<string | null>('select_directory');
+        if (!selectedDir) return; // User canceled the dialog
+        
+        const cleanPath = selectedDir.trim();
+        const name = cleanPath.split('/').pop() || 'unknown-project';
+        
+        const existing = projects.find(p => p.path === cleanPath);
+        if (existing) {
+            switchToProject(cleanPath);
+            closeModal();
+            return;
+        }
+        
+        const newProj: Project = {
+            path: cleanPath,
+            name,
+            color: getRandomProjectColor(),
+            lastActive: Date.now(),
+            engine: 'agy',
+            isTerminalMode: false
+        };
+        
+        projects.push(newProj);
+        saveProjects();
         switchToProject(cleanPath);
+        closeModal();
+    } catch (err) {
+        alert('Failed to select directory: ' + err);
+    }
+});
+
+// Show New Project Form
+btnChoiceNew?.addEventListener('click', () => {
+    if (newProjectForm) {
+        newProjectForm.classList.remove('hidden');
+        newProjNameInput?.focus();
+    }
+});
+
+// Auto-generate git repository name from project name
+newProjNameInput?.addEventListener('input', () => {
+    if (newProjGitInput) {
+        // Convert to kebab-case
+        const kebab = newProjNameInput.value
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+        newProjGitInput.value = kebab;
+    }
+});
+
+// Create & Initialize New Project
+btnSubmitNewProject?.addEventListener('click', async () => {
+    const name = newProjNameInput.value.trim();
+    const gitRepoName = newProjGitInput.value.trim();
+    
+    if (!name) {
+        alert('Please enter a project name.');
+        return;
+    }
+    if (!gitRepoName) {
+        alert('Please enter a git repository name.');
         return;
     }
     
-    // Assign a unique random pastel color
-    const colors = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#6366f1', '#14b8a6', '#a855f7'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    // Disable submit button and show loading state
+    const originalText = btnSubmitNewProject.innerHTML;
+    btnSubmitNewProject.disabled = true;
+    btnSubmitNewProject.innerHTML = `<span class="inline-block animate-spin mr-2">🔄</span> Creating...`;
     
-    const newProj: Project = {
-        path: cleanPath,
-        name,
-        color: randomColor,
-        lastActive: Date.now(),
-        engine: 'agy',
-        isTerminalMode: false
-    };
-    
-    projects.push(newProj);
-    saveProjects();
-    switchToProject(cleanPath);
+    try {
+        const projectPath = await invoke<string>('create_new_project', { name, gitRepoName });
+        
+        const newProj: Project = {
+            path: projectPath,
+            name,
+            color: getRandomProjectColor(),
+            lastActive: Date.now(),
+            engine: 'agy',
+            isTerminalMode: false
+        };
+        
+        projects.push(newProj);
+        saveProjects();
+        switchToProject(projectPath);
+        closeModal();
+    } catch (err) {
+        alert('Failed to create project: ' + err);
+    } finally {
+        btnSubmitNewProject.disabled = false;
+        btnSubmitNewProject.innerHTML = originalText;
+    }
 });
 
 // ----------------------------------------------------

@@ -72,6 +72,50 @@
       </div>
     </div>
 
+    <!-- Add Project Modal -->
+    <div id="add-project-modal" class="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-[450px] max-w-full overflow-hidden transform scale-95 transition-transform duration-300 p-1">
+        <!-- Modal Header -->
+        <div class="p-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-300">Add Project</h3>
+          <button id="close-modal-btn" class="text-gray-400 hover:text-white transition-colors text-lg font-bold leading-none">&times;</button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-6 space-y-6 bg-gray-900">
+          <!-- Choice Actions -->
+          <div class="grid grid-cols-2 gap-4">
+            <button id="btn-choice-existing" class="flex flex-col items-center justify-center p-5 rounded-lg bg-gray-850/50 border border-gray-800 hover:border-blue-500 hover:bg-gray-850 transition-all text-center group cursor-pointer">
+              <span class="text-3xl mb-3 text-blue-400 group-hover:scale-110 transition-transform">📂</span>
+              <span class="text-xs font-bold text-gray-200">Open Existing</span>
+              <span class="text-[10px] text-gray-400 mt-1.5">Select folder on system</span>
+            </button>
+            <button id="btn-choice-new" class="flex flex-col items-center justify-center p-5 rounded-lg bg-gray-850/50 border border-gray-800 hover:border-green-500 hover:bg-gray-850 transition-all text-center group cursor-pointer">
+              <span class="text-3xl mb-3 text-green-400 group-hover:scale-110 transition-transform">✨</span>
+              <span class="text-xs font-bold text-gray-200">Start New Project</span>
+              <span class="text-[10px] text-gray-400 mt-1.5">Initialize git & GitHub</span>
+            </button>
+          </div>
+
+          <!-- New Project Form (Hidden by default) -->
+          <div id="new-project-form" class="space-y-4 hidden border-t border-gray-800/80 pt-5">
+            <div class="space-y-1.5">
+              <label for="new-proj-name" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Project Name</label>
+              <input type="text" id="new-proj-name" placeholder="e.g. My Awesome App" class="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600">
+            </div>
+            <div class="space-y-1.5">
+              <label for="new-proj-git" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">GitHub Repo Name</label>
+              <input type="text" id="new-proj-git" placeholder="e.g. my-awesome-app" class="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600">
+            </div>
+            <button id="btn-submit-new-project" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2.5 rounded transition-all mt-2 flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-blue-900/20">
+              Create & Initialize Project
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
