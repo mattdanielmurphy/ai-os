@@ -95,3 +95,7 @@
 * **System Rules Append Script:** Implemented `scripts/append_system_rule.py` to programmatically insert rules into `~/.gemini/GEMINI.md` under global or agent-specific headers (`### GLOBAL RULES`, `### ANTIGRAVITY (PREMIUM) RULES`, `### CLAUDE (ECONOMY) RULES`).
 * **Ingest Codebase Tool:** Ensured `scripts/ingest_codebase` is properly registered and executable, skeletonizing code structures to minimize tokens.
 * **Mechanical Editor:** Implemented `scripts/mechanical_editor.py` to automate unified `.patch` execution with deepseek model via LiteLLM proxy, with a fallback programmatic JSON search-and-replace mechanism if patching fails.
+
+### [2026-06-27] Phase 5: Context Architecture Cleanup & Routing Fixes
+* **Context Manager Routing Update:** Updated `scripts/append_system_rule.py` to support multi-file target routing: `--agent global` writes rules to both `~/.gemini/GEMINI.md` and `CLAUDE.md`, `--agent agy` writes to `~/.gemini/GEMINI.md` under `### ANTIGRAVITY (PREMIUM) RULES`, and `--agent claude` writes to `CLAUDE.md` under `## CLAUDE-SPECIFIC RULES`.
+* **Rules Ledger Cleanup:** Cleaned up `~/.gemini/GEMINI.md` by stripping out Claude-specific rules and established a clean, dedicated `/Users/matthewmurphy/projects/ai-os/CLAUDE.md` containing global rules and Claude-specific cost telemetry guidelines.
