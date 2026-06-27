@@ -127,3 +127,7 @@
 ### [2026-06-27] Telemetry Hallucination Prevention
 * **Telemetry Output Enforcement:** Modified `get_last_cost.py` to output the exact telemetry blocks matching `[AGY TELEMETRY]` with three terminating asterisks.
 * **Strict Telemetry Instruction:** Updated global `GEMINI.md` system guidelines to strictly forbid manual hallucination of telemetry or quota numbers, forcing agents to call the script directly.
+
+### [2026-06-27] Dynamic DeepSeek Delegation Toggle
+* **Dynamic Toggle in `.zshrc_aios`:** Added `AIOS_DELEGATE` environment variable and `delegate_on`/`delegate_off` aliases.
+* **Triage Editing System Rule Update:** Integrated rules checking delegation state (`echo $AIOS_DELEGATE`) in both `~/.gemini/GEMINI.md` and `/Users/matthewmurphy/projects/ai-os/CLAUDE.md`. Under Scenario A (delegate=true), agents delegate to `mechanical_editor.py`; under Scenario B (delegate=false), agents use Quoted Heredoc safely (with single quotes around `'EOF_SAFE'`) to directly write code files.
