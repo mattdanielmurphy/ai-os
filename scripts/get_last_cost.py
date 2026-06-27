@@ -17,8 +17,7 @@ try:
 except ImportError:
     pass
 
-LIMIT_5H = 50
-LIMIT_WEEK = 200
+
 TOKEN_PATH = Path.home() / ".gemini" / "antigravity-cli" / "antigravity-oauth-token"
 CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 CLIENT_SECRET = "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"
@@ -109,27 +108,7 @@ def get_antigravity_quota():
 
     return quota_5h, quota_week, is_real
 
-def get_local_quotas():
-    try:
-        db = telemetry_db.load_db()
-        turns = db.get("agy_turns", [])
-    except Exception:
-        turns = []
-    
-    now = time.time()
-    five_hours_ago = now - 5 * 3600
-    one_week_ago = now - 7 * 24 * 3600
-    
-    turns_5h = [t for t in turns if t >= five_hours_ago]
-    turns_week = [t for t in turns if t >= one_week_ago]
-    
-    quota_5h_rem = max(0, LIMIT_5H - len(turns_5h))
-    quota_week_rem = max(0, LIMIT_WEEK - len(turns_week))
-    
-    quota_5h_pct = (quota_5h_rem / LIMIT_5H)
-    quota_week_pct = (quota_week_rem / LIMIT_WEEK)
-    
-    return quota_5h_pct, quota_week_pct
+
 
 def get_stats():
     db = telemetry_db.load_db()
@@ -162,23 +141,17 @@ def main():
         cost_turn, cost_total = get_stats()
         quota_5h, quota_week, is_real = get_antigravity_quota()
         
-        if not is_real or quota_5h is None or quota_week is None:
-            quota_5h_pct_val, quota_week_pct_val = get_local_quotas()
-            quota_5h_pct = int(quota_5h_pct_val * 100)
-            quota_week_pct = int(quota_week_pct_val * 100)
-            real_tag_5h = ""
-            real_tag_week = ""
-        else:
-            quota_5h_pct = int(quota_5h * 100)
-            quota_week_pct = int(quota_week * 100)
-            real_tag_5h = " (Real)"
-            real_tag_week = " (Real)"
-        
         print("[AGY TELEMETRY]")
         print(f"Delegated Sub-Model Cost (Turn): ${cost_turn:.4f}")
         print(f"Delegated Sub-Model Cost (Total): ${cost_total:.4f}")
-        print(f"AGY Quota Remaining (5hr): {quota_5h_pct}%{real_tag_5h}")
-        print(f"AGY Quota Remaining (Weekly): {quota_week_pct}%{real_tag_week}***")
+        if is_real and quota_5h is not None and quota_week is not None:
+            quota_5h_pct = int(quota_5h * 100)
+            quota_week_pct = int(quota_week * 100)
+            print(f"AGY Quota Remaining (5hr): {quota_5h_pct}% (Real)")
+            print(f"AGY Quota Remaining (Weekly): {quota_week_pct}% (Real)***")
+        else:
+            print("AGY Quota Remaining (5hr): N/A")
+            print("AGY Quota Remaining (Weekly): N/A***")
     else:
         cost_turn, cost_total = get_stats()
         print(f"[TELEMETRY] Sub-Model Cost This Turn: ${cost_turn:.4f} | Total Delegated Cost: ${cost_total:.4f}")
