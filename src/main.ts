@@ -12,11 +12,17 @@ const term = new Terminal({
     fontSize: 14,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     theme: { background: '#000000', foreground: '#ffffff' },
-    disableStdin: true, // Locks xterm from receiving raw keyboard inputs
 })
 
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
+
+// Handle direct input to terminal
+term.onData((data) => {
+    invoke('write_to_pty', { data }).catch((err) => {
+        console.error('Failed to write direct key input to PTY:', err);
+    });
+});
 
 // Helper function to fit and sync geometry with Rust
 const resizePty = () => {
@@ -90,9 +96,14 @@ textarea?.addEventListener('keydown', (e) => {
 
 // 5. Focus Management
 textarea?.focus()
-document.addEventListener('click', () => {
+document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement
     const selection = window.getSelection()
-    if (!selection || selection.toString() === '') {
+    const isTerminalClick = container?.contains(target)
+
+    if (isTerminalClick) {
+        term.focus()
+    } else if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && (!selection || selection.toString() === '')) {
         textarea?.focus()
     }
 })
