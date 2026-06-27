@@ -27,6 +27,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "cli": "./bin/ai-os --cli",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"

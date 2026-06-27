@@ -24,11 +24,14 @@ echo "## Hammerspoon Config" >> "$PROFILE_PATH"
 
 cd "$AI_OS_HOME" || exit
 
-if [ "$1" = "--cli" ]; then
+if [ "$1" = "--gui" ]; then
     shift
-    echo "[ai-os] Launching native terminal agent..."
-    exec claude "$@"
-else
     echo "[ai-os] Launching GUI interface..."
     pnpm tauri dev
+else
+    if [ "$1" = "--cli" ]; then
+        shift
+    fi
+    echo "[ai-os] Launching native terminal agent..."
+    exec claude "$@"
 fi
