@@ -77,6 +77,7 @@ def main():
         print(f"────────────────────────────────────")
         return
 
+    # Print clean usage summary with dollar cost and estimated remaining credits
     print(f"── This Message ────────────────────")
     print(f"  Cost:        ${delta:.6f}")
     print(f"  Total spent: ${current:.6f}")
