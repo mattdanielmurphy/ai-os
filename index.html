@@ -5,31 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI OS</title>
   </head>
-  <body class="bg-gray-900 text-white font-sans h-screen flex flex-col m-0">
+  <body class="bg-gray-900 text-white font-sans h-screen flex flex-col m-0 overflow-hidden">
     <!-- Top Header Bar -->
-    <div class="flex items-center gap-4 p-1 px-4 text-xs font-semibold bg-gray-800 border-b border-gray-700">
-        <span class="text-gray-400">ENGINE:</span>
-        <label class="flex items-center gap-1.5 cursor-pointer">
+    <div class="flex items-center gap-4 p-1.5 px-3 text-xs font-medium bg-gray-800 border-b border-gray-700 select-none">
+        <span class="text-gray-400 font-semibold tracking-wider">ENGINE:</span>
+        <label class="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
             <input type="radio" name="engine" value="claude" checked class="accent-blue-500">
             <span class="text-blue-400">DeepSeek V4 Flash (Claude Code)</span>
         </label>
-        <label class="flex items-center gap-1.5 cursor-pointer">
+        <label class="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
             <input type="radio" name="engine" value="agy" class="accent-green-500">
             <span class="text-green-400">Agy (Orchestrated)</span>
         </label>
     </div>
 
     <!-- Top Terminal Area -->
-    <div id="terminal-container" class="flex-grow bg-black overflow-hidden min-h-0 relative p-2 pb-6"></div>
+    <div id="terminal-container" class="flex-grow bg-black overflow-hidden min-h-0 relative pb-6"></div>
 
     <!-- Bottom Input Area -->
-    <div class="flex flex-col border-t border-gray-700 bg-gray-800">
+    <div class="flex flex-col bg-gray-800">
         <!-- The Text Input -->
         <textarea 
             id="prompt-input" 
-            class="w-full min-h-[3rem] max-h-40 overflow-y-auto p-4 bg-gray-800 text-white outline-none resize-none"
+            class="w-full min-h-[3rem] max-h-40 overflow-y-auto p-3 bg-gray-800 text-white outline-none resize-none text-sm"
             rows="2"
-            placeholder="Type a command or prompt... (Enter to send, Shift+Enter for newline)"
+            placeholder="Type a command or prompt... (Enter to send, Shift+Enter for newline, Cmd/Alt+Enter to bypass clear)"
         ></textarea>
     </div>
 

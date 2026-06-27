@@ -62,7 +62,17 @@ engineRadios.forEach((radio) => {
 // 4. Input Interception & Routing
 const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement
 
-textarea?.addEventListener('keydown', (e) => {
+// Auto-resize function
+const adjustHeight = () => {
+    if (textarea) {
+        textarea.style.height = 'auto';
+        // Enforce boundary logic: height = scrollHeight
+        textarea.style.height = textarea.scrollHeight + 'px';
+        resizePty();
+    }
+};
+
+textarea?.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         
@@ -95,24 +105,26 @@ textarea?.addEventListener('keydown', (e) => {
         const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
         commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
 
-        // Send to the PTY (\r executes the line)
-        invoke('write_to_pty', { data: commandToExecute + '\r' });
+        const isBypass = e.metaKey || e.ctrlKey || e.altKey;
+
+        if (isBypass) {
+            // Send the prompt without sending /clear first
+            invoke('write_to_pty', { data: commandToExecute + '\r' });
+        } else {
+            // Send a clear command to the active PTY
+            invoke('write_to_pty', { data: '/clear\r' });
+            // Asynchronous delay to allow CLI tool to process clear action
+            await new Promise((resolve) => setTimeout(resolve, 450));
+            // Send actual processed prompt
+            invoke('write_to_pty', { data: commandToExecute + '\r' });
+        }
+
         textarea.value = '';
         
-        // Reset the textarea height back to the 2-line default
-        textarea.style.height = 'auto';
-        resizePty();
+        // Reset the textarea height back to the default
+        adjustHeight();
     }
 });
-
-// Auto-resize listener
-const adjustHeight = () => {
-    if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
-        resizePty();
-    }
-};
 
 textarea?.addEventListener('input', adjustHeight);
 

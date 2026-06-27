@@ -74,3 +74,13 @@ When wrapping up a session or running diagnostics, favor these explicit workflow
     `git add . && git commit -m "[Auto-Commit] [Brief technical summary of edits]"`
 * **Visible Terminal Confirmation:** To ensure the user sees when the commit occurs, you must print a visible terminal confirmation line immediately following the execution, formatted exactly like this:
     `[ai-os] ✓ Changes successfully committed to background log.`
+
+## 8. Two-Layer Git Memory Architecture (Context Conservation)
+To conserve active context tokens, the system enforces a strict Two-Layer Memory Protocol using Git log history and helper scripts:
+1. **Annotated Git Commits:** Every background/auto-commit or manual commit must be heavily annotated with a technical summary, capturing high-level goals and architectural decisions.
+2. **Layer 1 (Search & Overview):** Before ingesting or reading large amounts of raw historical code or previous agent attempts, search the Git logs using:
+    `/Users/matthewmurphy/projects/ai-os/scripts/memory_search <keyword>`
+    This will produce a list of bullet points showing previous relevant commits tagged with a short Git Hash.
+3. **Layer 2 (Deep Dive):** Once relevant commit hashes/IDs are identified, retrieve the exact code diffs and full technical context using:
+    `/Users/matthewmurphy/projects/ai-os/scripts/memory_diff <commit-hash-or-id>`
+4. **Token Limitation Constraint:** You are STRICTLY prohibited from reading or ingesting raw historical files directly unless you have first searched via Layer 1, found a target ID, and pulled the specific differential patch via Layer 2. This keeps the active token limit minimal.

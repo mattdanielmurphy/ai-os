@@ -69,3 +69,13 @@
 * **Auto-Expanding Input Area:** Updated `<textarea id="prompt-input">` in `index.html` to start at 2 lines (`min-h-[3rem]`, `rows="2"`) and dynamically grow up to ~10 lines (`max-h-40`, `overflow-y-auto`) on keystroke input.
 * **PTY & Terminal Fit Synchronization:** Connected the textarea's dynamic resize triggers to automatically call `fitAddon.fit()` and sync terminal dimensions to the Rust backend PTY.
 * **Native File Drop (Tauri):** Listens to `tauri://file-drop` events, maps over absolute dropped file paths, appends them to the input area separated by spaces, and triggers the input resize calculation automatically.
+
+### [2026-06-27] Prompt Queuing & Auto-Clear Interception
+* **PTY Auto-Clear Interception:** Intercepts `Enter` key presses to write `/clear\r` to the PTY, yielding control for a 450ms delay for Claude/Agy CLI context reset before sending the prompt.
+* **Bypass Option:** Allows users to submit prompts immediately without clearing context by pressing `Cmd+Enter`, `Ctrl+Enter`, or `Alt+Enter`.
+
+### [2026-06-27] Two-Layer Git Memory Architecture
+* **Two-Layer Memory Protocol:** Designed a token-conservation strategy utilizing commit message indexing.
+* **Layer 1 (Overview Query):** Implemented `scripts/memory_search` which filters git log history matching a keyword to display commit hashes and summary points.
+* **Layer 2 (Detail Lookup):** Implemented `scripts/memory_diff` which displays the exact unified code diff of a specific commit ID.
+* **System Prompt Update:** Configured `claude.md` to mandate searching Layer 1 and checking Layer 2 before analyzing historical files to keep token counts small.

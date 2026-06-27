@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# scripts/memory_search
+# A script to search git logs for keywords and summarize previous work with short hashes.
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <keyword>"
+  exit 1
+fi
+
+# Search commit messages matching the keyword
+git log --grep="$1" --oneline -n 15 | while read -r line; do
+  hash=$(echo "$line" | cut -d' ' -f1)
+  summary=$(echo "$line" | cut -d' ' -f2-)
+  echo "- [$hash] $summary"
+done

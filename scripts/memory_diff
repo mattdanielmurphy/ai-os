@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# scripts/memory_diff
+# A script to retrieve full diff and technical context for a specific commit hash.
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <commit-hash-or-id>"
+  exit 1
+fi
+
+git show "$1"
