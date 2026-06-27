@@ -139,3 +139,7 @@
 ### [2026-06-27] Windowed File Reader
 * **`read_lines` windowed file reader:** Added `read_lines` function to `~/.zshrc_aios` which takes a file path, start line, and end line, outputting only those lines prefixed with actual line numbers using `sed` to save tokens.
 * **Token Management Section:** Added token management rule to `~/.gemini/GEMINI.md` forbidding `cat` for files larger than 100 lines and requiring `read_lines` or `grep -n` for surgical inspections.
+
+### [2026-06-27] Default CLI Wrapper Mode & CLI Development Script
+* **Default CLI execution:** Modified the global `bin/ai-os` wrapper to default to the native CLI terminal agent (`exec claude "$@"`) rather than Tauri GUI. Added a `--gui` flag to explicitly launch the Tauri GUI.
+* **`pnpm cli` development command:** Registered a new `"cli": "./bin/ai-os --cli"` script in `package.json` to allow developers to run the terminal-based agent directly via `pnpm cli`.
