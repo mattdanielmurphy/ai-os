@@ -26,7 +26,7 @@ def call_litellm(prompt, response_format=None):
 
     req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=60) as response:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             
@@ -64,7 +64,7 @@ def apply_patch(filepath, patch_content):
     try:
         # Run patch command: patch -u filepath -i patch_file
         result = subprocess.run(
-            ["patch", "-u", str(filepath), "-i", str(patch_file), "--no-backup-if-mismatch"],
+            ["patch", "-u", "--batch", "-f", str(filepath), "-i", str(patch_file), "--no-backup-if-mismatch"],
             capture_output=True,
             text=True
         )
@@ -109,6 +109,7 @@ def main():
         print(f"Error: File {filepath} does not exist.", file=sys.stderr)
         sys.exit(1)
         
+    print('[Mechanical Editor] Reading target file...', flush=True)
     with open(filepath, "r", encoding="utf-8") as f:
         file_content = f.read()
         
@@ -128,7 +129,7 @@ OUTPUT INSTRUCTIONS:
 - Wrap the patch block in ```diff code block.
 """
 
-    print("Requesting unified patch from DeepSeek via LiteLLM...")
+    print("[Mechanical Editor] Requesting strict patch from DeepSeek...", flush=True)
     response = call_litellm(prompt)
     
     # Extract the patch block
@@ -148,11 +149,12 @@ OUTPUT INSTRUCTIONS:
 
     success, msg = apply_patch(filepath, patch_content)
     if success:
+        print("[Mechanical Editor] LLM responded. Attempting to apply patch...", flush=True)
         print("Success: Patch applied successfully via Unix patch command.")
         print(msg)
         sys.exit(0)
-        
-    print("Patch application failed. Retrying with JSON search/replace fallback...")
+
+    print("[Mechanical Editor] Patch rejected! Falling back to programmatic string replacement...", flush=True)
     print(f"Patch error details:\n{msg}\n")
     
     # Phase 2 Fallback: JSON search & replace
@@ -165,13 +167,12 @@ Here is the current content of the file:
 
 Apply the following technical spec:
 {args.spec}
-
 OUTPUT INSTRUCTIONS:
 - You must return a strict JSON object with a single top-level key "substitutions".
 - "substitutions" must be a list of objects, each containing "search_string" and "replace_string" keys.
 - Each "search_string" must match exactly a contiguous block of text in the original file (including whitespace).
 - Each "replace_string" must contain the new text to replace that exact block of text.
-- Do not return markdown headers or any other conversational text. Return ONLY the JSON object.
+- Return ONLY the raw JSON object. Do NOT wrap the JSON in markdown code blocks, do NOT include ```json backticks, do NOT include any markdown formatting, and do NOT include any introductory or concluding text.
 
 Example JSON output format:
 {{
@@ -193,7 +194,12 @@ Example JSON output format:
             json_str = re.sub(r'\s*```$', '', json_str)
             
         data = json.loads(json_str)
-        substitutions = data.get("substitutions", [])
+        if isinstance(data, list):
+            substitutions = data
+        elif isinstance(data, dict):
+            substitutions = data.get("substitutions", [])
+        else:
+            substitutions = []
         if not substitutions:
             print("Error: JSON response from model did not contain 'substitutions' list.", file=sys.stderr)
             sys.exit(1)

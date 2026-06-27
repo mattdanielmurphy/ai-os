@@ -107,3 +107,9 @@
 * **Orchestrator Cost Interception:** Modified `scripts/mechanical_editor.py` to intercept the `usage` block from the LiteLLM API response and log metrics to `telemetry_db.py` on success.
 * **Smart Cost & Quota Reporter:** Rewrote `scripts/get_last_cost.py` to support `--agent claude` and `--agent agy` flags, outputting sub-model metrics for Claude, and logging turns while tracking rolling turn limits (50 turns/5hr and 200 turns/weekly) for Agy.
 * **System Telemetry Rules:** Injected new agent rules using `append_system_rule.py` to require Agy and Claude to run `get_last_cost.py` at the end of every turn.
+
+### [2026-06-27] Phase 7: Mechanical Editor Silent Hang Fixes
+* **Fix Subprocess Hang:** Passed `--batch` and `-f` flags to `subprocess.run` executing the Unix `patch` command to prevent user interaction prompt hangs and ensure fast failure.
+* **API Request Timeouts:** Added a strict 60-second timeout to the `urllib.request.urlopen` call executing LLM requests to LiteLLM, preventing indefinite hangs on network dropouts.
+* **Verbose Progress Logging:** Added immediate unbuffered `stdout` print statements logging key steps (reading file, requesting patch, attempting patch, falling back to substitutions) to keep users and agents fully informed.
+* **Robust JSON Fallback & Prompts:** Strengthened instructions inside the fallback prompt to forbid markdown formatting or code blocks in JSON outputs. Updated fallback parser to dynamically support both direct JSON arrays and dictionary objects wrapping the `substitutions` list.
