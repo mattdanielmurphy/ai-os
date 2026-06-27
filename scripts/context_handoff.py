@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import os
+import datetime
+
+def main():
+    parser = argparse.ArgumentParser(description="Create context handoff logs for agent state transmission.")
+    parser.add_argument("--goal", required=True, help="The current user goal")
+    parser.add_argument("--completed", required=True, help="What has been completed so far")
+    parser.add_argument("--next_steps", required=True, help="The next steps to execute")
+    parser.add_argument("--discoveries", required=True, help="Key architectural discoveries or info")
+
+    args = parser.parse_args()
+
+    # Ensure log dir exists
+    log_dir = "/Users/matthewmurphy/projects/ai-os/.agent-logs"
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Generate filename YYYY-MM-DD_HH-MM_handoff.md
+    now = datetime.datetime.now()
+    filename = now.strftime("%Y-%m-%d_%H-%M_handoff.md")
+    filepath = os.path.join(log_dir, filename)
+
+    content = f"""## Goal
+{args.goal}
+
+## Completed So Far
+{args.completed}
+
+## Next Steps
+{args.next_steps}
+
+## Discoveries
+{args.discoveries}
+"""
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"HANDOFF_FILE_PATH={filepath}")
+
+if __name__ == "__main__":
+    main()

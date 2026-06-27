@@ -118,3 +118,8 @@
 * **API Request Timeouts:** Added a strict 60-second timeout to the `urllib.request.urlopen` call executing LLM requests to LiteLLM, preventing indefinite hangs on network dropouts.
 * **Verbose Progress Logging:** Added immediate unbuffered `stdout` print statements logging key steps (reading file, requesting patch, attempting patch, falling back to substitutions) to keep users and agents fully informed.
 * **Robust JSON Fallback & Prompts:** Strengthened instructions inside the fallback prompt to forbid markdown formatting or code blocks in JSON outputs. Updated fallback parser to dynamically support both direct JSON arrays and dictionary objects wrapping the `substitutions` list.
+
+### [2026-06-27] Phases 9 & 10: Loop Prevention, Fast-Path Editing, & Automated Handoff
+* **Loop Prevention Rule Update:** Replaced cost telemetry rules in `GEMINI.md` and `CLAUDE.md` to prevent internal telemetry command execution during tool polling and wait cycles, executing only when yielding control back to the user.
+* **Precision Editor (`scripts/precision_edit.py`):** Created a robust, LLM-free direct file editing script supporting `replace`, `append`, and `insert_after_string` modes with strict error checking (fails if target matches 0 or >1 times in replace/insert modes).
+* **Automated Context Handoff (`scripts/context_handoff.py`):** Built state handoff logging to create standardized context files in `.agent-logs/` and updated `GEMINI.md` system rules to allow spawning a fresh child `agy` process to resume work and prevent context window bloat.
