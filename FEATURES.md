@@ -59,3 +59,8 @@
 * **Fixed Engine Routing:** Configured `src/main.ts` to route to Claude Code (`claude -p "[prompt]"`) or Orchestrated Agy (`agy --add-dir=$PWD --prompt "[prompt]" --dangerously-skip-permissions`).
 * **Cost Telemetry Execution:** Chained the `/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py` cost tracking script to PTY executions in `src/main.ts` via zsh sequential execution (`;`).
 * **macOS Profiling on Boot:** Updated `bin/ai-os` to automatically generate a static system profile (`memory/macOS_profile.md`) containing SPStorageDataType and active LaunchAgents on app startup.
+
+### [2026-06-27] UI Refactoring & Visual Clipping Fix
+* **Engine Toggle Relocation:** Relocated the engine toggle radio button container from above the input textarea to a new slim, compact top header bar (`bg-gray-800`, `text-xs`, border separator) to optimize vertical workspace layout.
+* **Terminal Container Padding:** Updated `#terminal-container` Tailwind classes to ensure `min-h-0` is present and added explicit bottom padding (`pb-6`) to prevent xterm.js visual clipping issues at the bottom of the terminal display.
+* **Input Area Cleanup:** Cleaned up leftover borders and space in the bottom input area around the `#prompt-input` textarea.

@@ -6,25 +6,24 @@
     <title>AI OS</title>
   </head>
   <body class="bg-gray-900 text-white font-sans h-screen flex flex-col m-0">
+    <!-- Top Header Bar -->
+    <div class="flex items-center gap-4 p-1 px-4 text-xs font-semibold bg-gray-800 border-b border-gray-700">
+        <span class="text-gray-400">ENGINE:</span>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="radio" name="engine" value="claude" checked class="accent-blue-500">
+            <span class="text-blue-400">DeepSeek V4 Flash (Claude Code)</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="radio" name="engine" value="agy" class="accent-green-500">
+            <span class="text-green-400">Agy (Orchestrated)</span>
+        </label>
+    </div>
+
     <!-- Top Terminal Area -->
-    <div id="terminal-container" class="flex-grow bg-black overflow-hidden min-h-0 relative p-2"></div>
+    <div id="terminal-container" class="flex-grow bg-black overflow-hidden min-h-0 relative p-2 pb-6"></div>
 
-    <!-- Bottom Engine Toggle & Input Area -->
+    <!-- Bottom Input Area -->
     <div class="flex flex-col border-t border-gray-700 bg-gray-800">
-        
-        <!-- The Engine Toggle -->
-        <div class="flex gap-6 p-2 px-4 text-sm font-semibold border-b border-gray-700">
-            <span class="text-gray-400">ENGINE:</span>
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="engine" value="claude" checked class="accent-blue-500">
-                <span class="text-blue-400">DeepSeek V4 Flash (Claude Code)</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="engine" value="agy" class="accent-green-500">
-                <span class="text-green-400">Agy (Orchestrated)</span>
-            </label>
-        </div>
-
         <!-- The Text Input -->
         <textarea 
             id="prompt-input" 
