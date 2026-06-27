@@ -82,13 +82,31 @@ fn spawn_single_pty(
             is_new_tmux = true;
         }
         let mut c = CommandBuilder::new("tmux");
-        c.args(&["new-session", "-A", "-s", &session_name, "-c", project_path]);
+        let mut args = vec!["new-session".to_string(), "-A".to_string(), "-s".to_string(), session_name, "-c".to_string(), project_path.to_string()];
+        if terminal_type == "claude" {
+            args.push("claude --dangerously-skip-permissions".to_string());
+        } else if terminal_type == "agy" {
+            args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path));
+        }
+        c.args(&args);
         c
     } else {
         is_new_tmux = true;
-        let mut c = CommandBuilder::new("/bin/zsh");
-        c.cwd(project_path);
-        c
+        if terminal_type == "claude" {
+            let mut c = CommandBuilder::new("claude");
+            c.args(&["--dangerously-skip-permissions"]);
+            c.cwd(project_path);
+            c
+        } else if terminal_type == "agy" {
+            let mut c = CommandBuilder::new("agy");
+            c.args(&["--add-dir", project_path, "--dangerously-skip-permissions"]);
+            c.cwd(project_path);
+            c
+        } else {
+            let mut c = CommandBuilder::new("/bin/zsh");
+            c.cwd(project_path);
+            c
+        }
     };
 
     let _child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;

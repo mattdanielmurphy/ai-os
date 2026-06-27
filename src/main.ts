@@ -419,22 +419,9 @@ const switchToProject = async (path: string) => {
     
     // Request Rust backend to load/switch the project shell session
     try {
-        const result = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { projectPath: path, engine: currentEngine });
+        await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { projectPath: path, engine: currentEngine });
         
-        // Auto-spawn active engine if this session is brand new (e.g. fresh tmux session)
-        if (result.is_new_session) {
-            let startupCmd = '';
-            if (currentEngine === 'claude') {
-                startupCmd = 'claude --dangerously-skip-permissions\r';
-            } else if (currentEngine === 'agy') {
-                startupCmd = 'agy --add-dir=$PWD --dangerously-skip-permissions\r';
-            }
-            if (startupCmd) {
-                setTimeout(() => {
-                    invoke('write_to_pty', { data: startupCmd, projectPath: path, terminalType: currentEngine });
-                }, 500);
-            }
-        }
+        // PTY auto-spawn is now handled directly by the backend to bypass zsh rc files and launch instantly
     } catch (e) {
         console.error('Failed to switch session in Rust:', e);
     }
@@ -634,25 +621,12 @@ engineRadios.forEach((radio) => {
 
         try {
             // Lazy spawn or switch to the engine on backend
-            const result = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
+            await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
                 projectPath: activeProject, 
                 engine: currentEngine 
             });
 
-            // Auto-spawn active engine if this session is brand new (e.g. fresh tmux session)
-            if (result.is_new_session) {
-                let startupCmd = '';
-                if (currentEngine === 'claude') {
-                    startupCmd = 'claude --dangerously-skip-permissions\r';
-                } else if (currentEngine === 'agy') {
-                    startupCmd = 'agy --add-dir=$PWD --dangerously-skip-permissions\r';
-                }
-                if (startupCmd) {
-                    setTimeout(() => {
-                        invoke('write_to_pty', { data: startupCmd, projectPath: activeProject, terminalType: currentEngine });
-                    }, 500);
-                }
-            }
+            // PTY auto-spawn is now handled directly by the backend to bypass zsh rc files and launch instantly
         } catch (err) {
             console.error('Failed to toggle engine session on backend:', err);
         }

@@ -3,6 +3,7 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 ### [2026-06-27] Phase 5: GUI-by-Default and Working Directory Workspace Loading
+* **PTY Startup Optimization:** Optimized engine PTY startup by launching `claude` and `agy` directly inside the backend tmux/PTY processes, bypassing slow zsh configuration loading (e.g. `nvm`, `.zshrc`) and reducing launch time from 12s to under 2s. Removed frontend startup command injections to prevent command text pollution.
 * **GUI-by-Default:** Configured `bin/ai-os` to launch the Tauri GUI app by default when executed.
 * **Non-GUI / Terminal Mode:** Added support for `--cli`, `--terminal`, `--no-gui` parameters (as well as direct `--agy` / `--claude`) to bypass the GUI and run the agents directly in the current terminal.
 * **Working Directory Passing:** Programmed `bin/ai-os` to capture the invocation directory (`$ORIGINAL_PWD`) and pass it to either:
