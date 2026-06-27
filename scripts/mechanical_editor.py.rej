@@ -1,9 +1,0 @@
-@@ -131,7 +131,7 @@
- 
-     print('[Mechanical Editor] Reading target file...', flush=True)
-     with open(filepath, "r", encoding="utf-8") as f:
-         file_content = f.read()
-         
-     # Phase 1: Try unified patch
--    print("Requesting unified patch from DeepSeek via LiteLLM...")
-+    print("[Mechanical Editor] Requesting strict patch from DeepSeek...", flush=True)
