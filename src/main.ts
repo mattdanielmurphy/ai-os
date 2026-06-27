@@ -25,13 +25,16 @@ let isTerminalMode: boolean = false; // '!' mode
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const terminalBuffers: Record<string, string> = {};
 
-let isPaused: boolean = false;
+let pauseStatus: 'Running' | 'Pending' | 'Paused' = 'Running';
 const pauseBtnEl = document.getElementById('pause-btn');
 
-const updatePauseUI = (paused: boolean) => {
-    isPaused = paused;
+const updatePauseUI = (status: 'Running' | 'Pending' | 'Paused') => {
+    pauseStatus = status;
     if (pauseBtnEl) {
-        if (paused) {
+        if (status === 'Pending') {
+            pauseBtnEl.textContent = 'Pending...';
+            pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 border border-orange-500/30 animate-pulse transition-all select-none cursor-pointer';
+        } else if (status === 'Paused') {
             pauseBtnEl.textContent = 'Resume';
             pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-all select-none cursor-pointer';
         } else {
@@ -42,12 +45,18 @@ const updatePauseUI = (paused: boolean) => {
 };
 
 pauseBtnEl?.addEventListener('click', async () => {
-    const nextPauseState = !isPaused;
+    const requestPause = (pauseStatus === 'Running');
     try {
-        await invoke('toggle_process_pause', { projectPath: activeProject, pause: nextPauseState });
-        updatePauseUI(nextPauseState);
+        await invoke('toggle_process_pause', { projectPath: activeProject, pause: requestPause });
     } catch (e) {
         console.error('Failed to toggle pause:', e);
+    }
+});
+
+listen<{ project_path: string, status: 'Running' | 'Pending' | 'Paused' }>('pause-status', (event) => {
+    const { project_path, status } = event.payload;
+    if (project_path === activeProject) {
+        updatePauseUI(status);
     }
 });
 
@@ -232,7 +241,7 @@ const switchToProject = async (path: string) => {
     }
     
     // Reset pause state for the active project
-    updatePauseUI(false);
+    updatePauseUI('Running');
     
     // Request Rust backend to load/switch the project shell session
     try {

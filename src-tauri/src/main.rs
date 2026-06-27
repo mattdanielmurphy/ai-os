@@ -251,29 +251,175 @@ fn is_engine_running(engine: String, project_path: String, state: tauri::State<A
     Ok(false)
 }
 
+fn find_agent_pid(shell_pid: u32) -> Option<u32> {
+    let output = std::process::Command::new("ps")
+        .args(&["-A", "-o", "ppid,pid,args"])
+        .output()
+        .ok()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    let mut parent_to_children: std::collections::HashMap<u32, Vec<u32>> = std::collections::HashMap::new();
+    let mut pid_to_args: std::collections::HashMap<u32, String> = std::collections::HashMap::new();
+    
+    for line in stdout.lines().skip(1) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 3 {
+            if let (Ok(ppid), Ok(pid)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                let args = parts[2..].join(" ");
+                parent_to_children.entry(ppid).or_default().push(pid);
+                pid_to_args.insert(pid, args);
+            }
+        }
+    }
+    
+    let mut queue = vec![shell_pid];
+    let mut visited = std::collections::HashSet::new();
+    let mut found_pid = None;
+    
+    while let Some(current_pid) = queue.pop() {
+        if !visited.insert(current_pid) {
+            continue;
+        }
+        if let Some(args) = pid_to_args.get(&current_pid) {
+            let args_lower = args.to_lowercase();
+            if args_lower.contains("claude") || args_lower.contains("agy") {
+                found_pid = Some(current_pid);
+                break;
+            }
+        }
+        if let Some(children) = parent_to_children.get(&current_pid) {
+            for &child in children {
+                queue.push(child);
+            }
+        }
+    }
+    
+    found_pid.or(Some(shell_pid))
+}
+
+fn has_open_write_files(pid: u32) -> bool {
+    let output = std::process::Command::new("lsof")
+        .args(&["-p", &pid.to_string()])
+        .output();
+        
+    if let Ok(out) = output {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        for line in stdout.lines().skip(1) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 5 {
+                let fd = parts[3];
+                let file_type = parts[4];
+                if file_type == "REG" && (fd.contains('w') || fd.contains('u')) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn has_active_network_traffic(pid: u32) -> bool {
+    let output = std::process::Command::new("lsof")
+        .args(&["-i", "-a", "-p", &pid.to_string()])
+        .output();
+        
+    if let Ok(out) = output {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        if stdout.contains("ESTABLISHED") {
+            return true;
+        }
+    }
+    false
+}
+
+fn has_child_processes(agent_pid: u32) -> bool {
+    let output = std::process::Command::new("ps")
+        .args(&["-A", "-o", "ppid,pid"])
+        .output();
+        
+    if let Ok(out) = output {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        for line in stdout.lines().skip(1) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                if let Ok(ppid) = parts[0].parse::<u32>() {
+                    if ppid == agent_pid {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+#[derive(Clone, serde::Serialize)]
+struct PauseStatusPayload {
+    project_path: String,
+    status: String,
+}
+
 #[tauri::command]
 fn toggle_process_pause(project_path: String, pause: bool, state: tauri::State<AppState>) -> Result<(), String> {
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     let session = sessions.get(&project_path)
         .ok_or_else(|| format!("No active session for path: {}", project_path))?;
-    let pid = session.shell_pid;
+    let shell_pid = session.shell_pid;
     drop(sessions);
 
-    if pid == 0 {
+    if shell_pid == 0 {
         return Err("Invalid process ID".to_string());
     }
 
-    let signal = if pause { "-TSTP" } else { "-CONT" };
-    let status = std::process::Command::new("kill")
-        .args(&[signal, &pid.to_string()])
-        .status()
-        .map_err(|e| e.to_string())?;
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("Failed to send signal {} to pid {}", signal, pid))
+    if !pause {
+        let signal = "-CONT";
+        std::process::Command::new("kill")
+            .args(&[signal, &shell_pid.to_string()])
+            .status()
+            .map_err(|e| e.to_string())?;
+            
+        state.app_handle.emit_all("pause-status", PauseStatusPayload {
+            project_path: project_path.clone(),
+            status: "Running".to_string(),
+        }).ok();
+        return Ok(());
     }
+
+    state.app_handle.emit_all("pause-status", PauseStatusPayload {
+        project_path: project_path.clone(),
+        status: "Pending".to_string(),
+    }).ok();
+
+    let app_handle_clone = state.app_handle.clone();
+    let project_path_clone = project_path.clone();
+    std::thread::spawn(move || {
+        loop {
+            let agent_pid = match find_agent_pid(shell_pid) {
+                Some(pid) => pid,
+                None => shell_pid,
+            };
+
+            let net_active = has_active_network_traffic(agent_pid);
+            let wr_active = has_open_write_files(agent_pid);
+            let child_active = has_child_processes(agent_pid);
+
+            if !net_active && !wr_active && !child_active {
+                let _ = std::process::Command::new("kill")
+                    .args(&["-TSTP", &shell_pid.to_string()])
+                    .status();
+
+                app_handle_clone.emit_all("pause-status", PauseStatusPayload {
+                    project_path: project_path_clone.clone(),
+                    status: "Paused".to_string(),
+                }).ok();
+                break;
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    });
+
+    Ok(())
 }
 
 fn main() {
