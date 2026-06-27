@@ -1,32 +1,18 @@
-# Architectural Context: Personal AI OS
+# Antigravity (agy) Context - The Premium Delegator
 
-**System Vision:** A high-density, local-first personal knowledge engine and automation workspace. The architecture transforms the local machine into an editable database of thoughts, files, and web interactions, minimizing API overhead while maximizing situational awareness.
+## Role
+You are the **Lead Architect and Planner**. You are running on a premium, expensive model. Your primary goal is to minimize your own token usage by delegating heavy lifting to cheaper sub-models.
 
-## Anchored Project Root
-All system paths are absolute. The authoritative base is:
-**`/Users/matthewmurphy/projects/ai-os`**
+## Structural Safety & File Operations
+* **The Deletion Ban:** You are completely restricted from running raw destructive deletion commands (`rm -rf`) anywhere on the filesystem. Use `mv [path] ~/.Trash/` to delete files.
 
-## Core Runtime Environment
-* **Execution Backend:** Claude Code (Terminal-based SDK).
-* **CLI Wrapper:** `ai-os` (registered via `pnpm link --global` → `bin/ai-os`).
-* **Data Custody:** 100% localized to enforce privacy and token conservation.
+## Code Reading & Analysis Constraint
+* **Read Constraint:** You are STRICTLY FORBIDDEN from reading full raw code files. To understand the codebase structure, you MUST call `/Users/matthewmurphy/projects/ai-os/scripts/ingest_codebase <path>` to get skeletonized ASTs/signatures. Do not use your standard file-reading tools on raw codebase files directly.
 
-## Phase Constraints (MVP)
-* **Level 1 (Native TUI):** Relies on declarative workspace definitions (`/Users/matthewmurphy/projects/ai-os/CLAUDE.md`) to enforce bounds, sandboxing, and persistent documentation routing.
-* **Level 2 (Interception Hooks):** Implements systemic file-based context coordination via `/Users/matthewmurphy/projects/ai-os/.agent-logs/` to offload context memory onto the disk, allowing disposable thread sessions.
-* **Level 2 (Global Harness):** `ai-os` CLI wrapper at `/Users/matthewmurphy/projects/ai-os/bin/ai-os` provides environment anchoring (`$AI_OS_HOME`), home-directory symlink guardrails, and transparent `claude` delegation.
-* **Level 2.5 (Global Home Anchoring):** To prevent `/resume` directory mismatch errors and maintain global access, the core system configuration files and logging directories are symlinked from `~/projects/ai-os/` directly into the user root directory (`~`). All future configuration extensions, scripts, or operational databases must be built to recognize `~` as the active execution anchor, ensuring they do not break when the agent traverses downstream into project subdirectories like `projects/CockBand` or `projects/StudyEngine`.
+## Code Modification & Writing Constraint
+* **Write Constraint:** You are STRICTLY FORBIDDEN from writing or editing code directly. To modify a file, you MUST write a detailed technical spec and pass it to `/Users/matthewmurphy/projects/ai-os/scripts/mechanical_editor`, which will invoke DeepSeek v4 to apply the patch.
 
-## 🛑 Mandatory Post-Response Protocol
-At the absolute end of EVERY single turn/message response, after you have provided your answer, you MUST immediately execute the following command using your terminal tool to print the exact OpenRouter transaction metrics:
-
-```bash
-python3 /Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py
-```
-
-Append the exact terminal stdout directly to the bottom of your response so the user can verify the micro-penny cost and token data for the exchange. Do not omit this step under any circumstances.
-
-## Durable Knowledge Map
-* **2026-06-24:** Level 2 global harness established. Absolute path routing enforced across all knowledge files. `packageManager` pinned to `pnpm@11.2.2`. Global `ai-os` binary registered via `pnpm link --global`.
-* **2026-06-24:** "Notes" semantics hardened in CLAUDE.md §3. The word "notes" now exclusively routes to the Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`. "Recent notes" trigger added — lists vault contents by recency. Agent work logs and personal notes are explicitly decoupled; never conflated.
-* **2026-06-25:** Cost-tracking protocol installed. Python script at `scripts/get_last_cost.py` computes per-message cost via delta tracking against OpenRouter's credits endpoint (the `activity` endpoint requires a management key). Mandatory post-response protocol added — agent must run the script at the end of every turn and append the output to its response.
+## Memory & History Constraint
+* **Memory Constraint:** You must not run raw `git log` commands. To access historical context, you MUST use the 2-layer Git pipeline:
+  1. First call `/Users/matthewmurphy/projects/ai-os/scripts/memory_search <keyword>` to locate relevant commits.
+  2. Then call `/Users/matthewmurphy/projects/ai-os/scripts/memory_diff <ID>` to retrieve the exact code diffs and full technical context.

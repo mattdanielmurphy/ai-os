@@ -4,7 +4,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 35.47 GB (35 473 518 592 bytes)
+      Free: 57.3 GB (57 296 281 600 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Update/mnt1
       File System: APFS
@@ -23,7 +23,7 @@ Storage:
 
     Data:
 
-      Free: 35.47 GB (35 473 522 688 bytes)
+      Free: 57.3 GB (57 296 281 600 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Data
       File System: APFS
@@ -40,43 +40,9 @@ Storage:
           Partition Map Type: Unknown
           S.M.A.R.T. Status: Verified
 
-    iOS 26.3.1 Simulator:
-
-      Free: 459.6 MB (459 620 352 bytes)
-      Capacity: 17.75 GB (17 754 488 832 bytes)
-      Mount Point: /Library/Developer/CoreSimulator/Volumes/iOS_23D8133
-      File System: APFS
-      Writable: No
-      Ignore Ownership: No
-      BSD Name: disk5s1
-      Volume UUID: 24D4020B-374E-41EA-850D-95D245363378
-      Physical Drive:
-          Device Name: Disk Image
-          Media Name: AppleAPFSMedia
-          Protocol: Disk Image
-          Internal: No
-          Partition Map Type: Unknown
-
-    MetalToolchainCryptex:
-
-      Free: 76.4 MB (76 406 784 bytes)
-      Capacity: 2.37 GB (2 367 684 608 bytes)
-      Mount Point: /private/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.3.7003.10.uyFBy2
-      File System: APFS
-      Writable: No
-      Ignore Ownership: No
-      BSD Name: disk7s1
-      Volume UUID: E9FD717E-5782-42F7-802C-252C3946BC15
-      Physical Drive:
-          Device Name: Disk Image
-          Media Name: AppleAPFSMedia
-          Protocol: Disk Image
-          Internal: No
-          Partition Map Type: Unknown
-
     Macintosh HD:
 
-      Free: 35.47 GB (35 473 522 688 bytes)
+      Free: 57.3 GB (57 296 281 600 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /
       File System: APFS
@@ -95,12 +61,12 @@ Storage:
 
 ## Active LaunchAgents
 total 208
-drwxr-xr-x@  20 matthewmurphy  staff    640 Jun 24 00:03 .
+drwxr-xr-x@  20 matthewmurphy  staff    640 Jun 27 02:46 .
 drwx------@ 129 matthewmurphy  staff   4128 May 21 13:43 ..
 -rw-r--r--@   1 matthewmurphy  staff   6148 Jun 24 00:47 .DS_Store
 -rw-------@   1 matthewmurphy  staff   1437 Jun 13 00:40 ai.openclaw.gateway.plist
 -rw-r--r--@   1 matthewmurphy  staff    880 Feb 19 13:37 com.google.GoogleUpdater.wake.plist
--rw-r--r--@   1 matthewmurphy  staff    594 Jun 24 00:03 com.lwouis.alt-tab-macos.plist
+-rw-r--r--@   1 matthewmurphy  staff    594 Jun 27 02:46 com.lwouis.alt-tab-macos.plist
 -rw-r--r--@   1 matthewmurphy  staff   1336 Jun  7 15:52 com.matthewmurphy.backup-launch-agents.plist
 -rw-r--r--    1 matthewmurphy  staff    494 May 19 23:39 com.matthewmurphy.energy_monitor.plist
 -rw-r--r--@   1 matthewmurphy  staff    711 Mar 22 14:39 com.matthewmurphy.irig-watcher.plist
