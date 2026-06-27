@@ -35,11 +35,14 @@ struct Payload {
 }
 
 fn is_tmux_available() -> bool {
-    std::process::Command::new("which")
-        .arg("tmux")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    static AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *AVAILABLE.get_or_init(|| {
+        std::process::Command::new("tmux")
+            .arg("-V")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    })
 }
 
 fn has_tmux_session(session_name: &str) -> bool {
@@ -190,22 +193,57 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     let is_new_proj = !sessions.contains_key(&project_path);
     if is_new_proj {
-        let (mini_writer, mini_master, mini_pid, _) = spawn_single_pty(&project_path, "mini", &app_handle)?;
-        sessions.insert(
-            project_path.clone(),
-            ProjectSession {
-                claude_writer: None,
-                claude_master: None,
-                claude_pid: None,
-                agy_writer: None,
-                agy_master: None,
-                agy_pid: None,
-                mini_writer,
-                mini_master,
-                mini_pid,
-                project_path: project_path.clone(),
-            },
-        );
+        // Spawn mini and engine PTYs in parallel to speed up tab loading
+        let app_handle_clone1 = app_handle.clone();
+        let app_handle_clone2 = app_handle.clone();
+        let path_clone1 = project_path.clone();
+        let path_clone2 = project_path.clone();
+        let engine_clone = engine.clone();
+
+        let mini_thread = std::thread::spawn(move || {
+            spawn_single_pty(&path_clone1, "mini", &app_handle_clone1)
+        });
+        let engine_thread = std::thread::spawn(move || {
+            spawn_single_pty(&path_clone2, &engine_clone, &app_handle_clone2)
+        });
+
+        let (mini_writer, mini_master, mini_pid, _) = mini_thread.join()
+            .map_err(|_| "Failed to join mini PTY spawn thread".to_string())??;
+        let (engine_writer, engine_master, engine_pid, is_new_session) = engine_thread.join()
+            .map_err(|_| "Failed to join engine PTY spawn thread".to_string())??;
+
+        let mut session = ProjectSession {
+            claude_writer: None,
+            claude_master: None,
+            claude_pid: None,
+            agy_writer: None,
+            agy_master: None,
+            agy_pid: None,
+            mini_writer,
+            mini_master,
+            mini_pid,
+            project_path: project_path.clone(),
+        };
+
+        if engine == "claude" {
+            session.claude_writer = Some(engine_writer);
+            session.claude_master = Some(engine_master);
+            session.claude_pid = Some(engine_pid);
+        } else if engine == "agy" {
+            session.agy_writer = Some(engine_writer);
+            session.agy_master = Some(engine_master);
+            session.agy_pid = Some(engine_pid);
+        }
+
+        sessions.insert(project_path.clone(), session);
+
+        let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
+        *active = Some(project_path);
+
+        return Ok(SwitchResult {
+            shell_pid: engine_pid,
+            is_new_session,
+        });
     }
 
     let session = sessions.get_mut(&project_path).unwrap();

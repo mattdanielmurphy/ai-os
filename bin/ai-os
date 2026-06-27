@@ -24,14 +24,65 @@ echo "## Hammerspoon Config" >> "$PROFILE_PATH"
 
 cd "$AI_OS_HOME" || exit
 
-if [ "$1" = "--gui" ]; then
-    shift
+# Argument parsing
+ENGINE="agy"
+LAUNCH_GUI=false
+
+show_help() {
+    echo "AI-OS CLI - Command Line Interface for Personal AI OS"
+    echo ""
+    echo "Usage:"
+    echo "  ai-os [options] [arguments]"
+    echo ""
+    echo "Options:"
+    echo "  --agy           Run the Agy orchestrator agent (default)"
+    echo "  --claude        Run the native Claude Code agent"
+    echo "  --gui           Launch the Tauri GUI dashboard"
+    echo "  -h, --help      Show this help message"
+    echo ""
+    echo "All other arguments and flags are forwarded to the selected agent."
+    exit 0
+}
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            ;;
+        --gui)
+            LAUNCH_GUI=true
+            shift
+            break
+            ;;
+        --claude)
+            ENGINE="claude"
+            shift
+            break
+            ;;
+        --agy)
+            ENGINE="agy"
+            shift
+            break
+            ;;
+        --cli)
+            # Legacy flag, support and map to default (agy)
+            shift
+            ;;
+        *)
+            # Forward everything else
+            break
+            ;;
+    esac
+done
+
+if [ "$LAUNCH_GUI" = true ]; then
     echo "[ai-os] Launching GUI interface..."
     pnpm tauri dev
-else
-    if [ "$1" = "--cli" ]; then
-        shift
-    fi
-    echo "[ai-os] Launching native terminal agent..."
+elif [ "$ENGINE" = "claude" ]; then
+    echo "[ai-os] Launching Claude Code agent..."
     exec claude "$@"
+else
+    echo "[ai-os] Launching Agy orchestrator agent..."
+    exec agy "$@"
 fi
