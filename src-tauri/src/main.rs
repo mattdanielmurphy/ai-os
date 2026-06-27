@@ -27,12 +27,36 @@ struct Payload {
     project_path: String,
 }
 
+fn is_tmux_available() -> bool {
+    std::process::Command::new("which")
+        .arg("tmux")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn has_tmux_session(session_name: &str) -> bool {
+    std::process::Command::new("tmux")
+        .args(&["has-session", "-t", session_name])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn get_tmux_session_name(project_path: &str) -> String {
+    let sanitized: String = project_path
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '_' })
+        .collect();
+    format!("ai_os_{}", sanitized.trim_matches('_'))
+}
+
 // Spawns a new shell PTY for a specific project directory
 fn spawn_project_pty(
     project_path: &str,
     app_handle: &tauri::AppHandle,
     sessions_ref: Arc<Mutex<HashMap<String, ProjectSession>>>,
-) -> Result<u32, String> {
+) -> Result<(u32, bool), String> {
     let pty_system = NativePtySystem::default();
     let pair = pty_system.openpty(PtySize {
         rows: 24,
@@ -41,10 +65,22 @@ fn spawn_project_pty(
         pixel_height: 0,
     }).map_err(|e| e.to_string())?;
 
-    let mut cmd = CommandBuilder::new("/bin/zsh");
-    // Start shell inside the target project directory!
-    cmd.cwd(project_path);
-    
+    let mut is_new_tmux = false;
+    let cmd = if is_tmux_available() {
+        let session_name = get_tmux_session_name(project_path);
+        if !has_tmux_session(&session_name) {
+            is_new_tmux = true;
+        }
+        let mut c = CommandBuilder::new("tmux");
+        c.args(&["new-session", "-A", "-s", &session_name, "-c", project_path]);
+        c
+    } else {
+        is_new_tmux = true;
+        let mut c = CommandBuilder::new("/bin/zsh");
+        c.cwd(project_path);
+        c
+    };
+
     let _child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
     let shell_pid = _child.process_id().unwrap_or(0);
 
@@ -85,7 +121,13 @@ fn spawn_project_pty(
         }
     });
 
-    Ok(shell_pid)
+    Ok((shell_pid, is_new_tmux))
+}
+
+#[derive(Clone, serde::Serialize)]
+struct SwitchResult {
+    shell_pid: u32,
+    is_new_session: bool,
 }
 
 #[tauri::command]
@@ -96,24 +138,38 @@ fn initialize_project_session(project_path: String, state: tauri::State<AppState
     }
     drop(sessions); // release lock before spawning to avoid deadlock
 
-    spawn_project_pty(&project_path, &state.app_handle, state.sessions.clone())
+    let (pid, _) = spawn_project_pty(&project_path, &state.app_handle, state.sessions.clone())?;
+    Ok(pid)
 }
 
 #[tauri::command]
-fn switch_active_project(project_path: String, state: tauri::State<AppState>) -> Result<(), String> {
+fn switch_active_project(project_path: String, state: tauri::State<AppState>) -> Result<SwitchResult, String> {
+    let mut is_new_session = false;
+    let mut shell_pid = 0;
+
     // First, ensure the session exists. If not, create it.
     let exists = {
         let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-        sessions.contains_key(&project_path)
+        if let Some(session) = sessions.get(&project_path) {
+            shell_pid = session.shell_pid;
+            true
+        } else {
+            false
+        }
     };
 
     if !exists {
-        spawn_project_pty(&project_path, &state.app_handle, state.sessions.clone())?;
+        let (pid, is_new) = spawn_project_pty(&project_path, &state.app_handle, state.sessions.clone())?;
+        shell_pid = pid;
+        is_new_session = is_new;
     }
 
     let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
     *active = Some(project_path);
-    Ok(())
+    Ok(SwitchResult {
+        shell_pid,
+        is_new_session,
+    })
 }
 
 #[tauri::command]
@@ -195,6 +251,31 @@ fn is_engine_running(engine: String, project_path: String, state: tauri::State<A
     Ok(false)
 }
 
+#[tauri::command]
+fn toggle_process_pause(project_path: String, pause: bool, state: tauri::State<AppState>) -> Result<(), String> {
+    let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+    let session = sessions.get(&project_path)
+        .ok_or_else(|| format!("No active session for path: {}", project_path))?;
+    let pid = session.shell_pid;
+    drop(sessions);
+
+    if pid == 0 {
+        return Err("Invalid process ID".to_string());
+    }
+
+    let signal = if pause { "-TSTP" } else { "-CONT" };
+    let status = std::process::Command::new("kill")
+        .args(&[signal, &pid.to_string()])
+        .status()
+        .map_err(|e| e.to_string())?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("Failed to send signal {} to pid {}", signal, pid))
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -217,7 +298,8 @@ fn main() {
             switch_active_project,
             write_to_pty,
             resize_pty,
-            is_engine_running
+            is_engine_running,
+            toggle_process_pause
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

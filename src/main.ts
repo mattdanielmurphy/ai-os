@@ -25,6 +25,32 @@ let isTerminalMode: boolean = false; // '!' mode
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const terminalBuffers: Record<string, string> = {};
 
+let isPaused: boolean = false;
+const pauseBtnEl = document.getElementById('pause-btn');
+
+const updatePauseUI = (paused: boolean) => {
+    isPaused = paused;
+    if (pauseBtnEl) {
+        if (paused) {
+            pauseBtnEl.textContent = 'Resume';
+            pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-all select-none cursor-pointer';
+        } else {
+            pauseBtnEl.textContent = 'Pause';
+            pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-all select-none cursor-pointer';
+        }
+    }
+};
+
+pauseBtnEl?.addEventListener('click', async () => {
+    const nextPauseState = !isPaused;
+    try {
+        await invoke('toggle_process_pause', { projectPath: activeProject, pause: nextPauseState });
+        updatePauseUI(nextPauseState);
+    } catch (e) {
+        console.error('Failed to toggle pause:', e);
+    }
+});
+
 // Hardcoded initial projects list mapped with unique random colors
 const initialProjects: Project[] = [
     { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now() },
@@ -198,16 +224,34 @@ const switchToProject = async (path: string) => {
         term.write(terminalBuffers[path]);
     } else {
         // First boot of shell, or empty cache.
-        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to cached project shell at: ${path}...\x1b[0m\r\n`);
+        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to project session at: ${path}...\x1b[0m\r\n`);
     }
 
     if (currentDirPathEl) {
         currentDirPathEl.textContent = path;
     }
     
+    // Reset pause state for the active project
+    updatePauseUI(false);
+    
     // Request Rust backend to load/switch the project shell session
     try {
-        await invoke('switch_active_project', { projectPath: path });
+        const result = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { projectPath: path });
+        
+        // Auto-spawn active engine if this session is brand new (e.g. fresh tmux session)
+        if (result.is_new_session) {
+            let startupCmd = '';
+            if (currentEngine === 'claude') {
+                startupCmd = 'claude\r';
+            } else if (currentEngine === 'agy') {
+                startupCmd = 'agy --add-dir=$PWD --dangerously-skip-permissions\r';
+            }
+            if (startupCmd) {
+                setTimeout(() => {
+                    invoke('write_to_pty', { data: startupCmd, projectPath: path });
+                }, 500);
+            }
+        }
     } catch (e) {
         console.error('Failed to switch session in Rust:', e);
     }
@@ -215,35 +259,6 @@ const switchToProject = async (path: string) => {
     // Restore or initialize PTY geometry sync
     resizePty();
     renderProjects();
-
-    // Check if there is an existing thread transcript to resume context
-    try {
-        await resumeLastThreadContext(path);
-    } catch (e) {
-        console.error('Failed to resume context:', e);
-    }
-};
-
-// Attempt to resume the last active thread/transcript for the current directory
-const resumeLastThreadContext = async (path: string) => {
-    // Let's run a search in the logs or print the last 2-3 exchanges on the screen to show how we left things off
-    // We will query the Rust process list or transcript.jsonl files
-    // Find the latest transcript.jsonl that references this project path
-    const terminalHistoryDump = terminalBuffers[path] || '';
-    // If terminal already has content, user can see the shell buffer, which is perfect!
-    // But we also want to display a helpful status message on the terminal showing the last thread session.
-    // Let's search the git log for the last commit details to summarize "how we left things off" in this directory.
-    if (!terminalHistoryDump.includes('── Last Thread Session ──')) {
-        // Retrieve last commit log to describe the active workspace state
-        // Let's write this cleanly to the xterm terminal
-        term.write('\r\n\x1b[1;30m── Last Thread Session ──\x1b[0m\r\n');
-        term.write('\x1b[38;5;244mChecking Git ledger/history logs to reconstruct state...\x1b[0m\r\n');
-        
-        // Send a carriage return to prompt the shell if empty
-        if (!terminalBuffers[path]) {
-            invoke('write_to_pty', { data: '\r', projectPath: path });
-        }
-    }
 };
 
 // Add project button
