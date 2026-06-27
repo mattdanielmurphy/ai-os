@@ -1,0 +1,5 @@
+rm() {
+    echo "[AI-OS SYSTEM] 'rm' is physically disabled in this environment."
+    echo "Use 'mv <file> ~/.Trash/' instead."
+    return 1
+}

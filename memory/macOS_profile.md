@@ -4,7 +4,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 57.3 GB (57 296 281 600 bytes)
+      Free: 57.1 GB (57 099 956 224 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Update/mnt1
       File System: APFS
@@ -23,7 +23,7 @@ Storage:
 
     Data:
 
-      Free: 57.3 GB (57 296 281 600 bytes)
+      Free: 57.1 GB (57 099 956 224 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Data
       File System: APFS
@@ -42,7 +42,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 57.3 GB (57 296 281 600 bytes)
+      Free: 57.1 GB (57 099 956 224 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /
       File System: APFS
@@ -81,3 +81,56 @@ lrwxr-xr-x    1 matthewmurphy  staff    132 Jun 22 22:42 com.user.notesync.plist
 -rw-r--r--@   1 matthewmurphy  staff    685 Jan  5  2025 homebrew.mxcl.nginx.plist
 -rw-r--r--@   1 matthewmurphy  staff    386 Dec 19  2025 Messauto.plist
 -rwxr-xr-x@   1 matthewmurphy  staff  33472 Jun 22 23:36 notesync-wrapper
+## Connected Displays
+Graphics/Displays:
+
+    Apple M2 Pro:
+
+      Chipset Model: Apple M2 Pro
+      Type: GPU
+      Bus: Built-In
+      Total Number of Cores: 19
+      Vendor: Apple (0x106b)
+      Metal Support: Metal 3
+      Displays:
+        Color LCD:
+          Display Type: Built-in Liquid Retina XDR Display
+          Resolution: 3456 x 2234 Retina
+          Main Display: Yes
+          Mirror: Off
+          Online: Yes
+          Automatically Adjust Brightness: No
+          Connection Type: Internal
+
+## Hammerspoon Config
+-- ~/.hammerspoon/init.lua
+-- Entry point for the Hammerspoon configuration.
+-- Loads modular components and sets up automatic config reloading.
+
+-- ── Config auto-reloader ────────────────────────────────────────────────────────
+-- Watches the entire ~/.hammerspoon/ directory tree for .lua changes and
+-- triggers a full reload so edits take effect immediately.
+
+local function _reloadConfig(files)
+  local shouldReload = false
+  for _, file in ipairs(files) do
+    if file:sub(-4) == ".lua" then
+      shouldReload = true
+      break
+    end
+  end
+  if shouldReload then
+    hs.reload()
+  end
+end
+
+local _configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", _reloadConfig)
+_configWatcher:start()
+
+-- ── Modules ─────────────────────────────────────────────────────────────────────
+
+require("modules.clipboard")
+
+-- ── Startup confirmation ─────────────────────────────────────────────────────────
+
+hs.alert.show("⚙️  Hammerspoon config loaded")

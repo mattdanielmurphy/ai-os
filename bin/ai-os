@@ -5,6 +5,7 @@ export AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
 echo "[ai-os] Enforcing absolute context guardrails in ~/"
 ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md
 ln -sf "$AI_OS_HOME/MEMORY.md" ~/MEMORY.md
+export ZDOTDIR="$AI_OS_HOME"
 ln -sfn "$AI_OS_HOME/memory" ~/memory
 
 # PHASE 4: macOS Profiling
@@ -16,6 +17,10 @@ echo "## Storage & Volumes" >> "$PROFILE_PATH"
 system_profiler SPStorageDataType >> "$PROFILE_PATH" 2>/dev/null
 echo "## Active LaunchAgents" >> "$PROFILE_PATH"
 ls -la ~/Library/LaunchAgents >> "$PROFILE_PATH" 2>/dev/null
+echo "## Connected Displays" >> "$PROFILE_PATH"
+system_profiler SPDisplaysDataType >> "$PROFILE_PATH" 2>/dev/null
+echo "## Hammerspoon Config" >> "$PROFILE_PATH"
+[ -f ~/.hammerspoon/init.lua ] && cat ~/.hammerspoon/init.lua | head -n 50 >> "$PROFILE_PATH" 2>/dev/null
 
 cd "$AI_OS_HOME" || exit
 
