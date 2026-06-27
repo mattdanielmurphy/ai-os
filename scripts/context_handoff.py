@@ -26,6 +26,7 @@ def main():
 {args.goal}
 
 ## Completed So Far
+<!-- INDEXED HANDOFF PROTOCOL: Be succinct. Write a 1-sentence summary per step with step_<id> reference. Store granular details in .agent-logs/details/step_<timestamp_or_id>.md -->
 {args.completed}
 
 ## Next Steps
