@@ -16,12 +16,14 @@ interface Project {
     lastActive: number; // timestamp
     engine: 'claude' | 'agy';
     promptDraft?: string;
+    isTerminalMode?: boolean;
 }
 
 // ----------------------------------------------------
 // 2. Global State Management
 // ----------------------------------------------------
 let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
+let isTerminalMode: boolean = false;
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const engineBuffers: Record<string, string> = {};
@@ -64,15 +66,15 @@ listen<{ project_path: string, status: 'Running' | 'Pending' | 'Paused' }>('paus
 
 // Hardcoded initial projects list mapped with unique random colors and default engines
 const initialProjects: Project[] = [
-    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now(), engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000, engine: 'claude' },
-    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000, engine: 'claude' }
+    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now(), engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000, engine: 'claude', isTerminalMode: false },
+    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000, engine: 'claude', isTerminalMode: false }
 ];
 
 // Load projects from localStorage or use initial list
@@ -81,9 +83,10 @@ let projects: Project[] = (() => {
     if (saved) {
         try {
             const list = JSON.parse(saved);
-            // Ensure all loaded projects have the engine property
+            // Ensure all loaded projects have the engine and isTerminalMode properties
             return list.map((p: any) => ({
                 engine: 'claude',
+                isTerminalMode: false,
                 ...p
             }));
         } catch (e) {
@@ -127,11 +130,46 @@ const miniTerm = new Terminal({
 const miniFitAddon = new FitAddon();
 miniTerm.loadAddon(miniFitAddon);
 
+let miniInputBuffer = '';
+
 miniTerm.onData((data) => {
+    // Intercept Escape key
+    if (data === '\x1b') {
+        exitTerminalMode();
+        return;
+    }
+    
+    // Write directly to PTY
     invoke('write_to_pty', { data, projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
         console.error('Failed to write key to Mini PTY:', err);
     });
+
+    // Check buffer for command exits
+    for (let i = 0; i < data.length; i++) {
+        const char = data[i];
+        if (char === '\r' || char === '\n') {
+            const cmd = miniInputBuffer.trim();
+            if (cmd === 'exit' || cmd === 'exit()') {
+                exitTerminalMode();
+            }
+            miniInputBuffer = '';
+        } else if (char === '\x7f' || char === '\x08') {
+            miniInputBuffer = miniInputBuffer.slice(0, -1);
+        } else {
+            miniInputBuffer += char;
+        }
+    }
 });
+
+const exitTerminalMode = () => {
+    isTerminalMode = false;
+    const currentProj = projects.find(p => p.path === activeProject);
+    if (currentProj) {
+        currentProj.isTerminalMode = false;
+        saveProjects();
+    }
+    applyTerminalModeUI();
+};
 
 const resizePty = () => {
     fitAddon.fit();
@@ -224,7 +262,32 @@ if (splitter && miniContainer && panesContainer) {
 }
 
 // ----------------------------------------------------
-// 5. UI Rendering: Sidebar & Project Swapper
+// 5. Dynamic Mode UI Application
+// ----------------------------------------------------
+const applyTerminalModeUI = () => {
+    const bottomArea = document.getElementById('bottom-input-area');
+    
+    if (isTerminalMode) {
+        if (splitter) splitter.style.display = 'block';
+        if (miniContainer) miniContainer.style.display = 'block';
+        if (bottomArea) bottomArea.style.display = 'none';
+        setTimeout(() => {
+            miniTerm.focus();
+            resizePty();
+        }, 50);
+    } else {
+        if (splitter) splitter.style.display = 'none';
+        if (miniContainer) miniContainer.style.display = 'none';
+        if (bottomArea) bottomArea.style.display = 'flex';
+        setTimeout(() => {
+            textarea?.focus();
+            resizePty();
+        }, 50);
+    }
+};
+
+// ----------------------------------------------------
+// 6. UI Rendering: Sidebar & Project Swapper
 // ----------------------------------------------------
 const projectsListEl = document.getElementById('projects-list');
 const currentDirPathEl = document.getElementById('current-dir-path');
@@ -298,6 +361,7 @@ const switchToProject = async (path: string) => {
     if (currentProj) {
         currentProj.promptDraft = textarea ? textarea.value : '';
         currentProj.engine = currentEngine;
+        currentProj.isTerminalMode = isTerminalMode;
     }
 
     activeProject = path;
@@ -316,6 +380,8 @@ const switchToProject = async (path: string) => {
                 radio.checked = true;
             }
         }
+        isTerminalMode = !!nextProj.isTerminalMode;
+        applyTerminalModeUI();
         saveProjects();
     }
     
@@ -397,7 +463,8 @@ addProjectBtn?.addEventListener('click', async () => {
         name,
         color: randomColor,
         lastActive: Date.now(),
-        engine: 'claude'
+        engine: 'claude',
+        isTerminalMode: false
     };
     
     projects.push(newProj);
@@ -406,7 +473,7 @@ addProjectBtn?.addEventListener('click', async () => {
 });
 
 // ----------------------------------------------------
-// 6. Engine Toggle & Routing
+// 7. Engine Toggle & Routing
 // ----------------------------------------------------
 let currentEngine: 'claude' | 'agy' = 'claude'
 const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]')
@@ -424,7 +491,7 @@ engineRadios.forEach((radio) => {
 });
 
 // ----------------------------------------------------
-// 7. Input Interception & Routing
+// 8. Input Interception & Routing
 // ----------------------------------------------------
 const adjustHeight = () => {
     if (textarea) {
@@ -433,6 +500,23 @@ const adjustHeight = () => {
         resizePty();
     }
 };
+
+textarea?.addEventListener('input', () => {
+    // Instantly toggle to terminal mode when user types exactly "!" in empty field
+    if (textarea.value === '!') {
+        isTerminalMode = true;
+        const currentProj = projects.find(p => p.path === activeProject);
+        if (currentProj) {
+            currentProj.isTerminalMode = true;
+            saveProjects();
+        }
+        applyTerminalModeUI();
+        textarea.value = '';
+        adjustHeight();
+    } else {
+        adjustHeight();
+    }
+});
 
 textarea?.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -496,8 +580,6 @@ textarea?.addEventListener('keydown', async (e) => {
     }
 });
 
-textarea?.addEventListener('input', adjustHeight);
-
 // Tauri File Drop handling
 listen<string[]>('tauri://file-drop', (event) => {
     if (!textarea) return;
@@ -514,7 +596,7 @@ listen<string[]>('tauri://file-drop', (event) => {
 });
 
 // ----------------------------------------------------
-// 8. Focus Management & Initialization
+// 9. Focus Management & Initialization
 // ----------------------------------------------------
 textarea?.focus();
 
@@ -532,7 +614,11 @@ document.addEventListener('click', (e) => {
     } else if (isMiniTermClick) {
         miniTerm.focus();
     } else if (!isSidebarClick && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && (!selection || selection.toString() === '')) {
-        textarea?.focus();
+        if (isTerminalMode) {
+            miniTerm.focus();
+        } else {
+            textarea?.focus();
+        }
     }
 });
 
