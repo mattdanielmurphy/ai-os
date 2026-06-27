@@ -525,10 +525,12 @@ fn close_project_session(project_path: String, state: tauri::State<AppState>) ->
 }
 
 #[tauri::command]
-fn select_directory() -> Result<Option<String>, String> {
-    use tauri::api::dialog::blocking::FileDialogBuilder;
-    let path = FileDialogBuilder::new()
-        .pick_folder();
+async fn select_directory() -> Result<Option<String>, String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    tauri::api::dialog::FileDialogBuilder::new().pick_folder(move |path| {
+        tx.send(path).ok();
+    });
+    let path = rx.recv().map_err(|e| e.to_string())?;
     match path {
         Some(path) => Ok(Some(path.to_string_lossy().to_string())),
         None => Ok(None),
