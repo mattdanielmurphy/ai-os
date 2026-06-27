@@ -22,11 +22,12 @@ system_profiler SPDisplaysDataType >> "$PROFILE_PATH" 2>/dev/null
 echo "## Hammerspoon Config" >> "$PROFILE_PATH"
 [ -f ~/.hammerspoon/init.lua ] && cat ~/.hammerspoon/init.lua | head -n 50 >> "$PROFILE_PATH" 2>/dev/null
 
+ORIGINAL_PWD="$PWD"
 cd "$AI_OS_HOME" || exit
 
 # Argument parsing
 ENGINE="agy"
-LAUNCH_GUI=false
+LAUNCH_GUI=true
 
 show_help() {
     echo "AI-OS CLI - Command Line Interface for Personal AI OS"
@@ -35,9 +36,12 @@ show_help() {
     echo "  ai-os [options] [arguments]"
     echo ""
     echo "Options:"
-    echo "  --agy           Run the Agy orchestrator agent (default)"
-    echo "  --claude        Run the native Claude Code agent"
-    echo "  --gui           Launch the Tauri GUI dashboard"
+    echo "  --gui           Launch the Tauri GUI dashboard (default)"
+    echo "  --cli           Run the Agy orchestrator agent in the current terminal"
+    echo "  --terminal      Run the Agy orchestrator agent in the current terminal"
+    echo "  --no-gui        Run the Agy orchestrator agent in the current terminal"
+    echo "  --agy           Run the Agy orchestrator agent in the current terminal"
+    echo "  --claude        Run the native Claude Code agent in the current terminal"
     echo "  -h, --help      Show this help message"
     echo ""
     echo "All other arguments and flags are forwarded to the selected agent."
@@ -53,24 +57,23 @@ while [[ $# -gt 0 ]]; do
         --gui)
             LAUNCH_GUI=true
             shift
-            break
             ;;
         --claude)
             ENGINE="claude"
+            LAUNCH_GUI=false
             shift
-            break
             ;;
         --agy)
             ENGINE="agy"
+            LAUNCH_GUI=false
             shift
-            break
             ;;
-        --cli)
-            # Legacy flag, support and map to default (agy)
+        --cli|--no-gui|--terminal)
+            LAUNCH_GUI=false
             shift
             ;;
         *)
-            # Forward everything else
+            # Forward everything else to agent (only applicable if running non-GUI)
             break
             ;;
     esac
@@ -78,11 +81,14 @@ done
 
 if [ "$LAUNCH_GUI" = true ]; then
     echo "[ai-os] Launching GUI interface..."
+    export AIOS_INITIAL_PROJECT="$ORIGINAL_PWD"
     pnpm tauri dev
 elif [ "$ENGINE" = "claude" ]; then
-    echo "[ai-os] Launching Claude Code agent..."
-    exec claude "$@"
+    echo "[ai-os] Launching Claude Code agent in terminal at $ORIGINAL_PWD..."
+    cd "$ORIGINAL_PWD" || exit
+    exec claude "$@" --dangerously-skip-permissions
 else
-    echo "[ai-os] Launching Agy orchestrator agent..."
-    exec agy "$@"
+    echo "[ai-os] Launching Agy orchestrator agent in terminal at $ORIGINAL_PWD..."
+    cd "$ORIGINAL_PWD" || exit
+    exec agy "$@" --dangerously-skip-permissions
 fi

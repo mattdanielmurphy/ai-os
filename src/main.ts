@@ -425,7 +425,7 @@ const switchToProject = async (path: string) => {
         if (result.is_new_session) {
             let startupCmd = '';
             if (currentEngine === 'claude') {
-                startupCmd = 'claude\r';
+                startupCmd = 'claude --dangerously-skip-permissions\r';
             } else if (currentEngine === 'agy') {
                 startupCmd = 'agy --add-dir=$PWD --dangerously-skip-permissions\r';
             }
@@ -643,7 +643,7 @@ engineRadios.forEach((radio) => {
             if (result.is_new_session) {
                 let startupCmd = '';
                 if (currentEngine === 'claude') {
-                    startupCmd = 'claude\r';
+                    startupCmd = 'claude --dangerously-skip-permissions\r';
                 } else if (currentEngine === 'agy') {
                     startupCmd = 'agy --add-dir=$PWD --dangerously-skip-permissions\r';
                 }
@@ -795,6 +795,31 @@ document.addEventListener('click', (e) => {
 
 // Initialize workspace session
 (async () => {
+    try {
+        const initialProject = await invoke<string | null>('get_initial_project');
+        if (initialProject) {
+            const cleanPath = initialProject.trim();
+            const existing = projects.find(p => p.path === cleanPath);
+            if (existing) {
+                activeProject = cleanPath;
+            } else {
+                const name = cleanPath.split('/').pop() || 'unknown-project';
+                const newProj: Project = {
+                    path: cleanPath,
+                    name,
+                    color: getRandomProjectColor(),
+                    lastActive: Date.now(),
+                    engine: 'agy',
+                    isTerminalMode: false
+                };
+                projects.push(newProj);
+                saveProjects();
+                activeProject = cleanPath;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to get initial project:', e);
+    }
     await switchToProject(activeProject);
     renderProjects();
 })();

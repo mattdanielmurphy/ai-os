@@ -642,6 +642,11 @@ fn create_new_project(name: String, git_repo_name: String) -> Result<String, Str
     Ok(project_path.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+fn get_initial_project() -> Option<String> {
+    std::env::var("AIOS_INITIAL_PROJECT").ok()
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -668,7 +673,8 @@ fn main() {
             toggle_process_pause,
             close_project_session,
             select_directory,
-            create_new_project
+            create_new_project,
+            get_initial_project
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

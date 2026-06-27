@@ -2,6 +2,14 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+### [2026-06-27] Phase 5: GUI-by-Default and Working Directory Workspace Loading
+* **GUI-by-Default:** Configured `bin/ai-os` to launch the Tauri GUI app by default when executed.
+* **Non-GUI / Terminal Mode:** Added support for `--cli`, `--terminal`, `--no-gui` parameters (as well as direct `--agy` / `--claude`) to bypass the GUI and run the agents directly in the current terminal.
+* **Working Directory Passing:** Programmed `bin/ai-os` to capture the invocation directory (`$ORIGINAL_PWD`) and pass it to either:
+  - The Tauri GUI app via the `AIOS_INITIAL_PROJECT` environment variable, where the frontend automatically switches to or imports it.
+  - The CLI agents (Claude/Agy) by performing `cd "$ORIGINAL_PWD"` prior to command execution.
+* **Tauri initial project loader:** Added `get_initial_project` Tauri command in Rust backend and hooked it up in the frontend's initialization lifecycle to seamlessly switch or append the working directory to the workspace project list.
+
 ### [2026-06-24] Phase 1: Declarative Guardrails Initialization
 * Established project boundaries and `~` directory isolation.
 * Enforced absolute `rm` bans and `~/.Trash/` relocation protocols.
