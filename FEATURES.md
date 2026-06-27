@@ -135,3 +135,6 @@
 ### [2026-06-27] Token-Saving Quiet Run wrapper
 * **`qr` (Quiet Run) wrapper:** Added `qr` helper function to `~/.zshrc_aios` and `/Users/matthewmurphy/projects/ai-os/.zshrc_aios`. Pipes command stdout/stderr to `/tmp/aios_last_cmd.log`, outputting a compact success message on status 0, or printing the last 20 log lines on failure.
 * **Instruction Rule Injected:** Added a system rule in `~/.gemini/GEMINI.md` instructing the agent to prefix noisy commands (like `pnpm install`, `pip install`, `cargo build`) with `qr` to avoid PTY token window bloat.
+### [2026-06-27] Windowed File Reader
+* **`read_lines` windowed file reader:** Added `read_lines` function to `~/.zshrc_aios` which takes a file path, start line, and end line, outputting only those lines prefixed with actual line numbers using `sed` to save tokens.
+* **Token Management Section:** Added token management rule to `~/.gemini/GEMINI.md` forbidding `cat` for files larger than 100 lines and requiring `read_lines` or `grep -n` for surgical inspections.
