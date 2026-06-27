@@ -75,10 +75,10 @@
 * **Bypass Option:** Allows users to submit prompts immediately without clearing context by pressing `Cmd+Enter`, `Ctrl+Enter`, or `Alt+Enter`.
 
 ### [2026-06-27] Two-Layer Git Memory Architecture
-* **Two-Layer Memory Protocol:** Designed a token-conservation strategy utilizing commit message indexing.
-* **Layer 1 (Overview Query):** Implemented `scripts/memory_search` which filters git log history matching a keyword to display commit hashes and summary points.
-* **Layer 2 (Detail Lookup):** Implemented `scripts/memory_diff` which displays the exact unified code diff of a specific commit ID.
-* **System Prompt Update:** Configured `claude.md` to mandate searching Layer 1 and checking Layer 2 before analyzing historical files to keep token counts small.
+* **Two-Layer Memory Protocol:** Implemented a token-conservation strategy utilizing commit message and content indexing.
+* **Layer 1 (Overview Query):** Implemented `scripts/memory_search.sh` which filters git log message history (`--grep`) and diff contents (`-S`) matching a keyword, formatted as a bulleted list: `[hash] - message`.
+* **Layer 2 (Detail Lookup):** Implemented `scripts/memory_diff.sh` which validates the commit hash and outputs the exact commit message and code diff using `git show`.
+* **System Rules Enforced:** Used `scripts/append_system_rule.py` to write system rule constraints for Global, Antigravity, and Claude agents into `~/.gemini/GEMINI.md`.
 
 ### [2026-06-27] Foreground Process Interception
 * **Active CLI Detection:** Added a Rust command `is_engine_running` to check if any active descendant process of the shell PTY matches the target engine.
