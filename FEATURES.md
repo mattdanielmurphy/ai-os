@@ -64,3 +64,8 @@
 * **Engine Toggle Relocation:** Relocated the engine toggle radio button container from above the input textarea to a new slim, compact top header bar (`bg-gray-800`, `text-xs`, border separator) to optimize vertical workspace layout.
 * **Terminal Container Padding:** Updated `#terminal-container` Tailwind classes to ensure `min-h-0` is present and added explicit bottom padding (`pb-6`) to prevent xterm.js visual clipping issues at the bottom of the terminal display.
 * **Input Area Cleanup:** Cleaned up leftover borders and space in the bottom input area around the `#prompt-input` textarea.
+
+### [2026-06-27] Auto-Expanding Input & Native File Drop Support
+* **Auto-Expanding Input Area:** Updated `<textarea id="prompt-input">` in `index.html` to start at 2 lines (`min-h-[3rem]`, `rows="2"`) and dynamically grow up to ~10 lines (`max-h-40`, `overflow-y-auto`) on keystroke input.
+* **PTY & Terminal Fit Synchronization:** Connected the textarea's dynamic resize triggers to automatically call `fitAddon.fit()` and sync terminal dimensions to the Rust backend PTY.
+* **Native File Drop (Tauri):** Listens to `tauri://file-drop` events, maps over absolute dropped file paths, appends them to the input area separated by spaces, and triggers the input resize calculation automatically.

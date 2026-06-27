@@ -98,6 +98,36 @@ textarea?.addEventListener('keydown', (e) => {
         // Send to the PTY (\r executes the line)
         invoke('write_to_pty', { data: commandToExecute + '\r' });
         textarea.value = '';
+        
+        // Reset the textarea height back to the 2-line default
+        textarea.style.height = 'auto';
+        resizePty();
+    }
+});
+
+// Auto-resize listener
+const adjustHeight = () => {
+    if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+        resizePty();
+    }
+};
+
+textarea?.addEventListener('input', adjustHeight);
+
+// Tauri File Drop handling
+listen<string[]>('tauri://file-drop', (event) => {
+    if (!textarea) return;
+    const paths = event.payload;
+    if (paths && paths.length > 0) {
+        const textToAppend = paths.join(' ');
+        if (textarea.value) {
+            textarea.value += ' ' + textToAppend;
+        } else {
+            textarea.value = textToAppend;
+        }
+        adjustHeight();
     }
 });
 
