@@ -108,6 +108,11 @@
 * **Smart Cost & Quota Reporter:** Rewrote `scripts/get_last_cost.py` to support `--agent claude` and `--agent agy` flags, outputting sub-model metrics for Claude, and logging turns while tracking rolling turn limits (50 turns/5hr and 200 turns/weekly) for Agy.
 * **System Telemetry Rules:** Injected new agent rules using `append_system_rule.py` to require Agy and Claude to run `get_last_cost.py` at the end of every turn.
 
+### [2026-06-27] Phase 8: Real-Time Quota Telemetry (Source of Truth)
+* **Real-Time Quota API Integration:** Rewrote `scripts/get_last_cost.py` to fetch active Antigravity quotas directly from the internal gRPC endpoint (`https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota`) on `daily-cloudcode-pa.googleapis.com`.
+* **Automated OAuth Token Refresh:** Implemented a robust token refresh mechanism using client ID `1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com` and client secret `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`. When the local token in `~/.gemini/antigravity-cli/antigravity-oauth-token` is expired or close to expiry, the script programmatically requests a refresh and persists the updated token back to disk.
+* **Accurate Percentage Outputs:** Replaced the naive turn-counter approximation with actual server-side quota fractions. Formats remaining 5-hour and weekly quotas as real percentages (e.g. `81% (Real)` and `80% (Real)`) based on `gemini-2.5-pro` and `gemini-2.5-flash` bucket statuses.
+
 ### [2026-06-27] Phase 7: Mechanical Editor Silent Hang Fixes
 * **Fix Subprocess Hang:** Passed `--batch` and `-f` flags to `subprocess.run` executing the Unix `patch` command to prevent user interaction prompt hangs and ensure fast failure.
 * **API Request Timeouts:** Added a strict 60-second timeout to the `urllib.request.urlopen` call executing LLM requests to LiteLLM, preventing indefinite hangs on network dropouts.
