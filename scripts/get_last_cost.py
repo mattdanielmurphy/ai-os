@@ -144,7 +144,7 @@ def main():
         print(f"Delegated Sub-Model Cost (Turn): ${cost_turn:.4f}")
         print(f"Delegated Sub-Model Cost (Total): ${cost_total:.4f}")
         print(f"AGY Quota Remaining (5hr): {quota_5h_pct}% (Real)")
-        print(f"AGY Quota Remaining (Weekly): {quota_week_pct}% (Real)")
+        print(f"AGY Quota Remaining (Weekly): {quota_week_pct}% (Real)***")
     else:
         cost_turn, cost_total = get_stats()
         print(f"[TELEMETRY] Sub-Model Cost This Turn: ${cost_turn:.4f} | Total Delegated Cost: ${cost_total:.4f}")
