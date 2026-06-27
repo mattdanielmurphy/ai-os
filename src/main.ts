@@ -6,7 +6,58 @@ import { Terminal } from '@xterm/xterm'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 
-// 1. Terminal Setup
+// ----------------------------------------------------
+// 1. Interfaces & Types
+// ----------------------------------------------------
+interface Project {
+    path: string;
+    name: string;
+    color: string;
+    lastActive: number; // timestamp
+}
+
+// ----------------------------------------------------
+// 2. Global State Management
+// ----------------------------------------------------
+let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
+let isTerminalMode: boolean = false; // '!' mode
+
+// In-memory cache for terminal history of each project, so we can restore screen instantly when switching
+const terminalBuffers: Record<string, string> = {};
+
+// Hardcoded initial projects list mapped with unique random colors
+const initialProjects: Project[] = [
+    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now() },
+    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000 },
+    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000 },
+    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000 },
+    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000 },
+    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000 },
+    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000 },
+    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000 },
+    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000 }
+];
+
+// Load projects from localStorage or use initial list
+let projects: Project[] = (() => {
+    const saved = localStorage.getItem('ai-os-projects');
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error('Failed to parse saved projects:', e);
+        }
+    }
+    return initialProjects;
+})();
+
+const saveProjects = () => {
+    localStorage.setItem('ai-os-projects', JSON.stringify(projects));
+};
+
+// ----------------------------------------------------
+// 3. Terminal Setup & Integration
+// ----------------------------------------------------
 const term = new Terminal({
     cursorBlink: true,
     fontSize: 14,
@@ -19,7 +70,8 @@ term.loadAddon(fitAddon);
 
 // Handle direct input to terminal
 term.onData((data) => {
-    invoke('write_to_pty', { data }).catch((err) => {
+    // Write direct key input to the PTY for the active project
+    invoke('write_to_pty', { data, projectPath: activeProject }).catch((err) => {
         console.error('Failed to write direct key input to PTY:', err);
     });
 });
@@ -27,7 +79,7 @@ term.onData((data) => {
 // Helper function to fit and sync geometry with Rust
 const resizePty = () => {
     fitAddon.fit();
-    invoke('resize_pty', { rows: term.rows, cols: term.cols }).catch((err) => {
+    invoke('resize_pty', { rows: term.rows, cols: term.cols, projectPath: activeProject }).catch((err) => {
         console.error('Failed to resize PTY:', err);
     });
 };
@@ -35,23 +87,205 @@ const resizePty = () => {
 const container = document.getElementById('terminal-container');
 if (container) {
     term.open(container);
-    resizePty(); // Sync immediately on boot
+    // Add custom cursor styling logic or layout adjustments
 }
 
 window.addEventListener('resize', () => {
-    resizePty(); // Sync on window resize
+    resizePty();
 });
 
-// 2. Listen to Backend PTY events
-listen<{ data: string }>('pty-output', (event) => {
-    term.write(event.payload.data)
-})
+// Listen to Backend PTY events
+listen<{ data: string, project_path: string }>('pty-output', (event) => {
+    const { data, project_path } = event.payload;
+    
+    // Append to cache buffer
+    if (!terminalBuffers[project_path]) {
+        terminalBuffers[project_path] = '';
+    }
+    terminalBuffers[project_path] += data;
+    // Limit cache size to prevent massive leaks (~100k characters)
+    if (terminalBuffers[project_path].length > 100000) {
+        terminalBuffers[project_path] = terminalBuffers[project_path].substring(terminalBuffers[project_path].length - 50000);
+    }
 
-// 3. UI State Management
+    // Only write output on screen if it belongs to the currently active project
+    if (project_path === activeProject) {
+        term.write(data);
+    }
+});
+
+// ----------------------------------------------------
+// 4. UI Rendering: Sidebar & Project Swapper
+// ----------------------------------------------------
+const projectsListEl = document.getElementById('projects-list');
+const currentDirPathEl = document.getElementById('current-dir-path');
+
+const renderProjects = () => {
+    if (!projectsListEl) return;
+    projectsListEl.innerHTML = '';
+    
+    // Sort by recency
+    const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive);
+    
+    sorted.forEach((project) => {
+        const item = document.createElement('div');
+        const isActive = project.path === activeProject;
+        
+        item.className = `flex items-center justify-between p-2 rounded cursor-pointer transition-all border ${
+            isActive 
+                ? 'bg-gray-800 border-gray-700 text-white font-medium shadow-sm' 
+                : 'bg-transparent border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+        }`;
+        
+        // Tab content
+        item.innerHTML = `
+            <div class="flex items-center gap-2.5 truncate">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${project.color}"></span>
+                <span class="truncate text-xs">${project.name}</span>
+            </div>
+            <button class="delete-btn text-[10px] text-gray-600 hover:text-red-400 px-1 py-0.5 rounded opacity-0 hover:opacity-100 hover:bg-gray-700 transition-all select-none">✕</button>
+        `;
+        
+        // Swap project click
+        item.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('delete-btn')) {
+                e.stopPropagation();
+                // Delete project
+                projects = projects.filter(p => p.path !== project.path);
+                saveProjects();
+                // If deleted active, switch to first available
+                if (activeProject === project.path && projects.length > 0) {
+                    switchToProject(projects[0].path);
+                } else {
+                    renderProjects();
+                }
+                return;
+            }
+            switchToProject(project.path);
+        });
+        
+        // Show delete button on hover
+        item.addEventListener('mouseenter', () => {
+            const btn = item.querySelector('.delete-btn') as HTMLElement;
+            if (btn && project.path !== '/Users/matthewmurphy/projects/ai-os') {
+                btn.style.opacity = '1';
+            }
+        });
+        item.addEventListener('mouseleave', () => {
+            const btn = item.querySelector('.delete-btn') as HTMLElement;
+            if (btn) btn.style.opacity = '0';
+        });
+
+        projectsListEl.appendChild(item);
+    });
+};
+
+// Switch active project workspace
+const switchToProject = async (path: string) => {
+    activeProject = path;
+    
+    // Update lastActive timestamp
+    const proj = projects.find(p => p.path === path);
+    if (proj) {
+        proj.lastActive = Date.now();
+        saveProjects();
+    }
+    
+    // Clear terminal screen and dump cached history
+    term.reset();
+    if (terminalBuffers[path]) {
+        term.write(terminalBuffers[path]);
+    } else {
+        // First boot of shell, or empty cache.
+        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to cached project shell at: ${path}...\x1b[0m\r\n`);
+    }
+
+    if (currentDirPathEl) {
+        currentDirPathEl.textContent = path;
+    }
+    
+    // Request Rust backend to load/switch the project shell session
+    try {
+        await invoke('switch_active_project', { projectPath: path });
+    } catch (e) {
+        console.error('Failed to switch session in Rust:', e);
+    }
+    
+    // Restore or initialize PTY geometry sync
+    resizePty();
+    renderProjects();
+
+    // Check if there is an existing thread transcript to resume context
+    try {
+        await resumeLastThreadContext(path);
+    } catch (e) {
+        console.error('Failed to resume context:', e);
+    }
+};
+
+// Attempt to resume the last active thread/transcript for the current directory
+const resumeLastThreadContext = async (path: string) => {
+    // Let's run a search in the logs or print the last 2-3 exchanges on the screen to show how we left things off
+    // We will query the Rust process list or transcript.jsonl files
+    // Find the latest transcript.jsonl that references this project path
+    const terminalHistoryDump = terminalBuffers[path] || '';
+    // If terminal already has content, user can see the shell buffer, which is perfect!
+    // But we also want to display a helpful status message on the terminal showing the last thread session.
+    // Let's search the git log for the last commit details to summarize "how we left things off" in this directory.
+    if (!terminalHistoryDump.includes('── Last Thread Session ──')) {
+        // Retrieve last commit log to describe the active workspace state
+        // Let's write this cleanly to the xterm terminal
+        term.write('\r\n\x1b[1;30m── Last Thread Session ──\x1b[0m\r\n');
+        term.write('\x1b[38;5;244mChecking Git ledger/history logs to reconstruct state...\x1b[0m\r\n');
+        
+        // Send a carriage return to prompt the shell if empty
+        if (!terminalBuffers[path]) {
+            invoke('write_to_pty', { data: '\r', projectPath: path });
+        }
+    }
+};
+
+// Add project button
+const addProjectBtn = document.getElementById('add-project-btn');
+addProjectBtn?.addEventListener('click', async () => {
+    const pathInput = prompt('Enter absolute path to the project directory:');
+    if (!pathInput) return;
+    
+    const cleanPath = pathInput.trim();
+    if (!cleanPath) return;
+    
+    // Extract project name from path
+    const name = cleanPath.split('/').pop() || 'unknown-project';
+    
+    // Check if already exists
+    const existing = projects.find(p => p.path === cleanPath);
+    if (existing) {
+        switchToProject(cleanPath);
+        return;
+    }
+    
+    // Assign a unique random pastel color
+    const colors = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#6366f1', '#14b8a6', '#a855f7'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const newProj: Project = {
+        path: cleanPath,
+        name,
+        color: randomColor,
+        lastActive: Date.now()
+    };
+    
+    projects.push(newProj);
+    saveProjects();
+    switchToProject(cleanPath);
+});
+
+// ----------------------------------------------------
+// 5. Engine Toggle & Routing
+// ----------------------------------------------------
 let currentEngine: 'claude' | 'agy' = 'claude'
-const engineRadios = document.querySelectorAll<HTMLInputElement>(
-    'input[name="engine"]'
-)
+const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]')
 
 engineRadios.forEach((radio) => {
     radio.addEventListener('change', (e) => {
@@ -59,45 +293,104 @@ engineRadios.forEach((radio) => {
     })
 })
 
-// 4. Input Interception & Routing
-const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement
+// ----------------------------------------------------
+// 6. Mode Switch: Terminal Mode VS Prompt Mode
+// ----------------------------------------------------
+const modeBadgeEl = document.getElementById('mode-badge');
+const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement;
+const terminalExitHintEl = document.getElementById('terminal-exit-hint');
 
-// Auto-resize function
+const setMode = (terminalMode: boolean) => {
+    isTerminalMode = terminalMode;
+    if (modeBadgeEl) {
+        if (terminalMode) {
+            modeBadgeEl.textContent = 'Terminal Mode';
+            modeBadgeEl.className = 'px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+            textarea.placeholder = "Terminal command mode active. Type command (e.g. 'ls', 'git status', 'exit') and Enter...";
+            terminalExitHintEl?.classList.remove('hidden');
+        } else {
+            modeBadgeEl.textContent = 'Prompt Mode';
+            modeBadgeEl.className = 'px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30';
+            textarea.placeholder = "Type a command or prompt... (Type '!' at start for Terminal Mode, Enter to send)";
+            terminalExitHintEl?.classList.add('hidden');
+        }
+    }
+};
+
+// ----------------------------------------------------
+// 7. Input Interception & Routing
+// ----------------------------------------------------
 const adjustHeight = () => {
     if (textarea) {
         textarea.style.height = 'auto';
-        // Enforce boundary logic: height = scrollHeight
         textarea.style.height = textarea.scrollHeight + 'px';
         resizePty();
     }
 };
 
 textarea?.addEventListener('keydown', async (e) => {
+    // If escape key is pressed, exit terminal mode
+    if (e.key === 'Escape' && isTerminalMode) {
+        setMode(false);
+        textarea.value = '';
+        adjustHeight();
+        return;
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         
-        const rawInput = textarea.value.trim();
-        if (!rawInput) return;
+        let rawInput = textarea.value;
+        
+        // Check for '!' trigger at the beginning to change modes
+        if (rawInput.trim().startsWith('!')) {
+            // strip out ! and change mode to terminal mode
+            const cmd = rawInput.trim().substring(1).trim();
+            setMode(true);
+            textarea.value = cmd;
+            adjustHeight();
+            return;
+        }
 
-        let processedInput = rawInput;
+        const trimmedInput = rawInput.trim();
+        if (!trimmedInput) return;
 
-        // PHASE 4 HOOK: Obsidian Knowledge Routing
-        // If the user mentions notes, inject a strict system override into the prompt
+        // If in terminal mode and user types 'exit', exit terminal mode
+        if (isTerminalMode && (trimmedInput === 'exit' || trimmedInput === 'exit()')) {
+            setMode(false);
+            textarea.value = '';
+            adjustHeight();
+            return;
+        }
+
+        if (isTerminalMode) {
+            // Write command directly to active project shell PTY
+            const dataToSend = trimmedInput + '\r';
+            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject });
+            textarea.value = '';
+            adjustHeight();
+            return;
+        }
+
+        // --- Prompt Mode Engine Routing Logic ---
+        let processedInput = trimmedInput;
+
+        // Obsidian Knowledge Routing
         if (processedInput.toLowerCase().includes('notes')) {
             processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`;
         }
 
         let isRunning = false;
         try {
-            isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine });
+            isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine, projectPath: activeProject });
         } catch (err) {
             console.error('Failed to check if engine is running:', err);
         }
 
         if (isRunning) {
-            // Send the input directly to the running process stdin
+            // Send prompt raw directly to the running interactive interface (stdin)
             const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
-            invoke('write_to_pty', { data: dataToSend });
+            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject });
         } else {
             // Escape quotes and flatten newlines so the bash command doesn't break
             const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
@@ -105,36 +398,30 @@ textarea?.addEventListener('keydown', async (e) => {
 
             // FIXED ENGINE ROUTING
             if (currentEngine === 'claude') {
-                // Force Claude Code CLI execution
                 commandToExecute = `claude -p "${escapedInput}"`;
             } else if (currentEngine === 'agy') {
-                // Use the correct interactive Antigravity syntax
                 commandToExecute = `agy --add-dir=$PWD -i "${escapedInput}" --dangerously-skip-permissions`;
             }
 
-            // PHASE 4 HOOK: Cost Telemetry Execution
-            // Chain the python script to the end of the zsh command using standard bash sequential execution (;)
+            // Cost Telemetry execution hook
             const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
             commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
 
             const isBypass = e.metaKey || e.ctrlKey || e.altKey;
 
             if (isBypass) {
-                // Send the prompt without sending /clear first
-                invoke('write_to_pty', { data: commandToExecute + '\r' });
+                // Send command to active project PTY without clearing
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject });
             } else {
-                // Send a clear command to the active PTY
-                invoke('write_to_pty', { data: '/clear\r' });
-                // Asynchronous delay to allow CLI tool to process clear action
+                // Send clear context command
+                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject });
                 await new Promise((resolve) => setTimeout(resolve, 450));
-                // Send actual processed prompt
-                invoke('write_to_pty', { data: commandToExecute + '\r' });
+                // Send command
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject });
             }
         }
 
         textarea.value = '';
-        
-        // Reset the textarea height back to the default
         adjustHeight();
     }
 });
@@ -156,16 +443,27 @@ listen<string[]>('tauri://file-drop', (event) => {
     }
 });
 
-// 5. Focus Management
-textarea?.focus()
+// ----------------------------------------------------
+// 8. Focus Management & Initialization
+// ----------------------------------------------------
+textarea?.focus();
+
 document.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement
-    const selection = window.getSelection()
-    const isTerminalClick = container?.contains(target)
+    const target = e.target as HTMLElement;
+    const selection = window.getSelection();
+    const isTerminalClick = container?.contains(target);
+    const isSidebarClick = document.getElementById('projects-sidebar')?.contains(target);
 
     if (isTerminalClick) {
-        term.focus()
-    } else if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && (!selection || selection.toString() === '')) {
-        textarea?.focus()
+        term.focus();
+    } else if (!isSidebarClick && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && (!selection || selection.toString() === '')) {
+        textarea?.focus();
     }
-})
+});
+
+// Initialize workspace session
+(async () => {
+    await switchToProject(activeProject);
+    renderProjects();
+})();
+

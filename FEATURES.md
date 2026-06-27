@@ -83,3 +83,9 @@
 ### [2026-06-27] Foreground Process Interception
 * **Active CLI Detection:** Added a Rust command `is_engine_running` to check if any active descendant process of the shell PTY matches the target engine.
 * **Nested Execution Prevention:** Intercepts prompt submission in `src/main.ts` to check if the target CLI is already active. If so, routes the raw user input directly to the running process's stdin instead of spawning a new nested command.
+
+### [2026-06-27] Sidebar Project Swapping & Terminal Command Mode
+* **Left Sidebar for Projects:** Added a left navigation panel in `index.html` mapping active development folders as tab elements. Each project is assigned a distinct color indicator, sorted by recency of focus.
+* **PTY Session Multiplexing:** Refactored Rust backend (`src-tauri/src/main.rs`) and typescript frontend to maintain independent cached shell PTY sessions per project folder. Switching between projects instantly resets and restores the corresponding xterm console screen buffer.
+* **Terminal Mode Toggle ('!'):** Implemented inline mode switching. Typing `!` at the beginning of the prompt input switches focus to a raw shell wrapper mode (Visual badge status: `Terminal Mode`), bypassing LLM orchestrators and piping user key inputs directly into the active PTY shell instance. Typing `exit` or pressing `Escape` resets input state back to Prompt Mode.
+* **Context Thread Resumption:** Displays project-specific startup logs showing current repository history to quickly describe how the developer left off when swapping active tabs.
