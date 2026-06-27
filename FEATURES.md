@@ -79,3 +79,7 @@
 * **Layer 1 (Overview Query):** Implemented `scripts/memory_search` which filters git log history matching a keyword to display commit hashes and summary points.
 * **Layer 2 (Detail Lookup):** Implemented `scripts/memory_diff` which displays the exact unified code diff of a specific commit ID.
 * **System Prompt Update:** Configured `claude.md` to mandate searching Layer 1 and checking Layer 2 before analyzing historical files to keep token counts small.
+
+### [2026-06-27] Foreground Process Interception
+* **Active CLI Detection:** Added a Rust command `is_engine_running` to check if any active descendant process of the shell PTY matches the target engine.
+* **Nested Execution Prevention:** Intercepts prompt submission in `src/main.ts` to check if the target CLI is already active. If so, routes the raw user input directly to the running process's stdin instead of spawning a new nested command.

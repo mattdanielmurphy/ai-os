@@ -87,36 +87,49 @@ textarea?.addEventListener('keydown', async (e) => {
             processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`;
         }
 
-        // Escape quotes and flatten newlines so the bash command doesn't break
-        const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
-        let commandToExecute = '';
-
-        // FIXED ENGINE ROUTING
-        if (currentEngine === 'claude') {
-            // Force Claude Code CLI execution
-            commandToExecute = `claude -p "${escapedInput}"`;
-        } else if (currentEngine === 'agy') {
-            // Use the correct interactive Antigravity syntax
-            commandToExecute = `agy --add-dir=$PWD -i "${escapedInput}" --dangerously-skip-permissions`;
+        let isRunning = false;
+        try {
+            isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine });
+        } catch (err) {
+            console.error('Failed to check if engine is running:', err);
         }
 
-        // PHASE 4 HOOK: Cost Telemetry Execution
-        // Chain the python script to the end of the zsh command using standard bash sequential execution (;)
-        const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
-        commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
-
-        const isBypass = e.metaKey || e.ctrlKey || e.altKey;
-
-        if (isBypass) {
-            // Send the prompt without sending /clear first
-            invoke('write_to_pty', { data: commandToExecute + '\r' });
+        if (isRunning) {
+            // Send the input directly to the running process stdin
+            const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
+            invoke('write_to_pty', { data: dataToSend });
         } else {
-            // Send a clear command to the active PTY
-            invoke('write_to_pty', { data: '/clear\r' });
-            // Asynchronous delay to allow CLI tool to process clear action
-            await new Promise((resolve) => setTimeout(resolve, 450));
-            // Send actual processed prompt
-            invoke('write_to_pty', { data: commandToExecute + '\r' });
+            // Escape quotes and flatten newlines so the bash command doesn't break
+            const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
+            let commandToExecute = '';
+
+            // FIXED ENGINE ROUTING
+            if (currentEngine === 'claude') {
+                // Force Claude Code CLI execution
+                commandToExecute = `claude -p "${escapedInput}"`;
+            } else if (currentEngine === 'agy') {
+                // Use the correct interactive Antigravity syntax
+                commandToExecute = `agy --add-dir=$PWD -i "${escapedInput}" --dangerously-skip-permissions`;
+            }
+
+            // PHASE 4 HOOK: Cost Telemetry Execution
+            // Chain the python script to the end of the zsh command using standard bash sequential execution (;)
+            const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
+            commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
+
+            const isBypass = e.metaKey || e.ctrlKey || e.altKey;
+
+            if (isBypass) {
+                // Send the prompt without sending /clear first
+                invoke('write_to_pty', { data: commandToExecute + '\r' });
+            } else {
+                // Send a clear command to the active PTY
+                invoke('write_to_pty', { data: '/clear\r' });
+                // Asynchronous delay to allow CLI tool to process clear action
+                await new Promise((resolve) => setTimeout(resolve, 450));
+                // Send actual processed prompt
+                invoke('write_to_pty', { data: commandToExecute + '\r' });
+            }
         }
 
         textarea.value = '';
