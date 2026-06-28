@@ -60,11 +60,11 @@
       <div id="bottom-input-area" class="flex flex-col bg-gray-800 relative">
           <!-- Quick directory display / breadcrumbs -->
           <div class="px-3 py-1 bg-gray-850/80 border-b border-gray-800 text-[11px] font-mono text-gray-400 flex items-center justify-between">
-              <span id="current-dir-path" class="truncate">/Users/matthewmurphy/projects/ai-os</span>
-              <label class="flex items-center cursor-pointer select-none text-gray-400 hover:text-white transition-colors">
-                  <input type="checkbox" id="clear-context-checkbox" checked class="accent-blue-500 rounded bg-gray-900 border-gray-700 w-3 h-3 cursor-pointer">
-                  <span class="text-[10px] ml-1.5 font-sans">Auto-Clear (/clear)</span>
+              <label id="clear-context-container" class="flex items-center cursor-pointer select-none text-xs font-semibold px-2 py-0.5 rounded border transition-all">
+                  <input type="checkbox" id="clear-context-checkbox" checked class="w-3.5 h-3.5 cursor-pointer mr-1.5 accent-emerald-500">
+                  <span id="clear-context-label-text">Auto-Clear Context</span>
               </label>
+              <span id="current-dir-path" class="truncate ml-4">/Users/matthewmurphy/projects/ai-os</span>
           </div>
           <!-- The Text Input -->
           <textarea 

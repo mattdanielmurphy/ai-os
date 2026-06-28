@@ -36,4 +36,5 @@ DO NOT execute this command during internal tool polling or intermediate steps, 
 * **2026-06-27:** Configured `ai-os` wrapper to default to GUI mode with auto-import/switch of working directory (`AIOS_INITIAL_PROJECT`), added non-GUI terminal overrides (`--cli`, `--terminal`, `--no-gui`), and updated backend/frontend integration to parse the initial path.
 * ---
 * **2026-06-28:** Implemented deterministic rules sync automation ([sync_rules.sh](file:///Users/matthewmurphy/projects/ai-os/scripts/sync_rules.sh)) to keep `~/.gemini/GEMINI.md` tracked at `.gemini/GEMINI.md`. Configured implicit shell load execution and command interception hooks for `git status`/`add`/`commit`/`diff` inside [.zshrc_aios](file:///Users/matthewmurphy/projects/ai-os/.zshrc_aios).
+* **2026-06-28:** Fixed TUI clipboard integration (Cmd+C/Cmd+V) and prompt Shift+Enter newlines. Relocated and redesigned the auto-clear context checkbox into a premium toggle badge that auto-reactivates on send. Disabled tmux status line to resolve cut-off visual noise. Temporarily disabled agent-side cost telemetry scripts in favor of planned native dashboard telemetry widgets.
 

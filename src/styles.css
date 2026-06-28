@@ -23,6 +23,13 @@ body {
 #terminal-container,
 #mini-terminal-container {
   padding: 8px;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.xterm, .xterm-rows, .xterm-screen {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 #terminal-container .xterm,

@@ -287,35 +287,7 @@ const applyTerminalModeUI = () => {
         if (bottomArea) bottomArea.style.display = 'flex';
         setTimeout(() => {
             textarea?.focus();
-
-// Auto-clear context checkbox handling
-const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
-let autoClearContext = true;
-const savedAutoClear = localStorage.getItem('ai-os-auto-clear');
-if (savedAutoClear !== null) {
-    autoClearContext = savedAutoClear === 'true';
-}
-
-const updatePlaceholder = () => {
-    if (textarea) {
-        if (clearCheckbox && clearCheckbox.checked) {
-            textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
-        } else {
-            textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
-        }
-    }
-};
-
-if (clearCheckbox) {
-    clearCheckbox.checked = autoClearContext;
-    clearCheckbox.addEventListener('change', () => {
-        autoClearContext = clearCheckbox.checked;
-        localStorage.setItem('ai-os-auto-clear', String(autoClearContext));
-        updatePlaceholder();
-    });
-    // Call initially
-    setTimeout(updatePlaceholder, 100);
-}
+            updatePlaceholder();
             resizePty();
         }, 50);
     }
@@ -693,7 +665,19 @@ textarea?.addEventListener('input', () => {
 });
 
 textarea?.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter') {
+        if (e.shiftKey) {
+            // Shift+Enter: insert a newline at the cursor position explicitly
+            e.preventDefault();
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const value = textarea.value;
+            textarea.value = value.substring(0, start) + '\n' + value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + 1;
+            adjustHeight();
+            return;
+        }
+
         e.preventDefault();
         
         let rawInput = textarea.value;
@@ -731,9 +715,9 @@ textarea?.addEventListener('keydown', async (e) => {
                 commandToExecute = `agy --add-dir=$PWD -i "${escapedInput}" --dangerously-skip-permissions`;
             }
 
-            // Cost Telemetry execution hook
-            const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
-            commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
+            // Cost Telemetry execution hook - TEMPORARILY DISABLED (AGY Telemetry is not working, showing live in app instead)
+            // const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
+            // commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
 
             const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
             const shouldClear = clearCheckbox ? clearCheckbox.checked : true;
@@ -753,6 +737,14 @@ textarea?.addEventListener('keydown', async (e) => {
 
         textarea.value = '';
         adjustHeight();
+
+        // Auto-clear context toggle turns itself back on after each message is sent
+        if (clearCheckbox) {
+            clearCheckbox.checked = true;
+            autoClearContext = true;
+            localStorage.setItem('ai-os-auto-clear', 'true');
+            updatePlaceholder();
+        }
     }
 });
 
@@ -772,6 +764,44 @@ listen<string[]>('tauri://file-drop', (event) => {
 });
 
 // ----------------------------------------------------
+// 8. Clipboard Copy & Paste for TUI (xterm.js)
+// ----------------------------------------------------
+document.addEventListener('keydown', (e) => {
+    // Intercept Cmd+C (Mac) or Ctrl+C to copy selected text from xterm.js or window
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+        let textToCopy = '';
+        if (term.hasSelection()) {
+            textToCopy = term.getSelection();
+        } else if (miniTerm.hasSelection()) {
+            textToCopy = miniTerm.getSelection();
+        } else {
+            textToCopy = window.getSelection()?.toString() || '';
+        }
+        
+        if (textToCopy) {
+            navigator.clipboard.writeText(textToCopy).catch((err) => {
+                console.error('Failed to copy text:', err);
+            });
+        }
+    }
+});
+
+document.addEventListener('paste', (e) => {
+    // If user is focused on the prompt input, let default paste happen
+    if (document.activeElement === textarea) {
+        return;
+    }
+    const pastedText = e.clipboardData?.getData('text');
+    if (pastedText) {
+        if (document.activeElement === container || term.element?.contains(document.activeElement)) {
+            invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: currentEngine });
+        } else if (document.activeElement === miniContainer || miniTerm.element?.contains(document.activeElement)) {
+            invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: 'mini' });
+        }
+    }
+});
+
+// ----------------------------------------------------
 // 9. Focus Management & Initialization
 // ----------------------------------------------------
 textarea?.focus();
@@ -785,11 +815,21 @@ if (savedAutoClear !== null) {
 }
 
 const updatePlaceholder = () => {
+    const contextContainer = document.getElementById('clear-context-container');
+    const labelText = document.getElementById('clear-context-label-text');
     if (textarea) {
         if (clearCheckbox && clearCheckbox.checked) {
             textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+            if (contextContainer) {
+                contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-bold px-2 py-0.5 rounded border transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+            }
+            if (labelText) labelText.textContent = "Auto-Clear: ACTIVE";
         } else {
             textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
+            if (contextContainer) {
+                contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-medium px-2 py-0.5 rounded border transition-all bg-gray-900/40 border-gray-800 text-gray-500 hover:text-gray-400";
+            }
+            if (labelText) labelText.textContent = "Auto-Clear: OFF";
         }
     }
 };
@@ -823,35 +863,7 @@ document.addEventListener('click', (e) => {
             miniTerm.focus();
         } else {
             textarea?.focus();
-
-// Auto-clear context checkbox handling
-const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
-let autoClearContext = true;
-const savedAutoClear = localStorage.getItem('ai-os-auto-clear');
-if (savedAutoClear !== null) {
-    autoClearContext = savedAutoClear === 'true';
-}
-
-const updatePlaceholder = () => {
-    if (textarea) {
-        if (clearCheckbox && clearCheckbox.checked) {
-            textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
-        } else {
-            textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
-        }
-    }
-};
-
-if (clearCheckbox) {
-    clearCheckbox.checked = autoClearContext;
-    clearCheckbox.addEventListener('change', () => {
-        autoClearContext = clearCheckbox.checked;
-        localStorage.setItem('ai-os-auto-clear', String(autoClearContext));
-        updatePlaceholder();
-    });
-    // Call initially
-    setTimeout(updatePlaceholder, 100);
-}
+            updatePlaceholder();
         }
     }
 });

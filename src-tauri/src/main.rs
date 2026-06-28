@@ -102,13 +102,23 @@ fn spawn_single_pty(
             is_new_tmux = true;
         }
         let mut c = CommandBuilder::new("tmux");
-        let mut args = vec!["new-session".to_string(), "-A".to_string(), "-s".to_string(), session_name, "-c".to_string(), project_path.to_string()];
+        let mut args = vec!["new-session".to_string(), "-A".to_string(), "-s".to_string(), session_name.clone(), "-c".to_string(), project_path.to_string()];
         if terminal_type == "claude" {
             args.push("claude --dangerously-skip-permissions".to_string());
         } else if terminal_type == "agy" {
             args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path));
         }
         c.args(&args);
+
+        if is_new_tmux {
+            let session_name_clone = session_name.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                let _ = std::process::Command::new("tmux")
+                    .args(&["set-option", "-t", &session_name_clone, "status", "off"])
+                    .status();
+            });
+        }
         c
     } else {
         is_new_tmux = true;
