@@ -15,3 +15,23 @@ qr() {
         return $exit_code
     fi
 }
+
+# Auto-sync system rules on terminal load / git actions
+sync_rules() {
+    if [ -f "/Users/matthewmurphy/projects/ai-os/scripts/sync_rules.sh" ]; then
+        /Users/matthewmurphy/projects/ai-os/scripts/sync_rules.sh > /dev/null 2>&1 || true
+    fi
+}
+
+# Run sync on shell initialization
+sync_rules
+
+# Intercept Git actions to sync rules before stage/commit/status inspects
+git() {
+    local cmd="$1"
+    if [[ "$cmd" == "status" || "$cmd" == "add" || "$cmd" == "commit" || "$cmd" == "diff" ]]; then
+        sync_rules
+    fi
+    command git "$@"
+}
+
