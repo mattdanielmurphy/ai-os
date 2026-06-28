@@ -183,6 +183,14 @@ const resizePty = () => {
     });
 };
 
+let resizePtyTimeout: any = null;
+const debouncedResizePty = () => {
+    if (resizePtyTimeout) clearTimeout(resizePtyTimeout);
+    resizePtyTimeout = setTimeout(() => {
+        resizePty();
+    }, 50);
+};
+
 const container = document.getElementById('terminal-container');
 if (container) {
     term.open(container);
@@ -194,7 +202,7 @@ if (miniContainer) {
 }
 
 window.addEventListener('resize', () => {
-    resizePty();
+    debouncedResizePty();
 });
 
 // Listen to Backend PTY events
@@ -255,7 +263,7 @@ if (splitter && miniContainer && panesContainer) {
         
         if (newMiniHeight >= minHeight && newMiniHeight <= maxHeight) {
             miniContainer.style.height = `${newMiniHeight}px`;
-            resizePty();
+            debouncedResizePty();
         }
     });
     
@@ -263,6 +271,7 @@ if (splitter && miniContainer && panesContainer) {
         if (isDragging) {
             isDragging = false;
             document.body.style.cursor = '';
+            resizePty();
         }
     });
 }

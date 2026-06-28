@@ -47,7 +47,7 @@ fn is_tmux_available() -> bool {
 
 fn has_tmux_session(session_name: &str) -> bool {
     std::process::Command::new("tmux")
-        .args(&["has-session", "-t", session_name])
+        .args(&["-u", "has-session", "-t", session_name])
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
@@ -96,13 +96,13 @@ fn spawn_single_pty(
     }).map_err(|e| e.to_string())?;
 
     let mut is_new_tmux = false;
-    let cmd = if is_tmux_available() {
+    let mut cmd = if is_tmux_available() {
         let session_name = get_tmux_session_name(project_path, terminal_type);
         if !has_tmux_session(&session_name) {
             is_new_tmux = true;
         }
         let mut c = CommandBuilder::new("tmux");
-        let mut args = vec!["new-session".to_string(), "-A".to_string(), "-s".to_string(), session_name.clone(), "-c".to_string(), project_path.to_string()];
+        let mut args = vec!["-u".to_string(), "new-session".to_string(), "-A".to_string(), "-s".to_string(), session_name.clone(), "-c".to_string(), project_path.to_string()];
         if terminal_type == "claude" {
             args.push("claude --dangerously-skip-permissions".to_string());
         } else if terminal_type == "agy" {
@@ -115,7 +115,7 @@ fn spawn_single_pty(
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(150));
                 let _ = std::process::Command::new("tmux")
-                    .args(&["set-option", "-t", &session_name_clone, "status", "off"])
+                    .args(&["-u", "set-option", "-t", &session_name_clone, "status", "off"])
                     .status();
             });
         }
@@ -139,6 +139,9 @@ fn spawn_single_pty(
         }
     };
 
+    cmd.env("LANG", "en_US.UTF-8");
+    cmd.env("LC_ALL", "en_US.UTF-8");
+
     let _child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
     let shell_pid = _child.process_id().unwrap_or(0);
 
@@ -152,15 +155,42 @@ fn spawn_single_pty(
     std::thread::spawn(move || {
         let mut reader = reader;
         let mut buf = [0u8; 1024];
+        let mut leftover = Vec::new();
         loop {
             match reader.read(&mut buf) {
                 Ok(n) if n > 0 => {
-                    let data = String::from_utf8_lossy(&buf[..n]).to_string();
-                    app_handle_clone.emit_all("pty-output", Payload {
-                        data,
-                        project_path: path_clone.clone(),
-                        terminal_type: type_clone.clone(),
-                    }).ok();
+                    leftover.extend_from_slice(&buf[..n]);
+                    let mut valid_len = leftover.len();
+                    
+                    while valid_len > 0 {
+                        match std::str::from_utf8(&leftover[..valid_len]) {
+                            Ok(_) => break,
+                            Err(e) => {
+                                if e.error_len().is_none() {
+                                    valid_len = e.valid_up_to();
+                                } else {
+                                    valid_len = e.valid_up_to();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if valid_len == 0 && !leftover.is_empty() {
+                        if leftover.len() >= 4 {
+                            valid_len = leftover.len();
+                        }
+                    }
+
+                    if valid_len > 0 {
+                        let data = String::from_utf8_lossy(&leftover[..valid_len]).to_string();
+                        leftover.drain(..valid_len);
+                        app_handle_clone.emit_all("pty-output", Payload {
+                            data,
+                            project_path: path_clone.clone(),
+                            terminal_type: type_clone.clone(),
+                        }).ok();
+                    }
                 }
                 _ => break,
             }
@@ -570,7 +600,7 @@ fn close_project_session(project_path: String, state: tauri::State<AppState>) ->
         for term_type in &["claude", "agy", "mini"] {
             let session_name = get_tmux_session_name(&project_path, term_type);
             let _ = std::process::Command::new("tmux")
-                .args(&["kill-session", "-t", &session_name])
+                .args(&["-u", "kill-session", "-t", &session_name])
                 .status();
         }
     }

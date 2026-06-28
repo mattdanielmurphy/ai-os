@@ -4,6 +4,8 @@
 
 
 ### [2026-06-28] Bug Fixes: Engine Run Detection and UI Context Controls
+* **Terminal Layout & UTF-8 Corruption Fix:** Resolved visual artifacts in embedded tmux sessions during vertical scrolling by forcing tmux UTF-8 mode via the `-u` flag, enforcing strict `LANG=en_US.UTF-8` and `LC_ALL=en_US.UTF-8` environment locales, and implementing a trailing byte accumulator in the Rust backend PTY reader to correctly handle multi-byte UTF-8 sequences split across chunks.
+* **Debounced Grid Resizing:** Debounced frontend window and dragging splitter resize event callbacks to 50ms, eliminating redundant rapid IPC resize requests to prevent tmux layout desync.
 * **Robust Engine Running Detection:** Improved `is_engine_running` and `ensure_engine_pty` in the Rust backend to check tmux session state and direct process state (`kill -0`) instead of relying solely on the process tree of the client process, fixing command routing issues when running inside a tmux session.
 * **Auto-Clear (/clear) UI Toggle:** Added an "Auto-Clear (/clear)" toggle checkbox to the bottom input breadcrumbs bar in the UI. Toggling the checkbox persists its state to `localStorage` and dynamically updates the prompt input's placeholder to clearly indicate whether `/clear` will be executed before the prompt is sent, allowing users to easily continue threads.
 * **Shift+Enter Multi-line Support:** Explicitly intercepted Shift+Enter in the prompt input to insert a newline and adjust textarea height, bypassing browser focus and webview issues.
