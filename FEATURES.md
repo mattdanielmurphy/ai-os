@@ -2,6 +2,11 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+
+### [2026-06-28] Bug Fixes: Engine Run Detection and UI Context Controls
+* **Robust Engine Running Detection:** Improved `is_engine_running` and `ensure_engine_pty` in the Rust backend to check tmux session state and direct process state (`kill -0`) instead of relying solely on the process tree of the client process, fixing command routing issues when running inside a tmux session.
+* **Auto-Clear (/clear) UI Toggle:** Added an "Auto-Clear (/clear)" toggle checkbox to the bottom input breadcrumbs bar in the UI. Toggling the checkbox persists its state to `localStorage` and dynamically updates the prompt input's placeholder to clearly indicate whether `/clear` will be executed before the prompt is sent, allowing users to easily continue threads.
+
 ### [2026-06-27] Phase 5: GUI-by-Default and Working Directory Workspace Loading
 * **PTY Startup Optimization:** Optimized engine PTY startup by launching `claude` and `agy` directly inside the backend tmux/PTY processes, bypassing slow zsh configuration loading (e.g. `nvm`, `.zshrc`) and reducing launch time from 12s to under 2s. Removed frontend startup command injections to prevent command text pollution.
 * **GUI-by-Default:** Configured `bin/ai-os` to launch the Tauri GUI app by default when executed.

@@ -61,6 +61,26 @@ fn get_tmux_session_name(project_path: &str, terminal_type: &str) -> String {
     format!("ai_os_{}_{}", terminal_type, sanitized.trim_matches('_'))
 }
 
+fn is_pid_alive(pid: u32) -> bool {
+    std::process::Command::new("kill")
+        .args(&["-0", &pid.to_string()])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn is_session_alive(project_path: &str, engine: &str, pid: Option<u32>) -> bool {
+    if is_tmux_available() {
+        let session_name = get_tmux_session_name(project_path, engine);
+        has_tmux_session(&session_name)
+    } else {
+        match pid {
+            Some(p) => is_pid_alive(p),
+            None => false,
+        }
+    }
+}
+
 // Spawns a single PTY session
 fn spawn_single_pty(
     project_path: &str,
@@ -147,7 +167,12 @@ fn ensure_engine_pty(
     session: &mut ProjectSession,
 ) -> Result<(u32, bool), String> {
     if engine == "claude" {
-        if session.claude_pid.is_none() {
+        let is_alive = if session.claude_pid.is_some() {
+            is_session_alive(project_path, "claude", session.claude_pid)
+        } else {
+            false
+        };
+        if !is_alive {
             let (writer, master, pid, is_new) = spawn_single_pty(project_path, "claude", app_handle)?;
             session.claude_writer = Some(writer);
             session.claude_master = Some(master);
@@ -157,7 +182,12 @@ fn ensure_engine_pty(
             Ok((session.claude_pid.unwrap(), false))
         }
     } else if engine == "agy" {
-        if session.agy_pid.is_none() {
+        let is_alive = if session.agy_pid.is_some() {
+            is_session_alive(project_path, "agy", session.agy_pid)
+        } else {
+            false
+        };
+        if !is_alive {
             let (writer, master, pid, is_new) = spawn_single_pty(project_path, "agy", app_handle)?;
             session.agy_writer = Some(writer);
             session.agy_master = Some(master);
@@ -339,52 +369,9 @@ fn is_engine_running(engine: String, project_path: String, state: tauri::State<A
         }
         None => return Ok(false),
     };
-    let shell_pid = match shell_pid {
-        Some(pid) => pid,
-        None => return Ok(false),
-    };
     drop(sessions);
 
-    let output = std::process::Command::new("ps")
-        .args(&["-A", "-o", "ppid,pid,args"])
-        .output()
-        .map_err(|e| e.to_string())?;
-        
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    
-    use std::collections::HashMap as StdHashMap;
-    let mut parent_to_children: StdHashMap<u32, Vec<(u32, String)>> = StdHashMap::new();
-    
-    for line in stdout.lines().skip(1) {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 3 {
-            if let (Ok(ppid), Ok(pid)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
-                let args = parts[2..].join(" ");
-                parent_to_children.entry(ppid).or_default().push((pid, args));
-            }
-        }
-    }
-    
-    let mut queue = vec![shell_pid];
-    let mut visited = std::collections::HashSet::new();
-    let target = engine.to_lowercase();
-    
-    while let Some(current_pid) = queue.pop() {
-        if !visited.insert(current_pid) {
-            continue;
-        }
-        if let Some(children) = parent_to_children.get(&current_pid) {
-            for &(child_pid, ref args) in children {
-                let args_lower = args.to_lowercase();
-                if args_lower.contains(&target) {
-                    return Ok(true);
-                }
-                queue.push(child_pid);
-            }
-        }
-    }
-    
-    Ok(false)
+    Ok(is_session_alive(&project_path, &engine, shell_pid))
 }
 
 fn find_agent_pid(shell_pid: u32) -> Option<u32> {

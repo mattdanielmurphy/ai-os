@@ -287,6 +287,35 @@ const applyTerminalModeUI = () => {
         if (bottomArea) bottomArea.style.display = 'flex';
         setTimeout(() => {
             textarea?.focus();
+
+// Auto-clear context checkbox handling
+const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
+let autoClearContext = true;
+const savedAutoClear = localStorage.getItem('ai-os-auto-clear');
+if (savedAutoClear !== null) {
+    autoClearContext = savedAutoClear === 'true';
+}
+
+const updatePlaceholder = () => {
+    if (textarea) {
+        if (clearCheckbox && clearCheckbox.checked) {
+            textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+        } else {
+            textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
+        }
+    }
+};
+
+if (clearCheckbox) {
+    clearCheckbox.checked = autoClearContext;
+    clearCheckbox.addEventListener('change', () => {
+        autoClearContext = clearCheckbox.checked;
+        localStorage.setItem('ai-os-auto-clear', String(autoClearContext));
+        updatePlaceholder();
+    });
+    // Call initially
+    setTimeout(updatePlaceholder, 100);
+}
             resizePty();
         }, 50);
     }
@@ -706,7 +735,9 @@ textarea?.addEventListener('keydown', async (e) => {
             const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
             commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
 
-            const isBypass = e.metaKey || e.ctrlKey || e.altKey;
+            const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
+            const shouldClear = clearCheckbox ? clearCheckbox.checked : true;
+            const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
 
             if (isBypass) {
                 // Send command to active project PTY without clearing
@@ -745,6 +776,35 @@ listen<string[]>('tauri://file-drop', (event) => {
 // ----------------------------------------------------
 textarea?.focus();
 
+// Auto-clear context checkbox handling
+const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
+let autoClearContext = true;
+const savedAutoClear = localStorage.getItem('ai-os-auto-clear');
+if (savedAutoClear !== null) {
+    autoClearContext = savedAutoClear === 'true';
+}
+
+const updatePlaceholder = () => {
+    if (textarea) {
+        if (clearCheckbox && clearCheckbox.checked) {
+            textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+        } else {
+            textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
+        }
+    }
+};
+
+if (clearCheckbox) {
+    clearCheckbox.checked = autoClearContext;
+    clearCheckbox.addEventListener('change', () => {
+        autoClearContext = clearCheckbox.checked;
+        localStorage.setItem('ai-os-auto-clear', String(autoClearContext));
+        updatePlaceholder();
+    });
+    // Call initially
+    setTimeout(updatePlaceholder, 100);
+}
+
 document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     const selection = window.getSelection();
@@ -763,6 +823,35 @@ document.addEventListener('click', (e) => {
             miniTerm.focus();
         } else {
             textarea?.focus();
+
+// Auto-clear context checkbox handling
+const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
+let autoClearContext = true;
+const savedAutoClear = localStorage.getItem('ai-os-auto-clear');
+if (savedAutoClear !== null) {
+    autoClearContext = savedAutoClear === 'true';
+}
+
+const updatePlaceholder = () => {
+    if (textarea) {
+        if (clearCheckbox && clearCheckbox.checked) {
+            textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+        } else {
+            textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
+        }
+    }
+};
+
+if (clearCheckbox) {
+    clearCheckbox.checked = autoClearContext;
+    clearCheckbox.addEventListener('change', () => {
+        autoClearContext = clearCheckbox.checked;
+        localStorage.setItem('ai-os-auto-clear', String(autoClearContext));
+        updatePlaceholder();
+    });
+    // Call initially
+    setTimeout(updatePlaceholder, 100);
+}
         }
     }
 });
