@@ -61,25 +61,6 @@ fn get_tmux_session_name(project_path: &str, terminal_type: &str) -> String {
     format!("ai_os_{}_{}", terminal_type, sanitized.trim_matches('_'))
 }
 
-fn is_pid_alive(pid: u32) -> bool {
-    std::process::Command::new("kill")
-        .args(&["-0", &pid.to_string()])
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
-}
-
-fn is_session_alive(project_path: &str, engine: &str, pid: Option<u32>) -> bool {
-    if is_tmux_available() {
-        let session_name = get_tmux_session_name(project_path, engine);
-        has_tmux_session(&session_name)
-    } else {
-        match pid {
-            Some(p) => is_pid_alive(p),
-            None => false,
-        }
-    }
-}
 
 fn get_tmux_pane_pid(session_name: &str) -> Option<u32> {
     let output = std::process::Command::new("tmux")
@@ -304,11 +285,19 @@ fn ensure_engine_pty(
 ) -> Result<(u32, bool), String> {
     if engine == "claude" {
         let is_alive = if session.claude_pid.is_some() {
-            is_session_alive(project_path, "claude", session.claude_pid)
+            is_engine_running_proc("claude", project_path, session.claude_pid)
         } else {
             false
         };
         if !is_alive {
+            if is_tmux_available() {
+                let session_name = get_tmux_session_name(project_path, "claude");
+                if has_tmux_session(&session_name) {
+                    let _ = std::process::Command::new("tmux")
+                        .args(&["kill-session", "-t", &session_name])
+                        .status();
+                }
+            }
             let (writer, master, pid, is_new) = spawn_single_pty(project_path, "claude", app_handle)?;
             session.claude_writer = Some(writer);
             session.claude_master = Some(master);
@@ -319,11 +308,19 @@ fn ensure_engine_pty(
         }
     } else if engine == "agy" {
         let is_alive = if session.agy_pid.is_some() {
-            is_session_alive(project_path, "agy", session.agy_pid)
+            is_engine_running_proc("agy", project_path, session.agy_pid)
         } else {
             false
         };
         if !is_alive {
+            if is_tmux_available() {
+                let session_name = get_tmux_session_name(project_path, "agy");
+                if has_tmux_session(&session_name) {
+                    let _ = std::process::Command::new("tmux")
+                        .args(&["kill-session", "-t", &session_name])
+                        .status();
+                }
+            }
             let (writer, master, pid, is_new) = spawn_single_pty(project_path, "agy", app_handle)?;
             session.agy_writer = Some(writer);
             session.agy_master = Some(master);
@@ -341,6 +338,36 @@ fn ensure_engine_pty(
 struct SwitchResult {
     shell_pid: u32,
     is_new_session: bool,
+}
+
+#[tauri::command]
+fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<AppState>) -> Result<u32, String> {
+    let app_handle = state.app_handle.clone();
+    let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+    let session = sessions.get_mut(&project_path).ok_or_else(|| "No session found".to_string())?;
+
+    if is_tmux_available() {
+        let session_name = get_tmux_session_name(&project_path, &engine);
+        if has_tmux_session(&session_name) {
+            let _ = std::process::Command::new("tmux")
+                .args(&["kill-session", "-t", &session_name])
+                .status();
+        }
+    }
+
+    let (writer, master, pid, _) = spawn_single_pty(&project_path, &engine, &app_handle)?;
+    if engine == "claude" {
+        session.claude_writer = Some(writer);
+        session.claude_master = Some(master);
+        session.claude_pid = Some(pid);
+    } else if engine == "agy" {
+        session.agy_writer = Some(writer);
+        session.agy_master = Some(master);
+        session.agy_pid = Some(pid);
+    }
+
+    trigger_tmux_refresh(&project_path, &engine);
+    Ok(pid)
 }
 
 #[tauri::command]
@@ -811,6 +838,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            spawn_fresh_engine,
             initialize_project_session,
             switch_active_project,
             write_to_pty,

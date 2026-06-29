@@ -725,30 +725,42 @@ textarea?.addEventListener('keydown', async (e) => {
                 invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
             }
         } else {
-            // Escape quotes but preserve literal newlines so the bash/tmux command inputs them properly
-            const escapedInput = processedInput.replace(/"/g, '\\"');
-            let commandToExecute = '';
-
-            // FIXED ENGINE ROUTING
-            if (currentEngine === 'claude') {
-                commandToExecute = `claude -p "${escapedInput}"`;
-            } else if (currentEngine === 'agy') {
-                commandToExecute = `agy --add-dir=$PWD -i "${escapedInput}" --dangerously-skip-permissions`;
-            }
-
-            // Cost Telemetry execution hook - TEMPORARILY DISABLED (AGY Telemetry is not working, showing live in app instead)
-            // const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
-            // commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
-
-            if (isBypass) {
-                // Send command to active project PTY without clearing
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
+            if (currentEngine === 'agy') {
+                try {
+                    await invoke('spawn_fresh_engine', { projectPath: activeProject, engine: 'agy' });
+                    // Wait a bit for the new instance to boot
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                } catch (err) {
+                    console.error('Failed to spawn fresh agy engine:', err);
+                }
+                const dataToSend = processedInput.replace(/\n/g, '\x1b\n') + '\r';
+                if (isBypass) {
+                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                } else {
+                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
+                    await new Promise((resolve) => setTimeout(resolve, 450));
+                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                }
             } else {
-                // Send clear context command
-                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
-                await new Promise((resolve) => setTimeout(resolve, 450));
-                // Send command
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
+                // Escape quotes but preserve literal newlines so the bash/tmux command inputs them properly
+                const escapedInput = processedInput.replace(/"/g, '\\"');
+                let commandToExecute = '';
+
+                // FIXED ENGINE ROUTING
+                if (currentEngine === 'claude') {
+                    commandToExecute = `claude -p "${escapedInput}"`;
+                }
+
+                if (isBypass) {
+                    // Send command to active project PTY without clearing
+                    invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
+                } else {
+                    // Send clear context command
+                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
+                    await new Promise((resolve) => setTimeout(resolve, 450));
+                    // Send command
+                    invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
+                }
             }
         }
 
