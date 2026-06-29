@@ -1055,6 +1055,15 @@ fn copy_tmux_selection(project_path: String, terminal_type: String) -> Result<()
 }
 
 #[tauri::command]
+fn open_path(path: String) -> Result<(), String> {
+    std::process::Command::new("open")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 fn get_initial_project() -> Option<String> {
     std::env::var("AIOS_INITIAL_PROJECT").ok()
 }
@@ -1090,7 +1099,8 @@ fn main() {
             select_directory,
             create_new_project,
             get_initial_project,
-            copy_tmux_selection
+            copy_tmux_selection,
+            open_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

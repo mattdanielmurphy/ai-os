@@ -121,10 +121,28 @@ term.loadAddon(fitAddon);
 const handleLink = (e: MouseEvent, uri: string) => {
     if (e.metaKey || e.ctrlKey) {
         let finalUri = uri;
-        if (!finalUri.startsWith('http://') && !finalUri.startsWith('https://') && !finalUri.startsWith('file://') && finalUri.startsWith('/')) {
-            finalUri = 'file://' + finalUri;
+        
+        // Handle web URLs
+        if (finalUri.startsWith('http://') || finalUri.startsWith('https://')) {
+            open(finalUri).catch(err => console.error("Failed to open web link:", err));
+            return;
         }
-        open(finalUri).catch(err => console.error("Failed to open link:", err));
+
+        // Clean up file:// prefix if present
+        if (finalUri.startsWith('file://')) {
+            finalUri = finalUri.replace('file://', '');
+        }
+
+        // Resolve relative paths against the active project
+        if (!finalUri.startsWith('/') && !finalUri.startsWith('~/')) {
+            if (finalUri.startsWith('./')) {
+                finalUri = finalUri.slice(2);
+            }
+            finalUri = `${activeProject}/${finalUri}`;
+        }
+
+        // Use custom rust command to circumvent Tauri `open` URL restrictions
+        invoke('open_path', { path: finalUri }).catch(err => console.error("Failed to open path:", err));
     }
 };
 
@@ -137,6 +155,7 @@ class LocalPathLinkProvider implements ILinkProvider {
             return;
         }
         const text = line.translateToString(true);
+        // Include URLs as well in this regex if needed? No, WebLinksAddon does URLs.
         const regex = /(?:file:\/\/)?[a-zA-Z0-9_.~-]*(?:\/[a-zA-Z0-9_.-]+)+/g;
         const links: ILink[] = [];
         let match;
