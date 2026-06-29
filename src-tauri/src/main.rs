@@ -194,6 +194,12 @@ fn spawn_single_pty(
                 let _ = std::process::Command::new("tmux")
                     .args(&["-u", "set-option", "-t", &session_name_clone, "status", "off"])
                     .status();
+                let _ = std::process::Command::new("tmux")
+                    .args(&["-u", "bind-key", "-T", "copy-mode-vi", "MouseDragEnd1Pane", "send-keys", "-X", "copy-pipe-and-cancel", "pbcopy"])
+                    .status();
+                let _ = std::process::Command::new("tmux")
+                    .args(&["-u", "bind-key", "-T", "copy-mode", "MouseDragEnd1Pane", "send-keys", "-X", "copy-pipe-and-cancel", "pbcopy"])
+                    .status();
             });
         }
         c
@@ -816,6 +822,23 @@ fn create_new_project(name: String, git_repo_name: String) -> Result<String, Str
 }
 
 #[tauri::command]
+fn copy_tmux_selection(project_path: String, terminal_type: String) -> Result<(), String> {
+    if is_tmux_available() {
+        let session_name = get_tmux_session_name(&project_path, &terminal_type);
+        let status = std::process::Command::new("tmux")
+            .args(&["-u", "send-keys", "-t", &session_name, "-X", "copy-pipe-and-cancel", "pbcopy"])
+            .status();
+        match status {
+            Ok(s) if s.success() => Ok(()),
+            Ok(s) => Err(format!("tmux exited with status: {}", s)),
+            Err(e) => Err(e.to_string()),
+        }
+    } else {
+        Err("tmux not available".to_string())
+    }
+}
+
+#[tauri::command]
 fn get_initial_project() -> Option<String> {
     std::env::var("AIOS_INITIAL_PROJECT").ok()
 }
@@ -848,7 +871,8 @@ fn main() {
             close_project_session,
             select_directory,
             create_new_project,
-            get_initial_project
+            get_initial_project,
+            copy_tmux_selection
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

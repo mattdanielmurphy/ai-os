@@ -803,9 +803,21 @@ document.addEventListener('keydown', (e) => {
         
         // Only prioritize xterm.js selections if the terminal elements are focused
         if (activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl))) {
-            if (term.hasSelection()) textToCopy = term.getSelection();
+            if (term.hasSelection()) {
+                textToCopy = term.getSelection();
+            } else {
+                invoke('copy_tmux_selection', { projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
+                    console.error('Failed to copy tmux selection:', err);
+                });
+            }
         } else if (activeEl && (miniContainer?.contains(activeEl) || miniTerm.element?.contains(activeEl))) {
-            if (miniTerm.hasSelection()) textToCopy = miniTerm.getSelection();
+            if (miniTerm.hasSelection()) {
+                textToCopy = miniTerm.getSelection();
+            } else {
+                invoke('copy_tmux_selection', { projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
+                    console.error('Failed to copy tmux selection:', err);
+                });
+            }
         } else {
             textToCopy = window.getSelection()?.toString() || '';
         }
