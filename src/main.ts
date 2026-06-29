@@ -676,10 +676,31 @@ const commandHistory: string[] = [];
 let historyIndex = -1;
 let currentDraft = '';
 
+let arrowUpPressedOnce = false;
+
 textarea?.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowUp') {
         if (textarea.selectionStart === 0 || historyIndex !== -1) {
             e.preventDefault();
+            
+            if (historyIndex === -1 && !arrowUpPressedOnce && commandHistory.length > 0) {
+                arrowUpPressedOnce = true;
+                const originalPlaceholder = textarea.placeholder;
+                textarea.placeholder = "Press ArrowUp again to recall history...";
+                
+                const resetArrowUpState = () => {
+                    arrowUpPressedOnce = false;
+                    textarea.placeholder = originalPlaceholder;
+                    textarea.removeEventListener('input', resetArrowUpState);
+                    textarea.removeEventListener('blur', resetArrowUpState);
+                };
+                textarea.addEventListener('input', resetArrowUpState);
+                textarea.addEventListener('blur', resetArrowUpState);
+                return;
+            }
+            
+            arrowUpPressedOnce = false;
+            updatePlaceholder(); // Reset placeholder in case it was changed
             if (historyIndex === -1) {
                 currentDraft = textarea.value;
             }
@@ -690,6 +711,7 @@ textarea?.addEventListener('keydown', async (e) => {
             }
         }
     } else if (e.key === 'ArrowDown') {
+        arrowUpPressedOnce = false;
         if (historyIndex !== -1) {
             e.preventDefault();
             if (historyIndex > 0) {
@@ -744,8 +766,8 @@ textarea?.addEventListener('keydown', async (e) => {
         const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
 
         if (isRunning) {
-            // Use Esc+LF (\x1b\n) to correctly insert literal newlines inside interactive CLI prompts without submitting them
-            const dataToSend = processedInput.replace(/\n/g, '\x1b\n') + '\r';
+            // Use bracketed paste mode (\x1b[200~ ... \x1b[201~) so the PTY receives the block instantly and preserves literal newlines
+            const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
             if (isBypass) {
                 invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
             } else {
@@ -764,7 +786,7 @@ textarea?.addEventListener('keydown', async (e) => {
                 } catch (err) {
                     console.error('Failed to spawn fresh agy engine:', err);
                 }
-                const dataToSend = processedInput.replace(/\n/g, '\x1b\n') + '\r';
+                const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
                 if (isBypass) {
                     invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
                 } else {
