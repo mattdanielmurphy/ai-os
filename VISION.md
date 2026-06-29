@@ -350,3 +350,10 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 1. **Semantic Thought Layer:** Integrating local vector embeddings for user notes, allowing the OS to recall abstract thoughts and link them to code commits automatically.
 2. **Automated Auth Rotation Daemon:** Fully implementing the headless account switcher for the underlying developer accounts and session clients to bypass user-facing login screens entirely.
 3. **Deeper macOS Automation:** Expanding permissions safely to interact with native macOS apps via JXA/AppleScript wrappers.
+
+
+# New Unorganized Eventual Features
+- File browser and VSCode and markdown editors
+- open project in Finder button
+- cmd-click links in tmux TUIs
+- automatic light/dark mode (might be tough with agy/claude code TUIs, but I think we can easily inject a `/theme <light>` command to switch the internal theme, which has been the issue in other terminals that I've used which have auto dark/light switching)

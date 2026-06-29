@@ -5,6 +5,8 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
+import { open } from '@tauri-apps/api/shell'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 
 // ----------------------------------------------------
 // 1. Interfaces & Types
@@ -115,6 +117,14 @@ const term = new Terminal({
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
 
+const handleLink = (e: MouseEvent, uri: string) => {
+    if (e.metaKey || e.ctrlKey) {
+        open(uri).catch(err => console.error("Failed to open link:", err));
+    }
+};
+
+term.loadAddon(new WebLinksAddon(handleLink));
+
 term.onData((data) => {
     invoke('write_to_pty', { data, projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
         console.error('Failed to write key to Engine PTY:', err);
@@ -139,6 +149,7 @@ const miniTerm = new Terminal({
 });
 const miniFitAddon = new FitAddon();
 miniTerm.loadAddon(miniFitAddon);
+miniTerm.loadAddon(new WebLinksAddon(handleLink));
 
 let miniInputBuffer = '';
 

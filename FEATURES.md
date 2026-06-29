@@ -177,3 +177,9 @@
 ### [2026-06-29] Agent Logging Transcript Integration
 * **Transcript Symlinking Protocol:** Updated `<AGENT_WORK_LOGS>` rules in `.gemini/GEMINI.md` to instruct the agent to symlink the `agy` `transcript.jsonl` directory to `.agent-logs/transcripts/<Conversation ID>` at the end of each session.
 * **Hybrid Context Logging:** The manual markdown logs now serve as a semantic "index" or TL;DR, containing a direct filesystem hyperlink to the symlinked raw transcript directory for deep-dive context retrieval without cluttering the main agent summary log.
+
+### [2026-06-29] Token Optimization & Multi-Command Logging
+* **Multi Command Logging:** Enhanced local log management strategy to handle multi-command execution flows, ensuring comprehensive tracking without context bloat.
+* **Command Token Usage Monitoring:** Optimized Antigravity agent token usage by monitoring and tracking token consumption for command outputs, ensuring alignment with token protection guardrails.
+
+* **Clickable Terminal Links:** Integrated `@xterm/addon-web-links` to parse and make web URLs clickable in the TUI terminal emulator. Links can now be opened natively in the default browser using the `Cmd`/`Ctrl` + Click shortcut via the Tauri shell API.
