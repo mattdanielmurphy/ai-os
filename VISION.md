@@ -357,7 +357,7 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 - open project in Finder button
 - automatic light/dark mode (might be tough with agy/claude code TUIs, but I think we can easily inject a `/theme <light>` command to switch the internal theme, which has been the issue in other terminals that I've used which have auto dark/light switching)
 - `/` commands in the textarea with autocomplete for commands AND for filepaths
-- when I enter shell mode, I see a bunch of these characters: ` 1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the terminal input, presumably from using cmd-arrow key and stuff from when it's in prompt mode so it's sending escape sequences for cursor movement is my gues
+- when I enter shell mode, I see a bunch of these characters: ` 1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the terminal input, presumably from using cmd-arrow key and stuff from when it's in prompt mode so it's sending escape sequences for cursor movement is my guess
 
-## In progress
-- cmd-click links in tmux TUIs
+## Mostly done
+- cmd-click links in tmux TUIs: DONE, but truncated filepaths don't work (might be tough to actually implement this... One way that occurs to me is if behind the scenes there's a super-wide TUI that we extract all the text from and pump into our own version of a TUI that's fit to the window, and so we still see the truncated file path but behind the scenes, it's a markdown link that is linked to the full filepath)

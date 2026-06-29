@@ -183,3 +183,7 @@
 * **Command Token Usage Monitoring:** Optimized Antigravity agent token usage by monitoring and tracking token consumption for command outputs, ensuring alignment with token protection guardrails.
 
 * **Clickable Terminal Links:** Integrated `@xterm/addon-web-links` to parse and make web URLs clickable in the TUI terminal emulator. Links can now be opened natively in the default browser using the `Cmd`/`Ctrl` + Click shortcut via the Tauri shell API.
+
+### [2026-06-29] Codebase Ingestion Parser (AST Upgrades)
+* **Tree-sitter AST Parser:** Refactored `scripts/ingest_codebase` to integrate `tree-sitter` (via Python bindings) for formal AST parsing of TypeScript, Rust, and Go files.
+* **Formal Struct/Function Skeletonization:** Eliminates brittle regex-based parsing by accurately capturing class definitions, function signatures, and exported constants while reliably stripping function bodies and docstrings to enforce token parsimony.

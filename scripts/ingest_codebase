@@ -5,6 +5,25 @@ import re
 import ast
 import subprocess
 from pathlib import Path
+import site
+
+user_site = site.getusersitepackages()
+if user_site not in sys.path:
+    sys.path.append(user_site)
+
+try:
+    from tree_sitter import Language, Parser
+    import tree_sitter_typescript as tsts
+    import tree_sitter_rust as tsrust
+    import tree_sitter_go as tsgo
+    
+    LANG_TS = Language(tsts.language_typescript())
+    LANG_TSX = Language(tsts.language_tsx())
+    LANG_RS = Language(tsrust.language())
+    LANG_GO = Language(tsgo.language())
+    TS_AVAILABLE = True
+except ImportError:
+    TS_AVAILABLE = False
 
 # Exclusion list for directory scanning
 EXCLUDE_DIRS = {
@@ -102,125 +121,58 @@ def skeletonize_python(content):
     visitor.visit(tree)
     return "\n".join(lines)
 
+def skeletonize_curly_braces_treesitter(content, ext):
+    if ext in (".ts", ".js"):
+        lang = LANG_TS
+    elif ext in (".tsx", ".jsx"):
+        lang = LANG_TSX
+    elif ext == ".rs":
+        lang = LANG_RS
+    elif ext == ".go":
+        lang = LANG_GO
+    else:
+        return content
+
+    parser = Parser(lang)
+    tree = parser.parse(content.encode('utf8'))
+
+    body_types = {"statement_block", "block"}
+    function_types = {
+        "function_declaration", "method_definition", "arrow_function", 
+        "function_item", "method_declaration", "func_literal"
+    }
+
+    replacements = []
+
+    def visit(n):
+        if n.type in body_types and n.parent and n.parent.type in function_types:
+            replacements.append((n.start_byte, n.end_byte))
+        else:
+            for child in n.children:
+                visit(child)
+
+    visit(tree.root_node)
+
+    replacements.sort(reverse=True)
+    res = bytearray(content.encode('utf8'))
+    for start, end in replacements:
+        res[start:end] = b"{ ... }"
+
+    return res.decode('utf8')
+
 def skeletonize_curly_braces(content, ext):
     """
-    Parse curly-brace languages (TS, JS, Rust, Go) to extract structural elements 
+    Parse curly-brace languages to extract structural elements 
     and signatures while stripping out function/method bodies.
+    Uses tree-sitter if available.
     """
-    # Regexes for structures we want to parse into (keeping content)
-    # vs functions we want to strip the body of.
+    if TS_AVAILABLE:
+        try:
+            return skeletonize_curly_braces_treesitter(content, ext)
+        except Exception as e:
+            return f"/* Error using tree-sitter: {e} */\n" + content
     
-    lines = content.splitlines()
-    output = []
-    
-    i = 0
-    n = len(lines)
-    
-    # Simple brace tracker
-    def skip_braces(start_line_idx, start_col=0):
-        """Skip lines until matching closing brace is found."""
-        brace_count = 0
-        l_idx = start_line_idx
-        
-        # Check first line
-        line = lines[l_idx][start_col:]
-        # Simple scan
-        in_string = False
-        string_char = None
-        escaped = False
-        
-        while l_idx < n:
-            line = lines[l_idx] if l_idx != start_line_idx else lines[l_idx][start_col:]
-            char_idx = 0
-            while char_idx < len(line):
-                char = line[char_idx]
-                if escaped:
-                    escaped = False
-                    char_idx += 1
-                    continue
-                if char == "\\":
-                    escaped = True
-                    char_idx += 1
-                    continue
-                if in_string:
-                    if char == string_char:
-                        in_string = False
-                elif char in ('"', "'", '`'):
-                    in_string = True
-                    string_char = char
-                else:
-                    if char == "{":
-                        brace_count += 1
-                    elif char == "}":
-                        brace_count -= 1
-                        if brace_count <= 0:
-                            return l_idx, char_idx + (start_col if l_idx == start_line_idx else 0)
-                char_idx += 1
-            l_idx += 1
-        return n - 1, 0
-
-    while i < n:
-        line = lines[i]
-        stripped = line.strip()
-        
-        # Keep empty lines and comments that look like documentation
-        if not stripped:
-            output.append("")
-            i += 1
-            continue
-            
-        if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
-            # Only keep doc comments (JSDoc, Rust doc, Go package doc)
-            if stripped.startswith("/**") or stripped.startswith("///") or stripped.startswith("/*") or stripped.startswith("*"):
-                output.append(line)
-            i += 1
-            continue
-            
-        # Detect function signatures (Rust 'fn', TS/JS 'function', constructor, arrow functions, or general patterns)
-        is_func = False
-        if ext in (".ts", ".js", ".tsx", ".jsx"):
-            # ts/js function, constructor, method, or arrow function
-            if (re.search(r'\b(function|constructor)\b', stripped) or
-                re.search(r'\w+\s*\([^)]*\)\s*:\s*\w+\s*\{', stripped) or # method with return type
-                re.search(r'\bconst\s+\w+\s*=\s*\([^)]*\)\s*(=>|:)\s*', stripped) or # arrow func
-                re.search(r'^\s*(async\s+)?(public|private|protected|static\s+)?\w+\s*\([^)]*\)\s*\{', line)): # class method
-                is_func = True
-        elif ext == ".rs":
-            # rust fn
-            if re.search(r'\b(fn)\b', stripped):
-                is_func = True
-        elif ext == ".go":
-            # go func
-            if re.search(r'\b(func)\b', stripped):
-                is_func = True
-
-        # Check if this line starts a block that has '{'
-        if is_func:
-            # Output signature line
-            output.append(line.split("{")[0] + "{ ... }")
-            # Find the opening brace and skip to the closing one
-            brace_pos = line.find("{")
-            if brace_pos != -1:
-                end_l, end_c = skip_braces(i, brace_pos)
-                i = end_l + 1
-            else:
-                # Brace might be on the next line
-                next_line_found = False
-                for j in range(i + 1, min(i + 4, n)):
-                    if "{" in lines[j]:
-                        brace_pos = lines[j].find("{")
-                        end_l, end_c = skip_braces(j, brace_pos)
-                        i = end_l + 1
-                        next_line_found = True
-                        break
-                if not next_line_found:
-                    i += 1
-        else:
-            # Regular structural definitions (classes, interfaces, structs, impls, traits) - we keep them
-            output.append(line)
-            i += 1
-
-    return "\n".join(output)
+    return "/* Tree-sitter not available, skipping parsing */\n" + content
 
 def skeletonize_html(file_path):
     """Use webpage-compressor if available, otherwise do a basic Python-based compression."""
@@ -236,22 +188,17 @@ def skeletonize_html(file_path):
             )
             return res.stdout
         except Exception as e:
-            # Fallback
             pass
             
-    # Basic Python Fallback for HTML
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
         return f"<!-- Error reading HTML: {e} -->"
         
-    # Strip scripts, styles, and comments
     content = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '<!-- [script removed] -->', content, flags=re.IGNORECASE)
     content = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '<!-- [style removed] -->', content, flags=re.IGNORECASE)
     content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
-    
-    # Strip long inline styling and other noise
     content = re.sub(r'\s+style="[^"]*"', '', content)
     content = re.sub(r'\s+onclick="[^"]*"', '', content)
     
@@ -282,7 +229,6 @@ def process_file(file_path):
         elif ext in (".html", ".htm"):
             return skeletonize_html(str(path))
         elif ext in (".md", ".txt", ".json", ".yml", ".yaml", ".toml"):
-            # Keep as is but truncate if extremely large
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
             if len(content) > 2000:
@@ -303,7 +249,6 @@ def process_directory(dir_path):
     outputs = []
     
     for root, dirs, files in os.walk(base_path):
-        # Exclude directories in-place
         dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
         
         for file in files:
@@ -313,7 +258,6 @@ def process_directory(dir_path):
             file_path = Path(root) / file
             rel_path = file_path.relative_to(base_path)
             
-            # Skip binary files/known noise extensions
             if file_path.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".mp3", ".mp4", ".pdf", ".zip", ".tar", ".gz"):
                 continue
                 
