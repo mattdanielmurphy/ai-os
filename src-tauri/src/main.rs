@@ -68,17 +68,25 @@ async fn handle_sync(
     Json(payload): Json<ContextSyncPayload>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
     let project_root = std::env::var("AIOS_INITIAL_PROJECT")
-        .unwrap_or_else(|_| std::env::current_dir().unwrap().to_string_lossy().to_string());
+        .unwrap_or_else(|_| {
+            let cwd = std::env::current_dir().unwrap();
+            if cwd.ends_with("src-tauri") {
+                cwd.parent().unwrap().to_string_lossy().to_string()
+            } else {
+                cwd.to_string_lossy().to_string()
+            }
+        });
+        
+    println!("Received sync payload for thread {} in root {}", payload.thread_id, project_root);
     
     let log_dir = std::path::Path::new(&project_root)
-        .join(".gemini")
-        .join("history")
+        .join("gemini-history")
         .join("threads");
         
     std::fs::create_dir_all(&log_dir)
         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         
-    let file_path = log_dir.join(format!("{}.txt", payload.thread_id));
+    let file_path = log_dir.join(format!("{}.md", payload.thread_id));
     
     std::fs::write(&file_path, &payload.content)
         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -157,11 +165,19 @@ async fn handle_gemini_sync(
     Json(payload): Json<GeminiSyncPayload>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
     let project_root = std::env::var("AIOS_INITIAL_PROJECT")
-        .unwrap_or_else(|_| std::env::current_dir().unwrap().to_string_lossy().to_string());
+        .unwrap_or_else(|_| {
+            let cwd = std::env::current_dir().unwrap();
+            if cwd.ends_with("src-tauri") {
+                cwd.parent().unwrap().to_string_lossy().to_string()
+            } else {
+                cwd.to_string_lossy().to_string()
+            }
+        });
+        
+    println!("Received gemini sync payload for url {} in root {}", payload.url, project_root);
     
     let log_dir = std::path::Path::new(&project_root)
-        .join(".gemini")
-        .join("history")
+        .join("gemini-history")
         .join("userscript_logs");
         
     std::fs::create_dir_all(&log_dir)
@@ -196,7 +212,7 @@ fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .layer(cors)
             .with_state(app_handle);
 
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:3030").await.unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:3031").await.unwrap();
         axum::serve(listener, app).await.unwrap();
     });
 }
