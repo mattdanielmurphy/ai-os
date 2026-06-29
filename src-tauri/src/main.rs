@@ -142,17 +142,12 @@ fn is_engine_running_proc(engine: &str, project_path: &str, shell_pid: Option<u3
     false
 }
 
-fn trigger_tmux_refresh(project_path: &str, engine: &str) {
+fn trigger_tmux_refresh(_project_path: &str, _engine: &str) {
     if is_tmux_available() {
-        let engine_session = get_tmux_session_name(project_path, engine);
-        let mini_session = get_tmux_session_name(project_path, "mini");
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(200));
             let _ = std::process::Command::new("tmux")
-                .args(&["-u", "refresh-client", "-t", &engine_session])
-                .status();
-            let _ = std::process::Command::new("tmux")
-                .args(&["-u", "refresh-client", "-t", &mini_session])
+                .args(&["-u", "refresh-client"])
                 .status();
         });
     }
