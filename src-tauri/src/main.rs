@@ -81,6 +81,102 @@ fn is_session_alive(project_path: &str, engine: &str, pid: Option<u32>) -> bool 
     }
 }
 
+fn get_tmux_pane_pid(session_name: &str) -> Option<u32> {
+    let output = std::process::Command::new("tmux")
+        .args(&["list-panes", "-t", session_name, "-F", "#{pane_pid}"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    stdout.trim().parse::<u32>().ok()
+}
+
+fn is_engine_running_proc(engine: &str, project_path: &str, shell_pid: Option<u32>) -> bool {
+    let root_pid = if is_tmux_available() {
+        let session_name = get_tmux_session_name(project_path, engine);
+        if !has_tmux_session(&session_name) {
+            return false;
+        }
+        match get_tmux_pane_pid(&session_name) {
+            Some(pid) => pid,
+            None => return false,
+        }
+    } else {
+        match shell_pid {
+            Some(pid) => pid,
+            None => return false,
+        }
+    };
+
+    let output = match std::process::Command::new("ps")
+        .args(&["-A", "-o", "ppid,pid,args"])
+        .output() {
+            Ok(o) => o,
+            Err(_) => return false,
+        };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    let mut parent_to_children: std::collections::HashMap<u32, Vec<u32>> = std::collections::HashMap::new();
+    let mut pid_to_args: std::collections::HashMap<u32, String> = std::collections::HashMap::new();
+    
+    for line in stdout.lines().skip(1) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 3 {
+            if let (Ok(ppid), Ok(pid)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                let args = parts[2..].join(" ");
+                parent_to_children.entry(ppid).or_default().push(pid);
+                pid_to_args.insert(pid, args);
+            }
+        }
+    }
+    
+    let mut queue = vec![root_pid];
+    let mut visited = std::collections::HashSet::new();
+    
+    while let Some(current_pid) = queue.pop() {
+        if !visited.insert(current_pid) {
+            continue;
+        }
+        if let Some(args) = pid_to_args.get(&current_pid) {
+            let args_lower = args.to_lowercase();
+            if engine == "claude" {
+                if args_lower.contains("claude") {
+                    return true;
+                }
+            } else if engine == "agy" {
+                if args_lower.contains("agy") {
+                    return true;
+                }
+            }
+        }
+        if let Some(children) = parent_to_children.get(&current_pid) {
+            for &child in children {
+                queue.push(child);
+            }
+        }
+    }
+    
+    false
+}
+
+fn trigger_tmux_refresh(project_path: &str, engine: &str) {
+    if is_tmux_available() {
+        let engine_session = get_tmux_session_name(project_path, engine);
+        let mini_session = get_tmux_session_name(project_path, "mini");
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            let _ = std::process::Command::new("tmux")
+                .args(&["-u", "refresh-client", "-t", &engine_session])
+                .status();
+            let _ = std::process::Command::new("tmux")
+                .args(&["-u", "refresh-client", "-t", &mini_session])
+                .status();
+        });
+    }
+}
+
 // Spawns a single PTY session
 fn spawn_single_pty(
     project_path: &str,
@@ -326,7 +422,9 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
         sessions.insert(project_path.clone(), session);
 
         let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
-        *active = Some(project_path);
+        *active = Some(project_path.clone());
+
+        trigger_tmux_refresh(&project_path, &engine);
 
         return Ok(SwitchResult {
             shell_pid: engine_pid,
@@ -338,7 +436,10 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
     let (shell_pid, is_new_session) = ensure_engine_pty(&project_path, &engine, &app_handle, session)?;
 
     let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
-    *active = Some(project_path);
+    *active = Some(project_path.clone());
+
+    trigger_tmux_refresh(&project_path, &engine);
+
     Ok(SwitchResult {
         shell_pid,
         is_new_session,
@@ -411,7 +512,7 @@ fn is_engine_running(engine: String, project_path: String, state: tauri::State<A
     };
     drop(sessions);
 
-    Ok(is_session_alive(&project_path, &engine, shell_pid))
+    Ok(is_engine_running_proc(&engine, &project_path, shell_pid))
 }
 
 fn find_agent_pid(shell_pid: u32) -> Option<u32> {
