@@ -458,6 +458,14 @@ fn spawn_single_pty(
     Ok((writer, pair.master, shell_pid, is_new_tmux))
 }
 
+fn is_process_alive(pid: u32) -> bool {
+    std::process::Command::new("kill")
+        .args(&["-0", &pid.to_string()])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 fn ensure_engine_pty(
     project_path: &str,
     engine: &str,
@@ -465,13 +473,14 @@ fn ensure_engine_pty(
     session: &mut ProjectSession,
 ) -> Result<(u32, bool), String> {
     if engine == "claude" {
-        let is_alive = if session.claude_pid.is_some() {
-            is_engine_running_proc("claude", project_path, session.claude_pid)
-        } else {
-            false
-        };
-        if !is_alive {
-            if is_tmux_available() {
+        let mut agy_alive = false;
+        let mut client_alive = false;
+        if let Some(pid) = session.claude_pid {
+            agy_alive = is_engine_running_proc("claude", project_path, session.claude_pid);
+            client_alive = is_process_alive(pid);
+        }
+        if !agy_alive || !client_alive {
+            if is_tmux_available() && !agy_alive {
                 let session_name = get_tmux_session_name(project_path, "claude");
                 if has_tmux_session(&session_name) {
                     let _ = std::process::Command::new("tmux")
@@ -488,13 +497,14 @@ fn ensure_engine_pty(
             Ok((session.claude_pid.unwrap(), false))
         }
     } else if engine == "agy" {
-        let is_alive = if session.agy_pid.is_some() {
-            is_engine_running_proc("agy", project_path, session.agy_pid)
-        } else {
-            false
-        };
-        if !is_alive {
-            if is_tmux_available() {
+        let mut agy_alive = false;
+        let mut client_alive = false;
+        if let Some(pid) = session.agy_pid {
+            agy_alive = is_engine_running_proc("agy", project_path, session.agy_pid);
+            client_alive = is_process_alive(pid);
+        }
+        if !agy_alive || !client_alive {
+            if is_tmux_available() && !agy_alive {
                 let session_name = get_tmux_session_name(project_path, "agy");
                 if has_tmux_session(&session_name) {
                     let _ = std::process::Command::new("tmux")
@@ -513,6 +523,20 @@ fn ensure_engine_pty(
     } else {
         Err(format!("Unknown engine: {}", engine))
     }
+}
+
+fn ensure_mini_pty(
+    project_path: &str,
+    app_handle: &tauri::AppHandle,
+    session: &mut ProjectSession,
+) -> Result<(), String> {
+    if !is_process_alive(session.mini_pid) {
+        let (writer, master, pid, _) = spawn_single_pty(project_path, "mini", app_handle)?;
+        session.mini_writer = writer;
+        session.mini_master = master;
+        session.mini_pid = pid;
+    }
+    Ok(())
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -642,6 +666,7 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
 
     let session = sessions.get_mut(&project_path).unwrap();
     let (shell_pid, is_new_session) = ensure_engine_pty(&project_path, &engine, &app_handle, session)?;
+    ensure_mini_pty(&project_path, &app_handle, session)?;
 
     let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
     *active = Some(project_path.clone());

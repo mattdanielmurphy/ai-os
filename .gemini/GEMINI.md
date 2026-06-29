@@ -31,7 +31,7 @@
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-0. **Fresh Thread Context:** When you receive a message in a fresh thread, if there is insufficient context about the specific feature or codebase elements being discussed, ALWAYS check the most recent 2 agent log files in `.agent-logs/`. Use this history to piece together the context needed to understand the prompt's references and execute it correctly.
+0. **Fresh Thread Context:** When you receive ANY prompt in a new thread, you MUST immediately check the most recent 2 agent log files in `.agent-logs/` AND do a quick search of the `.agent-logs/` directory for keywords related to the prompt. Use this history to load past context and piece together the knowledge needed to understand the user's intent and execute it correctly.
 1. **Log Directory:** ALWAYS look for and maintain an `.agent-logs/` directory at the root of the project.
 2. **Reading Logs:** Before starting a bug fix or feature, scan `.agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
 3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `.agent-logs/`.

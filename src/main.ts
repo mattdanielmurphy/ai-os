@@ -442,6 +442,10 @@ const switchToProject = async (path: string) => {
         currentDirPathEl.textContent = path;
     }
     
+    commandHistory = loadCommandHistory(path);
+    historyIndex = -1;
+    currentDraft = '';
+    
     // Reset pause state for the active project
     updatePauseUI('Running');
     
@@ -690,25 +694,79 @@ textarea?.addEventListener('input', () => {
         adjustHeight();
     }
 });
-const commandHistory: string[] = [];
+const loadCommandHistory = (projectPath: string): string[] => {
+    try {
+        const historyJson = localStorage.getItem(`ai-os-history-${projectPath}`);
+        if (historyJson) {
+            return JSON.parse(historyJson);
+        }
+    } catch (e) {
+        console.error('Failed to load command history', e);
+    }
+    return [];
+};
+
+const saveCommandHistory = (projectPath: string, history: string[]) => {
+    try {
+        localStorage.setItem(`ai-os-history-${projectPath}`, JSON.stringify(history));
+    } catch (e) {
+        console.error('Failed to save command history', e);
+    }
+};
+
+let commandHistory: string[] = loadCommandHistory(activeProject);
 let historyIndex = -1;
 let currentDraft = '';
 
 let arrowUpPressedOnce = false;
+let arrowUpTimeout: any = null;
+let arrowUpOverlay: HTMLDivElement | null = null;
+
+const showArrowUpOverlay = () => {
+    if (!arrowUpOverlay) {
+        arrowUpOverlay = document.createElement('div');
+        arrowUpOverlay.className = 'absolute top-0 left-0 right-0 bg-blue-600/90 text-white text-xs font-bold px-3 py-1.5 flex items-center justify-center rounded-t pointer-events-none z-10 animate-pulse transition-opacity';
+        arrowUpOverlay.textContent = 'Press ArrowUp again to recall history';
+        const bottomArea = document.getElementById('bottom-input-area');
+        if (bottomArea) {
+            bottomArea.appendChild(arrowUpOverlay);
+        }
+    }
+    arrowUpOverlay.style.opacity = '1';
+};
+
+const hideArrowUpOverlay = () => {
+    if (arrowUpOverlay) {
+        arrowUpOverlay.style.opacity = '0';
+        setTimeout(() => {
+            if (arrowUpOverlay && arrowUpOverlay.style.opacity === '0') {
+                arrowUpOverlay.remove();
+                arrowUpOverlay = null;
+            }
+        }, 300);
+    }
+};
+
 
 textarea?.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowUp') {
         if (textarea.selectionStart === 0 || historyIndex !== -1) {
-            e.preventDefault();
+            // If the textarea is empty, we don't need the double tap
+            const isEmpty = textarea.value.trim() === '';
             
-            if (historyIndex === -1 && !arrowUpPressedOnce && commandHistory.length > 0) {
+            if (!isEmpty && historyIndex === -1 && !arrowUpPressedOnce && commandHistory.length > 0) {
                 arrowUpPressedOnce = true;
-                const originalPlaceholder = textarea.placeholder;
-                textarea.placeholder = "Press ArrowUp again to recall history...";
+                showArrowUpOverlay();
+                
+                if (arrowUpTimeout) clearTimeout(arrowUpTimeout);
+                arrowUpTimeout = setTimeout(() => {
+                    arrowUpPressedOnce = false;
+                    hideArrowUpOverlay();
+                }, 2000);
                 
                 const resetArrowUpState = () => {
                     arrowUpPressedOnce = false;
-                    textarea.placeholder = originalPlaceholder;
+                    hideArrowUpOverlay();
                     textarea.removeEventListener('input', resetArrowUpState);
                     textarea.removeEventListener('blur', resetArrowUpState);
                 };
@@ -717,8 +775,12 @@ textarea?.addEventListener('keydown', async (e) => {
                 return;
             }
             
+            e.preventDefault();
+            
+            if (arrowUpTimeout) clearTimeout(arrowUpTimeout);
             arrowUpPressedOnce = false;
-            updatePlaceholder(); // Reset placeholder in case it was changed
+            hideArrowUpOverlay();
+            
             if (historyIndex === -1) {
                 currentDraft = textarea.value;
             }
@@ -729,7 +791,10 @@ textarea?.addEventListener('keydown', async (e) => {
             }
         }
     } else if (e.key === 'ArrowDown') {
+        if (arrowUpTimeout) clearTimeout(arrowUpTimeout);
         arrowUpPressedOnce = false;
+        hideArrowUpOverlay();
+        
         if (historyIndex !== -1) {
             e.preventDefault();
             if (historyIndex > 0) {
@@ -762,6 +827,7 @@ textarea?.addEventListener('keydown', async (e) => {
         if (!trimmedInput) return;
 
         commandHistory.push(trimmedInput);
+        saveCommandHistory(activeProject, commandHistory);
         historyIndex = -1;
 
         // Prompt Mode Engine Routing Logic
@@ -805,13 +871,9 @@ textarea?.addEventListener('keydown', async (e) => {
                     console.error('Failed to spawn fresh agy engine:', err);
                 }
                 const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
-                if (isBypass) {
-                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
-                } else {
-                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
-                    await new Promise((resolve) => setTimeout(resolve, 450));
-                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
-                }
+                
+                // When TUI is fresh/exited, we NEVER need to clear context. It's a fresh instance.
+                invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
             } else {
                 // Escape quotes but preserve literal newlines so the bash/tmux command inputs them properly
                 const escapedInput = processedInput.replace(/"/g, '\\"');
@@ -822,16 +884,8 @@ textarea?.addEventListener('keydown', async (e) => {
                     commandToExecute = `claude -p "${escapedInput}"`;
                 }
 
-                if (isBypass) {
-                    // Send command to active project PTY without clearing
-                    invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
-                } else {
-                    // Send clear context command
-                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
-                    await new Promise((resolve) => setTimeout(resolve, 450));
-                    // Send command
-                    invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
-                }
+                // Send command to active project PTY directly
+                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
             }
         }
 
@@ -843,7 +897,8 @@ textarea?.addEventListener('keydown', async (e) => {
             clearCheckbox.checked = true;
             autoClearContext = true;
             localStorage.setItem('ai-os-auto-clear', 'true');
-            updatePlaceholder();
+            // We poll is_engine_running in the background, but we can optimistically call updatePlaceholder(true) since we just spawned/used it
+            updatePlaceholder(true);
         }
     }
 });
@@ -948,22 +1003,32 @@ if (savedAutoClear !== null) {
     autoClearContext = savedAutoClear === 'true';
 }
 
-const updatePlaceholder = () => {
+const updatePlaceholder = (isRunning = true) => {
     const contextContainer = document.getElementById('clear-context-container');
     const labelText = document.getElementById('clear-context-label-text');
     if (textarea) {
-        if (clearCheckbox && clearCheckbox.checked) {
-            textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+        if (!isRunning) {
+            textarea.placeholder = `Type a prompt... [Will launch ${currentEngine} and send] (Enter to send, Shift+Enter for newline)`;
             if (contextContainer) {
-                contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-bold px-2 py-0.5 rounded border transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                contextContainer.style.display = 'none';
             }
-            if (labelText) labelText.textContent = "Auto-Clear: ACTIVE";
         } else {
-            textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
             if (contextContainer) {
-                contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-medium px-2 py-0.5 rounded border transition-all bg-gray-900/40 border-gray-800 text-gray-500 hover:text-gray-400";
+                contextContainer.style.display = 'flex';
             }
-            if (labelText) labelText.textContent = "Auto-Clear: OFF";
+            if (clearCheckbox && clearCheckbox.checked) {
+                textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+                if (contextContainer) {
+                    contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-bold px-2 py-0.5 rounded border transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                }
+                if (labelText) labelText.textContent = "Auto-Clear: ACTIVE";
+            } else {
+                textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
+                if (contextContainer) {
+                    contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-medium px-2 py-0.5 rounded border transition-all bg-gray-900/40 border-gray-800 text-gray-500 hover:text-gray-400";
+                }
+                if (labelText) labelText.textContent = "Auto-Clear: OFF";
+            }
         }
     }
 };
@@ -1032,3 +1097,17 @@ document.addEventListener('click', (e) => {
     await switchToProject(activeProject);
     renderProjects();
 })();
+
+// Poll engine running state
+setInterval(async () => {
+    if (!activeProject || isTerminalMode) return;
+    try {
+        const isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine, projectPath: activeProject });
+        // Only update if we aren't showing the arrow up overlay (so we don't mess up placeholder)
+        if (!arrowUpPressedOnce) {
+            updatePlaceholder(isRunning);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}, 1000);
