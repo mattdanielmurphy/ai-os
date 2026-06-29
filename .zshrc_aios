@@ -32,6 +32,45 @@ git() {
     if [[ "$cmd" == "status" || "$cmd" == "add" || "$cmd" == "commit" || "$cmd" == "diff" ]]; then
         sync_rules
     fi
+    
+    if [[ "$cmd" == "commit" ]]; then
+        qr command git "$@"
+        return $?
+    fi
+    
     command git "$@"
+}
+
+# Intercept noisy commands and execute them quietly
+npm() {
+    if [[ "$1" == "install" || "$1" == "i" || "$1" == "ci" ]]; then
+        qr command npm "$@"
+        return $?
+    fi
+    command npm "$@"
+}
+
+pnpm() {
+    if [[ "$1" == "install" || "$1" == "i" ]]; then
+        qr command pnpm "$@"
+        return $?
+    fi
+    command pnpm "$@"
+}
+
+pip() {
+    if [[ "$1" == "install" ]]; then
+        qr command pip "$@"
+        return $?
+    fi
+    command pip "$@"
+}
+
+cargo() {
+    if [[ "$1" == "build" || "$1" == "b" || "$1" == "install" || "$1" == "check" || "$1" == "c" ]]; then
+        qr command cargo "$@"
+        return $?
+    fi
+    command cargo "$@"
 }
 

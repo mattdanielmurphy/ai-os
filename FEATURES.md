@@ -170,3 +170,6 @@
 * **Default Agy CLI:** Modified the `ai-os` global wrapper to default to the Orchestrated `agy` CLI agent instead of Claude. Supports `--claude` flag to explicitly request Claude.
 * **Intercepted `--help`:** Captured `-h` and `--help` flags in `bin/ai-os` to display custom CLI help text for `ai-os` itself, preventing it from forwarding to sub-agents.
 * **Parallelized PTY Spawning:** Refactored Tauri Rust backend `switch_active_project` to concurrently spawn the mini-terminal PTY and active engine PTY in separate OS threads, cutting startup/tab loading latency in half. Cached `is_tmux_available` check via `OnceLock`.
+
+### [2026-06-29] Phase 11: Shell-Level Command Interception Strategy
+* **Token-Saving Shell Interception:** Established a strategy to intercept noisy/verbose shell commands (like `git commit`, `npm install`) at the `zsh` function level instead of relying on prompt-based LLM behavioral rules. This bypasses ingrained LLM muscle memory by silently wrapping the native commands in `.zshrc_aios`, executing them normally but redirecting output to `/dev/null` and returning a deterministic, token-efficient summary back to the agent.

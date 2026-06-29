@@ -62,6 +62,7 @@ Built to prevent "Token Ping-Pong" and enable autonomous execution.
 * **`ingest_codebase`**: Generates skeletonized ASTs/signatures, stripping logic out of files to give agents structure without bloat.
 * **`qr` (Quiet Run):** A zsh wrapper for noisy commands (e.g., `npm install`). Pipes stdout/stderr to `/tmp`, returning only success/failure and the last 15 lines of errors to protect the PTY context.
 * **`read_lines`:** A windowed file reader using `sed` to extract specific line ranges, preventing massive `cat` outputs in the terminal.
+* **Native Shell Command Interception:** Instead of attempting to prompt-engineer the agent away from its natural muscle memory (e.g., running `git commit`), `ai-os` intercepts these commands natively via `zsh` function wrappers in `.zshrc_aios`. The command executes transparently, but the massive console output is silenced and replaced with a deterministic, minimal token-cost success string.
 
 ### B. The Triage Editing System
 

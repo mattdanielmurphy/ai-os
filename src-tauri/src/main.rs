@@ -353,8 +353,12 @@ fn spawn_single_pty(
     let mut is_new_tmux = false;
     let mut cmd = if is_tmux_available() {
         let session_name = get_tmux_session_name(project_path, terminal_type);
+        println!("[DEBUG] tmux is available. Checking for session: {}", session_name);
         if !has_tmux_session(&session_name) {
+            println!("[DEBUG] Session {} does not exist. It will be new.", session_name);
             is_new_tmux = true;
+        } else {
+            println!("[DEBUG] Session {} already exists. Attaching.", session_name);
         }
         let mut c = CommandBuilder::new("tmux");
         let mut args = vec!["-u".to_string(), "new-session".to_string(), "-A".to_string(), "-s".to_string(), session_name.clone(), "-c".to_string(), project_path.to_string()];
@@ -363,6 +367,7 @@ fn spawn_single_pty(
         } else if terminal_type == "agy" {
             args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path));
         }
+        println!("[DEBUG] tmux args: {:?}", args);
         c.args(&args);
 
         if is_new_tmux {
@@ -400,11 +405,22 @@ fn spawn_single_pty(
     cmd.env("LANG", "en_US.UTF-8");
     cmd.env("LC_ALL", "en_US.UTF-8");
 
-    let _child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
+    println!("[DEBUG] Spawning command for project={}, type={}", project_path, terminal_type);
+    let _child = pair.slave.spawn_command(cmd).map_err(|e| {
+        println!("[DEBUG] Failed to spawn command: {}", e);
+        e.to_string()
+    })?;
     let shell_pid = _child.process_id().unwrap_or(0);
+    println!("[DEBUG] Spawned command with shell_pid={}", shell_pid);
 
-    let reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
-    let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
+    let reader = pair.master.try_clone_reader().map_err(|e| {
+        println!("[DEBUG] Failed to clone reader: {}", e);
+        e.to_string()
+    })?;
+    let writer = pair.master.take_writer().map_err(|e| {
+        println!("[DEBUG] Failed to take writer: {}", e);
+        e.to_string()
+    })?;
 
     // Spawn reader thread for this specific PTY
     let app_handle_clone = app_handle.clone();
