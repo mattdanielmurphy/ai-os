@@ -34,14 +34,17 @@
 0. **Fresh Thread Context:** When you receive ANY prompt in a new thread, you MUST immediately check the most recent 2 agent log files in `.agent-logs/` AND do a quick search of the `.agent-logs/` directory for keywords related to the prompt. Use this history to load past context and piece together the knowledge needed to understand the user's intent and execute it correctly.
 1. **Log Directory:** ALWAYS look for and maintain an `.agent-logs/` directory at the root of the project.
 2. **Reading Logs:** Before starting a bug fix or feature, scan `.agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
-3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `.agent-logs/`.
-   - **Naming Convention:** `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
-   - **Required Sections:**
-     - `## Goal`: What the user asked for.
-     - `## Changes Made`: Files modified, what was changed, and why.
-     - `## What Worked`: Confirmed fixes.
-     - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention (crucial for future agents).
-     - `## Architecture Notes`: Discoveries about how the codebase works that aren't obvious.
+3. **Writing Logs & Transcripts:** At the END of every session where you make code changes, you must link the session transcript and write a summary.
+   - **Step 1 (Symlink):** Create a symlink of your current brain folder to `.agent-logs/transcripts/<Conversation ID>` using the `Conversation ID` from your user information (e.g., `ln -s ~/.gemini/antigravity-cli/brain/<Conversation ID> .agent-logs/transcripts/<Conversation ID>`).
+   - **Step 2 (Summary File):** Create a new log file in `.agent-logs/`.
+     - **Naming Convention:** `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
+     - **Required Sections:**
+       - `**Transcript**`: A direct markdown link to the symlinked folder (e.g., `[View Full Logs](file:///.../projects/.../.agent-logs/transcripts/<Conversation ID>/)`).
+       - `## Goal`: What the user asked for.
+       - `## Changes Made`: Files modified, what was changed, and why.
+       - `## What Worked`: Confirmed fixes.
+       - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention (crucial for future agents).
+       - `## Architecture Notes`: Discoveries about how the codebase works that aren't obvious.
 4. **Commit:** Commit the log file alongside your code changes.
 </AGENT_WORK_LOGS>
 

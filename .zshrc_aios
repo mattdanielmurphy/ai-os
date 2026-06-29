@@ -5,13 +5,23 @@ rm() {
 }
 
 qr() {
+    local display_name="$1"
+    shift
     "$@" > /tmp/aios_last_cmd.log 2>&1
     local exit_code=$?
     if [ $exit_code -eq 0 ]; then
-        echo "✅ Success. (Full log at /tmp/aios_last_cmd.log)"
+        echo "✅ '$display_name' succeeded. (Output hidden to save tokens. Full log at /tmp/aios_last_cmd.log)"
+        tail -n 3 /tmp/aios_last_cmd.log
     else
-        echo "❌ Failed! Last 20 lines of error:"
-        tail -n 20 /tmp/aios_last_cmd.log
+        echo "❌ '$display_name' failed with exit code $exit_code."
+        echo "--- ERROR EXTRACTION ---"
+        if grep -iE "(error|exception|panic|fatal|traceback|fail)" /tmp/aios_last_cmd.log > /dev/null; then
+            grep -iE -B 2 -A 5 "(error|exception|panic|fatal|traceback|fail)" /tmp/aios_last_cmd.log | tail -n 30
+        else
+            tail -n 20 /tmp/aios_last_cmd.log
+        fi
+        echo "------------------------"
+        echo "ℹ️ Full error log available at: /tmp/aios_last_cmd.log"
         return $exit_code
     fi
 }
@@ -34,43 +44,27 @@ git() {
     fi
     
     if [[ "$cmd" == "commit" ]]; then
-        qr command git "$@"
+        qr "git commit" command git "$@"
         return $?
     fi
     
     command git "$@"
 }
 
-# Intercept noisy commands and execute them quietly
-npm() {
-    if [[ "$1" == "install" || "$1" == "i" || "$1" == "ci" ]]; then
-        qr command npm "$@"
-        return $?
-    fi
-    command npm "$@"
-}
+# --- AI-OS AGGRESSIVE WHITELIST ---
+# Add noisy commands to this array. An agent can easily edit this array during a token audit.
+# The shell will automatically route these commands through the `qr` (Quiet Run) wrapper.
+NOISY_COMMANDS=(
+    "npm" "pnpm" "yarn" "pip" "pip3" "cargo" "make" "docker" "docker-compose" "pytest" "jest" "tsc" "rustc" "go"
+)
 
-pnpm() {
-    if [[ "$1" == "install" || "$1" == "i" ]]; then
-        qr command pnpm "$@"
-        return $?
+for cmd in "${NOISY_COMMANDS[@]}"; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+        eval "
+        ${cmd}() {
+            qr \"\${cmd}\" command \${cmd} \"\$@\"
+        }
+        "
     fi
-    command pnpm "$@"
-}
-
-pip() {
-    if [[ "$1" == "install" ]]; then
-        qr command pip "$@"
-        return $?
-    fi
-    command pip "$@"
-}
-
-cargo() {
-    if [[ "$1" == "build" || "$1" == "b" || "$1" == "install" || "$1" == "check" || "$1" == "c" ]]; then
-        qr command cargo "$@"
-        return $?
-    fi
-    command cargo "$@"
-}
+done
 

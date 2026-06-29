@@ -173,3 +173,7 @@
 
 ### [2026-06-29] Phase 11: Shell-Level Command Interception Strategy
 * **Token-Saving Shell Interception:** Established a strategy to intercept noisy/verbose shell commands (like `git commit`, `npm install`) at the `zsh` function level instead of relying on prompt-based LLM behavioral rules. This bypasses ingrained LLM muscle memory by silently wrapping the native commands in `.zshrc_aios`, executing them normally but redirecting output to `/dev/null` and returning a deterministic, token-efficient summary back to the agent.
+
+### [2026-06-29] Agent Logging Transcript Integration
+* **Transcript Symlinking Protocol:** Updated `<AGENT_WORK_LOGS>` rules in `.gemini/GEMINI.md` to instruct the agent to symlink the `agy` `transcript.jsonl` directory to `.agent-logs/transcripts/<Conversation ID>` at the end of each session.
+* **Hybrid Context Logging:** The manual markdown logs now serve as a semantic "index" or TL;DR, containing a direct filesystem hyperlink to the symlinked raw transcript directory for deep-dive context retrieval without cluttering the main agent summary log.
