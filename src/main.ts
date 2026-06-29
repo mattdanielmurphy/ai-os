@@ -7,6 +7,7 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/api/shell'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import type { ILinkProvider, ILink } from '@xterm/xterm'
 
 // ----------------------------------------------------
 // 1. Interfaces & Types
@@ -119,11 +120,42 @@ term.loadAddon(fitAddon);
 
 const handleLink = (e: MouseEvent, uri: string) => {
     if (e.metaKey || e.ctrlKey) {
-        open(uri).catch(err => console.error("Failed to open link:", err));
+        let finalUri = uri;
+        if (!finalUri.startsWith('http://') && !finalUri.startsWith('https://') && !finalUri.startsWith('file://') && finalUri.startsWith('/')) {
+            finalUri = 'file://' + finalUri;
+        }
+        open(finalUri).catch(err => console.error("Failed to open link:", err));
     }
 };
 
+class LocalPathLinkProvider implements ILinkProvider {
+    constructor(private term: Terminal, private handler: (e: MouseEvent, uri: string) => void) {}
+    provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void): void {
+        const line = this.term.buffer.active.getLine(bufferLineNumber - 1);
+        if (!line) {
+            callback(undefined);
+            return;
+        }
+        const text = line.translateToString(true);
+        const regex = /(?:file:\/\/)?[a-zA-Z0-9_.~-]*(?:\/[a-zA-Z0-9_.-]+)+/g;
+        const links: ILink[] = [];
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            links.push({
+                range: {
+                    start: { x: match.index + 1, y: bufferLineNumber },
+                    end: { x: match.index + match[0].length, y: bufferLineNumber }
+                },
+                text: match[0],
+                activate: (e: MouseEvent, text: string) => this.handler(e, text)
+            });
+        }
+        callback(links);
+    }
+}
+
 term.loadAddon(new WebLinksAddon(handleLink));
+term.registerLinkProvider(new LocalPathLinkProvider(term, handleLink));
 
 term.onData((data) => {
     invoke('write_to_pty', { data, projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
@@ -150,6 +182,7 @@ const miniTerm = new Terminal({
 const miniFitAddon = new FitAddon();
 miniTerm.loadAddon(miniFitAddon);
 miniTerm.loadAddon(new WebLinksAddon(handleLink));
+miniTerm.registerLinkProvider(new LocalPathLinkProvider(miniTerm, handleLink));
 
 let miniInputBuffer = '';
 

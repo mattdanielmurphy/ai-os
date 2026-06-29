@@ -355,5 +355,9 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 # New Unorganized Eventual Features
 - File browser and VSCode and markdown editors
 - open project in Finder button
-- cmd-click links in tmux TUIs
 - automatic light/dark mode (might be tough with agy/claude code TUIs, but I think we can easily inject a `/theme <light>` command to switch the internal theme, which has been the issue in other terminals that I've used which have auto dark/light switching)
+- `/` commands in the textarea with autocomplete for commands AND for filepaths
+- when I enter shell mode, I see a bunch of these characters: ` 1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the input
+
+## In progress
+- cmd-click links in tmux TUIs

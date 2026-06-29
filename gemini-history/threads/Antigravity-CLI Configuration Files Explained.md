@@ -83,3 +83,23 @@ Actually, there is a technical distinction here: `/clear` and `/reset` do two di
 **/reset** is what you want. This completely wipes the active chat memory, terminates the current session, and spins up a brand-new context window. **This is the action that forces the CLI to re-read and reload `GEMINI.md` from disk.**
 
 If you have been using `/clear` to try and fix the rule ignoring, the model was actually still holding onto the old, stale session context. Try running `/reset` instead, and your updated rules should kick in immediately.
+
+---
+
+[2026-06-29 14:57] User:
+I'm having my agents auto-commit. Does agy do this anyway behind the scenes?
+
+---
+
+[2026-06-29 14:57] Assistant:
+No, `antigravity-cli` (or `agy`) does **not** auto-commit behind the scenes.
+
+By design, it leaves version control entirely in your hands. It will modify, create, or delete files in your workspace based on your instructions, but it won't stage or commit those changes to Git on its own.
+
+If you are seeing automated commits happen, it is coming from one of two places:
+
+**Your custom agent instructions:** If you have explicitly told your subagents in `AGENTS.md` or `.antigravity.md` to run `git commit` after making changes, they are just following your specific workflow rules.
+
+**An external tool/extension:** If you are running the CLI inside an IDE like Cursor or Windsurf, or alongside a tool like Cline, those environments sometimes have their own auto-commit or file-tracking behaviors enabled.
+
+If you *want* your agents to handle this automatically, keeping it in your local project rules is the right way to go, as `agy` won't step on your toes by doing it implicitly.
