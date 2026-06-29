@@ -708,13 +708,26 @@ textarea?.addEventListener('keydown', async (e) => {
             console.error('Failed to check if engine is running:', err);
         }
 
+        const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
+        const shouldClear = clearCheckbox ? clearCheckbox.checked : true;
+        const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
+
         if (isRunning) {
-            // Send prompt raw directly to the running interactive interface (stdin)
-            const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
-            invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+            if (isBypass) {
+                // Send raw prompt directly to the running interactive interface (stdin), mapping \n to \r for terminal line feeds
+                const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
+                invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+            } else {
+                // Clear context first
+                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
+                await new Promise((resolve) => setTimeout(resolve, 450));
+                // Send prompt
+                const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
+                invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+            }
         } else {
-            // Escape quotes and flatten newlines so the bash command doesn't break
-            const escapedInput = processedInput.replace(/"/g, '\\"').replace(/\n/g, ' ');
+            // Escape quotes but preserve literal newlines so the bash/tmux command inputs them properly
+            const escapedInput = processedInput.replace(/"/g, '\\"');
             let commandToExecute = '';
 
             // FIXED ENGINE ROUTING
@@ -727,10 +740,6 @@ textarea?.addEventListener('keydown', async (e) => {
             // Cost Telemetry execution hook - TEMPORARILY DISABLED (AGY Telemetry is not working, showing live in app instead)
             // const costScript = '/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py';
             // commandToExecute += ` ; if [ -f "${costScript}" ]; then python3 "${costScript}"; fi`;
-
-            const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
-            const shouldClear = clearCheckbox ? clearCheckbox.checked : true;
-            const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
 
             if (isBypass) {
                 // Send command to active project PTY without clearing
@@ -779,10 +788,13 @@ document.addEventListener('keydown', (e) => {
     // Intercept Cmd+C (Mac) or Ctrl+C to copy selected text from xterm.js or window
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
         let textToCopy = '';
-        if (term.hasSelection()) {
-            textToCopy = term.getSelection();
-        } else if (miniTerm.hasSelection()) {
-            textToCopy = miniTerm.getSelection();
+        const activeEl = document.activeElement;
+        
+        // Only prioritize xterm.js selections if the terminal elements are focused
+        if (activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl))) {
+            if (term.hasSelection()) textToCopy = term.getSelection();
+        } else if (activeEl && (miniContainer?.contains(activeEl) || miniTerm.element?.contains(activeEl))) {
+            if (miniTerm.hasSelection()) textToCopy = miniTerm.getSelection();
         } else {
             textToCopy = window.getSelection()?.toString() || '';
         }
@@ -802,9 +814,10 @@ document.addEventListener('paste', (e) => {
     }
     const pastedText = e.clipboardData?.getData('text');
     if (pastedText) {
-        if (document.activeElement === container || term.element?.contains(document.activeElement)) {
+        const activeEl = document.activeElement;
+        if (activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl))) {
             invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: currentEngine });
-        } else if (document.activeElement === miniContainer || miniTerm.element?.contains(document.activeElement)) {
+        } else if (activeEl && (miniContainer?.contains(activeEl) || miniTerm.element?.contains(activeEl))) {
             invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: 'mini' });
         }
     }
