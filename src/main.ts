@@ -121,6 +121,15 @@ term.onData((data) => {
     });
 });
 
+term.attachCustomKeyEventHandler((e) => {
+    if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
+        e.preventDefault();
+        invoke('write_to_pty', { data: '\x1b\x0d', projectPath: activeProject, terminalType: currentEngine }).catch(console.error);
+        return false;
+    }
+    return true;
+});
+
 // Mini Terminal
 const miniTerm = new Terminal({
     cursorBlink: true,
@@ -160,6 +169,15 @@ miniTerm.onData((data) => {
             miniInputBuffer += char;
         }
     }
+});
+
+miniTerm.attachCustomKeyEventHandler((e) => {
+    if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
+        e.preventDefault();
+        invoke('write_to_pty', { data: '\x1b\x0d', projectPath: activeProject, terminalType: 'mini' }).catch(console.error);
+        return false;
+    }
+    return true;
 });
 
 const exitTerminalMode = () => {
