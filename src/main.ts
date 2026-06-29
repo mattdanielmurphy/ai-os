@@ -672,9 +672,37 @@ textarea?.addEventListener('input', () => {
         adjustHeight();
     }
 });
+const commandHistory: string[] = [];
+let historyIndex = -1;
+let currentDraft = '';
 
 textarea?.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'ArrowUp') {
+        if (textarea.selectionStart === 0 || historyIndex !== -1) {
+            e.preventDefault();
+            if (historyIndex === -1) {
+                currentDraft = textarea.value;
+            }
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                textarea.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                adjustHeight();
+            }
+        }
+    } else if (e.key === 'ArrowDown') {
+        if (historyIndex !== -1) {
+            e.preventDefault();
+            if (historyIndex > 0) {
+                historyIndex--;
+                textarea.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                adjustHeight();
+            } else if (historyIndex === 0) {
+                historyIndex = -1;
+                textarea.value = currentDraft;
+                adjustHeight();
+            }
+        }
+    } else if (e.key === 'Enter') {
         if (e.shiftKey) {
             // Shift+Enter: insert a newline at the cursor position explicitly
             e.preventDefault();
@@ -692,6 +720,9 @@ textarea?.addEventListener('keydown', async (e) => {
         let rawInput = textarea.value;
         const trimmedInput = rawInput.trim();
         if (!trimmedInput) return;
+
+        commandHistory.push(trimmedInput);
+        historyIndex = -1;
 
         // Prompt Mode Engine Routing Logic
         let processedInput = trimmedInput;
