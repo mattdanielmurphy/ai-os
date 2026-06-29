@@ -1,0 +1,2 @@
+sed -i '' 's/if (this.readyState === 4) extractSidebarTimestamps(res)/if (this.readyState === 4) { extractSidebarTimestamps(res); fetch("http://127.0.0.1:3030\/api\/gemini\/sync", { method: "POST", body: res }).catch(e=>console.error(e)); }/' /Users/matthewmurphy/projects/ai-os/userscripts/gemini.user.js
+sed -i '' 's/extractMessageTimestamps(res)/extractMessageTimestamps(res); fetch("http://127.0.0.1:3030\/api\/gemini\/sync", { method: "POST", body: res }).catch(e=>console.error(e));/' /Users/matthewmurphy/projects/ai-os/userscripts/gemini.user.js

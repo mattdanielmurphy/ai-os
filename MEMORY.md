@@ -7,3 +7,4 @@ This file is the root index for the session memory system. Each entry below link
 - [Workspace Identity](memory/workspace-identity.md) — Matt's role, projects, constraints, and knowledge routing
 - [Obsidian Note Naming](memory/obsidian-note-naming.md) — Use human-readable filenames with clickable links when saving notes
 - [Real-time Data Preference](memory/realtime-data-fetch-preference.md) — Always use WebFetch over WebSearch for live data like weather/stocks
+- [Userscripts Directory](memory/userscripts-directory.md) — Source directory for browser extension context sync scripts

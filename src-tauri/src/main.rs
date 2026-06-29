@@ -12,6 +12,7 @@ use axum::{
 use tower_http::cors::{CorsLayer, Any};
 
 // Project session containing its own PTY channels and shell process details
+#[allow(dead_code)]
 struct ProjectSession {
     claude_writer: Option<Box<dyn Write + Send>>,
     claude_master: Option<Box<dyn MasterPty + Send>>,
@@ -57,8 +58,32 @@ struct RevisionEvent {
     commit_hash: String,
 }
 
-async fn handle_sync() -> &'static str {
-    "Sync OK"
+#[derive(serde::Deserialize)]
+struct ContextSyncPayload {
+    thread_id: String,
+    content: String,
+}
+
+async fn handle_sync(
+    Json(payload): Json<ContextSyncPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let project_root = std::env::var("AIOS_INITIAL_PROJECT")
+        .unwrap_or_else(|_| std::env::current_dir().unwrap().to_string_lossy().to_string());
+    
+    let log_dir = std::path::Path::new(&project_root)
+        .join(".gemini")
+        .join("history")
+        .join("threads");
+        
+    std::fs::create_dir_all(&log_dir)
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    let file_path = log_dir.join(format!("{}.txt", payload.thread_id));
+    
+    std::fs::write(&file_path, &payload.content)
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    Ok("Sync OK".to_string())
 }
 
 async fn handle_commit(
@@ -122,8 +147,43 @@ async fn handle_commit(
     Ok("Commit OK".to_string())
 }
 
+#[derive(serde::Deserialize)]
+struct GeminiSyncPayload {
+    url: String,
+    body: String,
+}
+
+async fn handle_gemini_sync(
+    Json(payload): Json<GeminiSyncPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let project_root = std::env::var("AIOS_INITIAL_PROJECT")
+        .unwrap_or_else(|_| std::env::current_dir().unwrap().to_string_lossy().to_string());
+    
+    let log_dir = std::path::Path::new(&project_root)
+        .join(".gemini")
+        .join("history")
+        .join("userscript_logs");
+        
+    std::fs::create_dir_all(&log_dir)
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
+    let file_path = log_dir.join(format!("gemini_sync_{}.json", timestamp));
+    
+    let content = serde_json::json!({
+        "timestamp": timestamp,
+        "url": payload.url,
+        "body": payload.body
+    });
+    
+    std::fs::write(&file_path, serde_json::to_string_pretty(&content).unwrap())
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    Ok("Sync OK".to_string())
+}
+
 fn spawn_axum_server(app_handle: tauri::AppHandle) {
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let cors = CorsLayer::new()
             .allow_origin(Any)
             .allow_methods(Any)
@@ -132,6 +192,7 @@ fn spawn_axum_server(app_handle: tauri::AppHandle) {
         let app = Router::new()
             .route("/api/context/sync", post(handle_sync))
             .route("/api/revision/commit", post(handle_commit))
+            .route("/api/gemini/sync", post(handle_gemini_sync))
             .layer(cors)
             .with_state(app_handle);
 
