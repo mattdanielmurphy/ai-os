@@ -195,10 +195,7 @@ fn spawn_single_pty(
                     .args(&["-u", "set-option", "-t", &session_name_clone, "status", "off"])
                     .status();
                 let _ = std::process::Command::new("tmux")
-                    .args(&["-u", "bind-key", "-T", "copy-mode-vi", "MouseDragEnd1Pane", "send-keys", "-X", "copy-pipe-and-cancel", "pbcopy"])
-                    .status();
-                let _ = std::process::Command::new("tmux")
-                    .args(&["-u", "bind-key", "-T", "copy-mode", "MouseDragEnd1Pane", "send-keys", "-X", "copy-pipe-and-cancel", "pbcopy"])
+                    .args(&["-u", "set-option", "-s", "copy-command", "pbcopy"])
                     .status();
             });
         }
