@@ -713,16 +713,15 @@ textarea?.addEventListener('keydown', async (e) => {
         const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
 
         if (isRunning) {
+            // Use Esc+LF (\x1b\n) to correctly insert literal newlines inside interactive CLI prompts without submitting them
+            const dataToSend = processedInput.replace(/\n/g, '\x1b\n') + '\r';
             if (isBypass) {
-                // Send raw prompt directly to the running interactive interface (stdin), mapping \n to \r for terminal line feeds
-                const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
                 invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
             } else {
                 // Clear context first
                 invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
                 await new Promise((resolve) => setTimeout(resolve, 450));
                 // Send prompt
-                const dataToSend = processedInput.replace(/\n/g, '\r') + '\r';
                 invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
             }
         } else {
@@ -807,18 +806,36 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-document.addEventListener('paste', (e) => {
+document.addEventListener('paste', async (e) => {
     // If user is focused on the prompt input, let default paste happen
     if (document.activeElement === textarea) {
         return;
     }
-    const pastedText = e.clipboardData?.getData('text');
+    let pastedText = e.clipboardData?.getData('text');
     if (pastedText) {
         const activeEl = document.activeElement;
-        if (activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl))) {
+        const isEngineFocus = activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl));
+        
+        if (isEngineFocus) {
+            let isRunning = false;
+            try {
+                isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine, projectPath: activeProject });
+            } catch (err) {
+                console.error('Failed to check if engine is running:', err);
+            }
+            if (isRunning) {
+                // When pasting directly into an active interactive session, map newlines to Esc+LF (\x1b\n)
+                // so the interactive shell buffers the entire pasted block without submitting line-by-line
+                pastedText = pastedText.replace(/\r\n/g, '\n').replace(/\n/g, '\x1b\n');
+            }
             invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: currentEngine });
         } else if (activeEl && (miniContainer?.contains(activeEl) || miniTerm.element?.contains(activeEl))) {
-            invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: 'mini' });
+            // For raw terminals/shells, use bracketed paste sequences if multiline to prevent premature executes
+            if (pastedText.includes('\n')) {
+                invoke('write_to_pty', { data: '\x1b[200~' + pastedText + '\x1b[201~', projectPath: activeProject, terminalType: 'mini' });
+            } else {
+                invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: 'mini' });
+            }
         }
     }
 });
