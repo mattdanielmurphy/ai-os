@@ -8,27 +8,49 @@ qr() {
     local display_name="$1"
     shift
     
+    # Create a sanitized version of the command for the filename
+    local raw_cmd="$*"
+    raw_cmd="${raw_cmd#command }"
+    local sanitized_cmd=$(echo "$raw_cmd" | sed -E 's/[^a-zA-Z0-9]+/_/g' | cut -c 1-40 | sed 's/_$//')
+    [ -z "$sanitized_cmd" ] && sanitized_cmd="unknown"
+    local log_file="/tmp/aios_last_cmd_0_${sanitized_cmd}.log"
+    
     # Rotate previous logs to keep the last 5
     for i in 4 3 2 1; do
-        [ -f "/tmp/aios_last_cmd_${i}.log" ] && mv "/tmp/aios_last_cmd_${i}.log" "/tmp/aios_last_cmd_$((i+1)).log"
+        for f in /tmp/aios_last_cmd_${i}_*(N); do
+            local base_name="${f##*/}"
+            local suffix="${base_name#aios_last_cmd_${i}_}"
+            mv "$f" "/tmp/aios_last_cmd_$((i+1))_${suffix}"
+        done
     done
-    [ -f "/tmp/aios_last_cmd.log" ] && mv /tmp/aios_last_cmd.log /tmp/aios_last_cmd_1.log
+    for f in /tmp/aios_last_cmd_0_*(N); do
+        local base_name="${f##*/}"
+        local suffix="${base_name#aios_last_cmd_0_}"
+        mv "$f" "/tmp/aios_last_cmd_1_${suffix}"
+    done
+    
+    # Backwards compatibility for previous non-prefixed log
+    [ -f "/tmp/aios_last_cmd.log" ] && mv /tmp/aios_last_cmd.log /tmp/aios_last_cmd_1_legacy.log 2>/dev/null || true
 
-    "$@" > /tmp/aios_last_cmd.log 2>&1
+    "$@" > "$log_file" 2>&1
     local exit_code=$?
+    
+    # Maintain symlink to latest for easy access
+    ln -sf "$log_file" /tmp/aios_last_cmd.log
+    
     if [ $exit_code -eq 0 ]; then
-        echo "✅ '$display_name' succeeded. (Output hidden to save tokens. Full log at /tmp/aios_last_cmd.log, previous 5 preserved as /tmp/aios_last_cmd_1.log etc)"
-        tail -n 3 /tmp/aios_last_cmd.log
+        echo "✅ '$display_name' succeeded. (Output hidden to save tokens. Full log at $log_file, previous 5 preserved as /tmp/aios_last_cmd_[1-5]_<cmd>.log)"
+        tail -n 3 "$log_file"
     else
         echo "❌ '$display_name' failed with exit code $exit_code."
         echo "--- ERROR EXTRACTION ---"
-        if grep -iE "(error|exception|panic|fatal|traceback|fail)" /tmp/aios_last_cmd.log > /dev/null; then
-            grep -iE -B 2 -A 5 "(error|exception|panic|fatal|traceback|fail)" /tmp/aios_last_cmd.log | tail -n 30
+        if grep -iE "(error|exception|panic|fatal|traceback|fail)" "$log_file" > /dev/null; then
+            grep -iE -B 2 -A 5 "(error|exception|panic|fatal|traceback|fail)" "$log_file" | tail -n 30
         else
-            tail -n 20 /tmp/aios_last_cmd.log
+            tail -n 20 "$log_file"
         fi
         echo "------------------------"
-        echo "ℹ️ Full error log available at: /tmp/aios_last_cmd.log (Previous logs at /tmp/aios_last_cmd_[1-5].log)"
+        echo "ℹ️ Full error log available at: $log_file (Previous logs at /tmp/aios_last_cmd_[1-5]_*.log)"
         return $exit_code
     fi
 }
