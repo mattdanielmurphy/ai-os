@@ -3,6 +3,13 @@ use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use tauri::Manager;
+use axum::{
+    routing::post,
+    Router,
+    Json,
+    extract::State,
+};
+use tower_http::cors::{CorsLayer, Any};
 
 // Project session containing its own PTY channels and shell process details
 struct ProjectSession {
@@ -32,6 +39,105 @@ struct Payload {
     data: String,
     project_path: String,
     terminal_type: String,
+}
+
+
+
+#[derive(serde::Deserialize)]
+struct CommitPayload {
+    thread_uuid: String,
+    target_filename: String,
+    content: String,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct RevisionEvent {
+    thread_uuid: String,
+    target_filename: String,
+    commit_hash: String,
+}
+
+async fn handle_sync() -> &'static str {
+    "Sync OK"
+}
+
+async fn handle_commit(
+    State(app_handle): State<tauri::AppHandle>,
+    Json(payload): Json<CommitPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let project_root = std::env::var("AIOS_INITIAL_PROJECT")
+        .unwrap_or_else(|_| std::env::current_dir().unwrap().to_string_lossy().to_string());
+    
+    let log_dir = std::path::Path::new(&project_root)
+        .join(".agent-logs")
+        .join("git")
+        .join(&payload.thread_uuid);
+        
+    std::fs::create_dir_all(&log_dir)
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    if !log_dir.join(".git").exists() {
+        std::process::Command::new("git")
+            .current_dir(&log_dir)
+            .arg("init")
+            .output()
+            .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    }
+        
+    let target_path = log_dir.join(&payload.target_filename);
+    std::fs::write(&target_path, &payload.content)
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    std::process::Command::new("git")
+        .current_dir(&log_dir)
+        .arg("add")
+        .arg(&payload.target_filename)
+        .output()
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    std::process::Command::new("git")
+        .current_dir(&log_dir)
+        .arg("commit")
+        .arg("--allow-empty")
+        .arg("-m")
+        .arg("Web Sync")
+        .output()
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    let output = std::process::Command::new("git")
+        .current_dir(&log_dir)
+        .arg("rev-parse")
+        .arg("HEAD")
+        .output()
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        
+    let commit_hash = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    
+    app_handle.emit_all("revision-commit", RevisionEvent {
+        thread_uuid: payload.thread_uuid,
+        target_filename: payload.target_filename,
+        commit_hash,
+    }).ok();
+
+    Ok("Commit OK".to_string())
+}
+
+fn spawn_axum_server(app_handle: tauri::AppHandle) {
+    tokio::spawn(async move {
+        let cors = CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any);
+
+        let app = Router::new()
+            .route("/api/context/sync", post(handle_sync))
+            .route("/api/revision/commit", post(handle_commit))
+            .layer(cors)
+            .with_state(app_handle);
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:3030").await.unwrap();
+        axum::serve(listener, app).await.unwrap();
+    });
 }
 
 fn is_tmux_available() -> bool {
@@ -839,6 +945,8 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             let app_handle = app.handle();
+            
+            spawn_axum_server(app_handle.clone());
             
             let sessions = Arc::new(Mutex::new(HashMap::new()));
             let active_project = Arc::new(Mutex::new(None));
