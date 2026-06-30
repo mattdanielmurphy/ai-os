@@ -3,6 +3,10 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [2026-06-30] Resizable Panes & Layout Flexibitly
+* **Resizable Sidebar & Lists:** Added sidebar width resizing (via `sidebar-splitter`) and project list vs project threads height resizing (via `sidebar-list-splitter`) to the Left Sidebar, solving layout space issues for the projects list.
+* **Horizontal Main split handle:** Added horizontal main split resizing (via `main-splitter`) between the Terminals wrapper (left) and Output Preview wrapper (right) to allow custom pane layout allocation.
+
 ### [2026-06-30] Antigravity Thread Integration & Auto-Hiding Scrollbars
 * **Sidebar Project Threads Integration:** Replaced the mockup folder list with a robust integration that reads actual historical `agy` threads (conversations) from the global `~/.gemini/antigravity-cli/brain/` directory. Substrings of project paths are verified and exact-matched to route each thread to its correct project.
 * **Compactified Context Resumption:** Clicking a project thread in the sidebar loads the selected thread in `agy` via the `/resume <id>` command. When a user submits a prompt, the system automatically runs `/clear` first, and then sends the thread's compactified context (extracting the user inputs and assistant responses from `transcript.jsonl` while stripping out heavy code blocks to prevent token bloat) along with the prompt.

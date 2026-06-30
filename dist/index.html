@@ -4,8 +4,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>AI OS</title>
-      <script type="module" crossorigin src="/assets/index-Bl9Y32Cb.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-gsbBD4bj.css">
+      <script type="module" crossorigin src="/assets/index-uzp89A04.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-uwYaAyX_.css">
     </head>
     <body
         class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white font-sans h-screen flex m-0 overflow-hidden"
@@ -13,7 +13,8 @@
         <!-- Left Sidebar for Projects -->
         <div
             id="projects-sidebar"
-            class="w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col select-none shrink-0"
+            class="bg-white dark:bg-gray-950 flex flex-col select-none shrink-0"
+            style="width: 256px;"
         >
             <div
                 class="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between"
@@ -31,10 +32,16 @@
             </div>
             <div
                 id="projects-list"
-                class="h-1/2 overflow-y-auto p-2 space-y-1 border-b border-gray-200 dark:border-gray-800"
+                class="overflow-y-auto p-2 space-y-1"
+                style="height: 250px;"
             >
                 <!-- Dynanically populated tabs -->
             </div>
+            <!-- Sidebar list splitter -->
+            <div
+                id="sidebar-list-splitter"
+                class="h-[3px] hover:h-[6px] active:h-[6px] bg-gray-200 dark:bg-gray-800 hover:bg-blue-600 active:bg-blue-700 cursor-row-resize transition-all select-none shrink-0"
+            ></div>
             <!-- Project Threads Area -->
             <div class="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
                 <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Project Threads</span>
@@ -53,6 +60,12 @@
                 <div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">No threads found in gemini-history/threads</div>
             </div>
         </div>
+
+        <!-- Sidebar Resize Handle -->
+        <div
+            id="sidebar-splitter"
+            class="w-[3px] hover:w-[6px] active:w-[6px] bg-gray-200 dark:bg-gray-800 hover:bg-blue-600 active:bg-blue-700 cursor-col-resize transition-all select-none shrink-0"
+        ></div>
 
         <!-- Main Workspace Container -->
         <div class="flex-grow flex flex-col min-w-0">
@@ -106,7 +119,9 @@
             <div id="panes-container" class="flex-grow flex min-h-0 relative">
                 <!-- Left: Terminals -->
                 <div
-                    class="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-800"
+                    id="terminals-wrapper"
+                    class="flex flex-col min-w-0"
+                    style="width: 50%;"
                 >
                     <!-- Engine/TUI Terminal Area -->
                     <div
@@ -137,9 +152,16 @@
                     </div>
                 </div>
 
+                <!-- Main split handle -->
+                <div
+                    id="main-splitter"
+                    class="w-[3px] hover:w-[6px] active:w-[6px] bg-gray-200 dark:bg-gray-800 hover:bg-blue-600 active:bg-blue-700 cursor-col-resize transition-all select-none shrink-0"
+                ></div>
+
                 <!-- Right: Final Output Markdown Preview -->
                 <div
-                    class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 min-w-0 relative"
+                    id="preview-wrapper"
+                    class="flex-grow flex flex-col bg-gray-50 dark:bg-gray-900 min-w-0 relative"
                 >
                     <div
                         class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 select-none"

@@ -458,6 +458,116 @@ if (splitter && miniContainer && panesContainer) {
     });
 }
 
+// 4a. Sidebar Width Resizing
+const sidebarSplitter = document.getElementById('sidebar-splitter');
+const sidebar = document.getElementById('projects-sidebar');
+
+if (sidebarSplitter && sidebar) {
+    let isDragging = false;
+    
+    sidebarSplitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const newWidth = e.clientX;
+        const minWidth = 150;
+        const maxWidth = 600;
+        
+        if (newWidth >= minWidth && newWidth <= maxWidth) {
+            sidebar.style.width = `${newWidth}px`;
+            debouncedResizePty();
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            resizePty();
+        }
+    });
+}
+
+// 4b. Projects List Height Resizing
+const sidebarListSplitter = document.getElementById('sidebar-list-splitter');
+const projectsList = document.getElementById('projects-list');
+
+if (sidebarListSplitter && projectsList && sidebar) {
+    let isDragging = false;
+    
+    sidebarListSplitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'row-resize';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const listTop = projectsList.getBoundingClientRect().top;
+        const newHeight = e.clientY - listTop;
+        const minHeight = 80;
+        
+        const sidebarHeight = sidebar.getBoundingClientRect().height;
+        const maxHeight = sidebarHeight - 120;
+        
+        if (newHeight >= minHeight && newHeight <= maxHeight) {
+            projectsList.style.height = `${newHeight}px`;
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+        }
+    });
+}
+
+// 4c. Main Panes Horizontal Resizing
+const mainSplitter = document.getElementById('main-splitter');
+const terminalsWrapper = document.getElementById('terminals-wrapper');
+
+if (mainSplitter && terminalsWrapper && panesContainer) {
+    let isDragging = false;
+    
+    mainSplitter.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const containerRect = panesContainer.getBoundingClientRect();
+        const leftWidth = e.clientX - containerRect.left;
+        const totalWidth = containerRect.width;
+        const leftPercent = (leftWidth / totalWidth) * 100;
+        
+        const minPercent = 15;
+        const maxPercent = 85;
+        
+        if (leftPercent >= minPercent && leftPercent <= maxPercent) {
+            terminalsWrapper.style.width = `${leftPercent}%`;
+            debouncedResizePty();
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+            resizePty();
+        }
+    });
+}
+
 // ----------------------------------------------------
 // 5. Dynamic Mode UI Application
 // ----------------------------------------------------

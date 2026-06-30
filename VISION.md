@@ -353,15 +353,15 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 
 
 # New Unorganized Eventual Features
-- Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
+- [x] Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
   - The context of these threads is pruned (omitting code and large file outputs, leaving only high-level steps/discoveries).
   - Designed to work alongside `/clear` by default, recreating continuity by supplying the agent with a lean historical summary of past threads.
   - Allows the agent to query detailed transcripts or full step logs via dedicated helper functions (e.g. leveraging `agy` transcripts/detailed logs) when more information is needed.
-- File browser and VSCode and markdown editors
-- open project in Finder button
-- `/` commands in the textarea with autocomplete for commands AND for filepaths
-- when I enter shell mode, I see a bunch of these characters: ` 1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the terminal input, presumably from using cmd-arrow key and stuff from when it's in prompt mode so it's sending escape sequences for cursor movement is my guess
-- Queuing of messages
+- [ ] File browser and VSCode and markdown editors
+- [x] open project in Finder button
+- [ ] `/` commands in the textarea with autocomplete for commands AND for filepaths
+- [ ] when I enter shell mode, I see a bunch of these characters: ` 1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the terminal input, presumably from using cmd-arrow key and stuff from when it's in prompt mode so it's sending escape sequences for cursor movement is my guess
+- [ ] Queuing of messages
   - The main hurdle to overcome is that if you naively send a /clear along with the prompt, the `/clear` immediately fires, canceling the current task, and the prompt disappears effectively; it's not even run
   - So what we have to do is just hold our messages in our own queue (with a simple UI to show the queued messages and to cancel/edit them), and we'll have to figure out how to determine when the current task has completed.
 
