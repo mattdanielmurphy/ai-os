@@ -31,6 +31,7 @@ let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
 let isTerminalMode: boolean = false;
 let activeThreadId: string | null = null;
 let activeThreadContext: string | null = null;
+const threadFilepaths = new Map<string, string>();
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const claudeBuffers: Record<string, string> = {};
@@ -349,10 +350,15 @@ setInterval(async () => {
                 lastRenderedMarkdown = content;
                 
                 // Unconditionally patch the thread log whenever output.md content changes
-                invoke('patch_thread_log_with_output', {
+                invoke<string>('patch_thread_log_with_output', {
                     projectPath: activeProject,
                     activeThreadId: activeThreadId,
                     outputContent: content
+                }).then((resolvedId) => {
+                    if (!activeThreadId && resolvedId) {
+                        activeThreadId = resolvedId;
+                    }
+                    renderProjectThreads(activeProject);
                 }).catch((err) => {
                     console.error('[AI-OS] Failed to patch thread log with output:', err);
                 });
@@ -867,7 +873,7 @@ function formatTranscriptToMarkdown(jsonlContent: string): string {
 
 function getCompactifiedContext(jsonlContent: string): string {
     const lines = jsonlContent.trim().split('\n');
-    let context = '';
+    const steps: string[] = [];
     let stepCount = 0;
     
     for (const line of lines) {
@@ -889,12 +895,19 @@ function getCompactifiedContext(jsonlContent: string): string {
                     prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
                 }
                 
+                // Extract actual user request if combined with historical context
+                const userRequestMarker = 'User request:';
+                const markerIdx = prompt.lastIndexOf(userRequestMarker);
+                if (markerIdx !== -1) {
+                    prompt = prompt.substring(markerIdx + userRequestMarker.length).trim();
+                }
+                
                 prompt = prompt.replace(/```[\s\S]*?```/g, '[Code Block omitted]').trim();
                 if (prompt.length > 300) {
                     prompt = prompt.substring(0, 300) + '...';
                 }
                 
-                context += `- User Step ${stepCount}: "${prompt}"\n`;
+                steps.push(`- User Step ${stepCount}: "${prompt}"`);
             } else if (source === 'MODEL' && type === 'PLANNER_RESPONSE' && content) {
                 let reply = content;
                 reply = reply.replace(/```[\s\S]*?```/g, '[Code Block omitted]').trim();
@@ -902,14 +915,16 @@ function getCompactifiedContext(jsonlContent: string): string {
                     reply = reply.substring(0, 300) + '...';
                 }
                 
-                context += `- Assistant: "${reply}"\n`;
+                steps.push(`- Assistant: "${reply}"`);
             }
         } catch (e) {
             // Ignore
         }
     }
     
-    return context;
+    const maxSteps = 6;
+    const slicedSteps = steps.length > maxSteps ? steps.slice(-maxSteps) : steps;
+    return slicedSteps.join('\n') + '\n';
 }
 
 const renderProjectThreads = async (projectPath: string) => {
@@ -925,6 +940,7 @@ const renderProjectThreads = async (projectPath: string) => {
         }
 
         threads.forEach((thread) => {
+            threadFilepaths.set(thread.id, thread.filepath);
             const el = document.createElement('div');
             const isActive = activeThreadId === thread.id;
             el.className = isActive 
@@ -1387,15 +1403,28 @@ textarea?.addEventListener('keydown', async (e) => {
         const shouldClear = clearCheckbox ? clearCheckbox.checked : true;
         const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
 
+        // Load the latest context dynamically from the thread's log file if inside a thread
+        let currentContext = activeThreadContext;
+        if (activeThreadId && currentEngine === 'agy') {
+            const filepath = threadFilepaths.get(activeThreadId);
+            if (filepath) {
+                try {
+                    const content = await invoke<string>('read_thread_log', { filepath });
+                    currentContext = getCompactifiedContext(content);
+                } catch (err) {
+                    console.error('Failed to load active thread context:', err);
+                }
+            }
+        }
+
         if (isRunning) {
-            if (activeThreadId && activeThreadContext) {
+            if (activeThreadId && currentContext) {
                 invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
                 await new Promise((resolve) => setTimeout(resolve, 450));
                 
-                const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${activeThreadContext}\n\nUser request: ${processedInput}`;
+                const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`;
                 const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`;
                 invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
-                activeThreadContext = null;
             } else {
                 const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
                 if (isBypass) {
@@ -1415,17 +1444,16 @@ textarea?.addEventListener('keydown', async (e) => {
                     console.error('Failed to spawn fresh agy engine:', err);
                 }
                 
-                if (activeThreadId && activeThreadContext) {
+                if (activeThreadId && currentContext) {
                     invoke('write_to_pty', { data: `/resume ${activeThreadId}\r`, projectPath: activeProject, terminalType: 'agy' });
                     await new Promise((resolve) => setTimeout(resolve, 600));
                     
                     invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
                     await new Promise((resolve) => setTimeout(resolve, 450));
                     
-                    const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${activeThreadContext}\n\nUser request: ${processedInput}`;
+                    const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`;
                     const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`;
                     invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
-                    activeThreadContext = null;
                 } else {
                     const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
                     invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });

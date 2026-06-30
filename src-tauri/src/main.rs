@@ -1193,7 +1193,7 @@ fn patch_thread_log_with_output(
     project_path: String,
     active_thread_id: Option<String>,
     output_content: String,
-) -> Result<(), String> {
+) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
     use std::io::Read;
@@ -1318,7 +1318,7 @@ fn patch_thread_log_with_output(
     patch_file(&transcript_path)?;
     patch_file(&transcript_full_path)?;
 
-    Ok(())
+    Ok(target_thread_id)
 }
 
 fn main() {
