@@ -1,22 +1,17 @@
-# Antigravity Thread Integration & Clipboard Bug Fixes
+# Elegant Fix: Historical Thread Logs Patched with output.md Content
 
-I have successfully resolved the two reported bugs regarding historical thread log loading and macOS keyboard paste shortcut limitations.
+I have resolved the issue where historical threads built on `agy` logs only contained user prompts and empty/placeholder assistant responses (like "I have updated the output file.").
 
----
+## 💡 The Solution
 
-## 🛠️ Changes Implemented
+Instead of storing placeholder messages in your thread logs, **AI-OS now automatically intercepts changes to `.ai-os/output.md` and patches the actual `agy` transcript logs dynamically.**
 
-### 1. Tauri Thread Log FS Scope Bypass (`src-tauri/src/main.rs` & `src/main.ts`)
-- **Tauri FS Scope Constraints:** In Tauri v1, glob patterns like `$HOME/**` do not match hidden paths starting with a dot (such as `.gemini`). This caused frontend file read calls to fail with `path not allowed on the configured scope` when reading thread logs inside the global `~/.gemini/antigravity-cli/brain` directory.
-- **Backend Rust command `read_thread_log`:** Created a new Rust command `read_thread_log` that takes a file path and reads its content using `std::fs::read_to_string`. Because backend Rust commands execute outside the Tauri frontend FS scope constraints, they are not sandboxed by the same frontend path security settings.
-- **Frontend Integration:** Updated `renderProjectThreads` in the frontend (`src/main.ts`) to invoke `read_thread_log` instead of using Tauri's `@tauri-apps/api/fs` `readTextFile` method.
+### How It Works:
+1. **Always-On File Polling:** The frontend polls `.ai-os/output.md` for changes in the background (even if you are currently watching the terminal pane).
+2. **Dynamic Back-Patching:** When a change in the output markdown is detected, the frontend invokes a new Rust backend command `patch_thread_log_with_output`.
+3. **Session Identification:** The Rust command identifies which thread log directory belongs to the active project (either by matching `active_thread_id` or dynamically finding the most recently modified transcript that references the project path).
+4. **Targeted JSONL Replacement:** The command reads `transcript.jsonl` and `transcript_full.jsonl`, parses each line as JSON, searches backwards to find the last assistant `PLANNER_RESPONSE` line, and replaces its `content` field directly with the actual markdown content.
 
-### 2. macOS Clipboard Copy/Paste Shortcut Support (`src-tauri/src/main.rs`)
-- **macOS Application Menu Requirement:** On macOS, webviews cannot receive standard OS-level edit shortcuts (like `Cmd+V` for pasting, `Cmd+C` for copying, or `Cmd+A` for selecting all) if the application's menu bar does not contain the corresponding menu options.
-- **Tauri OS Default Menu:** Initialized and set standard macOS system menus using `tauri::Menu::os_default(&context.package_info().name)` during the Tauri application startup. This configures the standard Edit menu, allowing `Cmd+V` to paste cleanly into the prompt textarea.
-
----
-
-## 💻 Build Verification
-- **Rust Backend:** Compiles successfully (`cargo check` passed).
-- **Vite & TypeScript Frontend:** Built successfully without errors (`pnpm build` passed).
+## 🚀 Key Benefits
+* **Full Context History:** When clicking a thread in the sidebar, the conversation preview pane will render the actual markdown response and code explanations instead of a useless placeholder.
+* **Accurate Context Resumption:** When resuming a thread via `/resume <id>`, the compactified context fed back to `agy` will contain the real assistant replies, ensuring the model understands the exact state of the project.
