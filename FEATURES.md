@@ -3,7 +3,8 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
-### [2026-06-30] Global Pathname Formatting & Sidebar Project Paths
+### [2026-06-30] Unified AI-OS Active Thread Timeline View
+* **Unified Thread Content Area:** Replaced separate historical thread log previews with the main unified active conversation view `renderCustomTuiLog`. Resuming conversations via the context handoff now appends and displays new user inputs and corresponding agent steps sequentially inside the same active pane.
 * **Global Pathname Formatting:** Implemented a global utility `formatPathForUser` that formats pathnames to use relative paths for files within the active project, and replaces the absolute user home directory with `~` for external paths.
 * **Visible Project Paths in Sidebar:** Upgraded the project sidebar list to render the formatted pathname directly beneath the project name, resolving confusion with duplicate project names and auto-generated thread wrappers.
 * **Regex and Boundary Matching Fixes:** Fixed a character-boundary indexing bug in `get_project_threads` and `patch_thread_log_with_output` in the Rust backend where byte offsets were mixed with character indexes, and corrected `detect_project_path` to strip markdown styling punctuation (`*`, `` ` ``) and brackets to ensure correct thread-to-project association.

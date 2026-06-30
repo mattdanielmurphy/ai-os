@@ -728,7 +728,7 @@ const buildTimelineHtml = (steps: Step[]): string => {
         if (block.type === 'user_input' && block.content) {
             html += `
             <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-md font-sans whitespace-pre-wrap shadow-sm">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
                     ${block.content}
                 </div>
             </div>
@@ -881,76 +881,6 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             markdownPreviewPane.scrollTop = markdownPreviewPane.scrollHeight
         }, 30)
     }
-}
-
-const renderHistoricalThreadLog = (
-    jsonlContent: string,
-    title: string,
-    dateStr: string
-) => {
-    if (!markdownPreviewPane) return
-
-    const lines = jsonlContent.trim().split('\n')
-    const steps: Step[] = []
-    const editedFilesSet = new Set<string>()
-
-    for (const line of lines) {
-        if (!line.trim()) continue
-        try {
-            const step: Step = JSON.parse(line)
-            steps.push(step)
-
-            if (step.tool_calls) {
-                for (const call of step.tool_calls) {
-                    if (
-                        call.name === 'replace_file_content' ||
-                        call.name === 'multi_replace_file_content' ||
-                        call.name === 'write_to_file'
-                    ) {
-                        if (
-                            call.args &&
-                            typeof call.args.TargetFile === 'string'
-                        ) {
-                            editedFilesSet.add(call.args.TargetFile)
-                        }
-                    }
-                }
-            }
-        } catch {
-            // Ignore
-        }
-    }
-
-    let html = `
-        <div class="border-b border-gray-250 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between select-none">
-            <div>
-                <span class="text-[10px] font-mono text-blue-500 uppercase tracking-widest">Historical Thread Context</span>
-                <h2 class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${title}</h2>
-            </div>
-            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${dateStr}</span>
-        </div>
-    `
-
-    // Edited Files
-    if (editedFilesSet.size > 0) {
-        const files = Array.from(editedFilesSet)
-        html += `
-        <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
-            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
-            ${files
-                .map((file) => {
-                    const parts = file.split('/')
-                    const name = parts[parts.length - 1]
-                    return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${file}">${name}</span>`
-                })
-                .join('')}
-        </div>
-        `
-    }
-
-    html += buildTimelineHtml(steps)
-
-    markdownPreviewPane.innerHTML = html
 }
 
 // Poll the active thread's log file
@@ -1759,11 +1689,7 @@ const renderProjectThreads = async (
                     updatePlaceholder(true)
 
                     if (previewPane) {
-                        renderHistoricalThreadLog(
-                            content,
-                            thread.title,
-                            dateStr
-                        )
+                        renderCustomTuiLog(content)
                     }
                 } catch (err) {
                     if (previewPane) {
