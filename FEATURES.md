@@ -202,4 +202,9 @@
 
 ### [2026-06-29] Codebase Ingestion Parser (AST Upgrades)
 * **Tree-sitter AST Parser:** Refactored `scripts/ingest_codebase` to integrate `tree-sitter` (via Python bindings) for formal AST parsing of TypeScript, Rust, and Go files.
-* **Formal Struct/Function Skeletonization:** Eliminates brittle regex-based parsing by accurately capturing class definitions, function signatures, and exported constants while reliably stripping function bodies and docstrings to enforce token parsimony.* **Automatic OS-Synced Light/Dark Mode**: The frontend app now listens to OS-level theme preference (`prefers-color-scheme`) and dynamically switches UI colors, xterm instances, and injects `/theme <light|dark>` commands into active PTY sessions.
+* **Formal Struct/Function Skeletonization:** Eliminates brittle regex-based parsing by accurately capturing class definitions, function signatures, and exported constants while reliably stripping function bodies and docstrings to enforce token parsimony.
+* **Automatic OS-Synced Light/Dark Mode**: The frontend app now listens to OS-level theme preference (`prefers-color-scheme`) and dynamically switches UI colors, xterm instances, and injects `/theme <light|dark>` commands into active PTY sessions.
+
+### [2026-06-30] Unified HTML TUI Log View & Expandable Terminal Layout
+* **Unified Custom HTML Log Parser:** Shipped real-time polling of active thread log `transcript.jsonl` files to populate the preview pane with a live timeline showing active tool calls, thinking/working status indicators, edited files summaries, and full markdown assistant responses.
+* **Vertical Split & Toggleable Terminal:** Replaced the side-by-side split layout with a vertical split configuration. The main area displays the custom HTML log view, and the bottom contains the original `agy` TUI terminal, which starts in a space-saving collapsed view (64px) and expands to near full screen upon clicking the divider toggle button.

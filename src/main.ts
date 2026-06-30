@@ -337,7 +337,7 @@ window.addEventListener('resize', () => {
 let lastRenderedMarkdown = '';
 const markdownPreviewPane = document.getElementById('markdown-preview-pane');
 
-// Poll the output.md file of the active project
+// Poll the output.md file of the active project to trigger background thread patches
 setInterval(async () => {
     if (!activeProject) return;
     
@@ -362,25 +362,205 @@ setInterval(async () => {
                 }).catch((err) => {
                     console.error('[AI-OS] Failed to patch thread log with output:', err);
                 });
-
-                // Only render to preview pane if NOT in terminal mode
-                if (!isTerminalMode && markdownPreviewPane) {
-                    if (content.trim().length > 0) {
-                        markdownPreviewPane.innerHTML = marked.parse(content) as string;
-                    } else {
-                        markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output...</div>';
-                    }
-                }
             }
         } else if (lastRenderedMarkdown !== '') {
             lastRenderedMarkdown = '';
-            if (!isTerminalMode && markdownPreviewPane) {
-                markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>';
+        }
+    } catch (e) {
+        console.error(`[AI-OS Preview Pane] Error checking/reading ${outputPath}:`, e);
+    }
+}, 500);
+
+// Parse transcript steps and render custom TUI log view in real time
+interface Step {
+    step_index: number;
+    source: string;
+    type: string;
+    status: string;
+    content?: string;
+    tool_calls?: Array<{
+        name: string;
+        args?: Record<string, any>;
+    }>;
+}
+
+let lastRenderedThreadLog = '';
+let lastRenderedThreadId = '';
+
+const renderCustomTuiLog = (jsonlContent: string) => {
+    if (!markdownPreviewPane) return;
+    
+    const lines = jsonlContent.trim().split('\n');
+    const steps: Step[] = [];
+    const editedFilesSet = new Set<string>();
+    
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+            const step: Step = JSON.parse(line);
+            steps.push(step);
+            
+            // Collect edited files
+            if (step.tool_calls) {
+                for (const call of step.tool_calls) {
+                    if (call.name === 'replace_file_content' || call.name === 'multi_replace_file_content' || call.name === 'write_to_file') {
+                        if (call.args && typeof call.args.TargetFile === 'string') {
+                            editedFilesSet.add(call.args.TargetFile);
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Ignore
+        }
+    }
+    
+    if (steps.length === 0) {
+        markdownPreviewPane.innerHTML = '<div class="text-gray-400 dark:text-gray-600 italic text-center mt-10">No conversation steps found.</div>';
+        return;
+    }
+    
+    let html = '';
+    
+    // 1. Edited Files Header
+    if (editedFilesSet.size > 0) {
+        const files = Array.from(editedFilesSet);
+        html += `
+        <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none">
+            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
+            ${files.map(file => {
+                const parts = file.split('/');
+                const name = parts[parts.length - 1];
+                return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${file}">${name}</span>`;
+            }).join('')}
+        </div>
+        `;
+    }
+    
+    // 2. Timeline Steps
+    steps.forEach((step) => {
+        if (step.type === 'USER_INPUT' && step.content) {
+            let prompt = step.content;
+            const startTag = '<USER_REQUEST>';
+            const endTag = '</USER_REQUEST>';
+            const startIdx = prompt.indexOf(startTag);
+            const endIdx = prompt.indexOf(endTag);
+            if (startIdx !== -1 && endIdx !== -1) {
+                prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+            }
+            
+            html += `
+            <div class="mb-5 border-b border-gray-150 dark:border-gray-850 pb-3">
+                <div class="flex items-center gap-1.5 mb-1.5 text-gray-800 dark:text-gray-200 font-semibold text-[11px] select-none">
+                    <span class="w-4.5 h-4.5 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-bold text-[9px]">U</span>
+                    User Request
+                </div>
+                <div class="p-2.5 bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-900 rounded text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans">
+                    ${prompt}
+                </div>
+            </div>
+            `;
+        } else if (step.tool_calls && step.tool_calls.length > 0) {
+            step.tool_calls.forEach(call => {
+                let actionSummary = '';
+                if (call.args && typeof call.args.toolSummary === 'string') {
+                    actionSummary = call.args.toolSummary;
+                } else if (call.args && typeof call.args.toolAction === 'string') {
+                    actionSummary = call.args.toolAction;
+                }
+                
+                if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
+                    actionSummary = actionSummary.slice(1, -1);
+                }
+                
+                if (!actionSummary) {
+                    actionSummary = `Running tool ${call.name}`;
+                }
+                
+                let icon = '🛠️';
+                if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍';
+                else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝';
+                else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
+                else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
+                
+                html += `
+                <div class="mb-2 pl-3 border-l border-blue-500/40 dark:border-blue-500/50 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-mono select-none">
+                    <span>${icon}</span>
+                    <span class="font-semibold text-gray-700 dark:text-gray-300">${actionSummary}</span>
+                </div>
+                `;
+            });
+        } else if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
+            html += `
+            <div class="mb-6">
+                <div class="flex items-center gap-1.5 mb-2.5 text-blue-600 dark:text-blue-400 font-semibold text-[11px] select-none">
+                    <span class="w-4.5 h-4.5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[9px]">A</span>
+                    Assistant Response
+                </div>
+                <div class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-300 prose-headings:text-gray-900 dark:prose-headings:text-white prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-850 dark:prose-pre:border-gray-900">
+                    ${marked.parse(step.content)}
+                </div>
+            </div>
+            `;
+        }
+    });
+    
+    // 3. Thinking Indicator
+    let isThinking = false;
+    if (steps.length > 0) {
+        const lastStep = steps[steps.length - 1];
+        if (lastStep.source === 'MODEL' && lastStep.status !== 'DONE') {
+            isThinking = true;
+        }
+    }
+    
+    if (!isThinking && pauseStatus === 'Running') {
+        const lastStep = steps[steps.length - 1];
+        if (lastStep && (lastStep.type === 'USER_INPUT' || (lastStep.tool_calls && lastStep.tool_calls.length > 0))) {
+            isThinking = true;
+        }
+    }
+    
+    if (isThinking) {
+        html += `
+        <div class="mt-3 flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
+            <div class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </div>
+            <span class="text-[10px] font-semibold text-blue-500 dark:text-blue-400 font-mono tracking-wider">Agent is thinking & working...</span>
+        </div>
+        `;
+    }
+    
+    markdownPreviewPane.innerHTML = html;
+    
+    // Auto-scroll the preview pane to bottom if it is currently generating
+    if (isThinking) {
+        setTimeout(() => {
+            markdownPreviewPane.scrollTop = markdownPreviewPane.scrollHeight;
+        }, 30);
+    }
+};
+
+// Poll the active thread's log file
+setInterval(async () => {
+    if (!activeThreadId) return;
+    const filepath = threadFilepaths.get(activeThreadId);
+    if (!filepath) return;
+    
+    try {
+        const fileExists = await exists(filepath);
+        if (fileExists) {
+            const content = await invoke<string>('read_thread_log', { filepath });
+            if (content !== lastRenderedThreadLog || activeThreadId !== lastRenderedThreadId) {
+                lastRenderedThreadLog = content;
+                lastRenderedThreadId = activeThreadId;
+                renderCustomTuiLog(content);
             }
         }
     } catch (e) {
-        // Log details to console for debugging
-        console.error(`[AI-OS Preview Pane] Error checking/reading ${outputPath}:`, e);
+        console.error('[AI-OS Thread Log Poll] Error:', e);
     }
 }, 500);
 
@@ -425,8 +605,40 @@ listen<{ data: string, project_path: string, terminal_type: string }>('pty-outpu
     }
 });
 
+// TUI Toggle Button Event Listener
+const toggleTuiBtn = document.getElementById('toggle-tui-btn');
+const tuiContainer = document.getElementById('terminal-container');
+const previewWrapper = document.getElementById('preview-wrapper');
+
+if (toggleTuiBtn && tuiContainer && previewWrapper) {
+    let isTuiExpanded = false;
+    toggleTuiBtn.addEventListener('click', () => {
+        isTuiExpanded = !isTuiExpanded;
+        if (isTuiExpanded) {
+            // Expand
+            tuiContainer.style.height = 'calc(100% - 28px)';
+            previewWrapper.style.display = 'none';
+            toggleTuiBtn.innerHTML = `
+                <span>Collapse Terminal</span>
+                <svg class="w-2.5 h-2.5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+            `;
+        } else {
+            // Collapse
+            tuiContainer.style.height = '64px';
+            previewWrapper.style.display = 'flex';
+            toggleTuiBtn.innerHTML = `
+                <span>Expand Terminal</span>
+                <svg class="w-2.5 h-2.5 transform transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+            `;
+        }
+        setTimeout(() => {
+            resizePty();
+        }, 50);
+    });
+}
+
 // ----------------------------------------------------
-// 4. Splitter Drag Resizing Panel
+// 4. Splitter Drag Resizing Panel (Legacy Splitter guards)
 // ----------------------------------------------------
 const splitter = document.getElementById('pane-splitter');
 const panesContainer = document.getElementById('panes-container');
