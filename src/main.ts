@@ -349,44 +349,8 @@ window.addEventListener('resize', () => {
 // ----------------------------------------------------
 // 7. Output Modal & Virtual Terminal Parser
 // ----------------------------------------------------
-// 7. Output File Polling & Markdown Preview
-// ----------------------------------------------------
-let lastRenderedMarkdown = '';
 const markdownPreviewPane = document.getElementById('markdown-preview-pane');
 
-// Poll the output.md file of the active project to trigger background thread patches
-setInterval(async () => {
-    if (!activeProject) return;
-    
-    const outputPath = `${activeProject}/.ai-os/output.md`;
-    try {
-        const fileExists = await exists(outputPath);
-        if (fileExists) {
-            const content = await readTextFile(outputPath);
-            if (content !== lastRenderedMarkdown) {
-                lastRenderedMarkdown = content;
-                
-                // Unconditionally patch the thread log whenever output.md content changes
-                invoke<string>('patch_thread_log_with_output', {
-                    projectPath: activeProject,
-                    activeThreadId: activeThreadId,
-                    outputContent: content
-                }).then((resolvedId) => {
-                    if (!activeThreadId && resolvedId) {
-                        activeThreadId = resolvedId;
-                    }
-                    renderProjectThreads(activeProject);
-                }).catch((err) => {
-                    console.error('[AI-OS] Failed to patch thread log with output:', err);
-                });
-            }
-        } else if (lastRenderedMarkdown !== '') {
-            lastRenderedMarkdown = '';
-        }
-    } catch (e) {
-        console.error(`[AI-OS Preview Pane] Error checking/reading ${outputPath}:`, e);
-    }
-}, 500);
 
 // Parse transcript steps and render custom TUI log view in real time
 interface Step {

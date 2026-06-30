@@ -20,6 +20,8 @@
 * **Tauri Thread Log FS Scope Bypass:** Implemented backend Rust command `read_thread_log` to load historical thread logs directly, resolving frontend Tauri filesystem scope errors (`path not allowed on the configured scope`) when accessing hidden `.gemini` configurations.
 * **macOS Copy/Paste Keyboard Shortcut Support:** Integrated standard macOS system menus via `tauri::Menu::os_default` in the Rust backend, enabling OS-level shortcuts like `Cmd+V`, `Cmd+C`, `Cmd+X`, and `Cmd+A` to function properly inside text inputs and the main prompt textarea on macOS.
 * **Historical Thread Log Patching:** Implemented Rust backend command `patch_thread_log_with_output` and connected it to the frontend `output.md` file-polling system. Whenever the active project's output changes, the system automatically replaces the model's placeholder response (e.g. "I have updated the output file.") in both `transcript.jsonl` and `transcript_full.jsonl` with the actual generated markdown content. This preserves full conversational context in thread histories and allows accurate resumption.
+* **Decommissioned Output File Protocol:** Removed the obsolete requirement to generate `.ai-os/output.md` files and output the "I have updated the output file" message, fully removing the polling and synchronization loop from the frontend.
+
 
 ### [2026-06-29] Theme and Styling Bug Fixes
 * **Tailwind Configuration Custom Theme Extension:** Defined a custom `gray-850` color (`#18202f`) within `tailwind.config.js` to fix a styling glitch where bars and buttons using `dark:bg-gray-850` fell back to a light or transparent background on dark mode, restoring the dark-mode theme cohesion across the header, modal, and context panel components.
