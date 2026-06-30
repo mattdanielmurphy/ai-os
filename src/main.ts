@@ -131,20 +131,58 @@ const initialProjects: Project[] = [
 // Load projects from localStorage or use initial list
 let projects: Project[] = (() => {
     const saved = localStorage.getItem('ai-os-projects');
+    let loadedList: any[] = [];
     if (saved) {
         try {
-            const list = JSON.parse(saved);
-            // Ensure all loaded projects have the engine and isTerminalMode properties
-            return list.map((p: any) => ({
-                engine: 'agy',
-                isTerminalMode: false,
-                ...p
-            }));
+            loadedList = JSON.parse(saved);
         } catch (e) {
             console.error('Failed to parse saved projects:', e);
+            loadedList = initialProjects;
+        }
+    } else {
+        loadedList = initialProjects;
+    }
+
+    const uniqueProjectsMap = new Map<string, Project>();
+    for (const p of loadedList) {
+        let cleanPath = p.path || '';
+        while (cleanPath.length > 0 && /[`*.,:;)}"\]]$/.test(cleanPath)) {
+            cleanPath = cleanPath.slice(0, -1);
+        }
+        let cleanName = p.name || '';
+        while (cleanName.length > 0 && /[`*.,:;)}"\]]$/.test(cleanName)) {
+            cleanName = cleanName.slice(0, -1);
+        }
+
+        if (!cleanPath) continue;
+
+        const mapped: Project = {
+            path: cleanPath,
+            name: cleanName,
+            color: p.color || '#3b82f6',
+            lastActive: p.lastActive || Date.now(),
+            engine: p.engine || 'agy',
+            isTerminalMode: p.isTerminalMode || false
+        };
+
+        const existing = uniqueProjectsMap.get(cleanPath);
+        if (!existing || mapped.lastActive > existing.lastActive) {
+            uniqueProjectsMap.set(cleanPath, mapped);
         }
     }
-    return initialProjects;
+
+    const cleaned = Array.from(uniqueProjectsMap.values());
+    cleaned.sort((a, b) => b.lastActive - a.lastActive);
+    
+    // Save back the cleaned version immediately if we changed anything
+    if (saved && cleaned.length !== loadedList.length) {
+        try {
+            localStorage.setItem('ai-os-projects', JSON.stringify(cleaned));
+        } catch (e) {
+            console.error('Failed to save cleaned projects:', e);
+        }
+    }
+    return cleaned;
 })();
 
 const saveProjects = () => {
@@ -1223,6 +1261,11 @@ const syncProjectsFromAllThreads = async () => {
                 targetPath = `/Users/matthewmurphy/projects/thread-${thread.id}`;
             }
             
+            // Strip trailing markdown symbols
+            while (targetPath.length > 0 && /[`*.,:;)}"\]]$/.test(targetPath)) {
+                targetPath = targetPath.slice(0, -1);
+            }
+            
             // Check if a project with this path already exists
             const exists = projects.some(p => p.path === targetPath);
             if (!exists) {
@@ -1232,6 +1275,10 @@ const syncProjectsFromAllThreads = async () => {
                     name = thread.detected_project_path.split('/').pop() || 'Unnamed';
                 } else {
                     name = thread.title || `Thread ${thread.id.substring(0, 8)}`;
+                }
+                
+                while (name.length > 0 && /[`*.,:;)}"\]]$/.test(name)) {
+                    name = name.slice(0, -1);
                 }
                 
                 projects.push({
