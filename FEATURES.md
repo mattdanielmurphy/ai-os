@@ -186,4 +186,4 @@
 
 ### [2026-06-29] Codebase Ingestion Parser (AST Upgrades)
 * **Tree-sitter AST Parser:** Refactored `scripts/ingest_codebase` to integrate `tree-sitter` (via Python bindings) for formal AST parsing of TypeScript, Rust, and Go files.
-* **Formal Struct/Function Skeletonization:** Eliminates brittle regex-based parsing by accurately capturing class definitions, function signatures, and exported constants while reliably stripping function bodies and docstrings to enforce token parsimony.
+* **Formal Struct/Function Skeletonization:** Eliminates brittle regex-based parsing by accurately capturing class definitions, function signatures, and exported constants while reliably stripping function bodies and docstrings to enforce token parsimony.* **Automatic OS-Synced Light/Dark Mode**: The frontend app now listens to OS-level theme preference (`prefers-color-scheme`) and dynamically switches UI colors, xterm instances, and injects `/theme <light|dark>` commands into active PTY sessions.

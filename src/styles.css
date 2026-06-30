@@ -10,10 +10,18 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background-color: #0d0e15;
-  color: #f1f1f4;
+  background-color: #ffffff;
+  color: #111827;
   overflow: hidden;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background-color: #0d0e15;
+    color: #f1f1f4;
+  }
 }
 
 .xterm-viewport {

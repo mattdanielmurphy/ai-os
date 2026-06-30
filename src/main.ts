@@ -110,12 +110,26 @@ const saveProjects = () => {
 // 3. Terminals Setup & Integration
 // ----------------------------------------------------
 
+const isDarkMode = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const getTermTheme = () => {
+    return isDarkMode() 
+        ? { background: '#000000', foreground: '#ffffff' }
+        : { background: '#ffffff', foreground: '#000000' };
+};
+
+const getMiniTermTheme = () => {
+    return isDarkMode() 
+        ? { background: '#000000', foreground: '#10b981' }
+        : { background: '#ffffff', foreground: '#059669' };
+};
+
 // Engine TUI Terminal
 const term = new Terminal({
     cursorBlink: true,
     fontSize: 13,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-    theme: { background: '#000000', foreground: '#ffffff' },
+    theme: getTermTheme(),
 });
 const fitAddon = new FitAddon();
 term.loadAddon(fitAddon);
@@ -198,7 +212,20 @@ const miniTerm = new Terminal({
     cursorBlink: true,
     fontSize: 12,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-    theme: { background: '#000000', foreground: '#10b981' }, // pastel green font for distinct look
+    theme: getMiniTermTheme(),
+});
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    term.options.theme = getTermTheme();
+    miniTerm.options.theme = getMiniTermTheme();
+    
+    // Inject the theme command to the backend engines
+    const themeStr = e.matches ? 'dark' : 'light';
+    const msg = `/theme ${themeStr}\x0d`;
+    if (activeProject) {
+        invoke('write_to_pty', { data: msg, projectPath: activeProject, terminalType: currentEngine }).catch(console.error);
+        invoke('write_to_pty', { data: msg, projectPath: activeProject, terminalType: 'mini' }).catch(console.error);
+    }
 });
 const miniFitAddon = new FitAddon();
 miniTerm.loadAddon(miniFitAddon);

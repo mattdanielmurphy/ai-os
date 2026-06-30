@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI OS</title>
   </head>
-  <body class="bg-gray-900 text-white font-sans h-screen flex m-0 overflow-hidden">
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white font-sans h-screen flex m-0 overflow-hidden">
     <!-- Left Sidebar for Projects -->
-    <div id="projects-sidebar" class="w-64 bg-gray-950 border-r border-gray-800 flex flex-col select-none shrink-0">
-      <div class="p-3 border-b border-gray-800 flex items-center justify-between">
-        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Projects</span>
-        <button id="add-project-btn" class="text-gray-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded hover:bg-gray-800 transition-colors">+</button>
+    <div id="projects-sidebar" class="w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col select-none shrink-0">
+      <div class="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+        <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Projects</span>
+        <button id="add-project-btn" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-bold px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">+</button>
       </div>
       <div id="projects-list" class="flex-grow overflow-y-auto p-2 space-y-1">
         <!-- Dynanically populated tabs -->
@@ -20,14 +20,14 @@
       <!-- Main Workspace Container -->
       <div class="flex-grow flex flex-col min-w-0">
           <!-- Top Header Bar -->
-          <div class="flex items-center justify-between p-1.5 px-3 text-xs font-medium bg-gray-850 border-b border-gray-800 select-none">
+          <div class="flex items-center justify-between p-1.5 px-3 text-xs font-medium bg-gray-100 dark:bg-gray-850 border-b border-gray-200 dark:border-gray-800 select-none">
               <div class="flex items-center gap-4">
-                  <span class="text-gray-400 font-semibold tracking-wider">ENGINE:</span>
-                  <label class="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
+                  <span class="text-gray-600 dark:text-gray-400 font-semibold tracking-wider">ENGINE:</span>
+                  <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                       <input type="radio" name="engine" value="agy" checked class="accent-green-500">
                       <span class="text-green-400">Gemini (agy)</span>
                   </label>
-                  <label class="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
+                  <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                       <input type="radio" name="engine" value="claude" class="accent-blue-500">
                       <span class="text-blue-400">Deepseek V4 Flash (Claude Code)</span>
                   </label>
@@ -44,39 +44,39 @@
           <div id="panes-container" class="flex-grow flex min-h-0 relative">
               
               <!-- Left: Terminals -->
-              <div class="flex-1 flex flex-col min-w-0 border-r border-gray-800">
+              <div class="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-800">
                   <!-- Engine/TUI Terminal Area -->
-                  <div id="terminal-container" class="flex-grow bg-black overflow-hidden min-h-0 relative">
-                      <span class="absolute top-2 right-4 text-[10px] text-gray-500 font-mono z-10 select-none uppercase tracking-wider">Engine TUI</span>
+                  <div id="terminal-container" class="flex-grow bg-white dark:bg-black overflow-hidden min-h-0 relative">
+                      <span class="absolute top-2 right-4 text-[10px] text-gray-500 dark:text-gray-500 font-mono z-10 select-none uppercase tracking-wider">Engine TUI</span>
                   </div>
                   
                   <!-- Splitter Resize Handle -->
-                  <div id="pane-splitter" class="h-1 bg-gray-950 hover:bg-blue-600 active:bg-blue-700 cursor-row-resize transition-all select-none border-t border-b border-gray-800"></div>
+                  <div id="pane-splitter" class="h-1 bg-white dark:bg-gray-950 hover:bg-blue-600 active:bg-blue-700 cursor-row-resize transition-all select-none border-t border-b border-gray-200 dark:border-gray-800"></div>
                   
                   <!-- Mini Terminal Area -->
-                  <div id="mini-terminal-container" class="h-44 bg-black overflow-hidden relative border-t border-gray-950">
-                      <span class="absolute top-2 right-4 text-[10px] text-gray-500 font-mono z-10 select-none uppercase tracking-wider">Mini Terminal</span>
+                  <div id="mini-terminal-container" class="h-44 bg-white dark:bg-black overflow-hidden relative border-t border-gray-950">
+                      <span class="absolute top-2 right-4 text-[10px] text-gray-500 dark:text-gray-500 font-mono z-10 select-none uppercase tracking-wider">Mini Terminal</span>
                   </div>
               </div>
               
               <!-- Right: Final Output Markdown Preview -->
-              <div class="flex-1 flex flex-col bg-gray-900 min-w-0 relative">
-                  <div class="flex items-center justify-between p-2 border-b border-gray-800 bg-gray-950 select-none">
-                      <h3 class="text-gray-200 font-medium text-xs flex items-center gap-2">
+              <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 min-w-0 relative">
+                  <div class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 select-none">
+                      <h3 class="text-gray-800 dark:text-gray-200 font-medium text-xs flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span> Output Preview
                       </h3>
                   </div>
-                  <div id="markdown-preview-pane" class="flex-grow overflow-y-auto p-6 prose prose-invert font-sans max-w-none prose-sm text-gray-300 prose-headings:text-white prose-a:text-blue-400 hover:prose-a:text-blue-300 prose-strong:text-white prose-strong:font-bold prose-code:font-mono prose-code:text-blue-300 prose-code:bg-blue-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-800 prose-pre:shadow-inner">
-                      <div class="text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>
+                  <div id="markdown-preview-pane" class="flex-grow overflow-y-auto p-6 prose prose-invert font-sans max-w-none prose-sm text-gray-700 dark:text-gray-300 prose-headings:text-white prose-a:text-blue-400 hover:prose-a:text-blue-300 prose-strong:text-white prose-strong:font-bold prose-code:font-mono prose-code:text-blue-300 prose-code:bg-blue-900/20 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-800 prose-pre:shadow-inner">
+                      <div class="text-gray-400 dark:text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>
                   </div>
               </div>
               
           </div>
 
       <!-- Bottom Input Area -->
-      <div id="bottom-input-area" class="flex flex-col bg-gray-800 relative">
+      <div id="bottom-input-area" class="flex flex-col bg-gray-200 dark:bg-gray-800 relative">
           <!-- Quick directory display / breadcrumbs -->
-          <div class="px-3 py-1 bg-gray-850/80 border-b border-gray-800 text-[11px] font-mono text-gray-400 flex items-center justify-between">
+          <div class="px-3 py-1 bg-gray-100/80 dark:bg-gray-850/80 border-b border-gray-200 dark:border-gray-800 text-[11px] font-mono text-gray-600 dark:text-gray-400 flex items-center justify-between">
               <label id="clear-context-container" class="flex items-center cursor-pointer select-none text-xs font-semibold px-2 py-0.5 rounded border transition-all">
                   <input type="checkbox" id="clear-context-checkbox" checked class="w-3.5 h-3.5 cursor-pointer mr-1.5 accent-emerald-500">
                   <span id="clear-context-label-text">Auto-Clear Context</span>
@@ -86,7 +86,7 @@
           <!-- The Text Input -->
           <textarea 
               id="prompt-input" 
-              class="w-full min-h-[3rem] max-h-40 overflow-y-auto p-3 bg-gray-800 text-white outline-none resize-none text-sm font-sans"
+              class="w-full min-h-[3rem] max-h-40 overflow-y-auto p-3 bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white outline-none resize-none text-sm font-sans"
               rows="2"
               placeholder="Type a prompt... (Enter to send, Shift+Enter for newline)"
           ></textarea>
@@ -94,41 +94,41 @@
     </div>
 
     <!-- Add Project Modal -->
-    <div id="add-project-modal" class="fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-      <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-[450px] max-w-full overflow-hidden transform scale-95 transition-transform duration-300 p-1">
+    <div id="add-project-modal" class="fixed inset-0 bg-white/65 dark:bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+      <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl w-[450px] max-w-full overflow-hidden transform scale-95 transition-transform duration-300 p-1">
         <!-- Modal Header -->
-        <div class="p-4 border-b border-gray-850 flex items-center justify-between bg-gray-950/40">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-300">Add Project</h3>
-          <button id="close-modal-btn" class="text-gray-400 hover:text-white transition-colors text-lg font-bold leading-none">&times;</button>
+        <div class="p-4 border-b border-gray-200 dark:border-gray-850 flex items-center justify-between bg-white/40 dark:bg-gray-950/40">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Add Project</h3>
+          <button id="close-modal-btn" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors text-lg font-bold leading-none">&times;</button>
         </div>
         
         <!-- Modal Body -->
-        <div class="p-6 space-y-6 bg-gray-900">
+        <div class="p-6 space-y-6 bg-gray-50 dark:bg-gray-900">
           <!-- Choice Actions -->
           <div class="grid grid-cols-2 gap-4">
-            <button id="btn-choice-existing" class="flex flex-col items-center justify-center p-5 rounded-lg bg-gray-850/50 border border-gray-800 hover:border-blue-500 hover:bg-gray-850 transition-all text-center group cursor-pointer">
+            <button id="btn-choice-existing" class="flex flex-col items-center justify-center p-5 rounded-lg bg-gray-100/50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 hover:border-blue-500 hover:bg-gray-100 dark:hover:bg-gray-850 transition-all text-center group cursor-pointer">
               <span class="text-3xl mb-3 text-blue-400 group-hover:scale-110 transition-transform">📂</span>
-              <span class="text-xs font-bold text-gray-200">Open Existing</span>
-              <span class="text-[10px] text-gray-400 mt-1.5">Select folder on system</span>
+              <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Open Existing</span>
+              <span class="text-[10px] text-gray-600 dark:text-gray-400 mt-1.5">Select folder on system</span>
             </button>
-            <button id="btn-choice-new" class="flex flex-col items-center justify-center p-5 rounded-lg bg-gray-850/50 border border-gray-800 hover:border-green-500 hover:bg-gray-850 transition-all text-center group cursor-pointer">
+            <button id="btn-choice-new" class="flex flex-col items-center justify-center p-5 rounded-lg bg-gray-100/50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 hover:border-green-500 hover:bg-gray-100 dark:hover:bg-gray-850 transition-all text-center group cursor-pointer">
               <span class="text-3xl mb-3 text-green-400 group-hover:scale-110 transition-transform">✨</span>
-              <span class="text-xs font-bold text-gray-200">Start New Project</span>
-              <span class="text-[10px] text-gray-400 mt-1.5">Initialize git & GitHub</span>
+              <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Start New Project</span>
+              <span class="text-[10px] text-gray-600 dark:text-gray-400 mt-1.5">Initialize git & GitHub</span>
             </button>
           </div>
 
           <!-- New Project Form (Hidden by default) -->
           <div id="new-project-form" class="space-y-4 hidden border-t border-gray-800/80 pt-5">
             <div class="space-y-1.5">
-              <label for="new-proj-name" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Project Name</label>
-              <input type="text" id="new-proj-name" placeholder="e.g. My Awesome App" class="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600">
+              <label for="new-proj-name" class="text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Project Name</label>
+              <input type="text" id="new-proj-name" placeholder="e.g. My Awesome App" class="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600">
             </div>
             <div class="space-y-1.5">
-              <label for="new-proj-git" class="text-[10px] font-bold uppercase tracking-wider text-gray-400">GitHub Repo Name</label>
-              <input type="text" id="new-proj-git" placeholder="e.g. my-awesome-app" class="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600">
+              <label for="new-proj-git" class="text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">GitHub Repo Name</label>
+              <input type="text" id="new-proj-git" placeholder="e.g. my-awesome-app" class="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-gray-600">
             </div>
-            <button id="btn-submit-new-project" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2.5 rounded transition-all mt-2 flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-blue-900/20">
+            <button id="btn-submit-new-project" class="w-full bg-blue-600 hover:bg-blue-500 text-gray-900 dark:text-white font-semibold text-xs py-2.5 rounded transition-all mt-2 flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-blue-900/20">
               Create & Initialize Project
             </button>
           </div>
