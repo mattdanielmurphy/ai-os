@@ -3,10 +3,12 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
-### [Proposed] Sidebar Project Threads & Context-Pruned Resumption
-* **Sidebar Project Threads:** Add a project-specific list of past threads/conversations to the sidebar.
-* **Pruned Context Feed:** Recreate thread continuity by default while still running `/clear` to minimize token bloat. Feed the agent a highly pruned overview of past step logs/discoveries.
-* **Detailed Log Retrieval:** Provide helper functions enabling the agent to JIT pull full transcripts or granular logs (`.agent-logs/transcripts/` or `.agent-logs/details/`) on demand.
+### [2026-06-30] Antigravity Thread Integration & Auto-Hiding Scrollbars
+* **Sidebar Project Threads Integration:** Replaced the mockup folder list with a robust integration that reads actual historical `agy` threads (conversations) from the global `~/.gemini/antigravity-cli/brain/` directory. Substrings of project paths are verified and exact-matched to route each thread to its correct project.
+* **Compactified Context Resumption:** Clicking a project thread in the sidebar loads the selected thread in `agy` via the `/resume <id>` command. When a user submits a prompt, the system automatically runs `/clear` first, and then sends the thread's compactified context (extracting the user inputs and assistant responses from `transcript.jsonl` while stripping out heavy code blocks to prevent token bloat) along with the prompt.
+* **New Thread Creation:** Added a "+" button to the "Project Threads" header in the sidebar, which clears the selected thread highlights, resets the preview pane, switches the active active engine to `agy`, and issues a `/clear` command to start a clean thread session.
+* **Glow-in-Dark Conversation Preview:** Custom-styled the Output Preview Pane to parse and display `transcript.jsonl` files as beautiful, fully rendered, styled chat conversations (User vs. Assistant message blocks) instead of raw text.
+* **Auto-Hiding Modern macOS Scrollbars:** Applied premium webkit-scrollbar styling globally. Scrollbars are completely transparent/hidden by default and fade in as modern rounded pill shapes when hovering over scrollable containers, resolving theme inconsistencies in dark mode.
 
 ### [2026-06-29] Theme and Styling Bug Fixes
 * **Tailwind Configuration Custom Theme Extension:** Defined a custom `gray-850` color (`#18202f`) within `tailwind.config.js` to fix a styling glitch where bars and buttons using `dark:bg-gray-850` fell back to a light or transparent background on dark mode, restoring the dark-mode theme cohesion across the header, modal, and context panel components.

@@ -48,18 +48,60 @@ body {
   height: 100%;
 }
 
-#markdown-preview-pane {
-  scrollbar-width: thin;
-  scrollbar-color: #888 #f1f1f1;
+#markdown-preview-pane {}
 
-  /* hide scrollbars when not in use */
-  &::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+/* Target any element with overflow control */
+* {
+  /* Disables default platform rendering behaviors */
+  -webkit-appearance: none;
+}
+
+/* Force custom scrollbar properties globally */
+::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent !important;
+  border-radius: 20px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* Show scrollbar thumb when the scrollable element is hovered */
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-radius: 20px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38) !important;
+  border-radius: 20px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* Light mode support */
+@media (prefers-color-scheme: light) {
+  *:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15) !important;
+    border-radius: 20px !important;
+    border: 2px solid transparent !important;
+    background-clip: padding-box !important;
   }
 
-  /* Dark mode */
-  @media (prefers-color-scheme: dark) {
-    scrollbar-color: #444 #222 !important;
+  *:hover::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.35) !important;
+    border-radius: 20px !important;
+    border: 2px solid transparent !important;
+    background-clip: padding-box !important;
   }
 }

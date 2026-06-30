@@ -1081,92 +1081,102 @@ struct ThreadLog {
 fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
     use std::fs;
     use std::path::Path;
+    use std::io::Read;
 
-    let threads_dir = Path::new(&project_path)
-        .join("gemini-history")
-        .join("threads");
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let brain_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("brain");
 
-    if !threads_dir.exists() {
+    if !brain_dir.exists() {
         return Ok(Vec::new());
     }
 
-    let entries = fs::read_dir(&threads_dir)
-        .map_err(|e| format!("Failed to read threads directory: {}", e))?;
+    let entries = fs::read_dir(&brain_dir)
+        .map_err(|e| format!("Failed to read brain directory: {}", e))?;
 
     let mut thread_logs = Vec::new();
 
     for entry in entries {
         if let Ok(entry) = entry {
             let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
-                let filename = path.file_name().unwrap().to_string_lossy().to_string();
-                let thread_id = path.file_stem().unwrap().to_string_lossy().to_string();
+            if path.is_dir() {
+                let thread_id = path.file_name().unwrap().to_string_lossy().to_string();
+                let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
                 
-                // Get modification time
-                let mtime = entry.metadata()
-                    .and_then(|m| m.modified())
-                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
-                    .map(|d| d.as_secs())
-                    .unwrap_or(0);
+                if transcript_path.exists() {
+                    let metadata = match fs::metadata(&transcript_path) {
+                        Ok(m) => m,
+                        Err(_) => continue,
+                    };
+                    let mtime = metadata.modified()
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
 
-                // Read thread content to extract first prompt or a snippet
-                let content = fs::read_to_string(&path).unwrap_or_default();
-                
-                // Simple parsing to extract a human-readable title / first user question
-                let mut title = thread_id.clone();
-                let mut snippet = String::new();
-                
-                let lines: Vec<&str> = content.lines().collect();
-                
-                // Try to find the first User block
-                let mut user_found = false;
-                let mut collected_lines = Vec::new();
-                for line in &lines {
-                    if line.contains("User:") {
-                        user_found = true;
-                        continue;
-                    }
-                    if user_found {
-                        if line.trim().starts_with("---") || line.contains("Assistant:") {
-                            break;
-                        }
-                        if !line.trim().is_empty() {
-                            collected_lines.push(line.trim());
+                    let file = match fs::File::open(&transcript_path) {
+                        Ok(f) => f,
+                        Err(_) => continue,
+                    };
+                    
+                    let mut buffer = Vec::new();
+                    let _ = file.take(131072).read_to_end(&mut buffer);
+                    let content = String::from_utf8_lossy(&buffer);
+
+                    if let Some(pos) = content.find(&project_path) {
+                        let next_char = content.chars().nth(pos + project_path.len());
+                        let is_exact = match next_char {
+                            Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
+                            None => true,
+                        };
+                        
+                        if is_exact {
+                            let mut title = thread_id.clone();
+                            let mut snippet = String::new();
+                            
+                            for line in content.lines() {
+                                if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+                                    if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+                                        if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
+                                            let mut raw_prompt = prompt_content.to_string();
+                                            if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
+                                                if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
+                                                    raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
+                                                }
+                                            }
+                                            
+                                            let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
+                                            title = if clean_prompt.len() > 40 {
+                                                format!("{}...", &clean_prompt[..40])
+                                            } else {
+                                                clean_prompt.clone()
+                                            };
+                                            snippet = if clean_prompt.len() > 120 {
+                                                format!("{}...", &clean_prompt[..120])
+                                            } else {
+                                                clean_prompt
+                                            };
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            thread_logs.push(ThreadLog {
+                                id: thread_id,
+                                title,
+                                snippet,
+                                filepath: transcript_path.to_string_lossy().to_string(),
+                                mtime,
+                            });
                         }
                     }
                 }
-                
-                if !collected_lines.is_empty() {
-                    let full_question = collected_lines.join(" ");
-                    title = if full_question.len() > 40 {
-                        format!("{}...", &full_question[..40])
-                    } else {
-                        full_question.clone()
-                    };
-                    snippet = if full_question.len() > 120 {
-                        format!("{}...", &full_question[..120])
-                    } else {
-                        full_question
-                    };
-                } else {
-                    // Fallback to filename
-                    if filename.contains("___") {
-                        title = filename.replace("___", " ").replace(".md", "");
-                    }
-                }
-
-                thread_logs.push(ThreadLog {
-                    id: thread_id,
-                    title,
-                    snippet,
-                    filepath: path.to_string_lossy().to_string(),
-                    mtime,
-                });
             }
         }
     }
 
-    // Sort by modification time descending (newest threads first)
     thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
 
     Ok(thread_logs)

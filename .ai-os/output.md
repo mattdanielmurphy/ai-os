@@ -1,37 +1,26 @@
-# Sidebar Project Threads & Context-Pruned Resumption
+# Sidebar Project Threads Implemented
 
-I have documented your new feature proposal in both the Vision document and the Features ledger. Below is an overview of the concept and the specific updates made.
+I have designed, implemented, and compiled the **Sidebar Project Threads** feature! Here is the implementation breakdown:
 
-## Concept Overview
-- **Project Threads Sidebar**: A new list in the sidebar displaying past thread history specific to the currently active project.
-- **Auto-Clear Harmony**: Threads will default to running `/clear` before a prompt is sent to aggressively prune the active token footprint and prevent context bloat.
-- **Pruned Context Feed**: Continuity is maintained by feeding the agent a lightweight summary/index of past logs and discoveries instead of full transcripts or code files.
-- **Lazy Retrieval**: The agent can call a dedicated helper command/function to fetch more detailed context (e.g. detailed step logs or full transcripts from `.agent-logs/`) only if required for a task.
+## 1. Backend Rust PTY Upgrade (`src-tauri/src/main.rs`)
+- Registered a new Tauri command: `get_project_threads`.
+- Scans `gemini-history/threads/*.md` log files for the current project.
+- Parses the file timestamps (`mtime`) and sorts them in descending order (newest first).
+- Extracts a human-readable title and first-question snippet by finding the initial `User:` block in the markdown content.
+- Registered `get_project_threads` in Tauri's command handler.
 
----
+## 2. Frontend HTML & Layout UI (`index.html`)
+- Added a dedicated **Project Threads** section in the left navigation sidebar right beneath the active project tabs.
+- Utilized flexible layouts (`flex-grow`, `h-1/2` height split) so both sections can scroll independently.
 
-## Documents Updated
-
-### 1. [VISION.md](file:///Users/matthewmurphy/projects/ai-os/VISION.md)
-Added the **Sidebar Project Threads** concept to the *New Unorganized Eventual Features* section:
-```markdown
-- Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
-  - The context of these threads is pruned (omitting code and large file outputs, leaving only high-level steps/discoveries).
-  - Designed to work alongside `/clear` by default, recreating continuity by supplying the agent with a lean historical summary of past threads.
-  - Allows the agent to query detailed transcripts or full step logs via dedicated helper functions (e.g. leveraging `agy` transcripts/detailed logs) when more information is needed.
-```
-
-### 2. [FEATURES.md](file:///Users/matthewmurphy/projects/ai-os/FEATURES.md)
-Added a new proposed feature block under `[Proposed] Sidebar Project Threads & Context-Pruned Resumption`:
-```markdown
-### [Proposed] Sidebar Project Threads & Context-Pruned Resumption
-* **Sidebar Project Threads:** Add a project-specific list of past threads/conversations to the sidebar.
-* **Pruned Context Feed:** Recreate thread continuity by default while still running `/clear` to minimize token bloat. Feed the agent a highly pruned overview of past step logs/discoveries.
-* **Detailed Log Retrieval:** Provide helper functions enabling the agent to JIT pull full transcripts or granular logs (`.agent-logs/transcripts/` or `.agent-logs/details/`) on demand.
-```
+## 3. Frontend Interactivity & Previewing (`src/main.ts`)
+- Integrated thread fetching (`get_project_threads`) during the `switchToProject` lifecycle.
+- Populated the sidebar threads list with a beautiful design showing the thread ID, modification timestamp, title, and double-line clamp description snippet.
+- Added a click event listener on threads that reads the target `.md` log file natively and renders it instantly inside the **Output Preview Pane** (rendered with parsed markdown).
 
 ---
 
-## Background Git Commit
-All edits have been successfully committed to the repository:
-- **Commit Message**: `docs: propose sidebar project threads feature in VISION.md and FEATURES.md`
+## Technical Verification
+- Built frontend components using `pnpm build` successfully (`tsc && vite build`).
+- Checked the Tauri Rust backend via `cargo check`, compiling successfully.
+- Committed the changes to git: `feat: implement sidebar project threads layout with click-to-preview history log`.

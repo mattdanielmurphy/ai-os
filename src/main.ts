@@ -29,6 +29,8 @@ interface Project {
 // ----------------------------------------------------
 let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
 let isTerminalMode: boolean = false;
+let activeThreadId: string | null = null;
+let activeThreadContext: string | null = null;
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const claudeBuffers: Record<string, string> = {};
@@ -565,6 +567,8 @@ const switchToProject = async (path: string) => {
     }
 
     activeProject = path;
+    activeThreadId = null;
+    activeThreadContext = null;
     
     // Update lastActive timestamp & restore state
     const nextProj = projects.find(p => p.path === path);
@@ -636,6 +640,123 @@ interface ThreadLog {
     mtime: number;
 }
 
+const selectAgyEngine = async () => {
+    if (currentEngine !== 'agy') {
+        currentEngine = 'agy';
+        const currentProj = projects.find(p => p.path === activeProject);
+        if (currentProj) {
+            currentProj.engine = 'agy';
+            saveProjects();
+        }
+        
+        const agyRadio = document.querySelector('input[name="engine"][value="agy"]') as HTMLInputElement;
+        if (agyRadio) agyRadio.checked = true;
+
+        term.reset();
+        if (agyBuffers[activeProject]) {
+            term.write(agyBuffers[activeProject]);
+        } else {
+            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${activeProject}...\x1b[0m\r\n`);
+        }
+
+        try {
+            await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
+                projectPath: activeProject, 
+                engine: 'agy' 
+            });
+        } catch (err) {
+            console.error('Failed to toggle engine session on backend:', err);
+        }
+        resizePty();
+    }
+};
+
+function formatTranscriptToMarkdown(jsonlContent: string): string {
+    const lines = jsonlContent.trim().split('\n');
+    let md = '';
+    let stepCount = 0;
+    
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+            const step = JSON.parse(line);
+            const source = step.source;
+            const type = step.type;
+            const content = step.content;
+            
+            if (type === 'USER_INPUT' && content) {
+                stepCount++;
+                let prompt = content;
+                const startTag = '<USER_REQUEST>';
+                const endTag = '</USER_REQUEST>';
+                const startIdx = prompt.indexOf(startTag);
+                const endIdx = prompt.indexOf(endTag);
+                if (startIdx !== -1 && endIdx !== -1) {
+                    prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+                }
+                
+                md += `### 👤 User Step ${stepCount}\n${prompt}\n\n`;
+            } else if (source === 'MODEL' && type === 'PLANNER_RESPONSE' && content) {
+                md += `### 🤖 Assistant Response\n${content}\n\n`;
+            }
+        } catch (e) {
+            // Ignore
+        }
+    }
+    
+    if (!md) {
+        return '*No readable conversation steps found in this transcript.*';
+    }
+    return md;
+}
+
+function getCompactifiedContext(jsonlContent: string): string {
+    const lines = jsonlContent.trim().split('\n');
+    let context = '';
+    let stepCount = 0;
+    
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+            const step = JSON.parse(line);
+            const source = step.source;
+            const type = step.type;
+            const content = step.content;
+            
+            if (type === 'USER_INPUT' && content) {
+                stepCount++;
+                let prompt = content;
+                const startTag = '<USER_REQUEST>';
+                const endTag = '</USER_REQUEST>';
+                const startIdx = prompt.indexOf(startTag);
+                const endIdx = prompt.indexOf(endTag);
+                if (startIdx !== -1 && endIdx !== -1) {
+                    prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+                }
+                
+                prompt = prompt.replace(/```[\s\S]*?```/g, '[Code Block omitted]').trim();
+                if (prompt.length > 300) {
+                    prompt = prompt.substring(0, 300) + '...';
+                }
+                
+                context += `- User Step ${stepCount}: "${prompt}"\n`;
+            } else if (source === 'MODEL' && type === 'PLANNER_RESPONSE' && content) {
+                let reply = content;
+                reply = reply.replace(/```[\s\S]*?```/g, '[Code Block omitted]').trim();
+                if (reply.length > 300) {
+                    reply = reply.substring(0, 300) + '...';
+                }
+                
+                context += `- Assistant: "${reply}"\n`;
+            }
+        } catch (e) {
+            // Ignore
+        }
+    }
+    
+    return context;
+}
+
 const renderProjectThreads = async (projectPath: string) => {
     const listEl = document.getElementById('project-threads-list');
     if (!listEl) return;
@@ -644,15 +765,17 @@ const renderProjectThreads = async (projectPath: string) => {
     try {
         const threads = await invoke<ThreadLog[]>('get_project_threads', { projectPath });
         if (threads.length === 0) {
-            listEl.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">No threads found in gemini-history/threads</div>';
+            listEl.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">No threads found for this project</div>';
             return;
         }
 
         threads.forEach((thread) => {
             const el = document.createElement('div');
-            el.className = 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
+            const isActive = activeThreadId === thread.id;
+            el.className = isActive 
+                ? 'p-2 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-1'
+                : 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
             
-            // Format time
             const dateStr = thread.mtime > 0 
                 ? new Date(thread.mtime * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'Unknown Date';
@@ -667,11 +790,22 @@ const renderProjectThreads = async (projectPath: string) => {
             `;
 
             el.addEventListener('click', async () => {
+                document.querySelectorAll('#project-threads-list > div').forEach((child) => {
+                    child.className = 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
+                });
+                el.className = 'p-2 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-1';
+
+                activeThreadId = thread.id;
+                await selectAgyEngine();
+
                 const previewPane = document.getElementById('markdown-preview-pane');
-                if (previewPane) {
-                    try {
-                        const content = await readTextFile(thread.filepath);
-                        // Render in Output Preview Pane
+                try {
+                    const content = await readTextFile(thread.filepath);
+                    activeThreadContext = getCompactifiedContext(content);
+                    updatePlaceholder(true);
+
+                    if (previewPane) {
+                        const formattedMd = formatTranscriptToMarkdown(content);
                         previewPane.innerHTML = `
                             <div class="border-b border-gray-250 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between select-none">
                                 <div>
@@ -681,13 +815,28 @@ const renderProjectThreads = async (projectPath: string) => {
                                 <span class="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${dateStr}</span>
                             </div>
                             <div class="prose prose-invert prose-sm max-w-none text-gray-700 dark:text-gray-300">
-                                ${marked.parse(content)}
+                                ${marked.parse(formattedMd)}
                             </div>
                         `;
-                    } catch (err) {
+                    }
+                } catch (err) {
+                    if (previewPane) {
                         previewPane.innerHTML = `<div class="text-red-500 p-4">Error loading thread log file: ${err}</div>`;
                     }
                 }
+
+                try {
+                    const res = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
+                        projectPath: activeProject, 
+                        engine: 'agy' 
+                    });
+                    if (res.is_new_session) {
+                        await new Promise((resolve) => setTimeout(resolve, 800));
+                    }
+                } catch (err) {
+                    console.error('Failed to toggle engine session on backend:', err);
+                }
+                invoke('write_to_pty', { data: `/resume ${thread.id}\r`, projectPath: activeProject, terminalType: 'agy' });
             });
 
             listEl.appendChild(el);
@@ -749,6 +898,26 @@ const closeModal = () => {
 const addProjectBtn = document.getElementById('add-project-btn');
 addProjectBtn?.addEventListener('click', openModal);
 closeModalBtn?.addEventListener('click', closeModal);
+
+// Start New Thread
+const newThreadBtn = document.getElementById('new-thread-btn');
+newThreadBtn?.addEventListener('click', async () => {
+    activeThreadId = null;
+    activeThreadContext = null;
+    updatePlaceholder(true);
+
+    document.querySelectorAll('#project-threads-list > div').forEach((child) => {
+        child.className = 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
+    });
+
+    const previewPane = document.getElementById('markdown-preview-pane');
+    if (previewPane) {
+        previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>';
+    }
+
+    await selectAgyEngine();
+    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
+});
 
 // Close modal when clicking on the backdrop (outside modal content)
 addProjectModal?.addEventListener('click', (e) => {
@@ -1084,41 +1253,56 @@ textarea?.addEventListener('keydown', async (e) => {
         const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
 
         if (isRunning) {
-            // Use bracketed paste mode (\x1b[200~ ... \x1b[201~) so the PTY receives the block instantly and preserves literal newlines
-            const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
-            if (isBypass) {
-                invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
-            } else {
-                // Clear context first
+            if (activeThreadId && activeThreadContext) {
                 invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
                 await new Promise((resolve) => setTimeout(resolve, 450));
-                // Send prompt
+                
+                const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${activeThreadContext}\n\nUser request: ${processedInput}`;
+                const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`;
                 invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+                activeThreadContext = null;
+            } else {
+                const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
+                if (isBypass) {
+                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+                } else {
+                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
+                    await new Promise((resolve) => setTimeout(resolve, 450));
+                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+                }
             }
         } else {
             if (currentEngine === 'agy') {
                 try {
                     await invoke('spawn_fresh_engine', { projectPath: activeProject, engine: 'agy' });
-                    // Wait a bit for the new instance to boot
                     await new Promise((resolve) => setTimeout(resolve, 1000));
                 } catch (err) {
                     console.error('Failed to spawn fresh agy engine:', err);
                 }
-                const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
                 
-                // When TUI is fresh/exited, we NEVER need to clear context. It's a fresh instance.
-                invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                if (activeThreadId && activeThreadContext) {
+                    invoke('write_to_pty', { data: `/resume ${activeThreadId}\r`, projectPath: activeProject, terminalType: 'agy' });
+                    await new Promise((resolve) => setTimeout(resolve, 600));
+                    
+                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
+                    await new Promise((resolve) => setTimeout(resolve, 450));
+                    
+                    const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${activeThreadContext}\n\nUser request: ${processedInput}`;
+                    const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`;
+                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                    activeThreadContext = null;
+                } else {
+                    const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
+                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                }
             } else {
-                // Escape quotes but preserve literal newlines so the bash/tmux command inputs them properly
                 const escapedInput = processedInput.replace(/"/g, '\\"');
                 let commandToExecute = '';
 
-                // FIXED ENGINE ROUTING
                 if (currentEngine === 'claude') {
                     commandToExecute = `claude -p "${escapedInput}"`;
                 }
 
-                // Send command to active project PTY directly
                 invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
             }
         }
