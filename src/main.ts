@@ -34,6 +34,7 @@ let activeThreadContext: string | null = null;
 const threadFilepaths = new Map<string, string>();
 let lastThreadsJson = '';
 let isWaitingForNewThread = false;
+let waitingExistingThreadIds: Set<string> = new Set();
 let saveDraftTimeout: any = null;
 
 const savePromptDraft = (content: string) => {
@@ -1066,7 +1067,14 @@ const renderProjects = () => {
                 e.stopPropagation();
                 activeThreadId = null;
                 activeThreadContext = null;
-                isWaitingForNewThread = false;
+                isWaitingForNewThread = true;
+                try {
+                    const currentThreads = await invoke<ThreadLog[]>('get_project_threads', { projectPath: activeProject });
+                    waitingExistingThreadIds = new Set(currentThreads.map(t => t.id));
+                } catch (err) {
+                    console.error('Failed to get current threads on new thread click:', err);
+                    waitingExistingThreadIds = new Set(Array.from(threadFilepaths.keys()));
+                }
                 updatePlaceholder(true);
 
                 threadsList.querySelectorAll(':scope > div').forEach((child) => {
@@ -1101,6 +1109,7 @@ const switchToProject = async (path: string, autoSelectFirstThread: boolean = fa
     activeThreadId = null;
     activeThreadContext = null;
     isWaitingForNewThread = false;
+    waitingExistingThreadIds.clear();
     lastThreadsJson = '';
     
     // Update lastActive timestamp & restore state
@@ -1373,22 +1382,25 @@ const pollThreadsList = async () => {
         // If we are waiting for a new thread to be created, and one is found
         if (isWaitingForNewThread && threads.length > 0) {
             const newestThread = threads[0];
-            activeThreadId = newestThread.id;
-            isWaitingForNewThread = false;
-            
-            activeThreadContext = '';
-            updatePlaceholder(true);
-            
-            lastThreadsJson = threadsJson;
-            await renderProjectThreads(activeProject);
-            
-            const filepath = newestThread.filepath;
-            if (filepath) {
-                const content = await invoke<string>('read_thread_log', { filepath });
-                activeThreadContext = getCompactifiedContext(content);
-                renderCustomTuiLog(content);
+            if (!waitingExistingThreadIds.has(newestThread.id)) {
+                activeThreadId = newestThread.id;
+                isWaitingForNewThread = false;
+                waitingExistingThreadIds.clear();
+                
+                activeThreadContext = '';
+                updatePlaceholder(true);
+                
+                lastThreadsJson = threadsJson;
+                await renderProjectThreads(activeProject);
+                
+                const filepath = newestThread.filepath;
+                if (filepath) {
+                    const content = await invoke<string>('read_thread_log', { filepath });
+                    activeThreadContext = getCompactifiedContext(content);
+                    renderCustomTuiLog(content);
+                }
+                return;
             }
-            return;
         }
 
         if (threadsJson !== lastThreadsJson) {
@@ -1780,6 +1792,13 @@ textarea?.addEventListener('keydown', async (e) => {
 
         if (!activeThreadId) {
             isWaitingForNewThread = true;
+            try {
+                const currentThreads = await invoke<ThreadLog[]>('get_project_threads', { projectPath: activeProject });
+                waitingExistingThreadIds = new Set(currentThreads.map(t => t.id));
+            } catch (err) {
+                console.error('Failed to get current threads on Enter press:', err);
+                waitingExistingThreadIds = new Set(Array.from(threadFilepaths.keys()));
+            }
         }
 
         commandHistory.push(trimmedInput);

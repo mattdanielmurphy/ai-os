@@ -228,3 +228,5 @@
 ### [2026-06-30] Unified HTML TUI Log View & Expandable Terminal Layout
 * **Unified Custom HTML Log Parser:** Shipped real-time polling of active thread log `transcript.jsonl` files to populate the preview pane with a live timeline showing active tool calls, thinking/working status indicators, edited files summaries, and full markdown assistant responses.
 * **Vertical Split & Toggleable Terminal:** Replaced the side-by-side split layout with a vertical split configuration. The main area displays the custom HTML log view, and the bottom contains the original `agy` TUI terminal, which starts in a space-saving collapsed view (64px) and expands to near full screen upon clicking the divider toggle button.
+### [2026-06-30] New Thread Selection Tracking Fix
+* **Thread ID Tracking:** Added tracking of existing thread IDs when starting a new thread or sending the first prompt in a new session. This ensures that the background polling loop correctly waits for a new thread ID to be written to disk rather than prematurely selecting an existing newest thread.
