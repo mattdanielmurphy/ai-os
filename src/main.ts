@@ -6,8 +6,10 @@ import { Terminal } from '@xterm/xterm'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/api/shell'
+import { readTextFile, exists } from '@tauri-apps/api/fs'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import type { ILinkProvider, ILink } from '@xterm/xterm'
+import { marked } from 'marked'
 
 // ----------------------------------------------------
 // 1. Interfaces & Types
@@ -286,9 +288,54 @@ window.addEventListener('resize', () => {
     debouncedResizePty();
 });
 
+// ----------------------------------------------------
+// 7. Output Modal & Virtual Terminal Parser
+// ----------------------------------------------------
+// 7. Output File Polling & Markdown Preview
+// ----------------------------------------------------
+let lastRenderedMarkdown = '';
+const markdownPreviewPane = document.getElementById('markdown-preview-pane');
+
+// Poll the output.md file of the active project
+setInterval(async () => {
+    if (!activeProject || isTerminalMode) return;
+    
+    const outputPath = `${activeProject}/.ai-os/output.md`;
+    try {
+        const fileExists = await exists(outputPath);
+        if (fileExists) {
+            const content = await readTextFile(outputPath);
+            if (content !== lastRenderedMarkdown && markdownPreviewPane) {
+                lastRenderedMarkdown = content;
+                if (content.trim().length > 0) {
+                    markdownPreviewPane.innerHTML = marked.parse(content) as string;
+                } else {
+                    markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output...</div>';
+                }
+            }
+        } else if (lastRenderedMarkdown !== '' && markdownPreviewPane) {
+            lastRenderedMarkdown = '';
+            markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>';
+        }
+    } catch (e) {
+        // Silently ignore file read errors to avoid console spam
+    }
+}, 500);
+
+const formatMarkdown = (text: string): string => {
+    let formatted = text;
+    formatted = formatted.replace(/\*\*([^\*]+)\*\*/g, '\x1b[1m$1\x1b[22m');
+    formatted = formatted.replace(/`([^`]+)`/g, '\x1b[36m$1\x1b[39m');
+    return formatted;
+};
+
 // Listen to Backend PTY events
 listen<{ data: string, project_path: string, terminal_type: string }>('pty-output', (event) => {
-    const { data, project_path, terminal_type } = event.payload;
+    let { data, project_path, terminal_type } = event.payload;
+    
+    if (terminal_type === 'agy') {
+        data = formatMarkdown(data);
+    }
     
     // Choose correct buffer
     let buffers = miniTermBuffers;
@@ -303,12 +350,10 @@ listen<{ data: string, project_path: string, terminal_type: string }>('pty-outpu
         buffers[project_path] = '';
     }
     buffers[project_path] += data;
-    // Limit cache size to prevent massive leaks
     if (buffers[project_path].length > 100000) {
         buffers[project_path] = buffers[project_path].substring(buffers[project_path].length - 50000);
     }
 
-    // Only write output on screen if it belongs to the currently active project
     if (project_path === activeProject) {
         if (terminal_type === 'mini') {
             miniTerm.write(data);
@@ -413,15 +458,19 @@ const renderProjects = () => {
                 <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${project.color}"></span>
                 <span class="truncate text-xs">${project.name}</span>
             </div>
-            <button class="delete-btn text-[10px] text-gray-600 hover:text-red-400 px-1 py-0.5 rounded opacity-0 hover:opacity-100 hover:bg-gray-700 transition-all select-none">✕</button>
+            <div class="flex items-center action-btns opacity-0 transition-opacity">
+                <button class="open-btn text-[10px] text-gray-500 hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
+                <button class="delete-btn text-[10px] text-gray-500 hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
+            </div>
         `;
         
         // Swap project click
         item.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
+            
+            // Delete project
             if (target.classList.contains('delete-btn')) {
                 e.stopPropagation();
-                // Delete project
                 projects = projects.filter(p => p.path !== project.path);
                 saveProjects();
                 invoke('close_project_session', { projectPath: project.path }).catch((err) => {
@@ -435,19 +484,31 @@ const renderProjects = () => {
                 }
                 return;
             }
+            
+            // Open in Finder
+            if (target.classList.contains('open-btn') || target.parentElement?.classList.contains('open-btn')) {
+                e.stopPropagation();
+                open(project.path).catch(console.error);
+                return;
+            }
+            
             switchToProject(project.path);
         });
         
-        // Show delete button on hover
+        // Show buttons on hover
         item.addEventListener('mouseenter', () => {
-            const btn = item.querySelector('.delete-btn') as HTMLElement;
-            if (btn && project.path !== '/Users/matthewmurphy/projects/ai-os') {
-                btn.style.opacity = '1';
+            const btns = item.querySelector('.action-btns') as HTMLElement;
+            if (btns) {
+                btns.style.opacity = '1';
+                const delBtn = btns.querySelector('.delete-btn') as HTMLElement;
+                if (delBtn && project.path === '/Users/matthewmurphy/projects/ai-os') {
+                    delBtn.style.display = 'none';
+                }
             }
         });
         item.addEventListener('mouseleave', () => {
-            const btn = item.querySelector('.delete-btn') as HTMLElement;
-            if (btn) btn.style.opacity = '0';
+            const btns = item.querySelector('.action-btns') as HTMLElement;
+            if (btns) btns.style.opacity = '0';
         });
 
         projectsListEl.appendChild(item);
