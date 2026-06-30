@@ -32,6 +32,37 @@ let isTuiExpanded: boolean = false;
 let activeThreadId: string | null = null;
 let activeThreadContext: string | null = null;
 const threadFilepaths = new Map<string, string>();
+let lastThreadsJson = '';
+let isWaitingForNewThread = false;
+let saveDraftTimeout: any = null;
+
+const savePromptDraft = (content: string) => {
+    if (!activeProject) return;
+    localStorage.setItem(`ai-os-prompt-draft-${activeProject}`, content);
+    
+    const currentProj = projects.find(p => p.path === activeProject);
+    if (currentProj) {
+        currentProj.promptDraft = content;
+        saveProjects();
+    }
+    
+    const isWordCompleted = content.endsWith(' ') || content.endsWith('\n') || content.endsWith('\t');
+    
+    if (saveDraftTimeout) {
+        clearTimeout(saveDraftTimeout);
+    }
+    
+    const writeToDisk = () => {
+        invoke('save_prompt_draft', { projectPath: activeProject, content })
+            .catch(err => console.error('Failed to save prompt draft to disk:', err));
+    };
+    
+    if (isWordCompleted) {
+        writeToDisk();
+    } else {
+        saveDraftTimeout = setTimeout(writeToDisk, 150);
+    }
+};
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const claudeBuffers: Record<string, string> = {};
@@ -1012,6 +1043,7 @@ const renderProjects = () => {
                 e.stopPropagation();
                 activeThreadId = null;
                 activeThreadContext = null;
+                isWaitingForNewThread = false;
                 updatePlaceholder(true);
 
                 threadsList.querySelectorAll(':scope > div').forEach((child) => {
@@ -1045,13 +1077,32 @@ const switchToProject = async (path: string, autoSelectFirstThread: boolean = fa
     activeProject = path;
     activeThreadId = null;
     activeThreadContext = null;
+    isWaitingForNewThread = false;
+    lastThreadsJson = '';
     
     // Update lastActive timestamp & restore state
     const nextProj = projects.find(p => p.path === path);
     if (nextProj) {
         nextProj.lastActive = Date.now();
         if (textarea) {
-            textarea.value = nextProj.promptDraft || '';
+            // Restore draft from localStorage first
+            const savedDraft = localStorage.getItem(`ai-os-prompt-draft-${path}`);
+            if (savedDraft !== null) {
+                textarea.value = savedDraft;
+                adjustHeight();
+            } else {
+                textarea.value = nextProj.promptDraft || '';
+                adjustHeight();
+            }
+
+            // Restore draft from physical disk asynchronously
+            invoke<string>('load_prompt_draft', { projectPath: path }).then((diskDraft) => {
+                if (diskDraft && diskDraft !== textarea.value) {
+                    textarea.value = diskDraft;
+                    adjustHeight();
+                    localStorage.setItem(`ai-os-prompt-draft-${path}`, diskDraft);
+                }
+            }).catch(console.error);
         }
         if (nextProj.engine) {
             currentEngine = nextProj.engine;
@@ -1290,6 +1341,45 @@ const renderProjectThreads = async (projectPath: string, autoSelectFirstThread: 
     }
 };
 
+const pollThreadsList = async () => {
+    if (!activeProject) return;
+    try {
+        const threads = await invoke<ThreadLog[]>('get_project_threads', { projectPath: activeProject });
+        const threadsJson = JSON.stringify(threads);
+        
+        // If we are waiting for a new thread to be created, and one is found
+        if (isWaitingForNewThread && threads.length > 0) {
+            const newestThread = threads[0];
+            activeThreadId = newestThread.id;
+            isWaitingForNewThread = false;
+            
+            activeThreadContext = '';
+            updatePlaceholder(true);
+            
+            lastThreadsJson = threadsJson;
+            await renderProjectThreads(activeProject);
+            
+            const filepath = newestThread.filepath;
+            if (filepath) {
+                const content = await invoke<string>('read_thread_log', { filepath });
+                activeThreadContext = getCompactifiedContext(content);
+                renderCustomTuiLog(content);
+            }
+            return;
+        }
+
+        if (threadsJson !== lastThreadsJson) {
+            lastThreadsJson = threadsJson;
+            await renderProjectThreads(activeProject, false);
+        }
+    } catch (err) {
+        console.error('Failed in pollThreadsList:', err);
+    }
+};
+
+// Start the polling interval
+setInterval(pollThreadsList, 1000);
+
 // Add project modal and logic
 const addProjectModal = document.getElementById('add-project-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
@@ -1505,6 +1595,7 @@ const adjustHeight = () => {
 };
 
 textarea?.addEventListener('input', () => {
+    savePromptDraft(textarea.value);
     // Instantly toggle to terminal mode when user types exactly "!" in empty field
     if (textarea.value === '!') {
         isTerminalMode = true;
@@ -1664,6 +1755,10 @@ textarea?.addEventListener('keydown', async (e) => {
         const trimmedInput = rawInput.trim();
         if (!trimmedInput) return;
 
+        if (!activeThreadId) {
+            isWaitingForNewThread = true;
+        }
+
         commandHistory.push(trimmedInput);
         saveCommandHistory(activeProject, commandHistory);
         historyIndex = -1;
@@ -1755,6 +1850,7 @@ textarea?.addEventListener('keydown', async (e) => {
         }
 
         textarea.value = '';
+        savePromptDraft('');
         adjustHeight();
 
         // Auto-clear context toggle turns itself back on after each message is sent

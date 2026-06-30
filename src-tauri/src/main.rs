@@ -1184,6 +1184,57 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
 }
 
 #[tauri::command]
+fn save_prompt_draft(project_path: String, content: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let drafts_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("drafts");
+
+    if !drafts_dir.exists() {
+        fs::create_dir_all(&drafts_dir).map_err(|e| format!("Failed to create drafts directory: {}", e))?;
+    }
+
+    let safe_filename = project_path
+        .replace("/", "_")
+        .replace("\\", "_")
+        .replace(":", "_")
+        + ".txt";
+
+    let draft_path = drafts_dir.join(safe_filename);
+    fs::write(draft_path, content).map_err(|e| format!("Failed to write prompt draft: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn load_prompt_draft(project_path: String) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let drafts_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("drafts");
+
+    let safe_filename = project_path
+        .replace("/", "_")
+        .replace("\\", "_")
+        .replace(":", "_")
+        + ".txt";
+
+    let draft_path = drafts_dir.join(safe_filename);
+    if draft_path.exists() {
+        fs::read_to_string(draft_path).map_err(|e| format!("Failed to read prompt draft: {}", e))
+    } else {
+        Ok(String::new())
+    }
+}
+
+#[tauri::command]
 fn read_thread_log(filepath: String) -> Result<String, String> {
     use std::fs;
     fs::read_to_string(filepath).map_err(|e| format!("Failed to read thread log: {}", e))
@@ -1363,6 +1414,8 @@ fn main() {
             get_project_threads,
             copy_tmux_selection,
             open_path,
+            save_prompt_draft,
+            load_prompt_draft,
             read_thread_log,
             file_exists,
             patch_thread_log_with_output
