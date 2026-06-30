@@ -3,6 +3,10 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [2026-06-30] Detailed Timeline Step Information & Clickable Paths
+* **Bold Tool Summaries & Clickable Target Paths:** Enhanced custom TUI step logs by bolding tool action summaries and appending secondary-colored, clickable relative file/directory links where applicable (e.g. for file edits, searches, directory listings). Clicking a path triggers Tauri to open the file locally.
+* **`window.openPath` Global Expose:** Exposed a global path-opening function to the browser window context, connecting timeline path element click listeners directly to the Tauri backend `open_path` command.
+
 ### [2026-06-30] New Thread Creation Detection & Prompt Autosaving
 * **Background Threads Polling:** Added a 1000ms background polling mechanism that queries thread lists and dynamically refreshes the sidebar tree.
 * **Auto-Select New Threads:** If a user clicks "+ New Thread" and submits a prompt, the system waits for the thread directory to be initialized on disk, automatically selects/highlights the new thread, and triggers instant preview timeline rendering.

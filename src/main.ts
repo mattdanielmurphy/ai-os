@@ -207,6 +207,10 @@ const handleLink = (e: MouseEvent, uri: string) => {
     }
 };
 
+(window as any).openPath = (path: string) => {
+    invoke('open_path', { path }).catch(err => console.error("Failed to open path:", err));
+};
+
 class LocalPathLinkProvider implements ILinkProvider {
     constructor(private term: Terminal, private handler: (e: MouseEvent, uri: string) => void) {}
     provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void): void {
@@ -399,6 +403,7 @@ interface ToolCallItem {
     name: string;
     actionSummary: string;
     icon: string;
+    targetPath?: string;
 }
 
 interface RenderBlock {
@@ -454,7 +459,15 @@ const buildTimelineHtml = (steps: Step[]): string => {
                     else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
                     else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
                     
-                    currentToolCalls.push({ name: call.name, actionSummary, icon });
+                    let targetPath = '';
+                    if (call.args) {
+                        if (typeof call.args.TargetFile === 'string') targetPath = call.args.TargetFile;
+                        else if (typeof call.args.AbsolutePath === 'string') targetPath = call.args.AbsolutePath;
+                        else if (typeof call.args.DirectoryPath === 'string') targetPath = call.args.DirectoryPath;
+                        else if (typeof call.args.SearchPath === 'string') targetPath = call.args.SearchPath;
+                    }
+                    
+                    currentToolCalls.push({ name: call.name, actionSummary, icon, targetPath: targetPath || undefined });
                 });
             }
             
@@ -467,14 +480,24 @@ const buildTimelineHtml = (steps: Step[]): string => {
     flushToolCalls();
 
     let html = '';
-    const renderToolCallHtml = (call: ToolCallItem) => `
-        <div class="w-full flex justify-start mb-2 select-none">
-            <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                <span>${call.icon}</span>
-                <span class="font-semibold text-gray-700 dark:text-gray-300">${call.actionSummary}</span>
+    const renderToolCallHtml = (call: ToolCallItem) => {
+        let pathHtml = '';
+        if (call.targetPath) {
+            let displayPath = call.targetPath;
+            if (activeProject && displayPath.startsWith(activeProject)) {
+                displayPath = displayPath.substring(activeProject.length).replace(/^\//, '');
+            }
+            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${call.targetPath}">${displayPath}</a>`;
+        }
+        return `
+            <div class="w-full flex justify-start mb-2 select-none">
+                <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                    <span>${call.icon}</span>
+                    <span class="font-bold text-gray-800 dark:text-gray-200">${call.actionSummary}</span>${pathHtml}
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    };
 
     blocks.forEach((block) => {
         if (block.type === 'user_input' && block.content) {
