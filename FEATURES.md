@@ -4,6 +4,9 @@
 
 
 ### [2026-06-30] Inline Project Threads & Simplified Sidebar Layout
+* **Automatic Startup Thread Recall & Selection:** Fixed a bug where the project threads list displayed "Loading threads..." forever on startup due to a redundant `renderProjects` call overwriting the DOM. Added support for automatic thread recall: on app startup, the system automatically resolves the most recently active project and clicks/selects its most recent thread to trigger instant preview rendering and session resumption.
+* **Collapsed Agentic Timeline Steps:** Implemented timeline step-collapsing in the output preview. Contiguous agentic steps (tool call executions) are grouped together, and if a group contains more than 2 steps, the older steps are wrapped in a collapsed-by-default `<details>` drop-down, keeping the workspace display clean while showing the latest 2 active steps.
+
 * **High Contrast Light Mode Support:** Fixed light-mode illegibility issues in the custom session log timeline. Converted the markdown preview pane to use responsive `.prose dark:prose-invert` classes and added high-contrast inline code snippet (`code`) and block (`pre`) CSS overrides that dynamically adjust colors based on light or dark modes.
 * **Unified Chat Timeline view:** Replaced generic Assistant step blocks and repetitive robot emoji headers with a beautiful chat-bubble timeline format. Left-aligns agent steps/prose, right-aligns user prompts, and limits text-width to a highly-readable `65ch` max-width.
 * **PTY Terminal Sizing & Resize Fix:** Eliminated the "all-black terminal" display glitch during layout transitions by firing PTY resizing at multiple key intervals during the transition animation.

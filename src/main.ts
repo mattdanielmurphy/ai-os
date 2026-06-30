@@ -364,6 +364,136 @@ interface Step {
     }>;
 }
 
+interface ToolCallItem {
+    name: string;
+    actionSummary: string;
+    icon: string;
+}
+
+interface RenderBlock {
+    type: 'user_input' | 'planner_response' | 'tool_calls';
+    content?: string;
+    calls?: ToolCallItem[];
+}
+
+const buildTimelineHtml = (steps: Step[]): string => {
+    const blocks: RenderBlock[] = [];
+    let currentToolCalls: ToolCallItem[] = [];
+
+    const flushToolCalls = () => {
+        if (currentToolCalls.length > 0) {
+            blocks.push({ type: 'tool_calls', calls: [...currentToolCalls] });
+            currentToolCalls = [];
+        }
+    };
+
+    steps.forEach((step) => {
+        if (step.type === 'USER_INPUT' && step.content) {
+            flushToolCalls();
+            let prompt = step.content;
+            const startTag = '<USER_REQUEST>';
+            const endTag = '</USER_REQUEST>';
+            const startIdx = prompt.indexOf(startTag);
+            const endIdx = prompt.indexOf(endTag);
+            if (startIdx !== -1 && endIdx !== -1) {
+                prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+            }
+            blocks.push({ type: 'user_input', content: prompt });
+        } else {
+            if (step.tool_calls && step.tool_calls.length > 0) {
+                step.tool_calls.forEach(call => {
+                    let actionSummary = '';
+                    if (call.args && typeof call.args.toolSummary === 'string') {
+                        actionSummary = call.args.toolSummary;
+                    } else if (call.args && typeof call.args.toolAction === 'string') {
+                        actionSummary = call.args.toolAction;
+                    }
+                    
+                    if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
+                        actionSummary = actionSummary.slice(1, -1);
+                    }
+                    
+                    if (!actionSummary) {
+                        actionSummary = `Running tool ${call.name}`;
+                    }
+                    
+                    let icon = '🛠️';
+                    if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍';
+                    else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝';
+                    else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
+                    else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
+                    
+                    currentToolCalls.push({ name: call.name, actionSummary, icon });
+                });
+            }
+            
+            if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
+                flushToolCalls();
+                blocks.push({ type: 'planner_response', content: step.content });
+            }
+        }
+    });
+    flushToolCalls();
+
+    let html = '';
+    const renderToolCallHtml = (call: ToolCallItem) => `
+        <div class="w-full flex justify-start mb-2 select-none">
+            <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                <span>${call.icon}</span>
+                <span class="font-semibold text-gray-700 dark:text-gray-300">${call.actionSummary}</span>
+            </div>
+        </div>
+    `;
+
+    blocks.forEach((block) => {
+        if (block.type === 'user_input' && block.content) {
+            html += `
+            <div class="w-full flex justify-end mb-4 select-text">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-xs font-sans whitespace-pre-wrap shadow-sm">
+                    ${block.content}
+                </div>
+            </div>
+            `;
+        } else if (block.type === 'planner_response' && block.content) {
+            html += `
+            <div class="w-full flex justify-start mb-4 select-text">
+                <div class="max-w-[65ch] w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
+                    ${marked.parse(block.content)}
+                </div>
+            </div>
+            `;
+        } else if (block.type === 'tool_calls' && block.calls) {
+            const calls = block.calls;
+            if (calls.length <= 2) {
+                calls.forEach(call => {
+                    html += renderToolCallHtml(call);
+                });
+            } else {
+                const collapsedCalls = calls.slice(0, -2);
+                const visibleCalls = calls.slice(-2);
+                
+                html += `
+                <details class="group mb-2 max-w-[65ch]">
+                    <summary class="flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-blue-500/70 hover:text-blue-500 dark:text-blue-400/70 dark:hover:text-blue-400 select-none pb-1.5 pl-3 border-l-2 border-blue-500/20 dark:border-blue-500/20">
+                        <span class="font-semibold text-gray-700 dark:text-gray-300">Show older steps (${collapsedCalls.length})</span>
+                        <span class="text-[8px] text-gray-700 dark:text-gray-300 transition-transform group-open:rotate-90">▶</span>
+                    </summary>
+                    <div class="mt-1">
+                        ${collapsedCalls.map(renderToolCallHtml).join('')}
+                    </div>
+                </details>
+                `;
+                
+                visibleCalls.forEach(call => {
+                    html += renderToolCallHtml(call);
+                });
+            }
+        }
+    });
+
+    return html;
+};
+
 let lastRenderedThreadLog = '';
 let lastRenderedThreadId = '';
 
@@ -418,66 +548,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     }
     
     // 2. Timeline Steps
-    steps.forEach((step) => {
-        if (step.type === 'USER_INPUT' && step.content) {
-            let prompt = step.content;
-            const startTag = '<USER_REQUEST>';
-            const endTag = '</USER_REQUEST>';
-            const startIdx = prompt.indexOf(startTag);
-            const endIdx = prompt.indexOf(endTag);
-            if (startIdx !== -1 && endIdx !== -1) {
-                prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
-            }
-            
-            html += `
-            <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-xs font-sans whitespace-pre-wrap shadow-sm">
-                    ${prompt}
-                </div>
-            </div>
-            `;
-        } else if (step.tool_calls && step.tool_calls.length > 0) {
-            step.tool_calls.forEach(call => {
-                let actionSummary = '';
-                if (call.args && typeof call.args.toolSummary === 'string') {
-                    actionSummary = call.args.toolSummary;
-                } else if (call.args && typeof call.args.toolAction === 'string') {
-                    actionSummary = call.args.toolAction;
-                }
-                
-                if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
-                    actionSummary = actionSummary.slice(1, -1);
-                }
-                
-                if (!actionSummary) {
-                    actionSummary = `Running tool ${call.name}`;
-                }
-                
-                let icon = '🛠️';
-                if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍';
-                else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝';
-                else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
-                else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
-                
-                html += `
-                <div class="w-full flex justify-start mb-2 select-none">
-                    <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                        <span>${icon}</span>
-                        <span class="font-semibold text-gray-700 dark:text-gray-300">${actionSummary}</span>
-                    </div>
-                </div>
-                `;
-            });
-        } else if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
-            html += `
-            <div class="w-full flex justify-start mb-4 select-text">
-                <div class="max-w-[65ch] w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
-                    ${marked.parse(step.content)}
-                </div>
-            </div>
-            `;
-        }
-    });
+    html += buildTimelineHtml(steps);
     
     // 3. Thinking Indicator
     let isThinking = false;
@@ -571,66 +642,7 @@ const renderHistoricalThreadLog = (jsonlContent: string, title: string, dateStr:
         `;
     }
     
-    steps.forEach((step) => {
-        if (step.type === 'USER_INPUT' && step.content) {
-            let prompt = step.content;
-            const startTag = '<USER_REQUEST>';
-            const endTag = '</USER_REQUEST>';
-            const startIdx = prompt.indexOf(startTag);
-            const endIdx = prompt.indexOf(endTag);
-            if (startIdx !== -1 && endIdx !== -1) {
-                prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
-            }
-            
-            html += `
-            <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-xs font-sans whitespace-pre-wrap shadow-sm">
-                    ${prompt}
-                </div>
-            </div>
-            `;
-        } else if (step.tool_calls && step.tool_calls.length > 0) {
-            step.tool_calls.forEach(call => {
-                let actionSummary = '';
-                if (call.args && typeof call.args.toolSummary === 'string') {
-                    actionSummary = call.args.toolSummary;
-                } else if (call.args && typeof call.args.toolAction === 'string') {
-                    actionSummary = call.args.toolAction;
-                }
-                
-                if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
-                    actionSummary = actionSummary.slice(1, -1);
-                }
-                
-                if (!actionSummary) {
-                    actionSummary = `Running tool ${call.name}`;
-                }
-                
-                let icon = '🛠️';
-                if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍';
-                else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝';
-                else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
-                else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
-                
-                html += `
-                <div class="w-full flex justify-start mb-2 select-none">
-                    <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                        <span>${icon}</span>
-                        <span class="font-semibold text-gray-700 dark:text-gray-300">${actionSummary}</span>
-                    </div>
-                </div>
-                `;
-            });
-        } else if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
-            html += `
-            <div class="w-full flex justify-start mb-4 select-text">
-                <div class="max-w-[65ch] w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
-                    ${marked.parse(step.content)}
-                </div>
-            </div>
-            `;
-        }
-    });
+    html += buildTimelineHtml(steps);
     
     markdownPreviewPane.innerHTML = html;
 };
@@ -1021,7 +1033,7 @@ const renderProjects = () => {
 };
 
 // Switch active project workspace
-const switchToProject = async (path: string) => {
+const switchToProject = async (path: string, autoSelectFirstThread: boolean = false) => {
     // Save draft and engine setting of the current project before switching
     const currentProj = projects.find(p => p.path === activeProject);
     if (currentProj) {
@@ -1092,7 +1104,7 @@ const switchToProject = async (path: string) => {
     // Restore or initialize PTY geometry sync
     resizePty();
     renderProjects();
-    renderProjectThreads(path);
+    renderProjectThreads(path, autoSelectFirstThread);
     adjustHeight();
 };
 
@@ -1192,7 +1204,7 @@ function getCompactifiedContext(jsonlContent: string): string {
     return slicedSteps.join('\n') + '\n';
 }
 
-const renderProjectThreads = async (projectPath: string) => {
+const renderProjectThreads = async (projectPath: string, autoSelectFirstThread: boolean = false) => {
     const listEl = document.getElementById('project-threads-list');
     if (!listEl) return;
     listEl.innerHTML = '';
@@ -1265,6 +1277,13 @@ const renderProjectThreads = async (projectPath: string) => {
 
             listEl.appendChild(el);
         });
+
+        if (autoSelectFirstThread) {
+            const firstChild = listEl.querySelector(':scope > div') as HTMLElement;
+            if (firstChild) {
+                firstChild.click();
+            }
+        }
     } catch (err) {
         console.error('Failed to load project threads:', err);
         listEl.innerHTML = `<div class="text-red-500 text-[10px] p-2">Error: ${err}</div>`;
@@ -1936,12 +1955,21 @@ document.addEventListener('click', (e) => {
                 saveProjects();
                 activeProject = cleanPath;
             }
+        } else {
+            // Sort by recency to get the most recent active project on startup
+            const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive);
+            if (sorted.length > 0) {
+                activeProject = sorted[0].path;
+            }
         }
     } catch (e) {
         console.error('Failed to get initial project:', e);
+        const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive);
+        if (sorted.length > 0) {
+            activeProject = sorted[0].path;
+        }
     }
-    await switchToProject(activeProject);
-    renderProjects();
+    await switchToProject(activeProject, true);
 })();
 
 // Poll engine running state
