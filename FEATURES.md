@@ -3,6 +3,9 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [2026-06-29] Theme and Styling Bug Fixes
+* **Tailwind Configuration Custom Theme Extension:** Defined a custom `gray-850` color (`#18202f`) within `tailwind.config.js` to fix a styling glitch where bars and buttons using `dark:bg-gray-850` fell back to a light or transparent background on dark mode, restoring the dark-mode theme cohesion across the header, modal, and context panel components.
+
 ### [2026-06-28] Bug Fixes: Engine Run Detection and UI Context Controls
 * **Fresh Agent Client Spawning:** Enhanced backend `ensure_engine_pty` and added a new `spawn_fresh_engine` Tauri command to verify if target engine processes (especially `agy`) are actively running inside tmux PTY sessions. If a client is dead or not found, it automatically terminates the stale tmux session and spawns a fresh, clean interactive instance. Updated the frontend prompt handler to dynamically detect missing engine clients and invoke `spawn_fresh_engine` before transmitting prompt inputs.
 * **Terminal Layout & UTF-8 Corruption Fix:** Resolved visual artifacts in embedded tmux sessions during vertical scrolling by forcing tmux UTF-8 mode via the `-u` flag, enforcing strict `LANG=en_US.UTF-8` and `LC_ALL=en_US.UTF-8` environment locales, and implementing a trailing byte accumulator in the Rust backend PTY reader to correctly handle multi-byte UTF-8 sequences split across chunks.
