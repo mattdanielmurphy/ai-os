@@ -1,21 +1,25 @@
-# UI Refactoring: Unified HTML TUI Log View & Expandable Bottom Terminal
+# UI Improvements: Light Mode, Resizing & Slash Command Heights
 
-We have successfully migrated the layout of the AI OS interface from the side-by-side two-pane view into a vertical unified version. 
+We have successfully addressed the issues with light mode legibility, terminal resizing, slash command display heights, and sidebar presentation.
 
-### Key Deliverables Implemented
+## Deliverables Implemented
 
-1. **Unified Custom HTML Log Parser & Viewer**:
-   - Polling checks of the active thread log file (`transcript.jsonl`) run every 500ms.
-   - We parse user requests, active tool call activities (e.g. searching the web, directory analysis, editing files), and assistant responses dynamically.
-   - Keeps track of all files edited during the thread conversation and displays them as a horizontal list of clickable file badges at the top of the timeline.
-   - Shows a glowing, pulsating status animation (`Agent is thinking & working...`) when the agent is actively executing background tasks.
+### 1. Light Mode Contrast & Styling Fixes
+- **Legible Headings & Strong Text:** Removed global prose overrides that forced all markdown headings and strong text to white, allowing proper contrast in light mode.
+- **Readable Code Snippets:** Added custom CSS styling rules for inline `code` and block `pre` elements that adapt automatically to light and dark theme classes.
+- **Unified Chat Timeline Layout:** Refactored active session logs and historical thread previews to lay out user prompts as right-aligned gray bubbles and agent actions/responses as left-aligned blocks, with a maximum text width of `65ch` and no redundant headers.
 
-2. **Expandable Bottom Terminal Container**:
-   - Replaced side-by-side resizing pane splitters with a toggleable vertical split layout.
-   - The primary `agy` TUI terminal container resides at the bottom, initialized in a compact collapsed view (64px height) to display the interactive prompt and autocompletion list.
-   - Implemented an expand/collapse toggle bar (`#tui-toggle-bar`) with a button (`#toggle-tui-btn`).
-   - Clicking **Expand Terminal** collapses the HTML log view and resizes the PTY terminal container to take up almost 100% of the screen height, allowing full inspection of artifacts and terminal history. Clicking **Collapse Terminal** returns it to the compact 64px view.
+### 2. Terminal Sizing & Resize Fixes
+- **Display Error Resolved:** Fixed the issue where expanding the terminal resulted in a blank/black window. By debouncing PTY resize calls at multiple key steps during the height animation, xterm refits perfectly.
+- **Three-State Terminal Height:**
+  - **Collapsed (`64px`):** Kept for compact overview.
+  - **Intermediate (`320px`):** Dynamically expands when typing a slash command (starting with `/`) in the prompt input textarea or terminal, showing the TUI autocomplete list without taking up the entire screen.
+  - **Expanded (`full-screen`):** Standard full view.
 
-3. **Compilation & Packaging**:
-   - Cleaned up legacy drag splitter handles and mini-term elements safely without breaking existing Javascript references.
-   - Verified clean TS compilation and asset bundling via `pnpm build`.
+### 3. Sidebar Optimizations
+- **Light Mode Colors:** Tweaked project list tab backgrounds, borders, and hover states to look clean and premium in light mode.
+- **Compact & Organized Threads:**
+  - UUID is truncated to an 8-character hex hash (`#a8f8211b`) to reduce noise.
+  - Date contrasts are heightened for perfect readability.
+  - Snippets are clamped to a single line to keep the sidebar compact.
+  - Threads container height limit increased to **2x** the previous height (`max-h-96`).

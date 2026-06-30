@@ -48,7 +48,9 @@ body {
   height: 100%;
 }
 
-#markdown-preview-pane {}
+#markdown-preview-pane {
+  color: black;
+}
 
 /* Target any element with overflow control */
 * {
@@ -104,4 +106,31 @@ body {
     border: 2px solid transparent !important;
     background-clip: padding-box !important;
   }
+}
+
+/* Custom Markdown Prose Styling Overrides */
+.prose code {
+  color: #0969da !important;
+  background-color: rgba(175, 184, 193, 0.2) !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 6px !important;
+  font-size: 85% !important;
+  font-family: ui-monospace, SFMono-Regular, SF Pro Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+
+.dark .prose code {
+  color: #58a6ff !important;
+  background-color: rgba(110, 118, 129, 0.4) !important;
+}
+
+.prose pre {
+  background-color: #f6f8fa !important;
+  border: 1px solid #d0d7de !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+}
+
+.dark .prose pre {
+  background-color: #161b22 !important;
+  border: 1px solid #30363d !important;
 }

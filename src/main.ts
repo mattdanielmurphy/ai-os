@@ -29,6 +29,7 @@ interface Project {
 // ----------------------------------------------------
 let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
 let isTerminalMode: boolean = false;
+let isTuiExpanded: boolean = false;
 let activeThreadId: string | null = null;
 let activeThreadContext: string | null = null;
 const threadFilepaths = new Map<string, string>();
@@ -210,6 +211,22 @@ term.onData((data) => {
     invoke('write_to_pty', { data, projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
         console.error('Failed to write key to Engine PTY:', err);
     });
+
+    // Auto-adjust terminal height when user starts typing a slash command
+    setTimeout(() => {
+        const cursorLine = term.buffer.active.getLine(term.buffer.active.cursorY + term.buffer.active.baseY);
+        const lineText = cursorLine ? cursorLine.translateToString().trim() : '';
+        const tuiContainer = document.getElementById('terminal-container');
+        if (tuiContainer && !isTuiExpanded) {
+            if (lineText.startsWith('/')) {
+                tuiContainer.style.height = '320px';
+                debouncedResizePty();
+            } else if (tuiContainer.style.height === '320px') {
+                tuiContainer.style.height = '64px';
+                debouncedResizePty();
+            }
+        }
+    }, 20);
 });
 
 term.attachCustomKeyEventHandler((e) => {
@@ -426,7 +443,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     if (editedFilesSet.size > 0) {
         const files = Array.from(editedFilesSet);
         html += `
-        <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none">
+        <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
             <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
             ${files.map(file => {
                 const parts = file.split('/');
@@ -450,12 +467,8 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             }
             
             html += `
-            <div class="mb-5 border-b border-gray-150 dark:border-gray-850 pb-3">
-                <div class="flex items-center gap-1.5 mb-1.5 text-gray-800 dark:text-gray-200 font-semibold text-[11px] select-none">
-                    <span class="w-4.5 h-4.5 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center justify-center font-bold text-[9px]">U</span>
-                    User Request
-                </div>
-                <div class="p-2.5 bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-900 rounded text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans">
+            <div class="w-full flex justify-end mb-4 select-text">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-xs font-sans whitespace-pre-wrap shadow-sm">
                     ${prompt}
                 </div>
             </div>
@@ -484,20 +497,18 @@ const renderCustomTuiLog = (jsonlContent: string) => {
                 else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
                 
                 html += `
-                <div class="mb-2 pl-3 border-l border-blue-500/40 dark:border-blue-500/50 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-mono select-none">
-                    <span>${icon}</span>
-                    <span class="font-semibold text-gray-700 dark:text-gray-300">${actionSummary}</span>
+                <div class="w-full flex justify-start mb-2 select-none">
+                    <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                        <span>${icon}</span>
+                        <span class="font-semibold text-gray-700 dark:text-gray-300">${actionSummary}</span>
+                    </div>
                 </div>
                 `;
             });
         } else if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
             html += `
-            <div class="mb-6">
-                <div class="flex items-center gap-1.5 mb-2.5 text-blue-600 dark:text-blue-400 font-semibold text-[11px] select-none">
-                    <span class="w-4.5 h-4.5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[9px]">A</span>
-                    Assistant Response
-                </div>
-                <div class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-300 prose-headings:text-gray-900 dark:prose-headings:text-white prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-850 dark:prose-pre:border-gray-900">
+            <div class="w-full flex justify-start mb-4 select-text">
+                <div class="max-w-[65ch] w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
                     ${marked.parse(step.content)}
                 </div>
             </div>
@@ -523,12 +534,14 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     
     if (isThinking) {
         html += `
-        <div class="mt-3 flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
-            <div class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        <div class="w-full flex justify-start mb-4">
+            <div class="max-w-[65ch] flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
+                <div class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </div>
+                <span class="text-[10px] font-semibold text-blue-500 dark:text-blue-400 font-mono tracking-wider">Agent is thinking & working...</span>
             </div>
-            <span class="text-[10px] font-semibold text-blue-500 dark:text-blue-400 font-mono tracking-wider">Agent is thinking & working...</span>
         </div>
         `;
     }
@@ -541,6 +554,122 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             markdownPreviewPane.scrollTop = markdownPreviewPane.scrollHeight;
         }, 30);
     }
+};
+
+const renderHistoricalThreadLog = (jsonlContent: string, title: string, dateStr: string) => {
+    if (!markdownPreviewPane) return;
+    
+    const lines = jsonlContent.trim().split('\n');
+    const steps: Step[] = [];
+    const editedFilesSet = new Set<string>();
+    
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+            const step: Step = JSON.parse(line);
+            steps.push(step);
+            
+            if (step.tool_calls) {
+                for (const call of step.tool_calls) {
+                    if (call.name === 'replace_file_content' || call.name === 'multi_replace_file_content' || call.name === 'write_to_file') {
+                        if (call.args && typeof call.args.TargetFile === 'string') {
+                            editedFilesSet.add(call.args.TargetFile);
+                        }
+                    }
+                }
+            }
+        } catch {
+            // Ignore
+        }
+    }
+    
+    let html = `
+        <div class="border-b border-gray-250 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between select-none">
+            <div>
+                <span class="text-[10px] font-mono text-blue-500 uppercase tracking-widest">Historical Thread Context</span>
+                <h2 class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${title}</h2>
+            </div>
+            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${dateStr}</span>
+        </div>
+    `;
+    
+    // Edited Files
+    if (editedFilesSet.size > 0) {
+        const files = Array.from(editedFilesSet);
+        html += `
+        <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
+            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
+            ${files.map(file => {
+                const parts = file.split('/');
+                const name = parts[parts.length - 1];
+                return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${file}">${name}</span>`;
+            }).join('')}
+        </div>
+        `;
+    }
+    
+    steps.forEach((step) => {
+        if (step.type === 'USER_INPUT' && step.content) {
+            let prompt = step.content;
+            const startTag = '<USER_REQUEST>';
+            const endTag = '</USER_REQUEST>';
+            const startIdx = prompt.indexOf(startTag);
+            const endIdx = prompt.indexOf(endTag);
+            if (startIdx !== -1 && endIdx !== -1) {
+                prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+            }
+            
+            html += `
+            <div class="w-full flex justify-end mb-4 select-text">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-xs font-sans whitespace-pre-wrap shadow-sm">
+                    ${prompt}
+                </div>
+            </div>
+            `;
+        } else if (step.tool_calls && step.tool_calls.length > 0) {
+            step.tool_calls.forEach(call => {
+                let actionSummary = '';
+                if (call.args && typeof call.args.toolSummary === 'string') {
+                    actionSummary = call.args.toolSummary;
+                } else if (call.args && typeof call.args.toolAction === 'string') {
+                    actionSummary = call.args.toolAction;
+                }
+                
+                if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
+                    actionSummary = actionSummary.slice(1, -1);
+                }
+                
+                if (!actionSummary) {
+                    actionSummary = `Running tool ${call.name}`;
+                }
+                
+                let icon = '🛠️';
+                if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍';
+                else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝';
+                else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
+                else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
+                
+                html += `
+                <div class="w-full flex justify-start mb-2 select-none">
+                    <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                        <span>${icon}</span>
+                        <span class="font-semibold text-gray-700 dark:text-gray-300">${actionSummary}</span>
+                    </div>
+                </div>
+                `;
+            });
+        } else if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
+            html += `
+            <div class="w-full flex justify-start mb-4 select-text">
+                <div class="max-w-[65ch] w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
+                    ${marked.parse(step.content)}
+                </div>
+            </div>
+            `;
+        }
+    });
+    
+    markdownPreviewPane.innerHTML = html;
 };
 
 // Poll the active thread's log file
@@ -611,7 +740,6 @@ const tuiContainer = document.getElementById('terminal-container');
 const previewWrapper = document.getElementById('preview-wrapper');
 
 if (toggleTuiBtn && tuiContainer && previewWrapper) {
-    let isTuiExpanded = false;
     toggleTuiBtn.addEventListener('click', () => {
         isTuiExpanded = !isTuiExpanded;
         if (isTuiExpanded) {
@@ -631,9 +759,9 @@ if (toggleTuiBtn && tuiContainer && previewWrapper) {
                 <svg class="w-2.5 h-2.5 transform transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
             `;
         }
-        setTimeout(() => {
-            resizePty();
-        }, 50);
+        setTimeout(() => { resizePty(); }, 50);
+        setTimeout(() => { resizePty(); }, 150);
+        setTimeout(() => { resizePty(); }, 320);
     });
 }
 
@@ -812,15 +940,15 @@ const renderProjects = () => {
         
         item.className = `flex flex-col p-1 rounded transition-all border ${
             isActive 
-                ? 'bg-gray-800/40 border-gray-700/80 shadow-sm' 
+                ? 'bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/80 shadow-sm' 
                 : 'bg-transparent border-transparent'
         }`;
         
         const header = document.createElement('div');
         header.className = `flex items-center justify-between p-1.5 rounded cursor-pointer transition-all ${
             isActive 
-                ? 'text-white font-medium bg-gray-800 border border-gray-700' 
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+                ? 'text-gray-900 dark:text-white font-semibold bg-gray-200/70 dark:bg-gray-800 border border-gray-300 dark:border-gray-700' 
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-250 hover:bg-gray-200/50 dark:hover:bg-gray-900/50'
         }`;
         
         header.innerHTML = `
@@ -829,8 +957,8 @@ const renderProjects = () => {
                 <span class="truncate text-xs">${project.name}</span>
             </div>
             <div class="flex items-center action-btns opacity-0 transition-opacity">
-                <button class="open-btn text-[10px] text-gray-500 hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
-                <button class="delete-btn text-[10px] text-gray-500 hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
+                <button class="open-btn text-[10px] text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
+                <button class="delete-btn text-[10px] text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
             </div>
         `;
         
@@ -885,18 +1013,18 @@ const renderProjects = () => {
 
         if (isActive) {
             const threadsContainer = document.createElement('div');
-            threadsContainer.className = 'mt-1.5 ml-2.5 pl-2.5 border-l border-gray-700/80 flex flex-col space-y-1.5';
+            threadsContainer.className = 'mt-1.5 ml-2.5 pl-2.5 border-l border-gray-300 dark:border-gray-700/80 flex flex-col space-y-1.5';
             
             const threadsHeader = document.createElement('div');
             threadsHeader.className = 'flex items-center justify-between pr-1.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500';
             threadsHeader.innerHTML = `
                 <span>Threads</span>
-                <button class="new-thread-btn text-[9px] font-bold text-gray-400 hover:text-white px-1 py-0.5 rounded hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
+                <button class="new-thread-btn text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
             `;
             
             const threadsList = document.createElement('div');
             threadsList.id = 'project-threads-list';
-            threadsList.className = 'max-h-48 overflow-y-auto space-y-1.5 pr-1';
+            threadsList.className = 'max-h-96 overflow-y-auto space-y-1.5 pr-1';
             threadsList.innerHTML = '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>';
             
             threadsContainer.appendChild(threadsHeader);
@@ -912,7 +1040,7 @@ const renderProjects = () => {
                 updatePlaceholder(true);
 
                 threadsList.querySelectorAll(':scope > div').forEach((child) => {
-                    child.className = 'p-1.5 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
+                    child.className = 'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
                 });
 
                 const previewPane = document.getElementById('markdown-preview-pane');
@@ -1044,44 +1172,6 @@ const selectAgyEngine = async () => {
     }
 };
 
-function formatTranscriptToMarkdown(jsonlContent: string): string {
-    const lines = jsonlContent.trim().split('\n');
-    let md = '';
-    let stepCount = 0;
-    
-    for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-            const step = JSON.parse(line);
-            const source = step.source;
-            const type = step.type;
-            const content = step.content;
-            
-            if (type === 'USER_INPUT' && content) {
-                stepCount++;
-                let prompt = content;
-                const startTag = '<USER_REQUEST>';
-                const endTag = '</USER_REQUEST>';
-                const startIdx = prompt.indexOf(startTag);
-                const endIdx = prompt.indexOf(endTag);
-                if (startIdx !== -1 && endIdx !== -1) {
-                    prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
-                }
-                
-                md += `### 👤 User Step ${stepCount}\n${prompt}\n\n`;
-            } else if (source === 'MODEL' && type === 'PLANNER_RESPONSE' && content) {
-                md += `### 🤖 Assistant Response\n${content}\n\n`;
-            }
-        } catch (e) {
-            // Ignore
-        }
-    }
-    
-    if (!md) {
-        return '*No readable conversation steps found in this transcript.*';
-    }
-    return md;
-}
 
 function getCompactifiedContext(jsonlContent: string): string {
     const lines = jsonlContent.trim().split('\n');
@@ -1156,27 +1246,27 @@ const renderProjectThreads = async (projectPath: string) => {
             const el = document.createElement('div');
             const isActive = activeThreadId === thread.id;
             el.className = isActive 
-                ? 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
-                : 'p-1.5 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
+                ? 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
+                : 'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
             
             const dateStr = thread.mtime > 0 
                 ? new Date(thread.mtime * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'Unknown Date';
 
             el.innerHTML = `
-                <div class="flex items-center justify-between text-[9px] font-medium text-gray-500 dark:text-gray-400">
+                <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
                     <span class="truncate pr-1">#${thread.id.substring(0, 8)}</span>
-                    <span class="shrink-0 text-[8px] text-gray-400 dark:text-gray-500 font-mono">${dateStr}</span>
+                    <span class="shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">${dateStr}</span>
                 </div>
-                <div class="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate" title="${thread.title}">${thread.title}</div>
-                <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-2 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
+                <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="${thread.title}">${thread.title}</div>
+                <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
             `;
 
             el.addEventListener('click', async () => {
                 document.querySelectorAll('#project-threads-list > div').forEach((child) => {
-                    child.className = 'p-1.5 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
+                    child.className = 'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
                 });
-                el.className = 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5';
+                el.className = 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5';
 
                 activeThreadId = thread.id;
                 await selectAgyEngine();
@@ -1188,19 +1278,7 @@ const renderProjectThreads = async (projectPath: string) => {
                     updatePlaceholder(true);
 
                     if (previewPane) {
-                        const formattedMd = formatTranscriptToMarkdown(content);
-                        previewPane.innerHTML = `
-                            <div class="border-b border-gray-250 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between select-none">
-                                <div>
-                                    <span class="text-[10px] font-mono text-blue-500 uppercase tracking-widest">Historical Thread Context</span>
-                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${thread.title}</h2>
-                                </div>
-                                <span class="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${dateStr}</span>
-                            </div>
-                            <div class="prose prose-invert prose-sm max-w-none text-gray-700 dark:text-gray-300">
-                                ${marked.parse(formattedMd)}
-                            </div>
-                        `;
+                        renderHistoricalThreadLog(content, thread.title, dateStr);
                     }
                 } catch (err) {
                     if (previewPane) {
@@ -1458,6 +1536,18 @@ textarea?.addEventListener('input', () => {
         adjustHeight();
     } else {
         adjustHeight();
+        
+        // Expand terminal if typing a slash command
+        const tuiContainer = document.getElementById('terminal-container');
+        if (tuiContainer && !isTuiExpanded) {
+            if (textarea.value.trim().startsWith('/')) {
+                tuiContainer.style.height = '320px';
+                debouncedResizePty();
+            } else if (tuiContainer.style.height === '320px') {
+                tuiContainer.style.height = '64px';
+                debouncedResizePty();
+            }
+        }
     }
 });
 const loadCommandHistory = (projectPath: string): string[] => {

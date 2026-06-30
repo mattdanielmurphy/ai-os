@@ -4,6 +4,11 @@
 
 
 ### [2026-06-30] Inline Project Threads & Simplified Sidebar Layout
+* **High Contrast Light Mode Support:** Fixed light-mode illegibility issues in the custom session log timeline. Converted the markdown preview pane to use responsive `.prose dark:prose-invert` classes and added high-contrast inline code snippet (`code`) and block (`pre`) CSS overrides that dynamically adjust colors based on light or dark modes.
+* **Unified Chat Timeline view:** Replaced generic Assistant step blocks and repetitive robot emoji headers with a beautiful chat-bubble timeline format. Left-aligns agent steps/prose, right-aligns user prompts, and limits text-width to a highly-readable `65ch` max-width.
+* **PTY Terminal Sizing & Resize Fix:** Eliminated the "all-black terminal" display glitch during layout transitions by firing PTY resizing at multiple key intervals during the transition animation.
+* **Three-State Terminal Height:** Enabled an intermediate terminal height (`320px`) that auto-activates when typing slash commands (starting with `/`) in either xterm or the prompt textarea. This allows full visibility of CLI slash suggestions without taking up the entire screen.
+* **Compact Sidebar Threads:** Compactified thread lists by shortening UUIDs to 8-character hashes (`#a8f8211b`), clamping thread snippets to a single line, increasing the threads window max-height to `max-h-96` (2x the previous height), and boosting date text contrast.
 * **Unified Projects & Threads Sidebar:** Removed the split sidebar panes and the vertical list splitter, merging project lists and threads into a single elegant tree-like view. Clicking a project now expands its list of threads directly underneath it, slightly indented.
 * **Inline New Thread Creation:** Added a "+" button next to the inline "Threads" header under the active project, allowing users to start a new thread session without cluttering the main layout.
 * **Dynamic Context Resumption:** Resolved a critical bug where thread history context was truncated/lost on subsequent prompts. The prompt interceptor now dynamically reads the latest thread transcript log file before sending each prompt.
