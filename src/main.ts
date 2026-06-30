@@ -356,7 +356,8 @@ setInterval(async () => {
             markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>';
         }
     } catch (e) {
-        // Silently ignore file read errors to avoid console spam
+        // Log details to console for debugging
+        console.error(`[AI-OS Preview Pane] Error checking/reading ${outputPath}:`, e);
     }
 }, 500);
 

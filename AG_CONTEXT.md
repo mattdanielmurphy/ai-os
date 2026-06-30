@@ -17,20 +17,12 @@ All system paths are absolute. The authoritative base is:
 * **Level 2 (Global Harness):** `ai-os` CLI wrapper at `/Users/matthewmurphy/projects/ai-os/bin/ai-os` provides environment anchoring (`$AI_OS_HOME`), home-directory symlink guardrails, and transparent `claude` delegation.
 * **Level 2.5 (Global Home Anchoring):** To prevent `/resume` directory mismatch errors and maintain global access, the core system configuration files and logging directories are symlinked from `~/projects/ai-os/` directly into the user root directory (`~`). All future configuration extensions, scripts, or operational databases must be built to recognize `~` as the active execution anchor, ensuring they do not break when the agent traverses downstream into project subdirectories like `projects/CockBand` or `projects/StudyEngine`.
 
-## 🛑 Mandatory Post-Response Protocol
-At the end of your task execution (when yielding control back to the user), you MUST execute the telemetry check script:
-
-```bash
-python3 /Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py --agent agy  # or --agent claude respectively
-```
-
 DO NOT execute this command during internal tool polling or intermediate steps, as it will cause an infinite loop.
 
 ## Durable Knowledge Map
 * **2026-06-24:** Level 2 global harness established. Absolute path routing enforced across all knowledge files. `packageManager` pinned to `pnpm@11.2.2`. Global `ai-os` binary registered via `pnpm link --global`.
 * **2026-06-24:** "Notes" semantics hardened in CLAUDE.md §3. The word "notes" now exclusively routes to the Obsidian vault at `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`. "Recent notes" trigger added — lists vault contents by recency. Agent work logs and personal notes are explicitly decoupled; never conflated.
-* **2026-06-25:** Cost-tracking protocol installed. Python script at `scripts/get_last_cost.py` computes per-message cost via delta tracking against OpenRouter's credits endpoint (the `activity` endpoint requires a management key). Mandatory post-response protocol added — agent must run the script at the end of every turn and append the output to its response.
-* **2026-06-27:** Centralized telemetry database and smart cost reporter deployed. Tracks sub-model LiteLLM requests, calculates costs using DeepSeek pricing, logs execution turns, and calculates rolling quotas for the premium `agy` interface. Added rules to require agents to run `get_last_cost.py` with appropriate agent flag at the end of every turn.
+* **2026-06-27:** Centralized telemetry database and smart cost reporter deployed. Tracks sub-model LiteLLM requests, calculates costs using DeepSeek pricing, logs execution turns, and calculates rolling quotas for the premium `agy` interface.
 * **2026-06-27:** Resolved infinite polling loop by modifying cost telemetry rules in `GEMINI.md` and `CLAUDE.md` to execute only when yielding control to the user. Implemented `precision_edit.py` for direct, LLM-free file replacements/insertions and `context_handoff.py` for automated agent state handoff and subtask spawning.
 * **2026-06-27:** Upgraded context handoff system to "Indexed Memory" architecture, introducing `.agent-logs/details/step_<timestamp_or_id>.md` references to keep the handoff context window small while preserving details.
 * **2026-06-27:** Configured `ai-os` wrapper to default to GUI mode with auto-import/switch of working directory (`AIOS_INITIAL_PROJECT`), added non-GUI terminal overrides (`--cli`, `--terminal`, `--no-gui`), and updated backend/frontend integration to parse the initial path.

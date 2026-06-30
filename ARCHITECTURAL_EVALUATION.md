@@ -5,7 +5,9 @@
 **[FULLY IMPLEMENTED]**
 *   **Orchestration & Bootloading**: `bin/ai-os`, `.zshrc`, `.zshrc_aios`, `package.json`. The application correctly sets up a shell-wrapping bootloader that intercepts destructive commands (e.g., `rm`) and injects the `qr` (quiet run) wrapper. 
 *   **Tauri GUI & PTY Layer**: `src/main.ts`, `src-tauri/src/main.rs`, `index.html`. Functional React/TS frontend utilizing `xterm.js` to render multiplexed background processes via Rust bindings.
-*   **Cost & Quota Telemetry Engine**: `scripts/get_last_cost.py`, `scripts/telemetry_db.py`. Excellent implementation of complex sub-model cost math and undocumented Google gRPC token refresh flows.
+*   **Cost & Quota Telemetry Engine**: 
+*   `scripts/get_last_cost.py`. Was implemented but has been disabled because it wasn't working for Antigravity CLI
+*    `scripts/telemetry_db.py`. Excellent implementation of complex sub-model cost math and undocumented Google gRPC token refresh flows.
 *   **Triage Editing System**: `scripts/precision_edit.py`, `scripts/mechanical_editor.py`. Completely handles surgical text mutations and LLM-driven `patch` applications with JSON fallbacks.
 *   **Git Memory Pipeline**: `scripts/memory_search.sh`, `scripts/memory_diff.sh`. Functional multi-layer indexing implementation for safe history retrieval.
 *   **Dynamic Rules Injection**: `scripts/append_system_rule.py`. Successfully manages context routing to the active `CLAUDE.md` and global rulesets.
@@ -45,7 +47,7 @@
     The codebase is severely coupled to a single environment. Hardcoded paths to `/Users/matthewmurphy/...` are scattered maliciously throughout the workspace, destroying portability:
     *   `bin/ai-os`: `export AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"`
     *   `scripts/context_handoff.py`: `log_dir = "/Users/matthewmurphy/projects/ai-os/.agent-logs"`
-    *   `src/main.ts`: Const injection of `obsidian` Vault paths and the `get_last_cost.py` execution path.
+    *   `src/main.ts`: Const injection of `obsidian` Vault paths.
 *   **Regex Structural Parsers**:
     The fallback logic in `mechanical_editor.py` attempts to sanitize JSON out of Markdown code blocks using primitive regex `replace`. The parsing matrix here is highly susceptible to formatting drift and will fail on unexpected markdown headers or malformed nested blocks.
 

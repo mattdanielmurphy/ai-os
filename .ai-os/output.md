@@ -1,7 +1,22 @@
-# Dark Mode & Theme fixes
+# Styling Fix: Dark Mode Theme Glitch Resolved
 
-I've updated the theme styling controls to properly apply dark mode style rules and resolved the issue where `/theme` commands were sent to the Antigravity engine and zsh terminal.
+The issue with the light background colors on dark mode has been resolved!
 
-### What Was Fixed
-1. **Root-Level Dark Mode Synchronization**: Tailwind CSS styles prefixed with `dark:` require the `dark` class on the root element to apply when configuring class-based dark mode. I've updated [tailwind.config.js](file:///Users/matthewmurphy/projects/ai-os/tailwind.config.js) to specify `darkMode: 'class'`, and updated [src/main.ts](file:///Users/matthewmurphy/projects/ai-os/src/main.ts) to dynamically apply/remove the `.dark` class to the HTML element.
-2. **Preventing Unsupported `/theme` Commands**: The PTY writing logic previously sent `/theme dark` or `/theme light` commands to the active engine and the mini terminal (zsh). These sessions do not support the `/theme` command. I've restricted these commands to only fire when the active engine is Claude (`claude`).
+## Cause of the Bug
+The app uses classes such as `dark:bg-gray-850`, `dark:bg-gray-850/80`, `dark:border-gray-850`, and `dark:bg-gray-850/50` on several bars and modal components. However, Tailwind CSS does not natively include a `gray-850` color shade. As a result, the browser couldn't map the classes to any color, causing them to fall back to default or transparent backgrounds which appeared light/white in dark mode.
+
+## Fix Implemented
+1. **Extended Tailwind Config**: Added a custom `gray-850` color shade (`#18202f`) to the Tailwind theme config in [tailwind.config.js](file:///Users/matthewmurphy/projects/ai-os/tailwind.config.js):
+   ```javascript
+   theme: {
+     extend: {
+       colors: {
+         gray: {
+           850: '#18202f',
+         }
+       }
+     },
+   }
+   ```
+2. **Rebuilt Production Bundle**: Ran `pnpm build` to compile the new colors into the production build styling assets and refresh `dist/index.html`.
+3. **Updated Ledgers & Logs**: Logged the fix in [FEATURES.md](file:///Users/matthewmurphy/projects/ai-os/FEATURES.md) and created an agent log in `.agent-logs/`.
