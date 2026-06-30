@@ -3,9 +3,10 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
-### [2026-06-30] Resizable Panes & Layout Flexibitly
+### [2026-06-30] Resizable Panes & Layout Flexibility
 * **Resizable Sidebar & Lists:** Added sidebar width resizing (via `sidebar-splitter`) and project list vs project threads height resizing (via `sidebar-list-splitter`) to the Left Sidebar, solving layout space issues for the projects list.
 * **Horizontal Main split handle:** Added horizontal main split resizing (via `main-splitter`) between the Terminals wrapper (left) and Output Preview wrapper (right) to allow custom pane layout allocation.
+* **Delta-Based Smooth Dragging & Invisible Hitboxes:** Refactored all splitter resizing math in `main.ts` to use mousedown delta offsets (startY/startX offsets), completely eliminating jumps, lag, and sudden pane offsets. Redesigned all splitters in `index.html` to use a generous 12px active drag hitbox (`w-3`/`h-3`) with a thin nested divider line that thickens on hover/active, keeping layout spacing perfectly stable.
 
 ### [2026-06-30] Antigravity Thread Integration & Auto-Hiding Scrollbars
 * **Sidebar Project Threads Integration:** Replaced the mockup folder list with a robust integration that reads actual historical `agy` threads (conversations) from the global `~/.gemini/antigravity-cli/brain/` directory. Substrings of project paths are verified and exact-matched to route each thread to its correct project.

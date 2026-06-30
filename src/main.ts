@@ -427,9 +427,13 @@ const panesContainer = document.getElementById('panes-container');
 
 if (splitter && miniContainer && panesContainer) {
     let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
     
     splitter.addEventListener('mousedown', (e) => {
         isDragging = true;
+        startY = e.clientY;
+        startHeight = miniContainer.offsetHeight;
         document.body.style.cursor = 'row-resize';
         e.preventDefault();
     });
@@ -437,9 +441,10 @@ if (splitter && miniContainer && panesContainer) {
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
-        const containerRect = panesContainer.getBoundingClientRect();
-        const newMiniHeight = containerRect.bottom - e.clientY - (splitter.offsetHeight / 2);
+        const deltaY = e.clientY - startY;
+        const newMiniHeight = startHeight - deltaY;
         
+        const containerRect = panesContainer.getBoundingClientRect();
         const minHeight = 50;
         const maxHeight = containerRect.height * 0.8;
         
@@ -464,9 +469,13 @@ const sidebar = document.getElementById('projects-sidebar');
 
 if (sidebarSplitter && sidebar) {
     let isDragging = false;
+    let startX = 0;
+    let startWidth = 0;
     
     sidebarSplitter.addEventListener('mousedown', (e) => {
         isDragging = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
         document.body.style.cursor = 'col-resize';
         e.preventDefault();
     });
@@ -474,7 +483,8 @@ if (sidebarSplitter && sidebar) {
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
-        const newWidth = e.clientX;
+        const deltaX = e.clientX - startX;
+        const newWidth = startWidth + deltaX;
         const minWidth = 150;
         const maxWidth = 600;
         
@@ -499,9 +509,13 @@ const projectsList = document.getElementById('projects-list');
 
 if (sidebarListSplitter && projectsList && sidebar) {
     let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
     
     sidebarListSplitter.addEventListener('mousedown', (e) => {
         isDragging = true;
+        startY = e.clientY;
+        startHeight = projectsList.offsetHeight;
         document.body.style.cursor = 'row-resize';
         e.preventDefault();
     });
@@ -509,8 +523,8 @@ if (sidebarListSplitter && projectsList && sidebar) {
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
-        const listTop = projectsList.getBoundingClientRect().top;
-        const newHeight = e.clientY - listTop;
+        const deltaY = e.clientY - startY;
+        const newHeight = startHeight + deltaY;
         const minHeight = 80;
         
         const sidebarHeight = sidebar.getBoundingClientRect().height;
@@ -535,9 +549,13 @@ const terminalsWrapper = document.getElementById('terminals-wrapper');
 
 if (mainSplitter && terminalsWrapper && panesContainer) {
     let isDragging = false;
+    let startX = 0;
+    let startWidth = 0;
     
     mainSplitter.addEventListener('mousedown', (e) => {
         isDragging = true;
+        startX = e.clientX;
+        startWidth = terminalsWrapper.offsetWidth;
         document.body.style.cursor = 'col-resize';
         e.preventDefault();
     });
@@ -545,10 +563,11 @@ if (mainSplitter && terminalsWrapper && panesContainer) {
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         
+        const deltaX = e.clientX - startX;
+        const newWidth = startWidth + deltaX;
+        
         const containerRect = panesContainer.getBoundingClientRect();
-        const leftWidth = e.clientX - containerRect.left;
-        const totalWidth = containerRect.width;
-        const leftPercent = (leftWidth / totalWidth) * 100;
+        const leftPercent = (newWidth / containerRect.width) * 100;
         
         const minPercent = 15;
         const maxPercent = 85;
