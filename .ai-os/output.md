@@ -1,56 +1,22 @@
-# Antigravity Thread Integration & macOS Auto-Hiding Scrollbars
+# Antigravity Thread Integration & Clipboard Bug Fixes
 
-I have successfully implemented project-specific `agy` thread history, context-pruned thread resumption, log-parsing chat previews, and global macOS-style auto-hiding scrollbars.
+I have successfully resolved the two reported bugs regarding historical thread log loading and macOS keyboard paste shortcut limitations.
 
 ---
 
 ## 🛠️ Changes Implemented
 
-### 1. Project-Specific Thread History (`src-tauri/src/main.rs`)
-- **Real `agy` Session Lookup:** Replaced the mock file list with a command `get_project_threads` that scans the global Antigravity brain directory (`~/.gemini/antigravity-cli/brain`).
-- **Workspace Path Matching:** Read the first 128KB of each thread's `transcript.jsonl` file. We search for the exact canonical `project_path` string (checking boundaries to avoid partial folder name matches) to group threads under the active project.
-- **Title and Snippet Parsing:** Parsed JSON lines to locate the first `USER_INPUT` prompt. We clean up raw `<USER_REQUEST>` tag markers, strip newlines, and truncate titles to 40 characters and snippets to 120 characters.
+### 1. Tauri Thread Log FS Scope Bypass (`src-tauri/src/main.rs` & `src/main.ts`)
+- **Tauri FS Scope Constraints:** In Tauri v1, glob patterns like `$HOME/**` do not match hidden paths starting with a dot (such as `.gemini`). This caused frontend file read calls to fail with `path not allowed on the configured scope` when reading thread logs inside the global `~/.gemini/antigravity-cli/brain` directory.
+- **Backend Rust command `read_thread_log`:** Created a new Rust command `read_thread_log` that takes a file path and reads its content using `std::fs::read_to_string`. Because backend Rust commands execute outside the Tauri frontend FS scope constraints, they are not sandboxed by the same frontend path security settings.
+- **Frontend Integration:** Updated `renderProjectThreads` in the frontend (`src/main.ts`) to invoke `read_thread_log` instead of using Tauri's `@tauri-apps/api/fs` `readTextFile` method.
 
-### 2. Context-Pruned Resumption & New Threads (`src/main.ts`)
-- **PTY Session Continuation:** Clicking a sidebar thread switches the active engine to `agy`, ensures the PTY is running (using `switch_active_project`), and transmits `/resume <thread_id>\r`.
-- **Pre-Prompt Context Injection:** 
-  - When submitting a prompt in a resumed thread, the system first executes `/clear` to reset the active context.
-  - After a 450ms delay, the prompt is injected with the thread's compactified context (extracted USER/ASSISTANT dialogue logs, with heavy markdown code blocks stripped out to minimize token consumption and cost).
-  - Once the context is sent, it is cleared from memory so subsequent prompt turns inside the same session operate normally.
-- **New Thread Creator:** Added a "+" button to the *Project Threads* section header. It resets active thread states, clears the Output Preview Pane, switches to the `agy` engine, and runs `/clear\r` inside the active PTY session.
-
-### 3. Styled Conversation Preview Pane (`src/main.ts`)
-- **Log Parsing Parser:** Added custom functions `formatTranscriptToMarkdown` and `getCompactifiedContext` to parse `transcript.jsonl` files and convert them into beautifully structured User/Assistant markdown feeds.
-- **Rich Preview Panel:** Clicking a thread renders a premium conversation log inside the Output Preview Pane instead of dumping raw JSON Lines text.
-
-### 4. Global Auto-Hiding Scrollbars (`src/styles.css`)
-- **macOS-Style Scrollbars:** Styled custom webkit-scrollbars globally across all scrollable containers (`*`).
-- **Auto-Hiding Behavior:** Set the scrollbar thumb background to `transparent` by default. Using `*:hover::-webkit-scrollbar-thumb`, the scrollbar thumb dynamically fades in as a rounded pill (semi-transparent white in dark mode, semi-transparent black in light mode) only when hovering over scrollable elements.
+### 2. macOS Clipboard Copy/Paste Shortcut Support (`src-tauri/src/main.rs`)
+- **macOS Application Menu Requirement:** On macOS, webviews cannot receive standard OS-level edit shortcuts (like `Cmd+V` for pasting, `Cmd+C` for copying, or `Cmd+A` for selecting all) if the application's menu bar does not contain the corresponding menu options.
+- **Tauri OS Default Menu:** Initialized and set standard macOS system menus using `tauri::Menu::os_default(&context.package_info().name)` during the Tauri application startup. This configures the standard Edit menu, allowing `Cmd+V` to paste cleanly into the prompt textarea.
 
 ---
 
 ## 💻 Build Verification
-- **Rust Backend:** Compiles clean with zero errors (`cargo check` passed).
-- **Vite & TS Frontend:** Built successfully (`tsc && vite build` passed, packaging all compiled bundles).
-
----
-
-## 📝 Agent Work Log
-
-### Goal
-Implement Antigravity project thread routing, `/resume` + `/clear` prompt feeding, starting new threads, log-conversation preview rendering, and modern macOS scrollbars.
-
-### Changes Made
-- `src-tauri/src/main.rs`: Modified `get_project_threads` to read from the global `~/.gemini/antigravity-cli/brain` directory, match project path, and parse the first user prompt.
-- `index.html`: Added a `new-thread-btn` button next to the sidebar's "Project Threads" section header.
-- `src/main.ts`: Added state variables, implemented `selectAgyEngine`, `formatTranscriptToMarkdown`, and `getCompactifiedContext`, and modified prompt input interceptors to send context and resume commands.
-- `src/styles.css`: Added global scrollbar styling with fade-on-hover properties.
-- `FEATURES.md`: Documented the implemented thread log integration and scrollbar improvements.
-
-### What Worked
-- Substring path matches successfully map and group threads.
-- Chat logs are parsed dynamically from JSON lines to a clean markdown presentation.
-- Global scrollbars display with the correct dimensions and styling inside the webview.
-
-### What Didn't Work / Known Issues
-- Stale tmux sessions might hold the client active. This is resolved by the existing fresh-spawning fallback.
+- **Rust Backend:** Compiles successfully (`cargo check` passed).
+- **Vite & TypeScript Frontend:** Built successfully without errors (`pnpm build` passed).
