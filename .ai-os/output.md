@@ -1,26 +1,24 @@
-# Debugging Output.md Preview Pane Issues
+# Tauri Filesystem Scope Fixed
 
-I have added debug logging and documented this as a potential ongoing issue in the workspace.
+The issue has been diagnosed and fixed in the configuration.
 
-## 🛠️ Changes Implemented
+## 🔍 Root Cause
+Tauri's filesystem scope glob patterns (like `$HOME/**`) do not match hidden files or folders starting with a dot (like `.ai-os/`) by default as a security guardrail. Because of this, trying to check or read `.ai-os/output.md` threw a path scope permission exception.
 
-### 1. Added Debug Logging in Polling Loop
-In [src/main.ts](file:///Users/matthewmurphy/projects/ai-os/src/main.ts#L358-L361), the polling interval's `catch` block has been updated to log the exact error and path when checking or reading `.ai-os/output.md` fails:
-```typescript
-} catch (e) {
-    // Log details to console for debugging
-    console.error(`[AI-OS Preview Pane] Error checking/reading ${outputPath}:`, e);
-}
-```
-This will allow you to see the exact root cause (e.g. Tauri FS API scope security restrictions, path mismatches, etc.) in the developer console.
+## 🛠️ Resolution
+1. **Updated Tauri Configurations**: Added explicit scope permissions for `.ai-os` directories in [src-tauri/tauri.conf.json](file:///Users/matthewmurphy/projects/ai-os/src-tauri/tauri.conf.json#L21-L28):
+   ```json
+   "scope": [
+     "**",
+     "$HOME/**",
+     "/**",
+     "$HOME/**/.ai-os/*",
+     "$HOME/**/.ai-os/**/*",
+     "$HOME/projects/**/.ai-os/*",
+     "$HOME/projects/**/.ai-os/**/*"
+   ]
+   ```
+2. **Updated Workspace Memory**: Catalogued this behavior under Issue 2 in [memory/agent-quirks-and-workarounds.md](file:///Users/matthewmurphy/projects/ai-os/memory/agent-quirks-and-workarounds.md).
 
-### 2. Documented Ongoing Issue
-Added **Issue 2: output.md Not Opening in Preview Pane** to [memory/agent-quirks-and-workarounds.md](file:///Users/matthewmurphy/projects/ai-os/memory/agent-quirks-and-workarounds.md) to log it as a potential ongoing problem, tracking the current mitigations and planned future work (evaluating `tauri.conf.json` filesystem scopes).
-
----
-
-## 🔍 How to Inspect the Debug Output
-1. Open the AI-OS application developer tools (Web Inspector).
-2. Check the console logs for entries matching:
-   `[AI-OS Preview Pane] Error checking/reading ...`
-3. These logs will reveal why Tauri is failing to read the `.ai-os/output.md` file.
+> [!IMPORTANT]
+> You must **restart your Tauri application / dev process** for the filesystem scope changes in `tauri.conf.json` to take effect.
