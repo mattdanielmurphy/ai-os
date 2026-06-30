@@ -112,6 +112,17 @@ const saveProjects = () => {
 
 const isDarkMode = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+const applyTheme = () => {
+    if (isDarkMode()) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+};
+
+// Initialize dark mode class on load
+applyTheme();
+
 const getTermTheme = () => {
     return isDarkMode() 
         ? { background: '#000000', foreground: '#ffffff' }
@@ -216,15 +227,15 @@ const miniTerm = new Terminal({
 });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    applyTheme();
     term.options.theme = getTermTheme();
     miniTerm.options.theme = getMiniTermTheme();
     
-    // Inject the theme command to the backend engines
-    const themeStr = e.matches ? 'dark' : 'light';
-    const msg = `/theme ${themeStr}\x0d`;
-    if (activeProject) {
-        invoke('write_to_pty', { data: msg, projectPath: activeProject, terminalType: currentEngine }).catch(console.error);
-        invoke('write_to_pty', { data: msg, projectPath: activeProject, terminalType: 'mini' }).catch(console.error);
+    // Inject the theme command to the backend engines ONLY if active engine is Claude
+    if (currentEngine === 'claude' && activeProject) {
+        const themeStr = e.matches ? 'dark' : 'light';
+        const msg = `/theme ${themeStr}\x0d`;
+        invoke('write_to_pty', { data: msg, projectPath: activeProject, terminalType: 'claude' }).catch(console.error);
     }
 });
 const miniFitAddon = new FitAddon();
