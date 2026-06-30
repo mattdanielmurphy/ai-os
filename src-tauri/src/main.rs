@@ -1147,13 +1147,14 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
                                             }
                                             
                                             let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
-                                            title = if clean_prompt.len() > 40 {
-                                                format!("{}...", &clean_prompt[..40])
+                                            let char_count = clean_prompt.chars().count();
+                                            title = if char_count > 40 {
+                                                format!("{}...", clean_prompt.chars().take(40).collect::<String>())
                                             } else {
                                                 clean_prompt.clone()
                                             };
-                                            snippet = if clean_prompt.len() > 120 {
-                                                format!("{}...", &clean_prompt[..120])
+                                            snippet = if char_count > 120 {
+                                                format!("{}...", clean_prompt.chars().take(120).collect::<String>())
                                             } else {
                                                 clean_prompt
                                             };
