@@ -1,17 +1,21 @@
-# Elegant Fix: Historical Thread Logs Patched with output.md Content
+# Resizable Layout Splitters Implemented
 
-I have resolved the issue where historical threads built on `agy` logs only contained user prompts and empty/placeholder assistant responses (like "I have updated the output file.").
+I have implemented fully resizable splitters for all major panes in the interface to allow flexible layout allocation.
 
-## 💡 The Solution
+## Key Enhancements
 
-Instead of storing placeholder messages in your thread logs, **AI-OS now automatically intercepts changes to `.ai-os/output.md` and patches the actual `agy` transcript logs dynamically.**
+1. **Sidebar Width Resizing**
+   - Added a vertical splitter (`#sidebar-splitter`) on the right edge of the projects sidebar.
+   - Dragging it resizes the width of the sidebar (constrained between `150px` and `600px`).
 
-### How It Works:
-1. **Always-On File Polling:** The frontend polls `.ai-os/output.md` for changes in the background (even if you are currently watching the terminal pane).
-2. **Dynamic Back-Patching:** When a change in the output markdown is detected, the frontend invokes a new Rust backend command `patch_thread_log_with_output`.
-3. **Session Identification:** The Rust command identifies which thread log directory belongs to the active project (either by matching `active_thread_id` or dynamically finding the most recently modified transcript that references the project path).
-4. **Targeted JSONL Replacement:** The command reads `transcript.jsonl` and `transcript_full.jsonl`, parses each line as JSON, searches backwards to find the last assistant `PLANNER_RESPONSE` line, and replaces its `content` field directly with the actual markdown content.
+2. **Projects List Height Resizing**
+   - Replaced the static `h-1/2` height split on the left sidebar.
+   - Added a horizontal splitter (`#sidebar-list-splitter`) between the projects list and the project threads header.
+   - Dragging it resizes the projects list height to leave enough room for project threads and vice-versa.
 
-## 🚀 Key Benefits
-* **Full Context History:** When clicking a thread in the sidebar, the conversation preview pane will render the actual markdown response and code explanations instead of a useless placeholder.
-* **Accurate Context Resumption:** When resuming a thread via `/resume <id>`, the compactified context fed back to `agy` will contain the real assistant replies, ensuring the model understands the exact state of the project.
+3. **Horizontal Terminal vs. Preview split**
+   - Added a vertical splitter (`#main-splitter`) between the terminals wrapper (left) and the output markdown preview wrapper (right).
+   - Dragging it dynamically adjusts the width percentage ratio between terminals and preview panels.
+
+4. **PTY Fit Alignment**
+   - Resizing layout elements automatically triggers terminal dimension recalculations via `debouncedResizePty` so the interactive terminals dynamically fit the new pane widths/heights without clipping.
