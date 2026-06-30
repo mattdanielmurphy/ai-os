@@ -146,6 +146,9 @@ let projects: Project[] = (() => {
     const uniqueProjectsMap = new Map<string, Project>();
     for (const p of loadedList) {
         let cleanPath = p.path || '';
+        if (cleanPath.includes('/projects/thread-')) {
+            continue; // Filter out legacy mock thread projects
+        }
         while (cleanPath.length > 0 && /[`*.,:;)}"\]]$/.test(cleanPath)) {
             cleanPath = cleanPath.slice(0, -1);
         }
@@ -1258,7 +1261,7 @@ const syncProjectsFromAllThreads = async () => {
             
             // If the thread is a lone agy thread without a detected project path
             if (!targetPath) {
-                targetPath = `/Users/matthewmurphy/projects/thread-${thread.id}`;
+                targetPath = `/Users/matthewmurphy/projects/Misc`;
             }
             
             // Strip trailing markdown symbols
@@ -1271,7 +1274,9 @@ const syncProjectsFromAllThreads = async () => {
             if (!exists) {
                 // Determine a name for the new project
                 let name = '';
-                if (thread.detected_project_path) {
+                if (targetPath === '/Users/matthewmurphy/projects/Misc') {
+                    name = 'Misc';
+                } else if (thread.detected_project_path) {
                     name = thread.detected_project_path.split('/').pop() || 'Unnamed';
                 } else {
                     name = thread.title || `Thread ${thread.id.substring(0, 8)}`;

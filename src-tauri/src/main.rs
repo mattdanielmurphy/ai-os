@@ -1095,6 +1095,8 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
         return Ok(Vec::new());
     }
 
+    let is_misc = project_path.ends_with("/projects/Misc") || project_path == "Misc";
+
     let entries = fs::read_dir(&brain_dir)
         .map_err(|e| format!("Failed to read brain directory: {}", e))?;
 
@@ -1126,55 +1128,62 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
                     let _ = file.take(131072).read_to_end(&mut buffer);
                     let content = String::from_utf8_lossy(&buffer);
 
-                    if let Some(pos) = content.find(&project_path) {
-                        let after_match = &content[pos + project_path.len()..];
-                        let is_exact = match after_match.chars().next() {
-                            Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
-                            None => true,
-                        };
+                    let matched = if is_misc {
+                        detect_project_path(&content).is_none()
+                    } else {
+                        if let Some(pos) = content.find(&project_path) {
+                            let after_match = &content[pos + project_path.len()..];
+                            let is_exact = match after_match.chars().next() {
+                                Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
+                                None => true,
+                            };
+                            is_exact
+                        } else {
+                            false
+                        }
+                    };
+
+                    if matched {
+                        let mut title = thread_id.clone();
+                        let mut snippet = String::new();
                         
-                        if is_exact {
-                            let mut title = thread_id.clone();
-                            let mut snippet = String::new();
-                            
-                            for line in content.lines() {
-                                if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-                                    if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
-                                        if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
-                                            let mut raw_prompt = prompt_content.to_string();
-                                            if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
-                                                if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
-                                                    raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
-                                                }
+                        for line in content.lines() {
+                            if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+                                if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+                                    if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
+                                        let mut raw_prompt = prompt_content.to_string();
+                                        if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
+                                            if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
+                                                raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
                                             }
-                                            
-                                            let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
-                                            let char_count = clean_prompt.chars().count();
-                                            title = if char_count > 40 {
-                                                format!("{}...", clean_prompt.chars().take(40).collect::<String>())
-                                            } else {
-                                                clean_prompt.clone()
-                                            };
-                                            snippet = if char_count > 120 {
-                                                format!("{}...", clean_prompt.chars().take(120).collect::<String>())
-                                            } else {
-                                                clean_prompt
-                                            };
-                                            break;
                                         }
+                                        
+                                        let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
+                                        let char_count = clean_prompt.chars().count();
+                                        title = if char_count > 40 {
+                                            format!("{}...", clean_prompt.chars().take(40).collect::<String>())
+                                        } else {
+                                            clean_prompt.clone()
+                                        };
+                                        snippet = if char_count > 120 {
+                                            format!("{}...", clean_prompt.chars().take(120).collect::<String>())
+                                        } else {
+                                            clean_prompt
+                                        };
+                                        break;
                                     }
                                 }
                             }
-                            
-                            thread_logs.push(ThreadLog {
-                                id: thread_id,
-                                title,
-                                snippet,
-                                filepath: transcript_path.to_string_lossy().to_string(),
-                                mtime,
-                                detected_project_path: Some(project_path.clone()),
-                            });
                         }
+                        
+                        thread_logs.push(ThreadLog {
+                            id: thread_id,
+                            title,
+                            snippet,
+                            filepath: transcript_path.to_string_lossy().to_string(),
+                            mtime,
+                            detected_project_path: Some(project_path.clone()),
+                        });
                     }
                 }
             }
