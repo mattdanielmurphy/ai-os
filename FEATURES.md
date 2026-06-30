@@ -3,6 +3,11 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [Proposed] Sidebar Project Threads & Context-Pruned Resumption
+* **Sidebar Project Threads:** Add a project-specific list of past threads/conversations to the sidebar.
+* **Pruned Context Feed:** Recreate thread continuity by default while still running `/clear` to minimize token bloat. Feed the agent a highly pruned overview of past step logs/discoveries.
+* **Detailed Log Retrieval:** Provide helper functions enabling the agent to JIT pull full transcripts or granular logs (`.agent-logs/transcripts/` or `.agent-logs/details/`) on demand.
+
 ### [2026-06-29] Theme and Styling Bug Fixes
 * **Tailwind Configuration Custom Theme Extension:** Defined a custom `gray-850` color (`#18202f`) within `tailwind.config.js` to fix a styling glitch where bars and buttons using `dark:bg-gray-850` fell back to a light or transparent background on dark mode, restoring the dark-mode theme cohesion across the header, modal, and context panel components.
 

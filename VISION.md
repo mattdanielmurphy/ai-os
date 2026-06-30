@@ -353,6 +353,10 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 
 
 # New Unorganized Eventual Features
+- Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
+  - The context of these threads is pruned (omitting code and large file outputs, leaving only high-level steps/discoveries).
+  - Designed to work alongside `/clear` by default, recreating continuity by supplying the agent with a lean historical summary of past threads.
+  - Allows the agent to query detailed transcripts or full step logs via dedicated helper functions (e.g. leveraging `agy` transcripts/detailed logs) when more information is needed.
 - File browser and VSCode and markdown editors
 - open project in Finder button
 - `/` commands in the textarea with autocomplete for commands AND for filepaths
