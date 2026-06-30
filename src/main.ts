@@ -6,7 +6,6 @@ import { Terminal } from '@xterm/xterm'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/api/shell'
-import { readTextFile, exists } from '@tauri-apps/api/fs'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import type { ILinkProvider, ILink } from '@xterm/xterm'
 import { marked } from 'marked'
@@ -643,7 +642,7 @@ setInterval(async () => {
     if (!filepath) return;
     
     try {
-        const fileExists = await exists(filepath);
+        const fileExists = await invoke<boolean>('file_exists', { filepath });
         if (fileExists) {
             const content = await invoke<string>('read_thread_log', { filepath });
             if (content !== lastRenderedThreadLog || activeThreadId !== lastRenderedThreadId) {

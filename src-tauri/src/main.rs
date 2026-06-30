@@ -1189,6 +1189,11 @@ fn read_thread_log(filepath: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn file_exists(filepath: String) -> bool {
+    std::path::Path::new(&filepath).exists()
+}
+
+#[tauri::command]
 fn patch_thread_log_with_output(
     project_path: String,
     active_thread_id: Option<String>,
@@ -1358,6 +1363,7 @@ fn main() {
             copy_tmux_selection,
             open_path,
             read_thread_log,
+            file_exists,
             patch_thread_log_with_output
         ])
         .run(context)
