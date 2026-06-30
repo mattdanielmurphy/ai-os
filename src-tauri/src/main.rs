@@ -1188,6 +1188,139 @@ fn read_thread_log(filepath: String) -> Result<String, String> {
     fs::read_to_string(filepath).map_err(|e| format!("Failed to read thread log: {}", e))
 }
 
+#[tauri::command]
+fn patch_thread_log_with_output(
+    project_path: String,
+    active_thread_id: Option<String>,
+    output_content: String,
+) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+    use std::io::Read;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let brain_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("brain");
+
+    if !brain_dir.exists() {
+        return Err("Brain directory does not exist".to_string());
+    }
+
+    // 1. Locate the correct thread directory ID
+    let target_id = if let Some(ref id) = active_thread_id {
+        if !id.trim().is_empty() {
+            id.clone()
+        } else {
+            "".to_string()
+        }
+    } else {
+        "".to_string()
+    };
+
+    let target_thread_id = if !target_id.is_empty() {
+        target_id
+    } else {
+        // Find the most recently modified thread that matches this project
+        let entries = fs::read_dir(&brain_dir)
+            .map_err(|e| format!("Failed to read brain directory: {}", e))?;
+
+        let mut latest_thread_id = None;
+        let mut latest_mtime = 0;
+
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    let thread_id = path.file_name().unwrap().to_string_lossy().to_string();
+                    let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
+
+                    if transcript_path.exists() {
+                        if let Ok(metadata) = fs::metadata(&transcript_path) {
+                            let mtime = metadata.modified()
+                                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
+                                .map(|d| d.as_secs())
+                                .unwrap_or(0);
+
+                            if mtime > latest_mtime {
+                                if let Ok(file) = fs::File::open(&transcript_path) {
+                                    let mut buffer = Vec::new();
+                                    let _ = file.take(131072).read_to_end(&mut buffer);
+                                    let content = String::from_utf8_lossy(&buffer);
+
+                                    if let Some(pos) = content.find(&project_path) {
+                                        let next_char = content.chars().nth(pos + project_path.len());
+                                        let is_exact = match next_char {
+                                            Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
+                                            None => true,
+                                        };
+                                        if is_exact {
+                                            latest_mtime = mtime;
+                                            latest_thread_id = Some(thread_id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        match latest_thread_id {
+            Some(id) => id,
+            None => return Err("No matching thread found for this project".to_string()),
+        }
+    };
+
+    let thread_dir = brain_dir.join(&target_thread_id);
+    let transcript_path = thread_dir.join(".system_generated").join("logs").join("transcript.jsonl");
+    let transcript_full_path = thread_dir.join(".system_generated").join("logs").join("transcript_full.jsonl");
+
+    let patch_file = |path: &Path| -> Result<(), String> {
+        if !path.exists() {
+            return Ok(());
+        }
+        let content = fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read transcript: {}", e))?;
+        
+        let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
+        let mut patched = false;
+
+        // Iterate backwards to find the last planner response from the model
+        for i in (0..lines.len()).rev() {
+            if let Ok(mut obj) = serde_json::from_str::<serde_json::Value>(&lines[i]) {
+                if obj.get("source").and_then(|v| v.as_str()) == Some("MODEL") 
+                    && obj.get("type").and_then(|v| v.as_str()) == Some("PLANNER_RESPONSE")
+                    && obj.get("content").is_some() 
+                {
+                    obj["content"] = serde_json::Value::String(output_content.clone());
+                    if let Ok(new_line) = serde_json::to_string(&obj) {
+                        lines[i] = new_line;
+                        patched = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if patched {
+            let mut new_content = lines.join("\n");
+            if !new_content.ends_with('\n') && !new_content.is_empty() {
+                new_content.push('\n');
+            }
+            fs::write(path, new_content)
+                .map_err(|e| format!("Failed to write patched transcript: {}", e))?;
+        }
+        Ok(())
+    };
+
+    patch_file(&transcript_path)?;
+    patch_file(&transcript_full_path)?;
+
+    Ok(())
+}
+
 fn main() {
     let context = tauri::generate_context!();
     tauri::Builder::default()
@@ -1224,7 +1357,8 @@ fn main() {
             get_project_threads,
             copy_tmux_selection,
             open_path,
-            read_thread_log
+            read_thread_log,
+            patch_thread_log_with_output
         ])
         .run(context)
         .expect("error while running tauri application");

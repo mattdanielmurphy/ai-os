@@ -338,24 +338,39 @@ const markdownPreviewPane = document.getElementById('markdown-preview-pane');
 
 // Poll the output.md file of the active project
 setInterval(async () => {
-    if (!activeProject || isTerminalMode) return;
+    if (!activeProject) return;
     
     const outputPath = `${activeProject}/.ai-os/output.md`;
     try {
         const fileExists = await exists(outputPath);
         if (fileExists) {
             const content = await readTextFile(outputPath);
-            if (content !== lastRenderedMarkdown && markdownPreviewPane) {
+            if (content !== lastRenderedMarkdown) {
                 lastRenderedMarkdown = content;
-                if (content.trim().length > 0) {
-                    markdownPreviewPane.innerHTML = marked.parse(content) as string;
-                } else {
-                    markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output...</div>';
+                
+                // Unconditionally patch the thread log whenever output.md content changes
+                invoke('patch_thread_log_with_output', {
+                    projectPath: activeProject,
+                    activeThreadId: activeThreadId,
+                    outputContent: content
+                }).catch((err) => {
+                    console.error('[AI-OS] Failed to patch thread log with output:', err);
+                });
+
+                // Only render to preview pane if NOT in terminal mode
+                if (!isTerminalMode && markdownPreviewPane) {
+                    if (content.trim().length > 0) {
+                        markdownPreviewPane.innerHTML = marked.parse(content) as string;
+                    } else {
+                        markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output...</div>';
+                    }
                 }
             }
-        } else if (lastRenderedMarkdown !== '' && markdownPreviewPane) {
+        } else if (lastRenderedMarkdown !== '') {
             lastRenderedMarkdown = '';
-            markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>';
+            if (!isTerminalMode && markdownPreviewPane) {
+                markdownPreviewPane.innerHTML = '<div class="text-gray-600 italic text-center mt-10">Waiting for output in .ai-os/output.md...</div>';
+            }
         }
     } catch (e) {
         // Log details to console for debugging
