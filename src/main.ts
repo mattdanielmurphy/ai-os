@@ -597,6 +597,8 @@ interface RenderBlock {
     type: 'user_input' | 'planner_response' | 'tool_calls'
     content?: string
     calls?: ToolCallItem[]
+    historicalContext?: string
+    threadId?: string
 }
 
 const buildTimelineHtml = (steps: Step[]): string => {
@@ -623,7 +625,40 @@ const buildTimelineHtml = (steps: Step[]): string => {
                     .substring(startIdx + startTag.length, endIdx)
                     .trim()
             }
-            blocks.push({ type: 'user_input', content: prompt })
+
+            let historicalContextText = ''
+            let threadId = ''
+            
+            if (prompt.includes('Continuing conversation from history')) {
+                // Find thread ID if present
+                const threadIdMatch = prompt.match(/Thread ID:\s*([a-fA-F0-9-]+)/)
+                if (threadIdMatch) {
+                    threadId = threadIdMatch[1]
+                }
+                
+                // Find historical context boundary
+                const histIdx = prompt.indexOf('Historical Context:\n')
+                const userReqIdx = prompt.indexOf('\n\nUser request: ')
+                
+                if (histIdx !== -1 && userReqIdx !== -1 && userReqIdx > histIdx) {
+                    historicalContextText = prompt.substring(histIdx + 'Historical Context:\n'.length, userReqIdx).trim()
+                    prompt = prompt.substring(userReqIdx + '\n\nUser request: '.length).trim()
+                } else {
+                    const oldHistIdx = prompt.indexOf('Historical Context:\n')
+                    const oldUserReqIdx = prompt.lastIndexOf('User request: ')
+                    if (oldHistIdx !== -1 && oldUserReqIdx !== -1 && oldUserReqIdx > oldHistIdx) {
+                        historicalContextText = prompt.substring(oldHistIdx + 'Historical Context:\n'.length, oldUserReqIdx).trim()
+                        prompt = prompt.substring(oldUserReqIdx + 'User request: '.length).trim()
+                    }
+                }
+            }
+
+            blocks.push({
+                type: 'user_input',
+                content: prompt,
+                historicalContext: historicalContextText || undefined,
+                threadId: threadId || undefined
+            })
         } else {
             if (step.tool_calls && step.tool_calls.length > 0) {
                 step.tool_calls.forEach((call) => {
@@ -726,6 +761,27 @@ const buildTimelineHtml = (steps: Step[]): string => {
 
     blocks.forEach((block) => {
         if (block.type === 'user_input' && block.content) {
+            if (block.historicalContext) {
+                const escapedThreadId = block.threadId || ''
+                html += `
+                <div class="w-full flex justify-start mb-4 select-text">
+                    <div class="w-full max-w-[65ch] bg-gray-50/90 dark:bg-gray-900/60 border border-gray-250/70 dark:border-gray-800/80 rounded-xl p-3 text-xs font-sans shadow-sm">
+                        <details class="group">
+                            <summary class="flex items-center justify-between cursor-pointer font-bold text-gray-500 dark:text-gray-400 select-none">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="text-[14px]">📜</span>
+                                    <span>Historical Context of active thread ${escapedThreadId ? `(${escapedThreadId.substring(0, 8)}...)` : ''}</span>
+                                </span>
+                                <span class="text-[9px] text-gray-400 dark:text-gray-500 font-mono transition-transform group-open:rotate-90">▶</span>
+                            </summary>
+                            <div class="mt-2.5 text-gray-600 dark:text-gray-300 font-mono whitespace-pre-wrap leading-relaxed max-h-[350px] overflow-y-auto pr-1 text-[11px] border-t border-gray-150 dark:border-gray-800/60 pt-2">
+${block.historicalContext}
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                `
+            }
             html += `
             <div class="w-full flex justify-end mb-4 select-text">
                 <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
@@ -1587,11 +1643,9 @@ function getCompactifiedContext(jsonlContent: string): string {
                         .trim()
                 }
 
-                prompt = prompt
-                    .replace(/```[\s\S]*?```/g, '[Code Block omitted]')
-                    .trim()
-                if (prompt.length > 300) {
-                    prompt = prompt.substring(0, 300) + '...'
+                prompt = prompt.trim()
+                if (prompt.length > 2500) {
+                    prompt = prompt.substring(0, 2500) + '\n... [truncated]'
                 }
 
                 steps.push(`- User Step ${stepCount}: "${prompt}"`)
@@ -1600,12 +1654,9 @@ function getCompactifiedContext(jsonlContent: string): string {
                 type === 'PLANNER_RESPONSE' &&
                 content
             ) {
-                let reply = content
-                reply = reply
-                    .replace(/```[\s\S]*?```/g, '[Code Block omitted]')
-                    .trim()
-                if (reply.length > 300) {
-                    reply = reply.substring(0, 300) + '...'
+                let reply = content.trim()
+                if (reply.length > 2500) {
+                    reply = reply.substring(0, 2500) + '\n... [truncated]'
                 }
 
                 steps.push(`- Assistant: "${reply}"`)
@@ -1615,7 +1666,7 @@ function getCompactifiedContext(jsonlContent: string): string {
         }
     }
 
-    const maxSteps = 6
+    const maxSteps = 15
     const slicedSteps = steps.length > maxSteps ? steps.slice(-maxSteps) : steps
     return slicedSteps.join('\n') + '\n'
 }
@@ -2272,7 +2323,7 @@ textarea?.addEventListener('keydown', async (e) => {
                 })
                 await new Promise((resolve) => setTimeout(resolve, 450))
 
-                const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
+                const combinedPrompt = `Continuing conversation from history (Thread ID: ${activeThreadId}).\n\n[SYSTEM DIRECTIVE: This is a summary/compacted view of the thread history. If you need to view the full, untruncated details, tool calls, or files from this thread, you can run the following command in the terminal:\n  pnpm run view-thread ${activeThreadId}\nor specifically for a step:\n  pnpm run view-thread ${activeThreadId} --step <index>\n]\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
                 const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`
                 invoke('write_to_pty', {
                     data: dataToSend,
@@ -2328,7 +2379,7 @@ textarea?.addEventListener('keydown', async (e) => {
                     })
                     await new Promise((resolve) => setTimeout(resolve, 450))
 
-                    const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
+                    const combinedPrompt = `Continuing conversation from history (Thread ID: ${activeThreadId}).\n\n[SYSTEM DIRECTIVE: This is a summary/compacted view of the thread history. If you need to view the full, untruncated details, tool calls, or files from this thread, you can run the following command in the terminal:\n  pnpm run view-thread ${activeThreadId}\nor specifically for a step:\n  pnpm run view-thread ${activeThreadId} --step <index>\n]\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
                     const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`
                     invoke('write_to_pty', {
                         data: dataToSend,

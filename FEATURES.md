@@ -4,6 +4,9 @@
 
 
 ### [2026-06-30] Unified AI-OS Active Thread Timeline View
+* **Historical Context UI Separation:** Separated the historical thread resumption context from the user's active prompt in the markdown conversation timeline. The history is now rendered in a beautiful, collapsible container on the left, while the active user prompt displays as a distinct message bubble on the right.
+* **Larger Context Limits:** Increased the compactified context window limits to preserve up to 15 conversation steps and 2,500 characters per message, preventing early truncation while retaining important thread details.
+* **CLI Thread Log Utility (`view-thread`):** Created `scripts/view_thread.py` and a corresponding `pnpm run view-thread <thread_id>` command, giving the agent a direct way to fetch and read untruncated steps of any historical thread. A system instruction with this command is injected into the historical context header.
 * **Unified Thread Content Area:** Replaced separate historical thread log previews with the main unified active conversation view `renderCustomTuiLog`. Resuming conversations via the context handoff now appends and displays new user inputs and corresponding agent steps sequentially inside the same active pane.
 * **Global Pathname Formatting:** Implemented a global utility `formatPathForUser` that formats pathnames to use relative paths for files within the active project, and replaces the absolute user home directory with `~` for external paths.
 * **Visible Project Paths in Sidebar:** Upgraded the project sidebar list to render the formatted pathname directly beneath the project name, resolving confusion with duplicate project names and auto-generated thread wrappers.
