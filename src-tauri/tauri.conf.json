@@ -18,7 +18,15 @@
         "all": false,
         "exists": true,
         "readFile": true,
-        "scope": ["**", "$HOME/**", "/**"]
+        "scope": [
+          "**",
+          "$HOME/**",
+          "/**",
+          "$HOME/**/.ai-os/*",
+          "$HOME/**/.ai-os/**/*",
+          "$HOME/projects/**/.ai-os/*",
+          "$HOME/projects/**/.ai-os/**/*"
+        ]
       },
       "shell": {
         "all": false,
