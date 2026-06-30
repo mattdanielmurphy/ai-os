@@ -27,6 +27,16 @@ interface Project {
 // 2. Global State Management
 // ----------------------------------------------------
 let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
+
+const formatPathForUser = (path: string, projectPath: string = activeProject): string => {
+    if (!path) return '';
+    const projectPrefix = projectPath.endsWith('/') ? projectPath : (projectPath + '/');
+    if (path.startsWith(projectPrefix)) {
+        return path.substring(projectPrefix.length);
+    }
+    return path.replace('/Users/matthewmurphy', '~');
+};
+
 let isTerminalMode: boolean = false;
 let isTuiExpanded: boolean = false;
 let activeThreadId: string | null = null;
@@ -484,11 +494,8 @@ const buildTimelineHtml = (steps: Step[]): string => {
     const renderToolCallHtml = (call: ToolCallItem) => {
         let pathHtml = '';
         if (call.targetPath) {
-            let displayPath = call.targetPath;
-            if (activeProject && displayPath.startsWith(activeProject)) {
-                displayPath = displayPath.substring(activeProject.length).replace(/^\//, '');
-            }
-            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${call.targetPath}">${displayPath}</a>`;
+            const displayPath = formatPathForUser(call.targetPath);
+            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`;
         }
         return `
             <div class="w-full flex justify-start mb-2 select-none">
@@ -596,7 +603,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             ${files.map(file => {
                 const parts = file.split('/');
                 const name = parts[parts.length - 1];
-                return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${file}">${name}</span>`;
+                return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${formatPathForUser(file)}">${name}</span>`;
             }).join('')}
         </div>
         `;
@@ -982,11 +989,14 @@ const renderProjects = () => {
         }`;
         
         header.innerHTML = `
-            <div class="flex items-center gap-2.5 truncate">
-                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${project.color}"></span>
-                <span class="truncate text-xs">${project.name}</span>
+            <div class="flex flex-col gap-0.5 truncate select-none min-w-0 flex-1">
+                <div class="flex items-center gap-2 truncate">
+                    <span class="w-2 rounded-full shrink-0 aspect-square" style="background-color: ${project.color}"></span>
+                    <span class="truncate text-xs">${project.name}</span>
+                </div>
+                <span class="pl-4 truncate text-[9px] text-gray-400 dark:text-gray-500 font-mono">${formatPathForUser(project.path)}</span>
             </div>
-            <div class="flex items-center action-btns opacity-0 transition-opacity">
+            <div class="flex items-center action-btns opacity-0 transition-opacity ml-1.5 shrink-0">
                 <button class="open-btn text-[10px] text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
                 <button class="delete-btn text-[10px] text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
             </div>
@@ -1154,18 +1164,18 @@ const switchToProject = async (path: string, autoSelectFirstThread: boolean = fa
     if (activeBuffers[path]) {
         term.write(activeBuffers[path]);
     } else {
-        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${path}...\x1b[0m\r\n`);
+        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(path)}...\x1b[0m\r\n`);
     }
 
     miniTerm.reset();
     if (miniTermBuffers[path]) {
         miniTerm.write(miniTermBuffers[path]);
     } else {
-        miniTerm.write(`\r\n\x1b[1;32m[ai-os] Connecting to Shell session at: ${path}...\x1b[0m\r\n`);
+        miniTerm.write(`\r\n\x1b[1;32m[ai-os] Connecting to Shell session at: ${formatPathForUser(path)}...\x1b[0m\r\n`);
     }
 
     if (currentDirPathEl) {
-        currentDirPathEl.textContent = path;
+        currentDirPathEl.textContent = formatPathForUser(path);
     }
     
     commandHistory = loadCommandHistory(path);
@@ -1263,7 +1273,7 @@ const selectAgyEngine = async () => {
         if (agyBuffers[activeProject]) {
             term.write(agyBuffers[activeProject]);
         } else {
-            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${activeProject}...\x1b[0m\r\n`);
+            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`);
         }
 
         try {
@@ -1647,7 +1657,7 @@ engineRadios.forEach((radio) => {
         if (activeBuffers[activeProject]) {
             term.write(activeBuffers[activeProject]);
         } else {
-            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${activeProject}...\x1b[0m\r\n`);
+            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`);
         }
 
         try {

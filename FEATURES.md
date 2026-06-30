@@ -3,6 +3,10 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [2026-06-30] Global Pathname Formatting & Sidebar Project Paths
+* **Global Pathname Formatting:** Implemented a global utility `formatPathForUser` that formats pathnames to use relative paths for files within the active project, and replaces the absolute user home directory with `~` for external paths.
+* **Visible Project Paths in Sidebar:** Upgraded the project sidebar list to render the formatted pathname directly beneath the project name, resolving confusion with duplicate project names and auto-generated thread wrappers.
+
 ### [2026-06-30] Detailed Timeline Step Information & Clickable Paths
 * **Bold Tool Summaries & Clickable Target Paths:** Enhanced custom TUI step logs by bolding tool action summaries and appending secondary-colored, clickable relative file/directory links where applicable (e.g. for file edits, searches, directory listings). Clicking a path triggers Tauri to open the file locally.
 * **`window.openPath` Global Expose:** Exposed a global path-opening function to the browser window context, connecting timeline path element click listeners directly to the Tauri backend `open_path` command.
