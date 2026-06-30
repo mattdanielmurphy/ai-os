@@ -624,7 +624,78 @@ const switchToProject = async (path: string) => {
     // Restore or initialize PTY geometry sync
     resizePty();
     renderProjects();
+    renderProjectThreads(path);
     adjustHeight();
+};
+
+interface ThreadLog {
+    id: string;
+    title: string;
+    snippet: string;
+    filepath: string;
+    mtime: number;
+}
+
+const renderProjectThreads = async (projectPath: string) => {
+    const listEl = document.getElementById('project-threads-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    try {
+        const threads = await invoke<ThreadLog[]>('get_project_threads', { projectPath });
+        if (threads.length === 0) {
+            listEl.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">No threads found in gemini-history/threads</div>';
+            return;
+        }
+
+        threads.forEach((thread) => {
+            const el = document.createElement('div');
+            el.className = 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
+            
+            // Format time
+            const dateStr = thread.mtime > 0 
+                ? new Date(thread.mtime * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'Unknown Date';
+
+            el.innerHTML = `
+                <div class="flex items-center justify-between text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                    <span class="truncate pr-1">#${thread.id.substring(0, 8)}</span>
+                    <span class="shrink-0 text-[9px] text-gray-400 dark:text-gray-500 font-mono">${dateStr}</span>
+                </div>
+                <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate" title="${thread.title}">${thread.title}</div>
+                <div class="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed" title="${thread.snippet}">${thread.snippet}</div>
+            `;
+
+            el.addEventListener('click', async () => {
+                const previewPane = document.getElementById('markdown-preview-pane');
+                if (previewPane) {
+                    try {
+                        const content = await readTextFile(thread.filepath);
+                        // Render in Output Preview Pane
+                        previewPane.innerHTML = `
+                            <div class="border-b border-gray-250 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between select-none">
+                                <div>
+                                    <span class="text-[10px] font-mono text-blue-500 uppercase tracking-widest">Historical Thread Context</span>
+                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${thread.title}</h2>
+                                </div>
+                                <span class="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${dateStr}</span>
+                            </div>
+                            <div class="prose prose-invert prose-sm max-w-none text-gray-700 dark:text-gray-300">
+                                ${marked.parse(content)}
+                            </div>
+                        `;
+                    } catch (err) {
+                        previewPane.innerHTML = `<div class="text-red-500 p-4">Error loading thread log file: ${err}</div>`;
+                    }
+                }
+            });
+
+            listEl.appendChild(el);
+        });
+    } catch (err) {
+        console.error('Failed to load project threads:', err);
+        listEl.innerHTML = `<div class="text-red-500 text-[10px] p-2">Error: ${err}</div>`;
+    }
 };
 
 // Add project modal and logic

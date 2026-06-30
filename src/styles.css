@@ -17,6 +17,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
+
   html,
   body {
     background-color: #0d0e15;
@@ -35,7 +36,9 @@ body {
   -webkit-user-select: text !important;
 }
 
-.xterm, .xterm-rows, .xterm-screen {
+.xterm,
+.xterm-rows,
+.xterm-screen {
   user-select: text !important;
   -webkit-user-select: text !important;
 }
@@ -43,4 +46,20 @@ body {
 #terminal-container .xterm,
 #mini-terminal-container .xterm {
   height: 100%;
+}
+
+#markdown-preview-pane {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+
+  /* hide scrollbars when not in use */
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    scrollbar-color: #444 #222 !important;
+  }
 }
