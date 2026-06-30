@@ -488,7 +488,7 @@ const renderProjects = () => {
             // Open in Finder
             if (target.classList.contains('open-btn') || target.parentElement?.classList.contains('open-btn')) {
                 e.stopPropagation();
-                open(project.path).catch(console.error);
+                invoke('open_path', { path: project.path }).catch(console.error);
                 return;
             }
             
