@@ -4,6 +4,8 @@
 
 
 ### [2026-06-30] Unified AI-OS Active Thread Timeline View
+* **Thread Chain Consolidation:** Implemented backend-level consolidation of continued threads. In personal AI-OS, each subsequent user message in a thread is run in a fresh backend turn (initiated via `/clear`), creating a new individual thread folder under the hood. The Rust backend now detects these continuation links (looking for parent thread ID headers), groups them by their root thread ID, and exposes them in the sidebar as a single unified AI-OS thread with its `mtime`, title, and snippet reflecting the latest segment in the chain.
+* **Merged Thread Log Stitching:** Configured `read_thread_log` to seamlessly stitch together the individual JSONL logs of all chain segments in chronological order, allowing the timeline UI to display the complete message history extended in the same window.
 * **Historical Context UI Separation:** Separated the historical thread resumption context from the user's active prompt in the markdown conversation timeline. The history is now rendered in a beautiful, collapsible container on the left, while the active user prompt displays as a distinct message bubble on the right.
 * **Larger Context Limits:** Increased the compactified context window limits to preserve up to 15 conversation steps and 2,500 characters per message, preventing early truncation while retaining important thread details.
 * **CLI Thread Log Utility (`view-thread`):** Created `scripts/view_thread.py` and a corresponding `pnpm run view-thread <thread_id>` command, giving the agent a direct way to fetch and read untruncated steps of any historical thread. A system instruction with this command is injected into the historical context header.

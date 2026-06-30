@@ -1079,6 +1079,81 @@ struct ThreadLog {
     detected_project_path: Option<String>,
 }
 
+fn get_root_thread_id(thread_id: &str, child_to_parent: &HashMap<String, String>) -> String {
+    let mut current = thread_id.to_string();
+    let mut visited = std::collections::HashSet::new();
+    visited.insert(current.clone());
+    while let Some(parent) = child_to_parent.get(&current) {
+        if visited.contains(parent) {
+            break;
+        }
+        current = parent.clone();
+        visited.insert(current.clone());
+    }
+    current
+}
+
+fn scan_brain_threads(brain_dir: &std::path::Path) -> (HashMap<String, String>, HashMap<String, u64>) {
+    use std::io::Read;
+    let mut child_to_parent = HashMap::new();
+    let mut thread_mtimes = HashMap::new();
+
+    if let Ok(entries) = std::fs::read_dir(brain_dir) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(thread_id) = path.file_name().map(|n| n.to_string_lossy().to_string()) {
+                        let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
+                        if transcript_path.exists() {
+                            if let Ok(metadata) = std::fs::metadata(&transcript_path) {
+                                let mtime = metadata.modified()
+                                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
+                                    .map(|d| d.as_secs())
+                                    .unwrap_or(0);
+                                thread_mtimes.insert(thread_id.clone(), mtime);
+                            }
+
+                            if let Ok(mut file) = std::fs::File::open(&transcript_path) {
+                                let mut buffer = vec![0; 4096];
+                                if let Ok(n) = file.read(&mut buffer) {
+                                    let content = String::from_utf8_lossy(&buffer[..n]);
+                                    if let Some(pos) = content.find("Continuing conversation from history (Thread ID:") {
+                                        let after = &content[pos + "Continuing conversation from history (Thread ID:".len()..];
+                                        if let Some(end_pos) = after.find(')') {
+                                            let parent_id = after[..end_pos].trim().to_string();
+                                            if parent_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
+                                                child_to_parent.insert(thread_id.clone(), parent_id);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    (child_to_parent, thread_mtimes)
+}
+
+fn get_thread_chain(
+    root_id: &str,
+    child_to_parent: &HashMap<String, String>,
+    thread_mtimes: &HashMap<String, u64>,
+) -> Vec<String> {
+    let mut chain = Vec::new();
+    for thread_id in thread_mtimes.keys() {
+        if get_root_thread_id(thread_id, child_to_parent) == root_id {
+            chain.push(thread_id.clone());
+        }
+    }
+    chain.sort_by_key(|id| thread_mtimes.get(id).cloned().unwrap_or(0));
+    chain
+}
+
 #[tauri::command]
 fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
     use std::fs;
@@ -1097,101 +1172,102 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
 
     let is_misc = project_path.ends_with("/projects/Misc") || project_path == "Misc";
 
-    let entries = fs::read_dir(&brain_dir)
-        .map_err(|e| format!("Failed to read brain directory: {}", e))?;
+    let (child_to_parent, thread_mtimes) = scan_brain_threads(&brain_dir);
+
+    let mut groups: HashMap<String, Vec<String>> = HashMap::new();
+    for thread_id in thread_mtimes.keys() {
+        let root_id = get_root_thread_id(thread_id, &child_to_parent);
+        groups.entry(root_id).or_default().push(thread_id.clone());
+    }
 
     let mut thread_logs = Vec::new();
 
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_dir() {
-                let thread_id = path.file_name().unwrap().to_string_lossy().to_string();
-                let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
-                
-                if transcript_path.exists() {
-                    let metadata = match fs::metadata(&transcript_path) {
-                        Ok(m) => m,
-                        Err(_) => continue,
-                    };
-                    let mtime = metadata.modified()
-                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0);
+    for (root_id, mut members) in groups {
+        members.sort_by_key(|id| thread_mtimes.get(id).cloned().unwrap_or(0));
+        
+        let root_thread_id = &root_id;
+        let latest_thread_id = members.last().unwrap();
+        
+        let root_dir = brain_dir.join(root_thread_id);
+        let root_filepath = root_dir.join(".system_generated").join("logs").join("transcript.jsonl");
 
-                    let file = match fs::File::open(&transcript_path) {
-                        Ok(f) => f,
-                        Err(_) => continue,
-                    };
-                    
-                    let mut buffer = Vec::new();
-                    let _ = file.take(131072).read_to_end(&mut buffer);
-                    let content = String::from_utf8_lossy(&buffer);
+        let latest_dir = brain_dir.join(latest_thread_id);
+        let latest_filepath = latest_dir.join(".system_generated").join("logs").join("transcript.jsonl");
 
-                    let matched = if is_misc {
-                        detect_project_path(&content).is_none()
-                    } else {
-                        if let Some(pos) = content.find(&project_path) {
-                            let after_match = &content[pos + project_path.len()..];
-                            let is_exact = match after_match.chars().next() {
-                                Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
-                                None => true,
-                            };
-                            is_exact
-                        } else {
-                            false
-                        }
-                    };
+        if !root_filepath.exists() || !latest_filepath.exists() {
+            continue;
+        }
 
-                    if matched {
-                        let mut title = thread_id.clone();
-                        let mut snippet = String::new();
-                        
-                        for line in content.lines() {
-                            if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-                                if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
-                                    if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
-                                        let mut raw_prompt = prompt_content.to_string();
-                                        if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
-                                            if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
-                                                raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
-                                            }
-                                        }
-                                        
-                                        let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
-                                        let char_count = clean_prompt.chars().count();
-                                        title = if char_count > 40 {
-                                            format!("{}...", clean_prompt.chars().take(40).collect::<String>())
-                                        } else {
-                                            clean_prompt.clone()
-                                        };
-                                        snippet = if char_count > 120 {
-                                            format!("{}...", clean_prompt.chars().take(120).collect::<String>())
-                                        } else {
-                                            clean_prompt
-                                        };
-                                        break;
-                                    }
+        let file = match fs::File::open(&latest_filepath) {
+            Ok(f) => f,
+            Err(_) => continue,
+        };
+        let mut buffer = Vec::new();
+        let _ = file.take(131072).read_to_end(&mut buffer);
+        let content = String::from_utf8_lossy(&buffer);
+
+        let matched = if is_misc {
+            detect_project_path(&content).is_none()
+        } else {
+            if let Some(pos) = content.find(&project_path) {
+                let after_match = &content[pos + project_path.len()..];
+                let is_exact = match after_match.chars().next() {
+                    Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
+                    None => true,
+                };
+                is_exact
+            } else {
+                false
+            }
+        };
+
+        if matched {
+            let mut title = latest_thread_id.clone();
+            let mut snippet = String::new();
+            
+            for line in content.lines() {
+                if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+                    if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+                        if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
+                            let mut raw_prompt = prompt_content.to_string();
+                            if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
+                                if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
+                                    raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
                                 }
                             }
+                            
+                            let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
+                            let char_count = clean_prompt.chars().count();
+                            title = if char_count > 40 {
+                                format!("{}...", clean_prompt.chars().take(40).collect::<String>())
+                            } else {
+                                clean_prompt.clone()
+                            };
+                            snippet = if char_count > 120 {
+                                format!("{}...", clean_prompt.chars().take(120).collect::<String>())
+                            } else {
+                                clean_prompt
+                            };
+                            break;
                         }
-                        
-                        thread_logs.push(ThreadLog {
-                            id: thread_id,
-                            title,
-                            snippet,
-                            filepath: transcript_path.to_string_lossy().to_string(),
-                            mtime,
-                            detected_project_path: Some(project_path.clone()),
-                        });
                     }
                 }
             }
+
+            let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
+
+            thread_logs.push(ThreadLog {
+                id: root_id,
+                title,
+                snippet,
+                filepath: root_filepath.to_string_lossy().to_string(),
+                mtime: latest_mtime,
+                detected_project_path: Some(project_path.clone()),
+            });
         }
     }
 
     thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
-
     Ok(thread_logs)
 }
 
@@ -1206,7 +1282,6 @@ fn detect_project_path(content: &str) -> Option<String> {
         }).unwrap_or(after_prefix.len());
         
         let mut project_name = &after_prefix[..end_pos];
-        // Strip trailing markdown punctuation/styling chars
         while !project_name.is_empty() && project_name.ends_with(|c: char| c == '`' || c == '*' || c == '.' || c == ',' || c == ':' || c == ';' || c == ')' || c == ']') {
             project_name = &project_name[..project_name.len() - 1];
         }
@@ -1233,87 +1308,86 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
         return Ok(Vec::new());
     }
 
-    let entries = fs::read_dir(&brain_dir)
-        .map_err(|e| format!("Failed to read brain directory: {}", e))?;
+    let (child_to_parent, thread_mtimes) = scan_brain_threads(&brain_dir);
+
+    let mut groups: HashMap<String, Vec<String>> = HashMap::new();
+    for thread_id in thread_mtimes.keys() {
+        let root_id = get_root_thread_id(thread_id, &child_to_parent);
+        groups.entry(root_id).or_default().push(thread_id.clone());
+    }
 
     let mut thread_logs = Vec::new();
 
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_dir() {
-                let thread_id = path.file_name().unwrap().to_string_lossy().to_string();
-                let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
-                
-                if transcript_path.exists() {
-                    let metadata = match fs::metadata(&transcript_path) {
-                        Ok(m) => m,
-                        Err(_) => continue,
-                    };
-                    let mtime = metadata.modified()
-                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
-                        .map(|d| d.as_secs())
-                        .unwrap_or(0);
+    for (root_id, mut members) in groups {
+        members.sort_by_key(|id| thread_mtimes.get(id).cloned().unwrap_or(0));
+        
+        let root_thread_id = &root_id;
+        let latest_thread_id = members.last().unwrap();
+        
+        let root_dir = brain_dir.join(root_thread_id);
+        let root_filepath = root_dir.join(".system_generated").join("logs").join("transcript.jsonl");
 
-                    let file = match fs::File::open(&transcript_path) {
-                        Ok(f) => f,
-                        Err(_) => continue,
-                    };
-                    
-                    let mut buffer = Vec::new();
-                    let _ = file.take(131072).read_to_end(&mut buffer);
-                    let content = String::from_utf8_lossy(&buffer);
+        let latest_dir = brain_dir.join(latest_thread_id);
+        let latest_filepath = latest_dir.join(".system_generated").join("logs").join("transcript.jsonl");
 
-                    let mut title = thread_id.clone();
-                    let mut snippet = String::new();
-                    
-                    for line in content.lines() {
-                        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-                            if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
-                                if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
-                                    let mut raw_prompt = prompt_content.to_string();
-                                    if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
-                                        if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
-                                            raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
-                                        }
-                                    }
-                                    
-                                    let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
-                                    let char_count = clean_prompt.chars().count();
-                                    title = if char_count > 40 {
-                                        format!("{}...", clean_prompt.chars().take(40).collect::<String>())
-                                    } else {
-                                        clean_prompt.clone()
-                                    };
-                                    snippet = if char_count > 120 {
-                                        format!("{}...", clean_prompt.chars().take(120).collect::<String>())
-                                    } else {
-                                        clean_prompt
-                                    };
-                                    break;
-                                }
+        if !root_filepath.exists() || !latest_filepath.exists() {
+            continue;
+        }
+
+        let file = match fs::File::open(&latest_filepath) {
+            Ok(f) => f,
+            Err(_) => continue,
+        };
+        let mut buffer = Vec::new();
+        let _ = file.take(131072).read_to_end(&mut buffer);
+        let content = String::from_utf8_lossy(&buffer);
+
+        let mut title = latest_thread_id.clone();
+        let mut snippet = String::new();
+        
+        for line in content.lines() {
+            if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+                if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+                    if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
+                        let mut raw_prompt = prompt_content.to_string();
+                        if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
+                            if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
+                                raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
                             }
                         }
+                        
+                        let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
+                        let char_count = clean_prompt.chars().count();
+                        title = if char_count > 40 {
+                            format!("{}...", clean_prompt.chars().take(40).collect::<String>())
+                        } else {
+                            clean_prompt.clone()
+                        };
+                        snippet = if char_count > 120 {
+                            format!("{}...", clean_prompt.chars().take(120).collect::<String>())
+                        } else {
+                            clean_prompt
+                        };
+                        break;
                     }
-                    
-                    let detected_project_path = detect_project_path(&content);
-                    
-                    thread_logs.push(ThreadLog {
-                        id: thread_id,
-                        title,
-                        snippet,
-                        filepath: transcript_path.to_string_lossy().to_string(),
-                        mtime,
-                        detected_project_path,
-                    });
                 }
             }
         }
+
+        let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
+        let detected_project_path = detect_project_path(&content);
+
+        thread_logs.push(ThreadLog {
+            id: root_id,
+            title,
+            snippet,
+            filepath: root_filepath.to_string_lossy().to_string(),
+            mtime: latest_mtime,
+            detected_project_path,
+        });
     }
 
-    // Sort by mtime descending (newest first)
     thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
-
     Ok(thread_logs)
 }
 
@@ -1368,9 +1442,53 @@ fn load_prompt_draft(project_path: String) -> Result<String, String> {
     }
 }
 
+fn get_thread_id_from_path(filepath: &str) -> Option<String> {
+    let path = std::path::Path::new(filepath);
+    for ancestor in path.ancestors() {
+        if let Some(parent) = ancestor.parent() {
+            if parent.file_name()?.to_string_lossy() == "brain" {
+                return Some(ancestor.file_name()?.to_string_lossy().to_string());
+            }
+        }
+    }
+    None
+}
+
 #[tauri::command]
 fn read_thread_log(filepath: String) -> Result<String, String> {
     use std::fs;
+    use std::path::Path;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let brain_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("brain");
+
+    if let Some(thread_id) = get_thread_id_from_path(&filepath) {
+        if brain_dir.exists() {
+            let (child_to_parent, thread_mtimes) = scan_brain_threads(&brain_dir);
+            let root_id = get_root_thread_id(&thread_id, &child_to_parent);
+            let chain = get_thread_chain(&root_id, &child_to_parent, &thread_mtimes);
+            
+            if !chain.is_empty() {
+                let mut combined_content = String::new();
+                for id in chain {
+                    let log_path = brain_dir.join(id).join(".system_generated").join("logs").join("transcript.jsonl");
+                    if log_path.exists() {
+                        if let Ok(content) = fs::read_to_string(log_path) {
+                            if !combined_content.is_empty() && !combined_content.ends_with('\n') {
+                                combined_content.push('\n');
+                            }
+                            combined_content.push_str(&content);
+                        }
+                    }
+                }
+                return Ok(combined_content);
+            }
+        }
+    }
+
     fs::read_to_string(filepath).map_err(|e| format!("Failed to read thread log: {}", e))
 }
 
@@ -1411,7 +1529,14 @@ fn patch_thread_log_with_output(
     };
 
     let target_thread_id = if !target_id.is_empty() {
-        target_id
+        let (child_to_parent, thread_mtimes) = scan_brain_threads(&brain_dir);
+        let root_id = get_root_thread_id(&target_id, &child_to_parent);
+        let mut chain = get_thread_chain(&root_id, &child_to_parent, &thread_mtimes);
+        if let Some(leaf_id) = chain.pop() {
+            leaf_id
+        } else {
+            target_id
+        }
     } else {
         // Find the most recently modified thread that matches this project
         let entries = fs::read_dir(&brain_dir)
