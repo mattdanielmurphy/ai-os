@@ -109,6 +109,23 @@ body {
 }
 
 /* Custom Markdown Prose Styling Overrides */
+.prose {
+  max-width: none !important;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6,
+.prose blockquote {
+  max-width: 65ch !important;
+}
+
 .prose code {
   color: #0969da !important;
   background-color: rgba(175, 184, 193, 0.2) !important;

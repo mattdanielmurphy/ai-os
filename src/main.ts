@@ -1,163 +1,248 @@
 import '@xterm/xterm/css/xterm.css'
 import './styles.css'
 
+import type { ILink, ILinkProvider } from '@xterm/xterm'
+
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
-import { open } from '@tauri-apps/api/shell'
-import { WebLinksAddon } from '@xterm/addon-web-links'
-import type { ILinkProvider, ILink } from '@xterm/xterm'
 import { marked } from 'marked'
+import { open } from '@tauri-apps/api/shell'
 
 // ----------------------------------------------------
 // 1. Interfaces & Types
 // ----------------------------------------------------
 interface Project {
-    path: string;
-    name: string;
-    color: string;
-    lastActive: number; // timestamp
-    engine: 'claude' | 'agy';
-    promptDraft?: string;
-    isTerminalMode?: boolean;
+    path: string
+    name: string
+    color: string
+    lastActive: number // timestamp
+    engine: 'claude' | 'agy'
+    promptDraft?: string
+    isTerminalMode?: boolean
 }
 
 // ----------------------------------------------------
 // 2. Global State Management
 // ----------------------------------------------------
-let activeProject: string = '/Users/matthewmurphy/projects/ai-os';
+let activeProject: string = '/Users/matthewmurphy/projects/ai-os'
 
-const formatPathForUser = (path: string, projectPath: string = activeProject): string => {
-    if (!path) return '';
-    const projectPrefix = projectPath.endsWith('/') ? projectPath : (projectPath + '/');
+const formatPathForUser = (
+    path: string,
+    projectPath: string = activeProject
+): string => {
+    if (!path) return ''
+    const projectPrefix = projectPath.endsWith('/')
+        ? projectPath
+        : projectPath + '/'
     if (path.startsWith(projectPrefix)) {
-        return path.substring(projectPrefix.length);
+        return path.substring(projectPrefix.length)
     }
-    return path.replace('/Users/matthewmurphy', '~');
-};
+    return path.replace('/Users/matthewmurphy', '~')
+}
 
-let isTerminalMode: boolean = false;
-let isTuiExpanded: boolean = false;
-let activeThreadId: string | null = null;
-let activeThreadContext: string | null = null;
-const threadFilepaths = new Map<string, string>();
-let lastThreadsJson = '';
-let isWaitingForNewThread = false;
-let waitingExistingThreadIds: Set<string> = new Set();
-let saveDraftTimeout: any = null;
+let isTerminalMode: boolean = false
+let isTuiExpanded: boolean = false
+let activeThreadId: string | null = null
+let activeThreadContext: string | null = null
+const threadFilepaths = new Map<string, string>()
+let lastThreadsJson = ''
+let isWaitingForNewThread = false
+let waitingExistingThreadIds: Set<string> = new Set()
+let saveDraftTimeout: any = null
 
 const savePromptDraft = (content: string) => {
-    if (!activeProject) return;
-    localStorage.setItem(`ai-os-prompt-draft-${activeProject}`, content);
-    
-    const currentProj = projects.find(p => p.path === activeProject);
+    if (!activeProject) return
+    localStorage.setItem(`ai-os-prompt-draft-${activeProject}`, content)
+
+    const currentProj = projects.find((p) => p.path === activeProject)
     if (currentProj) {
-        currentProj.promptDraft = content;
-        saveProjects();
+        currentProj.promptDraft = content
+        saveProjects()
     }
-    
-    const isWordCompleted = content.endsWith(' ') || content.endsWith('\n') || content.endsWith('\t');
-    
+
+    const isWordCompleted =
+        content.endsWith(' ') ||
+        content.endsWith('\n') ||
+        content.endsWith('\t')
+
     if (saveDraftTimeout) {
-        clearTimeout(saveDraftTimeout);
+        clearTimeout(saveDraftTimeout)
     }
-    
+
     const writeToDisk = () => {
-        invoke('save_prompt_draft', { projectPath: activeProject, content })
-            .catch(err => console.error('Failed to save prompt draft to disk:', err));
-    };
-    
-    if (isWordCompleted) {
-        writeToDisk();
-    } else {
-        saveDraftTimeout = setTimeout(writeToDisk, 150);
+        invoke('save_prompt_draft', {
+            projectPath: activeProject,
+            content,
+        }).catch((err) =>
+            console.error('Failed to save prompt draft to disk:', err)
+        )
     }
-};
+
+    if (isWordCompleted) {
+        writeToDisk()
+    } else {
+        saveDraftTimeout = setTimeout(writeToDisk, 150)
+    }
+}
 
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
-const claudeBuffers: Record<string, string> = {};
-const agyBuffers: Record<string, string> = {};
-const miniTermBuffers: Record<string, string> = {};
+const claudeBuffers: Record<string, string> = {}
+const agyBuffers: Record<string, string> = {}
+const miniTermBuffers: Record<string, string> = {}
 
-let pauseStatus: 'Running' | 'Pending' | 'Paused' = 'Running';
-const pauseBtnEl = document.getElementById('pause-btn');
+let pauseStatus: 'Running' | 'Pending' | 'Paused' = 'Running'
+const pauseBtnEl = document.getElementById('pause-btn')
 
 const updatePauseUI = (status: 'Running' | 'Pending' | 'Paused') => {
-    pauseStatus = status;
+    pauseStatus = status
     if (pauseBtnEl) {
         if (status === 'Pending') {
-            pauseBtnEl.textContent = 'Pending...';
-            pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 border border-orange-500/30 animate-pulse transition-all select-none cursor-pointer';
+            pauseBtnEl.textContent = 'Pending...'
+            pauseBtnEl.className =
+                'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 border border-orange-500/30 animate-pulse transition-all select-none cursor-pointer'
         } else if (status === 'Paused') {
-            pauseBtnEl.textContent = 'Resume';
-            pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-all select-none cursor-pointer';
+            pauseBtnEl.textContent = 'Resume'
+            pauseBtnEl.className =
+                'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-all select-none cursor-pointer'
         } else {
-            pauseBtnEl.textContent = 'Pause';
-            pauseBtnEl.className = 'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-all select-none cursor-pointer';
+            pauseBtnEl.textContent = 'Pause'
+            pauseBtnEl.className =
+                'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-all select-none cursor-pointer'
         }
     }
-};
+}
 
 pauseBtnEl?.addEventListener('click', async () => {
-    const requestPause = (pauseStatus === 'Running');
+    const requestPause = pauseStatus === 'Running'
     try {
-        await invoke('toggle_process_pause', { projectPath: activeProject, pause: requestPause });
+        await invoke('toggle_process_pause', {
+            projectPath: activeProject,
+            pause: requestPause,
+        })
     } catch (e) {
-        console.error('Failed to toggle pause:', e);
+        console.error('Failed to toggle pause:', e)
     }
-});
+})
 
-listen<{ project_path: string, status: 'Running' | 'Pending' | 'Paused' }>('pause-status', (event) => {
-    const { project_path, status } = event.payload;
-    if (project_path === activeProject) {
-        updatePauseUI(status);
+listen<{ project_path: string; status: 'Running' | 'Pending' | 'Paused' }>(
+    'pause-status',
+    (event) => {
+        const { project_path, status } = event.payload
+        if (project_path === activeProject) {
+            updatePauseUI(status)
+        }
     }
-});
+)
 
 // Hardcoded initial projects list mapped with unique random colors and default engines
 const initialProjects: Project[] = [
-    { path: '/Users/matthewmurphy/projects/ai-os', name: 'ai-os', color: '#3b82f6', lastActive: Date.now(), engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/structural-constraint-art', name: 'structural-constraint-art', color: '#ec4899', lastActive: Date.now() - 1000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/now-music', name: 'now-music', color: '#10b981', lastActive: Date.now() - 2000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/antigravity-optimization', name: 'antigravity-optimization', color: '#f59e0b', lastActive: Date.now() - 3000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/webpage-compressor', name: 'webpage-compressor', color: '#8b5cf6', lastActive: Date.now() - 4000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/tic-tac-toe', name: 'tic-tac-toe', color: '#ef4444', lastActive: Date.now() - 5000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/agy-animation', name: 'agy-animation', color: '#06b6d4', lastActive: Date.now() - 6000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/atlas-calculator', name: 'atlas-calculator', color: '#10b981', lastActive: Date.now() - 7000, engine: 'agy', isTerminalMode: false },
-    { path: '/Users/matthewmurphy/projects/animation_project', name: 'animation_project', color: '#6366f1', lastActive: Date.now() - 8000, engine: 'agy', isTerminalMode: false }
-];
+    {
+        path: '/Users/matthewmurphy/projects/ai-os',
+        name: 'ai-os',
+        color: '#3b82f6',
+        lastActive: Date.now(),
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/structural-constraint-art',
+        name: 'structural-constraint-art',
+        color: '#ec4899',
+        lastActive: Date.now() - 1000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/now-music',
+        name: 'now-music',
+        color: '#10b981',
+        lastActive: Date.now() - 2000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/antigravity-optimization',
+        name: 'antigravity-optimization',
+        color: '#f59e0b',
+        lastActive: Date.now() - 3000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/webpage-compressor',
+        name: 'webpage-compressor',
+        color: '#8b5cf6',
+        lastActive: Date.now() - 4000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/tic-tac-toe',
+        name: 'tic-tac-toe',
+        color: '#ef4444',
+        lastActive: Date.now() - 5000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/agy-animation',
+        name: 'agy-animation',
+        color: '#06b6d4',
+        lastActive: Date.now() - 6000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/atlas-calculator',
+        name: 'atlas-calculator',
+        color: '#10b981',
+        lastActive: Date.now() - 7000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+    {
+        path: '/Users/matthewmurphy/projects/animation_project',
+        name: 'animation_project',
+        color: '#6366f1',
+        lastActive: Date.now() - 8000,
+        engine: 'agy',
+        isTerminalMode: false,
+    },
+]
 
 // Load projects from localStorage or use initial list
 let projects: Project[] = (() => {
-    const saved = localStorage.getItem('ai-os-projects');
-    let loadedList: any[] = [];
+    const saved = localStorage.getItem('ai-os-projects')
+    let loadedList: any[] = []
     if (saved) {
         try {
-            loadedList = JSON.parse(saved);
+            loadedList = JSON.parse(saved)
         } catch (e) {
-            console.error('Failed to parse saved projects:', e);
-            loadedList = initialProjects;
+            console.error('Failed to parse saved projects:', e)
+            loadedList = initialProjects
         }
     } else {
-        loadedList = initialProjects;
+        loadedList = initialProjects
     }
 
-    const uniqueProjectsMap = new Map<string, Project>();
+    const uniqueProjectsMap = new Map<string, Project>()
     for (const p of loadedList) {
-        let cleanPath = p.path || '';
+        let cleanPath = p.path || ''
         if (cleanPath.includes('/projects/thread-')) {
-            continue; // Filter out legacy mock thread projects
+            continue // Filter out legacy mock thread projects
         }
         while (cleanPath.length > 0 && /[`*.,:;)}"\]]$/.test(cleanPath)) {
-            cleanPath = cleanPath.slice(0, -1);
+            cleanPath = cleanPath.slice(0, -1)
         }
-        let cleanName = p.name || '';
+        let cleanName = p.name || ''
         while (cleanName.length > 0 && /[`*.,:;)}"\]]$/.test(cleanName)) {
-            cleanName = cleanName.slice(0, -1);
+            cleanName = cleanName.slice(0, -1)
         }
 
-        if (!cleanPath) continue;
+        if (!cleanPath) continue
 
         const mapped: Project = {
             path: cleanPath,
@@ -165,61 +250,62 @@ let projects: Project[] = (() => {
             color: p.color || '#3b82f6',
             lastActive: p.lastActive || Date.now(),
             engine: p.engine || 'agy',
-            isTerminalMode: p.isTerminalMode || false
-        };
+            isTerminalMode: p.isTerminalMode || false,
+        }
 
-        const existing = uniqueProjectsMap.get(cleanPath);
+        const existing = uniqueProjectsMap.get(cleanPath)
         if (!existing || mapped.lastActive > existing.lastActive) {
-            uniqueProjectsMap.set(cleanPath, mapped);
+            uniqueProjectsMap.set(cleanPath, mapped)
         }
     }
 
-    const cleaned = Array.from(uniqueProjectsMap.values());
-    cleaned.sort((a, b) => b.lastActive - a.lastActive);
-    
+    const cleaned = Array.from(uniqueProjectsMap.values())
+    cleaned.sort((a, b) => b.lastActive - a.lastActive)
+
     // Save back the cleaned version immediately if we changed anything
     if (saved && cleaned.length !== loadedList.length) {
         try {
-            localStorage.setItem('ai-os-projects', JSON.stringify(cleaned));
+            localStorage.setItem('ai-os-projects', JSON.stringify(cleaned))
         } catch (e) {
-            console.error('Failed to save cleaned projects:', e);
+            console.error('Failed to save cleaned projects:', e)
         }
     }
-    return cleaned;
-})();
+    return cleaned
+})()
 
 const saveProjects = () => {
-    localStorage.setItem('ai-os-projects', JSON.stringify(projects));
-};
+    localStorage.setItem('ai-os-projects', JSON.stringify(projects))
+}
 
 // ----------------------------------------------------
 // 3. Terminals Setup & Integration
 // ----------------------------------------------------
 
-const isDarkMode = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+const isDarkMode = () =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches
 
 const applyTheme = () => {
     if (isDarkMode()) {
-        document.documentElement.classList.add('dark');
+        document.documentElement.classList.add('dark')
     } else {
-        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.remove('dark')
     }
-};
+}
 
 // Initialize dark mode class on load
-applyTheme();
+applyTheme()
 
 const getTermTheme = () => {
-    return isDarkMode() 
+    return isDarkMode()
         ? { background: '#000000', foreground: '#ffffff' }
-        : { background: '#ffffff', foreground: '#000000' };
-};
+        : { background: '#ffffff', foreground: '#000000' }
+}
 
 const getMiniTermTheme = () => {
-    return isDarkMode() 
+    return isDarkMode()
         ? { background: '#000000', foreground: '#10b981' }
-        : { background: '#ffffff', foreground: '#059669' };
-};
+        : { background: '#ffffff', foreground: '#059669' }
+}
 
 // Engine TUI Terminal
 const term = new Terminal({
@@ -227,102 +313,128 @@ const term = new Terminal({
     fontSize: 13,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     theme: getTermTheme(),
-});
-const fitAddon = new FitAddon();
-term.loadAddon(fitAddon);
+})
+const fitAddon = new FitAddon()
+term.loadAddon(fitAddon)
 
 const handleLink = (e: MouseEvent, uri: string) => {
     if (e.metaKey || e.ctrlKey) {
-        let finalUri = uri;
-        
+        let finalUri = uri
+
         // Handle web URLs
         if (finalUri.startsWith('http://') || finalUri.startsWith('https://')) {
-            open(finalUri).catch(err => console.error("Failed to open web link:", err));
-            return;
+            open(finalUri).catch((err) =>
+                console.error('Failed to open web link:', err)
+            )
+            return
         }
 
         // Clean up file:// prefix if present
         if (finalUri.startsWith('file://')) {
-            finalUri = finalUri.replace('file://', '');
+            finalUri = finalUri.replace('file://', '')
         }
 
         // Resolve relative paths against the active project
         if (!finalUri.startsWith('/') && !finalUri.startsWith('~/')) {
             if (finalUri.startsWith('./')) {
-                finalUri = finalUri.slice(2);
+                finalUri = finalUri.slice(2)
             }
-            finalUri = `${activeProject}/${finalUri}`;
+            finalUri = `${activeProject}/${finalUri}`
         }
 
         // Use custom rust command to circumvent Tauri `open` URL restrictions
-        invoke('open_path', { path: finalUri }).catch(err => console.error("Failed to open path:", err));
+        invoke('open_path', { path: finalUri }).catch((err) =>
+            console.error('Failed to open path:', err)
+        )
     }
-};
+}
 
-(window as any).openPath = (path: string) => {
-    invoke('open_path', { path }).catch(err => console.error("Failed to open path:", err));
-};
+;(window as any).openPath = (path: string) => {
+    invoke('open_path', { path }).catch((err) =>
+        console.error('Failed to open path:', err)
+    )
+}
 
 class LocalPathLinkProvider implements ILinkProvider {
-    constructor(private term: Terminal, private handler: (e: MouseEvent, uri: string) => void) {}
-    provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void): void {
-        const line = this.term.buffer.active.getLine(bufferLineNumber - 1);
+    constructor(
+        private term: Terminal,
+        private handler: (e: MouseEvent, uri: string) => void
+    ) {}
+    provideLinks(
+        bufferLineNumber: number,
+        callback: (links: ILink[] | undefined) => void
+    ): void {
+        const line = this.term.buffer.active.getLine(bufferLineNumber - 1)
         if (!line) {
-            callback(undefined);
-            return;
+            callback(undefined)
+            return
         }
-        const text = line.translateToString(true);
+        const text = line.translateToString(true)
         // Include URLs as well in this regex if needed? No, WebLinksAddon does URLs.
-        const regex = /(?:file:\/\/)?[a-zA-Z0-9_.~-]*(?:\/[a-zA-Z0-9_.-]+)+/g;
-        const links: ILink[] = [];
-        let match;
+        const regex = /(?:file:\/\/)?[a-zA-Z0-9_.~-]*(?:\/[a-zA-Z0-9_.-]+)+/g
+        const links: ILink[] = []
+        let match
         while ((match = regex.exec(text)) !== null) {
             links.push({
                 range: {
                     start: { x: match.index + 1, y: bufferLineNumber },
-                    end: { x: match.index + match[0].length, y: bufferLineNumber }
+                    end: {
+                        x: match.index + match[0].length,
+                        y: bufferLineNumber,
+                    },
                 },
                 text: match[0],
-                activate: (e: MouseEvent, text: string) => this.handler(e, text)
-            });
+                activate: (e: MouseEvent, text: string) =>
+                    this.handler(e, text),
+            })
         }
-        callback(links);
+        callback(links)
     }
 }
 
-term.loadAddon(new WebLinksAddon(handleLink));
-term.registerLinkProvider(new LocalPathLinkProvider(term, handleLink));
+term.loadAddon(new WebLinksAddon(handleLink))
+term.registerLinkProvider(new LocalPathLinkProvider(term, handleLink))
 
 term.onData((data) => {
-    invoke('write_to_pty', { data, projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
-        console.error('Failed to write key to Engine PTY:', err);
-    });
+    invoke('write_to_pty', {
+        data,
+        projectPath: activeProject,
+        terminalType: currentEngine,
+    }).catch((err) => {
+        console.error('Failed to write key to Engine PTY:', err)
+    })
 
     // Auto-adjust terminal height when user starts typing a slash command
     setTimeout(() => {
-        const cursorLine = term.buffer.active.getLine(term.buffer.active.cursorY + term.buffer.active.baseY);
-        const lineText = cursorLine ? cursorLine.translateToString().trim() : '';
-        const tuiContainer = document.getElementById('terminal-container');
+        const cursorLine = term.buffer.active.getLine(
+            term.buffer.active.cursorY + term.buffer.active.baseY
+        )
+        const lineText = cursorLine ? cursorLine.translateToString().trim() : ''
+        const tuiContainer = document.getElementById('terminal-container')
         if (tuiContainer && !isTuiExpanded) {
             if (lineText.startsWith('/')) {
-                tuiContainer.style.height = '320px';
-                debouncedResizePty();
+                tuiContainer.style.height = '320px'
+                debouncedResizePty()
             } else if (tuiContainer.style.height === '320px') {
-                tuiContainer.style.height = '64px';
-                debouncedResizePty();
+                tuiContainer.style.height = '64px'
+                debouncedResizePty()
             }
         }
-    }, 20);
-});
+    }, 20)
+})
 
 term.attachCustomKeyEventHandler((e) => {
     if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
-        e.preventDefault();
-        invoke('write_to_pty', { data: '\x1b\x0d', projectPath: activeProject, terminalType: currentEngine }).catch(console.error);
-        return false;
+        e.preventDefault()
+        invoke('write_to_pty', {
+            data: '\x1b\x0d',
+            projectPath: activeProject,
+            terminalType: currentEngine,
+        }).catch(console.error)
+        return false
     }
-    return true;
-});
+    return true
+})
 
 // Mini Terminal
 const miniTerm = new Terminal({
@@ -330,251 +442,315 @@ const miniTerm = new Terminal({
     fontSize: 12,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     theme: getMiniTermTheme(),
-});
+})
 
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    applyTheme();
-    term.options.theme = getTermTheme();
-    miniTerm.options.theme = getMiniTermTheme();
-    
-    // Inject the theme command to the backend engines ONLY if active engine is Claude
-    if (currentEngine === 'claude' && activeProject) {
-        const themeStr = e.matches ? 'dark' : 'light';
-        const msg = `/theme ${themeStr}\x0d`;
-        invoke('write_to_pty', { data: msg, projectPath: activeProject, terminalType: 'claude' }).catch(console.error);
-    }
-});
-const miniFitAddon = new FitAddon();
-miniTerm.loadAddon(miniFitAddon);
-miniTerm.loadAddon(new WebLinksAddon(handleLink));
-miniTerm.registerLinkProvider(new LocalPathLinkProvider(miniTerm, handleLink));
+window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', (e) => {
+        applyTheme()
+        term.options.theme = getTermTheme()
+        miniTerm.options.theme = getMiniTermTheme()
 
-let miniInputBuffer = '';
+        // Inject the theme command to the backend engines ONLY if active engine is Claude
+        if (currentEngine === 'claude' && activeProject) {
+            const themeStr = e.matches ? 'dark' : 'light'
+            const msg = `/theme ${themeStr}\x0d`
+            invoke('write_to_pty', {
+                data: msg,
+                projectPath: activeProject,
+                terminalType: 'claude',
+            }).catch(console.error)
+        }
+    })
+const miniFitAddon = new FitAddon()
+miniTerm.loadAddon(miniFitAddon)
+miniTerm.loadAddon(new WebLinksAddon(handleLink))
+miniTerm.registerLinkProvider(new LocalPathLinkProvider(miniTerm, handleLink))
+
+let miniInputBuffer = ''
 
 miniTerm.onData((data) => {
     // Intercept Escape key
     if (data === '\x1b') {
-        exitTerminalMode();
-        return;
+        exitTerminalMode()
+        return
     }
-    
+
     // Write directly to PTY
-    invoke('write_to_pty', { data, projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
-        console.error('Failed to write key to Mini PTY:', err);
-    });
+    invoke('write_to_pty', {
+        data,
+        projectPath: activeProject,
+        terminalType: 'mini',
+    }).catch((err) => {
+        console.error('Failed to write key to Mini PTY:', err)
+    })
 
     // Check buffer for command exits
     for (let i = 0; i < data.length; i++) {
-        const char = data[i];
+        const char = data[i]
         if (char === '\r' || char === '\n') {
-            const cmd = miniInputBuffer.trim();
+            const cmd = miniInputBuffer.trim()
             if (cmd === 'exit' || cmd === 'exit()') {
-                exitTerminalMode();
+                exitTerminalMode()
             }
-            miniInputBuffer = '';
+            miniInputBuffer = ''
         } else if (char === '\x7f' || char === '\x08') {
-            miniInputBuffer = miniInputBuffer.slice(0, -1);
+            miniInputBuffer = miniInputBuffer.slice(0, -1)
         } else {
-            miniInputBuffer += char;
+            miniInputBuffer += char
         }
     }
-});
+})
 
 miniTerm.attachCustomKeyEventHandler((e) => {
     if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
-        e.preventDefault();
-        invoke('write_to_pty', { data: '\x1b\x0d', projectPath: activeProject, terminalType: 'mini' }).catch(console.error);
-        return false;
+        e.preventDefault()
+        invoke('write_to_pty', {
+            data: '\x1b\x0d',
+            projectPath: activeProject,
+            terminalType: 'mini',
+        }).catch(console.error)
+        return false
     }
-    return true;
-});
+    return true
+})
 
 const exitTerminalMode = () => {
-    isTerminalMode = false;
-    const currentProj = projects.find(p => p.path === activeProject);
+    isTerminalMode = false
+    const currentProj = projects.find((p) => p.path === activeProject)
     if (currentProj) {
-        currentProj.isTerminalMode = false;
-        saveProjects();
+        currentProj.isTerminalMode = false
+        saveProjects()
     }
-    applyTerminalModeUI();
-};
-
-const resizePty = () => {
-    fitAddon.fit();
-    miniFitAddon.fit();
-    invoke('resize_pty', { rows: term.rows, cols: term.cols, projectPath: activeProject, terminalType: 'engine' }).catch((err) => {
-        console.error('Failed to resize Engine PTY:', err);
-    });
-    invoke('resize_pty', { rows: miniTerm.rows, cols: miniTerm.cols, projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
-        console.error('Failed to resize Mini PTY:', err);
-    });
-};
-
-let resizePtyTimeout: any = null;
-const debouncedResizePty = () => {
-    if (resizePtyTimeout) clearTimeout(resizePtyTimeout);
-    resizePtyTimeout = setTimeout(() => {
-        resizePty();
-    }, 50);
-};
-
-const container = document.getElementById('terminal-container');
-if (container) {
-    term.open(container);
+    applyTerminalModeUI()
 }
 
-const miniContainer = document.getElementById('mini-terminal-container');
+const resizePty = () => {
+    fitAddon.fit()
+    miniFitAddon.fit()
+    invoke('resize_pty', {
+        rows: term.rows,
+        cols: term.cols,
+        projectPath: activeProject,
+        terminalType: 'engine',
+    }).catch((err) => {
+        console.error('Failed to resize Engine PTY:', err)
+    })
+    invoke('resize_pty', {
+        rows: miniTerm.rows,
+        cols: miniTerm.cols,
+        projectPath: activeProject,
+        terminalType: 'mini',
+    }).catch((err) => {
+        console.error('Failed to resize Mini PTY:', err)
+    })
+}
+
+let resizePtyTimeout: any = null
+const debouncedResizePty = () => {
+    if (resizePtyTimeout) clearTimeout(resizePtyTimeout)
+    resizePtyTimeout = setTimeout(() => {
+        resizePty()
+    }, 50)
+}
+
+const container = document.getElementById('terminal-container')
+if (container) {
+    term.open(container)
+}
+
+const miniContainer = document.getElementById('mini-terminal-container')
 if (miniContainer) {
-    miniTerm.open(miniContainer);
+    miniTerm.open(miniContainer)
 }
 
 window.addEventListener('resize', () => {
-    debouncedResizePty();
-});
+    debouncedResizePty()
+})
 
 // ----------------------------------------------------
 // 7. Output Modal & Virtual Terminal Parser
 // ----------------------------------------------------
-const markdownPreviewPane = document.getElementById('markdown-preview-pane');
-
+const markdownPreviewPane = document.getElementById('markdown-preview-pane')
 
 // Parse transcript steps and render custom TUI log view in real time
 interface Step {
-    step_index: number;
-    source: string;
-    type: string;
-    status: string;
-    content?: string;
+    step_index: number
+    source: string
+    type: string
+    status: string
+    content?: string
     tool_calls?: Array<{
-        name: string;
-        args?: Record<string, any>;
-    }>;
+        name: string
+        args?: Record<string, any>
+    }>
 }
 
 interface ToolCallItem {
-    name: string;
-    actionSummary: string;
-    icon: string;
-    targetPath?: string;
+    name: string
+    actionSummary: string
+    icon: string
+    targetPath?: string
 }
 
 interface RenderBlock {
-    type: 'user_input' | 'planner_response' | 'tool_calls';
-    content?: string;
-    calls?: ToolCallItem[];
+    type: 'user_input' | 'planner_response' | 'tool_calls'
+    content?: string
+    calls?: ToolCallItem[]
 }
 
 const buildTimelineHtml = (steps: Step[]): string => {
-    const blocks: RenderBlock[] = [];
-    let currentToolCalls: ToolCallItem[] = [];
+    const blocks: RenderBlock[] = []
+    let currentToolCalls: ToolCallItem[] = []
 
     const flushToolCalls = () => {
         if (currentToolCalls.length > 0) {
-            blocks.push({ type: 'tool_calls', calls: [...currentToolCalls] });
-            currentToolCalls = [];
+            blocks.push({ type: 'tool_calls', calls: [...currentToolCalls] })
+            currentToolCalls = []
         }
-    };
+    }
 
     steps.forEach((step) => {
         if (step.type === 'USER_INPUT' && step.content) {
-            flushToolCalls();
-            let prompt = step.content;
-            const startTag = '<USER_REQUEST>';
-            const endTag = '</USER_REQUEST>';
-            const startIdx = prompt.indexOf(startTag);
-            const endIdx = prompt.indexOf(endTag);
+            flushToolCalls()
+            let prompt = step.content
+            const startTag = '<USER_REQUEST>'
+            const endTag = '</USER_REQUEST>'
+            const startIdx = prompt.indexOf(startTag)
+            const endIdx = prompt.indexOf(endTag)
             if (startIdx !== -1 && endIdx !== -1) {
-                prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+                prompt = prompt
+                    .substring(startIdx + startTag.length, endIdx)
+                    .trim()
             }
-            blocks.push({ type: 'user_input', content: prompt });
+            blocks.push({ type: 'user_input', content: prompt })
         } else {
             if (step.tool_calls && step.tool_calls.length > 0) {
-                step.tool_calls.forEach(call => {
-                    let actionSummary = '';
-                    if (call.args && typeof call.args.toolSummary === 'string') {
-                        actionSummary = call.args.toolSummary;
-                    } else if (call.args && typeof call.args.toolAction === 'string') {
-                        actionSummary = call.args.toolAction;
+                step.tool_calls.forEach((call) => {
+                    let actionSummary = ''
+                    if (
+                        call.args &&
+                        typeof call.args.toolSummary === 'string'
+                    ) {
+                        actionSummary = call.args.toolSummary
+                    } else if (
+                        call.args &&
+                        typeof call.args.toolAction === 'string'
+                    ) {
+                        actionSummary = call.args.toolAction
                     }
-                    
-                    if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
-                        actionSummary = actionSummary.slice(1, -1);
+
+                    if (
+                        actionSummary.startsWith('"') &&
+                        actionSummary.endsWith('"')
+                    ) {
+                        actionSummary = actionSummary.slice(1, -1)
                     }
-                    
+
                     if (!actionSummary) {
-                        actionSummary = `Running tool ${call.name}`;
+                        actionSummary = `Running tool ${call.name}`
                     }
-                    
-                    let icon = '🛠️';
-                    if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍';
-                    else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝';
-                    else if (call.name.includes('command') || call.name.includes('run')) icon = '💻';
-                    else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂';
-                    
-                    let targetPath = '';
+
+                    let icon = '🛠️'
+                    if (
+                        call.name.includes('search') ||
+                        call.name.includes('grep')
+                    )
+                        icon = '🔍'
+                    else if (
+                        call.name.includes('file') ||
+                        call.name.includes('write') ||
+                        call.name.includes('replace')
+                    )
+                        icon = '📝'
+                    else if (
+                        call.name.includes('command') ||
+                        call.name.includes('run')
+                    )
+                        icon = '💻'
+                    else if (
+                        call.name.includes('dir') ||
+                        call.name.includes('list')
+                    )
+                        icon = '📂'
+
+                    let targetPath = ''
                     if (call.args) {
-                        if (typeof call.args.TargetFile === 'string') targetPath = call.args.TargetFile;
-                        else if (typeof call.args.AbsolutePath === 'string') targetPath = call.args.AbsolutePath;
-                        else if (typeof call.args.DirectoryPath === 'string') targetPath = call.args.DirectoryPath;
-                        else if (typeof call.args.SearchPath === 'string') targetPath = call.args.SearchPath;
+                        if (typeof call.args.TargetFile === 'string')
+                            targetPath = call.args.TargetFile
+                        else if (typeof call.args.AbsolutePath === 'string')
+                            targetPath = call.args.AbsolutePath
+                        else if (typeof call.args.DirectoryPath === 'string')
+                            targetPath = call.args.DirectoryPath
+                        else if (typeof call.args.SearchPath === 'string')
+                            targetPath = call.args.SearchPath
                     }
-                    
-                    currentToolCalls.push({ name: call.name, actionSummary, icon, targetPath: targetPath || undefined });
-                });
+
+                    currentToolCalls.push({
+                        name: call.name,
+                        actionSummary,
+                        icon,
+                        targetPath: targetPath || undefined,
+                    })
+                })
             }
-            
-            if (step.source === 'MODEL' && step.type === 'PLANNER_RESPONSE' && step.content) {
-                flushToolCalls();
-                blocks.push({ type: 'planner_response', content: step.content });
+
+            if (
+                step.source === 'MODEL' &&
+                step.type === 'PLANNER_RESPONSE' &&
+                step.content
+            ) {
+                flushToolCalls()
+                blocks.push({ type: 'planner_response', content: step.content })
             }
         }
-    });
-    flushToolCalls();
+    })
+    flushToolCalls()
 
-    let html = '';
+    let html = ''
     const renderToolCallHtml = (call: ToolCallItem) => {
-        let pathHtml = '';
+        let pathHtml = ''
         if (call.targetPath) {
-            const displayPath = formatPathForUser(call.targetPath);
-            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`;
+            const displayPath = formatPathForUser(call.targetPath)
+            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
         }
         return `
             <div class="w-full flex justify-start mb-2 select-none">
-                <div class="max-w-[65ch] pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                <div class="pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
                     <span>${call.icon}</span>
                     <span class="font-bold text-gray-800 dark:text-gray-200">${call.actionSummary}</span>${pathHtml}
                 </div>
             </div>
-        `;
-    };
+        `
+    }
 
     blocks.forEach((block) => {
         if (block.type === 'user_input' && block.content) {
             html += `
             <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-xs font-sans whitespace-pre-wrap shadow-sm">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-md font-sans whitespace-pre-wrap shadow-sm">
                     ${block.content}
                 </div>
             </div>
-            `;
+            `
         } else if (block.type === 'planner_response' && block.content) {
             html += `
             <div class="w-full flex justify-start mb-4 select-text">
-                <div class="max-w-[65ch] w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
+                <div class="w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
                     ${marked.parse(block.content)}
                 </div>
             </div>
-            `;
+            `
         } else if (block.type === 'tool_calls' && block.calls) {
-            const calls = block.calls;
+            const calls = block.calls
             if (calls.length <= 2) {
-                calls.forEach(call => {
-                    html += renderToolCallHtml(call);
-                });
+                calls.forEach((call) => {
+                    html += renderToolCallHtml(call)
+                })
             } else {
-                const collapsedCalls = calls.slice(0, -2);
-                const visibleCalls = calls.slice(-2);
-                
+                const collapsedCalls = calls.slice(0, -2)
+                const visibleCalls = calls.slice(-2)
+
                 html += `
                 <details class="group mb-2 max-w-[65ch]">
                     <summary class="flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-blue-500/70 hover:text-blue-500 dark:text-blue-400/70 dark:hover:text-blue-400 select-none pb-1.5 pl-3 border-l-2 border-blue-500/20 dark:border-blue-500/20">
@@ -585,40 +761,47 @@ const buildTimelineHtml = (steps: Step[]): string => {
                         ${collapsedCalls.map(renderToolCallHtml).join('')}
                     </div>
                 </details>
-                `;
-                
-                visibleCalls.forEach(call => {
-                    html += renderToolCallHtml(call);
-                });
+                `
+
+                visibleCalls.forEach((call) => {
+                    html += renderToolCallHtml(call)
+                })
             }
         }
-    });
+    })
 
-    return html;
-};
+    return html
+}
 
-let lastRenderedThreadLog = '';
-let lastRenderedThreadId = '';
+let lastRenderedThreadLog = ''
+let lastRenderedThreadId = ''
 
 const renderCustomTuiLog = (jsonlContent: string) => {
-    if (!markdownPreviewPane) return;
-    
-    const lines = jsonlContent.trim().split('\n');
-    const steps: Step[] = [];
-    const editedFilesSet = new Set<string>();
-    
+    if (!markdownPreviewPane) return
+
+    const lines = jsonlContent.trim().split('\n')
+    const steps: Step[] = []
+    const editedFilesSet = new Set<string>()
+
     for (const line of lines) {
-        if (!line.trim()) continue;
+        if (!line.trim()) continue
         try {
-            const step: Step = JSON.parse(line);
-            steps.push(step);
-            
+            const step: Step = JSON.parse(line)
+            steps.push(step)
+
             // Collect edited files
             if (step.tool_calls) {
                 for (const call of step.tool_calls) {
-                    if (call.name === 'replace_file_content' || call.name === 'multi_replace_file_content' || call.name === 'write_to_file') {
-                        if (call.args && typeof call.args.TargetFile === 'string') {
-                            editedFilesSet.add(call.args.TargetFile);
+                    if (
+                        call.name === 'replace_file_content' ||
+                        call.name === 'multi_replace_file_content' ||
+                        call.name === 'write_to_file'
+                    ) {
+                        if (
+                            call.args &&
+                            typeof call.args.TargetFile === 'string'
+                        ) {
+                            editedFilesSet.add(call.args.TargetFile)
                         }
                     }
                 }
@@ -627,52 +810,59 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             // Ignore
         }
     }
-    
+
     if (steps.length === 0) {
-        markdownPreviewPane.innerHTML = '<div class="text-gray-400 dark:text-gray-600 italic text-center mt-10">No conversation steps found.</div>';
-        return;
+        markdownPreviewPane.innerHTML =
+            '<div class="text-gray-400 dark:text-gray-600 italic text-center mt-10">No conversation steps found.</div>'
+        return
     }
-    
-    let html = '';
-    
+
+    let html = ''
+
     // 1. Edited Files Header
     if (editedFilesSet.size > 0) {
-        const files = Array.from(editedFilesSet);
+        const files = Array.from(editedFilesSet)
         html += `
         <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
             <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
-            ${files.map(file => {
-                const parts = file.split('/');
-                const name = parts[parts.length - 1];
-                return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${formatPathForUser(file)}">${name}</span>`;
-            }).join('')}
+            ${files
+                .map((file) => {
+                    const parts = file.split('/')
+                    const name = parts[parts.length - 1]
+                    return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${formatPathForUser(file)}">${name}</span>`
+                })
+                .join('')}
         </div>
-        `;
+        `
     }
-    
+
     // 2. Timeline Steps
-    html += buildTimelineHtml(steps);
-    
+    html += buildTimelineHtml(steps)
+
     // 3. Thinking Indicator
-    let isThinking = false;
+    let isThinking = false
     if (steps.length > 0) {
-        const lastStep = steps[steps.length - 1];
+        const lastStep = steps[steps.length - 1]
         if (lastStep.source === 'MODEL' && lastStep.status !== 'DONE') {
-            isThinking = true;
+            isThinking = true
         }
     }
-    
+
     if (!isThinking && pauseStatus === 'Running') {
-        const lastStep = steps[steps.length - 1];
-        if (lastStep && (lastStep.type === 'USER_INPUT' || (lastStep.tool_calls && lastStep.tool_calls.length > 0))) {
-            isThinking = true;
+        const lastStep = steps[steps.length - 1]
+        if (
+            lastStep &&
+            (lastStep.type === 'USER_INPUT' ||
+                (lastStep.tool_calls && lastStep.tool_calls.length > 0))
+        ) {
+            isThinking = true
         }
     }
-    
+
     if (isThinking) {
         html += `
         <div class="w-full flex justify-start mb-4">
-            <div class="max-w-[65ch] flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
+            <div class="flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
                 <div class="relative flex h-3 w-3">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
@@ -680,37 +870,48 @@ const renderCustomTuiLog = (jsonlContent: string) => {
                 <span class="text-[10px] font-semibold text-blue-500 dark:text-blue-400 font-mono tracking-wider">Agent is thinking & working...</span>
             </div>
         </div>
-        `;
+        `
     }
-    
-    markdownPreviewPane.innerHTML = html;
-    
+
+    markdownPreviewPane.innerHTML = html
+
     // Auto-scroll the preview pane to bottom if it is currently generating
     if (isThinking) {
         setTimeout(() => {
-            markdownPreviewPane.scrollTop = markdownPreviewPane.scrollHeight;
-        }, 30);
+            markdownPreviewPane.scrollTop = markdownPreviewPane.scrollHeight
+        }, 30)
     }
-};
+}
 
-const renderHistoricalThreadLog = (jsonlContent: string, title: string, dateStr: string) => {
-    if (!markdownPreviewPane) return;
-    
-    const lines = jsonlContent.trim().split('\n');
-    const steps: Step[] = [];
-    const editedFilesSet = new Set<string>();
-    
+const renderHistoricalThreadLog = (
+    jsonlContent: string,
+    title: string,
+    dateStr: string
+) => {
+    if (!markdownPreviewPane) return
+
+    const lines = jsonlContent.trim().split('\n')
+    const steps: Step[] = []
+    const editedFilesSet = new Set<string>()
+
     for (const line of lines) {
-        if (!line.trim()) continue;
+        if (!line.trim()) continue
         try {
-            const step: Step = JSON.parse(line);
-            steps.push(step);
-            
+            const step: Step = JSON.parse(line)
+            steps.push(step)
+
             if (step.tool_calls) {
                 for (const call of step.tool_calls) {
-                    if (call.name === 'replace_file_content' || call.name === 'multi_replace_file_content' || call.name === 'write_to_file') {
-                        if (call.args && typeof call.args.TargetFile === 'string') {
-                            editedFilesSet.add(call.args.TargetFile);
+                    if (
+                        call.name === 'replace_file_content' ||
+                        call.name === 'multi_replace_file_content' ||
+                        call.name === 'write_to_file'
+                    ) {
+                        if (
+                            call.args &&
+                            typeof call.args.TargetFile === 'string'
+                        ) {
+                            editedFilesSet.add(call.args.TargetFile)
                         }
                     }
                 }
@@ -719,7 +920,7 @@ const renderHistoricalThreadLog = (jsonlContent: string, title: string, dateStr:
             // Ignore
         }
     }
-    
+
     let html = `
         <div class="border-b border-gray-250 dark:border-gray-800 pb-3 mb-4 flex items-center justify-between select-none">
             <div>
@@ -728,307 +929,324 @@ const renderHistoricalThreadLog = (jsonlContent: string, title: string, dateStr:
             </div>
             <span class="text-[10px] text-gray-500 dark:text-gray-400 font-mono">${dateStr}</span>
         </div>
-    `;
-    
+    `
+
     // Edited Files
     if (editedFilesSet.size > 0) {
-        const files = Array.from(editedFilesSet);
+        const files = Array.from(editedFilesSet)
         html += `
         <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
             <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
-            ${files.map(file => {
-                const parts = file.split('/');
-                const name = parts[parts.length - 1];
-                return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${file}">${name}</span>`;
-            }).join('')}
+            ${files
+                .map((file) => {
+                    const parts = file.split('/')
+                    const name = parts[parts.length - 1]
+                    return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${file}">${name}</span>`
+                })
+                .join('')}
         </div>
-        `;
+        `
     }
-    
-    html += buildTimelineHtml(steps);
-    
-    markdownPreviewPane.innerHTML = html;
-};
+
+    html += buildTimelineHtml(steps)
+
+    markdownPreviewPane.innerHTML = html
+}
 
 // Poll the active thread's log file
 setInterval(async () => {
-    if (!activeThreadId) return;
-    const filepath = threadFilepaths.get(activeThreadId);
-    if (!filepath) return;
-    
+    if (!activeThreadId) return
+    const filepath = threadFilepaths.get(activeThreadId)
+    if (!filepath) return
+
     try {
-        const fileExists = await invoke<boolean>('file_exists', { filepath });
+        const fileExists = await invoke<boolean>('file_exists', { filepath })
         if (fileExists) {
-            const content = await invoke<string>('read_thread_log', { filepath });
-            if (content !== lastRenderedThreadLog || activeThreadId !== lastRenderedThreadId) {
-                lastRenderedThreadLog = content;
-                lastRenderedThreadId = activeThreadId;
-                renderCustomTuiLog(content);
+            const content = await invoke<string>('read_thread_log', {
+                filepath,
+            })
+            if (
+                content !== lastRenderedThreadLog ||
+                activeThreadId !== lastRenderedThreadId
+            ) {
+                lastRenderedThreadLog = content
+                lastRenderedThreadId = activeThreadId
+                renderCustomTuiLog(content)
             }
         }
     } catch (e) {
-        console.error('[AI-OS Thread Log Poll] Error:', e);
+        console.error('[AI-OS Thread Log Poll] Error:', e)
     }
-}, 500);
+}, 500)
 
 const formatMarkdown = (text: string): string => {
-    let formatted = text;
-    formatted = formatted.replace(/\*\*([^\*]+)\*\*/g, '\x1b[1m$1\x1b[22m');
-    formatted = formatted.replace(/`([^`]+)`/g, '\x1b[36m$1\x1b[39m');
-    return formatted;
-};
+    let formatted = text
+    formatted = formatted.replace(/\*\*([^\*]+)\*\*/g, '\x1b[1m$1\x1b[22m')
+    formatted = formatted.replace(/`([^`]+)`/g, '\x1b[36m$1\x1b[39m')
+    return formatted
+}
 
 // Listen to Backend PTY events
-listen<{ data: string, project_path: string, terminal_type: string }>('pty-output', (event) => {
-    let { data, project_path, terminal_type } = event.payload;
-    
-    if (terminal_type === 'agy') {
-        data = formatMarkdown(data);
-    }
-    
-    // Choose correct buffer
-    let buffers = miniTermBuffers;
-    if (terminal_type === 'claude') {
-        buffers = claudeBuffers;
-    } else if (terminal_type === 'agy') {
-        buffers = agyBuffers;
-    }
-    
-    // Append to cache buffer
-    if (!buffers[project_path]) {
-        buffers[project_path] = '';
-    }
-    buffers[project_path] += data;
-    if (buffers[project_path].length > 100000) {
-        buffers[project_path] = buffers[project_path].substring(buffers[project_path].length - 50000);
-    }
+listen<{ data: string; project_path: string; terminal_type: string }>(
+    'pty-output',
+    (event) => {
+        let { data, project_path, terminal_type } = event.payload
 
-    if (project_path === activeProject) {
-        if (terminal_type === 'mini') {
-            miniTerm.write(data);
-        } else if (terminal_type === currentEngine) {
-            term.write(data);
+        if (terminal_type === 'agy') {
+            data = formatMarkdown(data)
+        }
+
+        // Choose correct buffer
+        let buffers = miniTermBuffers
+        if (terminal_type === 'claude') {
+            buffers = claudeBuffers
+        } else if (terminal_type === 'agy') {
+            buffers = agyBuffers
+        }
+
+        // Append to cache buffer
+        if (!buffers[project_path]) {
+            buffers[project_path] = ''
+        }
+        buffers[project_path] += data
+        if (buffers[project_path].length > 100000) {
+            buffers[project_path] = buffers[project_path].substring(
+                buffers[project_path].length - 50000
+            )
+        }
+
+        if (project_path === activeProject) {
+            if (terminal_type === 'mini') {
+                miniTerm.write(data)
+            } else if (terminal_type === currentEngine) {
+                term.write(data)
+            }
         }
     }
-});
+)
 
 // TUI Toggle Button Event Listener
-const toggleTuiBtn = document.getElementById('toggle-tui-btn');
-const tuiContainer = document.getElementById('terminal-container');
-const previewWrapper = document.getElementById('preview-wrapper');
+const toggleTuiBtn = document.getElementById('toggle-tui-btn')
+const tuiContainer = document.getElementById('terminal-container')
+const previewWrapper = document.getElementById('preview-wrapper')
 
 if (toggleTuiBtn && tuiContainer && previewWrapper) {
     toggleTuiBtn.addEventListener('click', () => {
-        isTuiExpanded = !isTuiExpanded;
+        isTuiExpanded = !isTuiExpanded
         if (isTuiExpanded) {
             // Expand
-            tuiContainer.style.height = 'calc(100% - 28px)';
-            previewWrapper.style.display = 'none';
+            tuiContainer.style.height = 'calc(100% - 28px)'
+            previewWrapper.style.display = 'none'
             toggleTuiBtn.innerHTML = `
                 <span>Collapse Terminal</span>
                 <svg class="w-2.5 h-2.5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-            `;
+            `
         } else {
             // Collapse
-            tuiContainer.style.height = '64px';
-            previewWrapper.style.display = 'flex';
+            tuiContainer.style.height = '64px'
+            previewWrapper.style.display = 'flex'
             toggleTuiBtn.innerHTML = `
                 <span>Expand Terminal</span>
                 <svg class="w-2.5 h-2.5 transform transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-            `;
+            `
         }
-        setTimeout(() => { resizePty(); }, 50);
-        setTimeout(() => { resizePty(); }, 150);
-        setTimeout(() => { resizePty(); }, 320);
-    });
+        setTimeout(() => {
+            resizePty()
+        }, 50)
+        setTimeout(() => {
+            resizePty()
+        }, 150)
+        setTimeout(() => {
+            resizePty()
+        }, 320)
+    })
 }
 
 // ----------------------------------------------------
 // 4. Splitter Drag Resizing Panel (Legacy Splitter guards)
 // ----------------------------------------------------
-const splitter = document.getElementById('pane-splitter');
-const panesContainer = document.getElementById('panes-container');
+const splitter = document.getElementById('pane-splitter')
+const panesContainer = document.getElementById('panes-container')
 
 if (splitter && miniContainer && panesContainer) {
-    let isDragging = false;
-    let startY = 0;
-    let startHeight = 0;
-    
+    let isDragging = false
+    let startY = 0
+    let startHeight = 0
+
     splitter.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startY = e.clientY;
-        startHeight = miniContainer.offsetHeight;
-        document.body.style.cursor = 'row-resize';
-        e.preventDefault();
-    });
-    
+        isDragging = true
+        startY = e.clientY
+        startHeight = miniContainer.offsetHeight
+        document.body.style.cursor = 'row-resize'
+        e.preventDefault()
+    })
+
     document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-        const deltaY = e.clientY - startY;
-        const newMiniHeight = startHeight - deltaY;
-        
-        const containerRect = panesContainer.getBoundingClientRect();
-        const minHeight = 50;
-        const maxHeight = containerRect.height * 0.8;
-        
+        if (!isDragging) return
+
+        const deltaY = e.clientY - startY
+        const newMiniHeight = startHeight - deltaY
+
+        const containerRect = panesContainer.getBoundingClientRect()
+        const minHeight = 50
+        const maxHeight = containerRect.height * 0.8
+
         if (newMiniHeight >= minHeight && newMiniHeight <= maxHeight) {
-            miniContainer.style.height = `${newMiniHeight}px`;
-            debouncedResizePty();
+            miniContainer.style.height = `${newMiniHeight}px`
+            debouncedResizePty()
         }
-    });
-    
+    })
+
     document.addEventListener('mouseup', () => {
         if (isDragging) {
-            isDragging = false;
-            document.body.style.cursor = '';
-            resizePty();
+            isDragging = false
+            document.body.style.cursor = ''
+            resizePty()
         }
-    });
+    })
 }
 
 // 4a. Sidebar Width Resizing
-const sidebarSplitter = document.getElementById('sidebar-splitter');
-const sidebar = document.getElementById('projects-sidebar');
+const sidebarSplitter = document.getElementById('sidebar-splitter')
+const sidebar = document.getElementById('projects-sidebar')
 
 if (sidebarSplitter && sidebar) {
-    let isDragging = false;
-    let startX = 0;
-    let startWidth = 0;
-    
+    let isDragging = false
+    let startX = 0
+    let startWidth = 0
+
     sidebarSplitter.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX;
-        startWidth = sidebar.offsetWidth;
-        document.body.style.cursor = 'col-resize';
-        e.preventDefault();
-    });
-    
+        isDragging = true
+        startX = e.clientX
+        startWidth = sidebar.offsetWidth
+        document.body.style.cursor = 'col-resize'
+        e.preventDefault()
+    })
+
     document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-        const deltaX = e.clientX - startX;
-        const newWidth = startWidth + deltaX;
-        const minWidth = 150;
-        const maxWidth = 600;
-        
+        if (!isDragging) return
+
+        const deltaX = e.clientX - startX
+        const newWidth = startWidth + deltaX
+        const minWidth = 150
+        const maxWidth = 600
+
         if (newWidth >= minWidth && newWidth <= maxWidth) {
-            sidebar.style.width = `${newWidth}px`;
-            debouncedResizePty();
+            sidebar.style.width = `${newWidth}px`
+            debouncedResizePty()
         }
-    });
-    
+    })
+
     document.addEventListener('mouseup', () => {
         if (isDragging) {
-            isDragging = false;
-            document.body.style.cursor = '';
-            resizePty();
+            isDragging = false
+            document.body.style.cursor = ''
+            resizePty()
         }
-    });
+    })
 }
 
-
 // 4c. Main Panes Horizontal Resizing
-const mainSplitter = document.getElementById('main-splitter');
-const terminalsWrapper = document.getElementById('terminals-wrapper');
+const mainSplitter = document.getElementById('main-splitter')
+const terminalsWrapper = document.getElementById('terminals-wrapper')
 
 if (mainSplitter && terminalsWrapper && panesContainer) {
-    let isDragging = false;
-    let startX = 0;
-    let startWidth = 0;
-    
+    let isDragging = false
+    let startX = 0
+    let startWidth = 0
+
     mainSplitter.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startX = e.clientX;
-        startWidth = terminalsWrapper.offsetWidth;
-        document.body.style.cursor = 'col-resize';
-        e.preventDefault();
-    });
-    
+        isDragging = true
+        startX = e.clientX
+        startWidth = terminalsWrapper.offsetWidth
+        document.body.style.cursor = 'col-resize'
+        e.preventDefault()
+    })
+
     document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-        const deltaX = e.clientX - startX;
-        const newWidth = startWidth + deltaX;
-        
-        const containerRect = panesContainer.getBoundingClientRect();
-        const leftPercent = (newWidth / containerRect.width) * 100;
-        
-        const minPercent = 15;
-        const maxPercent = 85;
-        
+        if (!isDragging) return
+
+        const deltaX = e.clientX - startX
+        const newWidth = startWidth + deltaX
+
+        const containerRect = panesContainer.getBoundingClientRect()
+        const leftPercent = (newWidth / containerRect.width) * 100
+
+        const minPercent = 15
+        const maxPercent = 85
+
         if (leftPercent >= minPercent && leftPercent <= maxPercent) {
-            terminalsWrapper.style.width = `${leftPercent}%`;
-            debouncedResizePty();
+            terminalsWrapper.style.width = `${leftPercent}%`
+            debouncedResizePty()
         }
-    });
-    
+    })
+
     document.addEventListener('mouseup', () => {
         if (isDragging) {
-            isDragging = false;
-            document.body.style.cursor = '';
-            resizePty();
+            isDragging = false
+            document.body.style.cursor = ''
+            resizePty()
         }
-    });
+    })
 }
 
 // ----------------------------------------------------
 // 5. Dynamic Mode UI Application
 // ----------------------------------------------------
 const applyTerminalModeUI = () => {
-    const bottomArea = document.getElementById('bottom-input-area');
-    
+    const bottomArea = document.getElementById('bottom-input-area')
+
     if (isTerminalMode) {
-        if (splitter) splitter.style.display = 'block';
-        if (miniContainer) miniContainer.style.display = 'block';
-        if (bottomArea) bottomArea.style.display = 'none';
+        if (splitter) splitter.style.display = 'block'
+        if (miniContainer) miniContainer.style.display = 'block'
+        if (bottomArea) bottomArea.style.display = 'none'
         setTimeout(() => {
-            miniTerm.focus();
-            resizePty();
-        }, 50);
+            miniTerm.focus()
+            resizePty()
+        }, 50)
     } else {
-        if (splitter) splitter.style.display = 'none';
-        if (miniContainer) miniContainer.style.display = 'none';
-        if (bottomArea) bottomArea.style.display = 'flex';
+        if (splitter) splitter.style.display = 'none'
+        if (miniContainer) miniContainer.style.display = 'none'
+        if (bottomArea) bottomArea.style.display = 'flex'
         setTimeout(() => {
-            textarea?.focus();
-            updatePlaceholder();
-            resizePty();
-        }, 50);
+            textarea?.focus()
+            updatePlaceholder()
+            resizePty()
+        }, 50)
     }
-};
+}
 
 // ----------------------------------------------------
 // 6. UI Rendering: Sidebar & Project Swapper
 // ----------------------------------------------------
-const projectsListEl = document.getElementById('projects-list');
-const currentDirPathEl = document.getElementById('current-dir-path');
-const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement;
+const projectsListEl = document.getElementById('projects-list')
+const currentDirPathEl = document.getElementById('current-dir-path')
+const textarea = document.getElementById('prompt-input') as HTMLTextAreaElement
 
 const renderProjects = () => {
-    if (!projectsListEl) return;
-    projectsListEl.innerHTML = '';
-    
+    if (!projectsListEl) return
+    projectsListEl.innerHTML = ''
+
     // Sort by recency
-    const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive);
-    
+    const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive)
+
     sorted.forEach((project) => {
-        const item = document.createElement('div');
-        const isActive = project.path === activeProject;
-        
+        const item = document.createElement('div')
+        const isActive = project.path === activeProject
+
         item.className = `flex flex-col p-1 rounded transition-all border ${
-            isActive 
-                ? 'bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/80 shadow-sm' 
+            isActive
+                ? 'bg-gray-100 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/80 shadow-sm'
                 : 'bg-transparent border-transparent'
-        }`;
-        
-        const header = document.createElement('div');
+        }`
+
+        const header = document.createElement('div')
         header.className = `flex items-center justify-between p-1.5 rounded cursor-pointer transition-all ${
-            isActive 
-                ? 'text-gray-900 dark:text-white font-semibold bg-gray-200/70 dark:bg-gray-800 border border-gray-300 dark:border-gray-700' 
+            isActive
+                ? 'text-gray-900 dark:text-white font-semibold bg-gray-200/70 dark:bg-gray-800 border border-gray-300 dark:border-gray-700'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-250 hover:bg-gray-200/50 dark:hover:bg-gray-900/50'
-        }`;
-        
+        }`
+
         header.innerHTML = `
             <div class="flex flex-col gap-0.5 truncate select-none min-w-0 flex-1">
                 <div class="flex items-center gap-2 truncate">
@@ -1041,385 +1259,472 @@ const renderProjects = () => {
                 <button class="open-btn text-[10px] text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
                 <button class="delete-btn text-[10px] text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
             </div>
-        `;
-        
+        `
+
         // Swap project click
         header.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            
+            const target = e.target as HTMLElement
+
             // Delete project
             if (target.classList.contains('delete-btn')) {
-                e.stopPropagation();
-                projects = projects.filter(p => p.path !== project.path);
-                saveProjects();
-                invoke('close_project_session', { projectPath: project.path }).catch((err) => {
-                    console.error('Failed to close project session in Rust:', err);
-                });
+                e.stopPropagation()
+                projects = projects.filter((p) => p.path !== project.path)
+                saveProjects()
+                invoke('close_project_session', {
+                    projectPath: project.path,
+                }).catch((err) => {
+                    console.error(
+                        'Failed to close project session in Rust:',
+                        err
+                    )
+                })
                 // If deleted active, switch to first available
                 if (activeProject === project.path && projects.length > 0) {
-                    switchToProject(projects[0].path);
+                    switchToProject(projects[0].path)
                 } else {
-                    renderProjects();
+                    renderProjects()
                 }
-                return;
+                return
             }
-            
+
             // Open in Finder
-            if (target.classList.contains('open-btn') || target.parentElement?.classList.contains('open-btn')) {
-                e.stopPropagation();
-                invoke('open_path', { path: project.path }).catch(console.error);
-                return;
+            if (
+                target.classList.contains('open-btn') ||
+                target.parentElement?.classList.contains('open-btn')
+            ) {
+                e.stopPropagation()
+                invoke('open_path', { path: project.path }).catch(console.error)
+                return
             }
-            
-            switchToProject(project.path);
-        });
-        
+
+            switchToProject(project.path)
+        })
+
         // Show buttons on hover
         header.addEventListener('mouseenter', () => {
-            const btns = header.querySelector('.action-btns') as HTMLElement;
+            const btns = header.querySelector('.action-btns') as HTMLElement
             if (btns) {
-                btns.style.opacity = '1';
-                const delBtn = btns.querySelector('.delete-btn') as HTMLElement;
-                if (delBtn && project.path === '/Users/matthewmurphy/projects/ai-os') {
-                    delBtn.style.display = 'none';
+                btns.style.opacity = '1'
+                const delBtn = btns.querySelector('.delete-btn') as HTMLElement
+                if (
+                    delBtn &&
+                    project.path === '/Users/matthewmurphy/projects/ai-os'
+                ) {
+                    delBtn.style.display = 'none'
                 }
             }
-        });
+        })
         header.addEventListener('mouseleave', () => {
-            const btns = header.querySelector('.action-btns') as HTMLElement;
-            if (btns) btns.style.opacity = '0';
-        });
+            const btns = header.querySelector('.action-btns') as HTMLElement
+            if (btns) btns.style.opacity = '0'
+        })
 
-        item.appendChild(header);
+        item.appendChild(header)
 
         if (isActive) {
-            const threadsContainer = document.createElement('div');
-            threadsContainer.className = 'mt-1.5 ml-2.5 pl-2.5 border-l border-gray-300 dark:border-gray-700/80 flex flex-col space-y-1.5';
-            
-            const threadsHeader = document.createElement('div');
-            threadsHeader.className = 'flex items-center justify-between pr-1.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500';
+            const threadsContainer = document.createElement('div')
+            threadsContainer.className =
+                'mt-1.5 ml-2.5 pl-2.5 border-l border-gray-300 dark:border-gray-700/80 flex flex-col space-y-1.5'
+
+            const threadsHeader = document.createElement('div')
+            threadsHeader.className =
+                'flex items-center justify-between pr-1.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500'
             threadsHeader.innerHTML = `
                 <span>Threads</span>
                 <button class="new-thread-btn text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
-            `;
-            
-            const threadsList = document.createElement('div');
-            threadsList.id = 'project-threads-list';
-            threadsList.className = 'max-h-96 overflow-y-auto space-y-1.5 pr-1';
-            threadsList.innerHTML = '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>';
-            
-            threadsContainer.appendChild(threadsHeader);
-            threadsContainer.appendChild(threadsList);
-            item.appendChild(threadsContainer);
-            
+            `
+
+            const threadsList = document.createElement('div')
+            threadsList.id = 'project-threads-list'
+            threadsList.className = 'max-h-96 overflow-y-auto space-y-1.5 pr-1'
+            threadsList.innerHTML =
+                '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>'
+
+            threadsContainer.appendChild(threadsHeader)
+            threadsContainer.appendChild(threadsList)
+            item.appendChild(threadsContainer)
+
             // Attach event listener for the "+" button to start a new thread
-            const newThreadBtn = threadsHeader.querySelector('.new-thread-btn');
+            const newThreadBtn = threadsHeader.querySelector('.new-thread-btn')
             newThreadBtn?.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                activeThreadId = null;
-                activeThreadContext = null;
-                isWaitingForNewThread = true;
+                e.stopPropagation()
+                activeThreadId = null
+                activeThreadContext = null
+                isWaitingForNewThread = true
                 try {
-                    const currentThreads = await invoke<ThreadLog[]>('get_project_threads', { projectPath: activeProject });
-                    waitingExistingThreadIds = new Set(currentThreads.map(t => t.id));
+                    const currentThreads = await invoke<ThreadLog[]>(
+                        'get_project_threads',
+                        { projectPath: activeProject }
+                    )
+                    waitingExistingThreadIds = new Set(
+                        currentThreads.map((t) => t.id)
+                    )
                 } catch (err) {
-                    console.error('Failed to get current threads on new thread click:', err);
-                    waitingExistingThreadIds = new Set(Array.from(threadFilepaths.keys()));
+                    console.error(
+                        'Failed to get current threads on new thread click:',
+                        err
+                    )
+                    waitingExistingThreadIds = new Set(
+                        Array.from(threadFilepaths.keys())
+                    )
                 }
-                updatePlaceholder(true);
+                updatePlaceholder(true)
 
-                threadsList.querySelectorAll(':scope > div').forEach((child) => {
-                    child.className = 'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
-                });
+                threadsList
+                    .querySelectorAll(':scope > div')
+                    .forEach((child) => {
+                        child.className =
+                            'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                    })
 
-                const previewPane = document.getElementById('markdown-preview-pane');
+                const previewPane = document.getElementById(
+                    'markdown-preview-pane'
+                )
                 if (previewPane) {
-                    previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>';
+                    previewPane.innerHTML =
+                        '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
                 }
 
-                await selectAgyEngine();
-                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
-            });
+                await selectAgyEngine()
+                invoke('write_to_pty', {
+                    data: '/clear\r',
+                    projectPath: activeProject,
+                    terminalType: 'agy',
+                })
+            })
         }
 
-        projectsListEl.appendChild(item);
-    });
-};
+        projectsListEl.appendChild(item)
+    })
+}
 
 // Switch active project workspace
-const switchToProject = async (path: string, autoSelectFirstThread: boolean = false) => {
+const switchToProject = async (
+    path: string,
+    autoSelectFirstThread: boolean = false
+) => {
     // Save draft and engine setting of the current project before switching
-    const currentProj = projects.find(p => p.path === activeProject);
+    const currentProj = projects.find((p) => p.path === activeProject)
     if (currentProj) {
-        currentProj.promptDraft = textarea ? textarea.value : '';
-        currentProj.engine = currentEngine;
-        currentProj.isTerminalMode = isTerminalMode;
+        currentProj.promptDraft = textarea ? textarea.value : ''
+        currentProj.engine = currentEngine
+        currentProj.isTerminalMode = isTerminalMode
     }
 
-    activeProject = path;
-    activeThreadId = null;
-    activeThreadContext = null;
-    isWaitingForNewThread = false;
-    waitingExistingThreadIds.clear();
-    lastThreadsJson = '';
-    
+    activeProject = path
+    activeThreadId = null
+    activeThreadContext = null
+    isWaitingForNewThread = false
+    waitingExistingThreadIds.clear()
+    lastThreadsJson = ''
+
     // Update lastActive timestamp & restore state
-    const nextProj = projects.find(p => p.path === path);
+    const nextProj = projects.find((p) => p.path === path)
     if (nextProj) {
-        nextProj.lastActive = Date.now();
+        nextProj.lastActive = Date.now()
         if (textarea) {
             // Restore draft from localStorage first
-            const savedDraft = localStorage.getItem(`ai-os-prompt-draft-${path}`);
+            const savedDraft = localStorage.getItem(
+                `ai-os-prompt-draft-${path}`
+            )
             if (savedDraft !== null) {
-                textarea.value = savedDraft;
-                adjustHeight();
+                textarea.value = savedDraft
+                adjustHeight()
             } else {
-                textarea.value = nextProj.promptDraft || '';
-                adjustHeight();
+                textarea.value = nextProj.promptDraft || ''
+                adjustHeight()
             }
 
             // Restore draft from physical disk asynchronously
-            invoke<string>('load_prompt_draft', { projectPath: path }).then((diskDraft) => {
-                if (diskDraft && diskDraft !== textarea.value) {
-                    textarea.value = diskDraft;
-                    adjustHeight();
-                    localStorage.setItem(`ai-os-prompt-draft-${path}`, diskDraft);
-                }
-            }).catch(console.error);
+            invoke<string>('load_prompt_draft', { projectPath: path })
+                .then((diskDraft) => {
+                    if (diskDraft && diskDraft !== textarea.value) {
+                        textarea.value = diskDraft
+                        adjustHeight()
+                        localStorage.setItem(
+                            `ai-os-prompt-draft-${path}`,
+                            diskDraft
+                        )
+                    }
+                })
+                .catch(console.error)
         }
         if (nextProj.engine) {
-            currentEngine = nextProj.engine;
-            const radio = document.querySelector(`input[name="engine"][value="${nextProj.engine}"]`) as HTMLInputElement;
+            currentEngine = nextProj.engine
+            const radio = document.querySelector(
+                `input[name="engine"][value="${nextProj.engine}"]`
+            ) as HTMLInputElement
             if (radio) {
-                radio.checked = true;
+                radio.checked = true
             }
         }
-        isTerminalMode = !!nextProj.isTerminalMode;
-        applyTerminalModeUI();
-        saveProjects();
-    }
-    
-    // Clear terminal screens and dump cached history
-    term.reset();
-    const activeBuffers = currentEngine === 'claude' ? claudeBuffers : agyBuffers;
-    if (activeBuffers[path]) {
-        term.write(activeBuffers[path]);
-    } else {
-        term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(path)}...\x1b[0m\r\n`);
+        isTerminalMode = !!nextProj.isTerminalMode
+        applyTerminalModeUI()
+        saveProjects()
     }
 
-    miniTerm.reset();
-    if (miniTermBuffers[path]) {
-        miniTerm.write(miniTermBuffers[path]);
+    // Clear terminal screens and dump cached history
+    term.reset()
+    const activeBuffers =
+        currentEngine === 'claude' ? claudeBuffers : agyBuffers
+    if (activeBuffers[path]) {
+        term.write(activeBuffers[path])
     } else {
-        miniTerm.write(`\r\n\x1b[1;32m[ai-os] Connecting to Shell session at: ${formatPathForUser(path)}...\x1b[0m\r\n`);
+        term.write(
+            `\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(path)}...\x1b[0m\r\n`
+        )
+    }
+
+    miniTerm.reset()
+    if (miniTermBuffers[path]) {
+        miniTerm.write(miniTermBuffers[path])
+    } else {
+        miniTerm.write(
+            `\r\n\x1b[1;32m[ai-os] Connecting to Shell session at: ${formatPathForUser(path)}...\x1b[0m\r\n`
+        )
     }
 
     if (currentDirPathEl) {
-        currentDirPathEl.textContent = formatPathForUser(path);
+        currentDirPathEl.textContent = formatPathForUser(path)
     }
-    
-    commandHistory = loadCommandHistory(path);
-    historyIndex = -1;
-    currentDraft = '';
-    
+
+    commandHistory = loadCommandHistory(path)
+    historyIndex = -1
+    currentDraft = ''
+
     // Reset pause state for the active project
-    updatePauseUI('Running');
-    
+    updatePauseUI('Running')
+
     // Request Rust backend to load/switch the project shell session
     try {
-        await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { projectPath: path, engine: currentEngine });
-        
+        await invoke<{ shell_pid: number; is_new_session: boolean }>(
+            'switch_active_project',
+            { projectPath: path, engine: currentEngine }
+        )
+
         // PTY auto-spawn is now handled directly by the backend to bypass zsh rc files and launch instantly
     } catch (e) {
-        console.error('Failed to switch session in Rust:', e);
+        console.error('Failed to switch session in Rust:', e)
     }
-    
+
     // Restore or initialize PTY geometry sync
-    resizePty();
-    renderProjects();
-    renderProjectThreads(path, autoSelectFirstThread);
-    adjustHeight();
-};
+    resizePty()
+    renderProjects()
+    renderProjectThreads(path, autoSelectFirstThread)
+    adjustHeight()
+}
 
 interface ThreadLog {
-    id: string;
-    title: string;
-    snippet: string;
-    filepath: string;
-    mtime: number;
-    detected_project_path?: string;
+    id: string
+    title: string
+    snippet: string
+    filepath: string
+    mtime: number
+    detected_project_path?: string
 }
 
 const syncProjectsFromAllThreads = async () => {
     try {
-        const allThreads = await invoke<ThreadLog[]>('get_all_agy_threads');
-        let projectsModified = false;
-        
+        const allThreads = await invoke<ThreadLog[]>('get_all_agy_threads')
+        let projectsModified = false
+
         for (const thread of allThreads) {
-            let targetPath = thread.detected_project_path;
-            
+            let targetPath = thread.detected_project_path
+
             // If the thread is a lone agy thread without a detected project path
             if (!targetPath) {
-                targetPath = `/Users/matthewmurphy/projects/Misc`;
+                targetPath = `/Users/matthewmurphy/projects/Misc`
             }
-            
+
             // Strip trailing markdown symbols
             while (targetPath.length > 0 && /[`*.,:;)}"\]]$/.test(targetPath)) {
-                targetPath = targetPath.slice(0, -1);
+                targetPath = targetPath.slice(0, -1)
             }
-            
+
             // Check if a project with this path already exists
-            const exists = projects.some(p => p.path === targetPath);
+            const exists = projects.some((p) => p.path === targetPath)
             if (!exists) {
                 // Determine a name for the new project
-                let name = '';
+                let name = ''
                 if (targetPath === '/Users/matthewmurphy/projects/Misc') {
-                    name = 'Misc';
+                    name = 'Misc'
                 } else if (thread.detected_project_path) {
-                    name = thread.detected_project_path.split('/').pop() || 'Unnamed';
+                    name =
+                        thread.detected_project_path.split('/').pop() ||
+                        'Unnamed'
                 } else {
-                    name = thread.title || `Thread ${thread.id.substring(0, 8)}`;
+                    name = thread.title || `Thread ${thread.id.substring(0, 8)}`
                 }
-                
+
                 while (name.length > 0 && /[`*.,:;)}"\]]$/.test(name)) {
-                    name = name.slice(0, -1);
+                    name = name.slice(0, -1)
                 }
-                
+
                 projects.push({
                     path: targetPath,
                     name: name,
                     color: getRandomProjectColor(),
-                    lastActive: thread.mtime > 0 ? thread.mtime * 1000 : Date.now(),
+                    lastActive:
+                        thread.mtime > 0 ? thread.mtime * 1000 : Date.now(),
                     engine: 'agy',
-                    isTerminalMode: false
-                });
-                projectsModified = true;
+                    isTerminalMode: false,
+                })
+                projectsModified = true
             }
         }
-        
+
         if (projectsModified) {
             // Sort projects by lastActive descending
-            projects.sort((a, b) => b.lastActive - a.lastActive);
-            saveProjects();
-            renderProjects();
+            projects.sort((a, b) => b.lastActive - a.lastActive)
+            saveProjects()
+            renderProjects()
         }
     } catch (err) {
-        console.error('Failed to sync projects from all threads:', err);
+        console.error('Failed to sync projects from all threads:', err)
     }
-};
+}
 
 const selectAgyEngine = async () => {
     if (currentEngine !== 'agy') {
-        currentEngine = 'agy';
-        const currentProj = projects.find(p => p.path === activeProject);
+        currentEngine = 'agy'
+        const currentProj = projects.find((p) => p.path === activeProject)
         if (currentProj) {
-            currentProj.engine = 'agy';
-            saveProjects();
+            currentProj.engine = 'agy'
+            saveProjects()
         }
-        
-        const agyRadio = document.querySelector('input[name="engine"][value="agy"]') as HTMLInputElement;
-        if (agyRadio) agyRadio.checked = true;
 
-        term.reset();
+        const agyRadio = document.querySelector(
+            'input[name="engine"][value="agy"]'
+        ) as HTMLInputElement
+        if (agyRadio) agyRadio.checked = true
+
+        term.reset()
         if (agyBuffers[activeProject]) {
-            term.write(agyBuffers[activeProject]);
+            term.write(agyBuffers[activeProject])
         } else {
-            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`);
+            term.write(
+                `\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`
+            )
         }
 
         try {
-            await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
-                projectPath: activeProject, 
-                engine: 'agy' 
-            });
+            await invoke<{ shell_pid: number; is_new_session: boolean }>(
+                'switch_active_project',
+                {
+                    projectPath: activeProject,
+                    engine: 'agy',
+                }
+            )
         } catch (err) {
-            console.error('Failed to toggle engine session on backend:', err);
+            console.error('Failed to toggle engine session on backend:', err)
         }
-        resizePty();
+        resizePty()
     }
-};
-
+}
 
 function getCompactifiedContext(jsonlContent: string): string {
-    const lines = jsonlContent.trim().split('\n');
-    const steps: string[] = [];
-    let stepCount = 0;
-    
+    const lines = jsonlContent.trim().split('\n')
+    const steps: string[] = []
+    let stepCount = 0
+
     for (const line of lines) {
-        if (!line.trim()) continue;
+        if (!line.trim()) continue
         try {
-            const step = JSON.parse(line);
-            const source = step.source;
-            const type = step.type;
-            const content = step.content;
-            
+            const step = JSON.parse(line)
+            const source = step.source
+            const type = step.type
+            const content = step.content
+
             if (type === 'USER_INPUT' && content) {
-                stepCount++;
-                let prompt = content;
-                const startTag = '<USER_REQUEST>';
-                const endTag = '</USER_REQUEST>';
-                const startIdx = prompt.indexOf(startTag);
-                const endIdx = prompt.indexOf(endTag);
+                stepCount++
+                let prompt = content
+                const startTag = '<USER_REQUEST>'
+                const endTag = '</USER_REQUEST>'
+                const startIdx = prompt.indexOf(startTag)
+                const endIdx = prompt.indexOf(endTag)
                 if (startIdx !== -1 && endIdx !== -1) {
-                    prompt = prompt.substring(startIdx + startTag.length, endIdx).trim();
+                    prompt = prompt
+                        .substring(startIdx + startTag.length, endIdx)
+                        .trim()
                 }
-                
+
                 // Extract actual user request if combined with historical context
-                const userRequestMarker = 'User request:';
-                const markerIdx = prompt.lastIndexOf(userRequestMarker);
+                const userRequestMarker = 'User request:'
+                const markerIdx = prompt.lastIndexOf(userRequestMarker)
                 if (markerIdx !== -1) {
-                    prompt = prompt.substring(markerIdx + userRequestMarker.length).trim();
+                    prompt = prompt
+                        .substring(markerIdx + userRequestMarker.length)
+                        .trim()
                 }
-                
-                prompt = prompt.replace(/```[\s\S]*?```/g, '[Code Block omitted]').trim();
+
+                prompt = prompt
+                    .replace(/```[\s\S]*?```/g, '[Code Block omitted]')
+                    .trim()
                 if (prompt.length > 300) {
-                    prompt = prompt.substring(0, 300) + '...';
+                    prompt = prompt.substring(0, 300) + '...'
                 }
-                
-                steps.push(`- User Step ${stepCount}: "${prompt}"`);
-            } else if (source === 'MODEL' && type === 'PLANNER_RESPONSE' && content) {
-                let reply = content;
-                reply = reply.replace(/```[\s\S]*?```/g, '[Code Block omitted]').trim();
+
+                steps.push(`- User Step ${stepCount}: "${prompt}"`)
+            } else if (
+                source === 'MODEL' &&
+                type === 'PLANNER_RESPONSE' &&
+                content
+            ) {
+                let reply = content
+                reply = reply
+                    .replace(/```[\s\S]*?```/g, '[Code Block omitted]')
+                    .trim()
                 if (reply.length > 300) {
-                    reply = reply.substring(0, 300) + '...';
+                    reply = reply.substring(0, 300) + '...'
                 }
-                
-                steps.push(`- Assistant: "${reply}"`);
+
+                steps.push(`- Assistant: "${reply}"`)
             }
         } catch (e) {
             // Ignore
         }
     }
-    
-    const maxSteps = 6;
-    const slicedSteps = steps.length > maxSteps ? steps.slice(-maxSteps) : steps;
-    return slicedSteps.join('\n') + '\n';
+
+    const maxSteps = 6
+    const slicedSteps = steps.length > maxSteps ? steps.slice(-maxSteps) : steps
+    return slicedSteps.join('\n') + '\n'
 }
 
-const renderProjectThreads = async (projectPath: string, autoSelectFirstThread: boolean = false) => {
-    const listEl = document.getElementById('project-threads-list');
-    if (!listEl) return;
-    listEl.innerHTML = '';
+const renderProjectThreads = async (
+    projectPath: string,
+    autoSelectFirstThread: boolean = false
+) => {
+    const listEl = document.getElementById('project-threads-list')
+    if (!listEl) return
+    listEl.innerHTML = ''
 
     try {
-        const threads = await invoke<ThreadLog[]>('get_project_threads', { projectPath });
+        const threads = await invoke<ThreadLog[]>('get_project_threads', {
+            projectPath,
+        })
         if (threads.length === 0) {
-            listEl.innerHTML = '<div class="text-[9px] text-gray-500 dark:text-gray-600 italic text-center p-3">No threads found for this project</div>';
-            return;
+            listEl.innerHTML =
+                '<div class="text-[9px] text-gray-500 dark:text-gray-600 italic text-center p-3">No threads found for this project</div>'
+            return
         }
 
         threads.forEach((thread) => {
-            threadFilepaths.set(thread.id, thread.filepath);
-            const el = document.createElement('div');
-            const isActive = activeThreadId === thread.id;
-            el.className = isActive 
+            threadFilepaths.set(thread.id, thread.filepath)
+            const el = document.createElement('div')
+            const isActive = activeThreadId === thread.id
+            el.className = isActive
                 ? 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
-                : 'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
-            
-            const dateStr = thread.mtime > 0 
-                ? new Date(thread.mtime * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : 'Unknown Date';
+                : 'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+
+            const dateStr =
+                thread.mtime > 0
+                    ? new Date(thread.mtime * 1000).toLocaleString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                      })
+                    : 'Unknown Date'
 
             el.innerHTML = `
                 <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
@@ -1428,209 +1733,254 @@ const renderProjectThreads = async (projectPath: string, autoSelectFirstThread: 
                 </div>
                 <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="${thread.title}">${thread.title}</div>
                 <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
-            `;
+            `
 
             el.addEventListener('click', async () => {
-                document.querySelectorAll('#project-threads-list > div').forEach((child) => {
-                    child.className = 'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
-                });
-                el.className = 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5';
+                document
+                    .querySelectorAll('#project-threads-list > div')
+                    .forEach((child) => {
+                        child.className =
+                            'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                    })
+                el.className =
+                    'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
 
-                activeThreadId = thread.id;
-                await selectAgyEngine();
+                activeThreadId = thread.id
+                await selectAgyEngine()
 
-                const previewPane = document.getElementById('markdown-preview-pane');
+                const previewPane = document.getElementById(
+                    'markdown-preview-pane'
+                )
                 try {
-                    const content = await invoke<string>('read_thread_log', { filepath: thread.filepath });
-                    activeThreadContext = getCompactifiedContext(content);
-                    updatePlaceholder(true);
+                    const content = await invoke<string>('read_thread_log', {
+                        filepath: thread.filepath,
+                    })
+                    activeThreadContext = getCompactifiedContext(content)
+                    updatePlaceholder(true)
 
                     if (previewPane) {
-                        renderHistoricalThreadLog(content, thread.title, dateStr);
+                        renderHistoricalThreadLog(
+                            content,
+                            thread.title,
+                            dateStr
+                        )
                     }
                 } catch (err) {
                     if (previewPane) {
-                        previewPane.innerHTML = `<div class="text-red-500 p-4">Error loading thread log file: ${err}</div>`;
+                        previewPane.innerHTML = `<div class="text-red-500 p-4">Error loading thread log file: ${err}</div>`
                     }
                 }
 
                 try {
-                    const res = await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
-                        projectPath: activeProject, 
-                        engine: 'agy' 
-                    });
+                    const res = await invoke<{
+                        shell_pid: number
+                        is_new_session: boolean
+                    }>('switch_active_project', {
+                        projectPath: activeProject,
+                        engine: 'agy',
+                    })
                     if (res.is_new_session) {
-                        await new Promise((resolve) => setTimeout(resolve, 800));
+                        await new Promise((resolve) => setTimeout(resolve, 800))
                     }
                 } catch (err) {
-                    console.error('Failed to toggle engine session on backend:', err);
+                    console.error(
+                        'Failed to toggle engine session on backend:',
+                        err
+                    )
                 }
-                invoke('write_to_pty', { data: `/resume ${thread.id}\r`, projectPath: activeProject, terminalType: 'agy' });
-            });
+                invoke('write_to_pty', {
+                    data: `/resume ${thread.id}\r`,
+                    projectPath: activeProject,
+                    terminalType: 'agy',
+                })
+            })
 
-            listEl.appendChild(el);
-        });
+            listEl.appendChild(el)
+        })
 
         if (autoSelectFirstThread) {
-            const firstChild = listEl.querySelector(':scope > div') as HTMLElement;
+            const firstChild = listEl.querySelector(
+                ':scope > div'
+            ) as HTMLElement
             if (firstChild) {
-                firstChild.click();
+                firstChild.click()
             }
         }
     } catch (err) {
-        console.error('Failed to load project threads:', err);
-        listEl.innerHTML = `<div class="text-red-500 text-[10px] p-2">Error: ${err}</div>`;
+        console.error('Failed to load project threads:', err)
+        listEl.innerHTML = `<div class="text-red-500 text-[10px] p-2">Error: ${err}</div>`
     }
-};
+}
 
 const pollThreadsList = async () => {
-    if (!activeProject) return;
+    if (!activeProject) return
     try {
-        const threads = await invoke<ThreadLog[]>('get_project_threads', { projectPath: activeProject });
-        const threadsJson = JSON.stringify(threads);
-        
+        const threads = await invoke<ThreadLog[]>('get_project_threads', {
+            projectPath: activeProject,
+        })
+        const threadsJson = JSON.stringify(threads)
+
         // If we are waiting for a new thread to be created, and one is found
         if (isWaitingForNewThread && threads.length > 0) {
-            const newestThread = threads[0];
+            const newestThread = threads[0]
             if (!waitingExistingThreadIds.has(newestThread.id)) {
-                activeThreadId = newestThread.id;
-                isWaitingForNewThread = false;
-                waitingExistingThreadIds.clear();
-                
-                activeThreadContext = '';
-                updatePlaceholder(true);
-                
-                lastThreadsJson = threadsJson;
-                await renderProjectThreads(activeProject);
-                
-                const filepath = newestThread.filepath;
+                activeThreadId = newestThread.id
+                isWaitingForNewThread = false
+                waitingExistingThreadIds.clear()
+
+                activeThreadContext = ''
+                updatePlaceholder(true)
+
+                lastThreadsJson = threadsJson
+                await renderProjectThreads(activeProject)
+
+                const filepath = newestThread.filepath
                 if (filepath) {
-                    const content = await invoke<string>('read_thread_log', { filepath });
-                    activeThreadContext = getCompactifiedContext(content);
-                    renderCustomTuiLog(content);
+                    const content = await invoke<string>('read_thread_log', {
+                        filepath,
+                    })
+                    activeThreadContext = getCompactifiedContext(content)
+                    renderCustomTuiLog(content)
                 }
-                return;
+                return
             }
         }
 
         if (threadsJson !== lastThreadsJson) {
-            lastThreadsJson = threadsJson;
-            await renderProjectThreads(activeProject, false);
+            lastThreadsJson = threadsJson
+            await renderProjectThreads(activeProject, false)
         }
     } catch (err) {
-        console.error('Failed in pollThreadsList:', err);
+        console.error('Failed in pollThreadsList:', err)
     }
-};
+}
 
 // Start the polling interval
-setInterval(pollThreadsList, 1000);
+setInterval(pollThreadsList, 1000)
 
 // Add project modal and logic
-const addProjectModal = document.getElementById('add-project-modal');
-const closeModalBtn = document.getElementById('close-modal-btn');
-const btnChoiceExisting = document.getElementById('btn-choice-existing');
-const btnChoiceNew = document.getElementById('btn-choice-new');
-const newProjectForm = document.getElementById('new-project-form');
-const newProjNameInput = document.getElementById('new-proj-name') as HTMLInputElement;
-const newProjGitInput = document.getElementById('new-proj-git') as HTMLInputElement;
-const btnSubmitNewProject = document.getElementById('btn-submit-new-project') as HTMLButtonElement;
+const addProjectModal = document.getElementById('add-project-modal')
+const closeModalBtn = document.getElementById('close-modal-btn')
+const btnChoiceExisting = document.getElementById('btn-choice-existing')
+const btnChoiceNew = document.getElementById('btn-choice-new')
+const newProjectForm = document.getElementById('new-project-form')
+const newProjNameInput = document.getElementById(
+    'new-proj-name'
+) as HTMLInputElement
+const newProjGitInput = document.getElementById(
+    'new-proj-git'
+) as HTMLInputElement
+const btnSubmitNewProject = document.getElementById(
+    'btn-submit-new-project'
+) as HTMLButtonElement
 
 const openModal = () => {
-    if (!addProjectModal) return;
-    addProjectModal.classList.remove('hidden');
+    if (!addProjectModal) return
+    addProjectModal.classList.remove('hidden')
     // Force browser reflow to trigger CSS transitions
-    addProjectModal.offsetHeight;
-    addProjectModal.classList.remove('opacity-0');
-    addProjectModal.classList.add('opacity-100');
-    
-    const modalContent = addProjectModal.querySelector('.transform');
+    addProjectModal.offsetHeight
+    addProjectModal.classList.remove('opacity-0')
+    addProjectModal.classList.add('opacity-100')
+
+    const modalContent = addProjectModal.querySelector('.transform')
     if (modalContent) {
-        modalContent.classList.remove('scale-95');
-        modalContent.classList.add('scale-100');
+        modalContent.classList.remove('scale-95')
+        modalContent.classList.add('scale-100')
     }
-    
+
     // Reset modal state
-    if (newProjectForm) newProjectForm.classList.add('hidden');
-    if (newProjNameInput) newProjNameInput.value = '';
-    if (newProjGitInput) newProjGitInput.value = '';
-};
+    if (newProjectForm) newProjectForm.classList.add('hidden')
+    if (newProjNameInput) newProjNameInput.value = ''
+    if (newProjGitInput) newProjGitInput.value = ''
+}
 
 const closeModal = () => {
-    if (!addProjectModal) return;
-    addProjectModal.classList.remove('opacity-100');
-    addProjectModal.classList.add('opacity-0');
-    
-    const modalContent = addProjectModal.querySelector('.transform');
+    if (!addProjectModal) return
+    addProjectModal.classList.remove('opacity-100')
+    addProjectModal.classList.add('opacity-0')
+
+    const modalContent = addProjectModal.querySelector('.transform')
     if (modalContent) {
-        modalContent.classList.remove('scale-100');
-        modalContent.classList.add('scale-95');
+        modalContent.classList.remove('scale-100')
+        modalContent.classList.add('scale-95')
     }
-    
+
     // Hide modal element after transition completes
     setTimeout(() => {
-        addProjectModal.classList.add('hidden');
-    }, 300);
-};
+        addProjectModal.classList.add('hidden')
+    }, 300)
+}
 
 // Toggle modal visibility
-const addProjectBtn = document.getElementById('add-project-btn');
-addProjectBtn?.addEventListener('click', openModal);
-closeModalBtn?.addEventListener('click', closeModal);
+const addProjectBtn = document.getElementById('add-project-btn')
+addProjectBtn?.addEventListener('click', openModal)
+closeModalBtn?.addEventListener('click', closeModal)
 
 // Close modal when clicking on the backdrop (outside modal content)
 addProjectModal?.addEventListener('click', (e) => {
     if (e.target === addProjectModal) {
-        closeModal();
+        closeModal()
     }
-});
+})
 
 // Helper to choose random color for project card
 const getRandomProjectColor = () => {
-    const colors = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#6366f1', '#14b8a6', '#a855f7'];
-    return colors[Math.floor(Math.random() * colors.length)];
-};
+    const colors = [
+        '#3b82f6',
+        '#ec4899',
+        '#10b981',
+        '#f59e0b',
+        '#8b5cf6',
+        '#ef4444',
+        '#06b6d4',
+        '#6366f1',
+        '#14b8a6',
+        '#a855f7',
+    ]
+    return colors[Math.floor(Math.random() * colors.length)]
+}
 
 // Open Existing Project via File Picker
 btnChoiceExisting?.addEventListener('click', async () => {
     try {
-        const selectedDir = await invoke<string | null>('select_directory');
-        if (!selectedDir) return; // User canceled the dialog
-        
-        const cleanPath = selectedDir.trim();
-        const name = cleanPath.split('/').pop() || 'unknown-project';
-        
-        const existing = projects.find(p => p.path === cleanPath);
+        const selectedDir = await invoke<string | null>('select_directory')
+        if (!selectedDir) return // User canceled the dialog
+
+        const cleanPath = selectedDir.trim()
+        const name = cleanPath.split('/').pop() || 'unknown-project'
+
+        const existing = projects.find((p) => p.path === cleanPath)
         if (existing) {
-            switchToProject(cleanPath);
-            closeModal();
-            return;
+            switchToProject(cleanPath)
+            closeModal()
+            return
         }
-        
+
         const newProj: Project = {
             path: cleanPath,
             name,
             color: getRandomProjectColor(),
             lastActive: Date.now(),
             engine: 'agy',
-            isTerminalMode: false
-        };
-        
-        projects.push(newProj);
-        saveProjects();
-        switchToProject(cleanPath);
-        closeModal();
+            isTerminalMode: false,
+        }
+
+        projects.push(newProj)
+        saveProjects()
+        switchToProject(cleanPath)
+        closeModal()
     } catch (err) {
-        alert('Failed to select directory: ' + err);
+        alert('Failed to select directory: ' + err)
     }
-});
+})
 
 // Show New Project Form
 btnChoiceNew?.addEventListener('click', () => {
     if (newProjectForm) {
-        newProjectForm.classList.remove('hidden');
-        newProjNameInput?.focus();
+        newProjectForm.classList.remove('hidden')
+        newProjNameInput?.focus()
     }
-});
+})
 
 // Auto-generate git repository name from project name
 newProjNameInput?.addEventListener('input', () => {
@@ -1639,397 +1989,479 @@ newProjNameInput?.addEventListener('input', () => {
         const kebab = newProjNameInput.value
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)/g, '');
-        newProjGitInput.value = kebab;
+            .replace(/(^-|-$)/g, '')
+        newProjGitInput.value = kebab
     }
-});
+})
 
 // Create & Initialize New Project
 btnSubmitNewProject?.addEventListener('click', async () => {
-    const name = newProjNameInput.value.trim();
-    const gitRepoName = newProjGitInput.value.trim();
-    
+    const name = newProjNameInput.value.trim()
+    const gitRepoName = newProjGitInput.value.trim()
+
     if (!name) {
-        alert('Please enter a project name.');
-        return;
+        alert('Please enter a project name.')
+        return
     }
     if (!gitRepoName) {
-        alert('Please enter a git repository name.');
-        return;
+        alert('Please enter a git repository name.')
+        return
     }
-    
+
     // Disable submit button and show loading state
-    const originalText = btnSubmitNewProject.innerHTML;
-    btnSubmitNewProject.disabled = true;
-    btnSubmitNewProject.innerHTML = `<span class="inline-block animate-spin mr-2">🔄</span> Creating...`;
-    
+    const originalText = btnSubmitNewProject.innerHTML
+    btnSubmitNewProject.disabled = true
+    btnSubmitNewProject.innerHTML = `<span class="inline-block animate-spin mr-2">🔄</span> Creating...`
+
     try {
-        const projectPath = await invoke<string>('create_new_project', { name, gitRepoName });
-        
+        const projectPath = await invoke<string>('create_new_project', {
+            name,
+            gitRepoName,
+        })
+
         const newProj: Project = {
             path: projectPath,
             name,
             color: getRandomProjectColor(),
             lastActive: Date.now(),
             engine: 'agy',
-            isTerminalMode: false
-        };
-        
-        projects.push(newProj);
-        saveProjects();
-        switchToProject(projectPath);
-        closeModal();
+            isTerminalMode: false,
+        }
+
+        projects.push(newProj)
+        saveProjects()
+        switchToProject(projectPath)
+        closeModal()
     } catch (err) {
-        alert('Failed to create project: ' + err);
+        alert('Failed to create project: ' + err)
     } finally {
-        btnSubmitNewProject.disabled = false;
-        btnSubmitNewProject.innerHTML = originalText;
+        btnSubmitNewProject.disabled = false
+        btnSubmitNewProject.innerHTML = originalText
     }
-});
+})
 
 // ----------------------------------------------------
 // 7. Engine Toggle & Routing
 // ----------------------------------------------------
 let currentEngine: 'claude' | 'agy' = 'agy'
-const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]')
+const engineRadios = document.querySelectorAll<HTMLInputElement>(
+    'input[name="engine"]'
+)
 
 engineRadios.forEach((radio) => {
     radio.addEventListener('change', async (e) => {
-        currentEngine = (e.target as HTMLInputElement).value as 'claude' | 'agy';
+        currentEngine = (e.target as HTMLInputElement).value as 'claude' | 'agy'
         // Persist setting on the active project
-        const currentProj = projects.find(p => p.path === activeProject);
+        const currentProj = projects.find((p) => p.path === activeProject)
         if (currentProj) {
-            currentProj.engine = currentEngine;
-            saveProjects();
+            currentProj.engine = currentEngine
+            saveProjects()
         }
-        
+
         // Reset terminal screen and show matching engine buffer
-        term.reset();
-        const activeBuffers = currentEngine === 'claude' ? claudeBuffers : agyBuffers;
+        term.reset()
+        const activeBuffers =
+            currentEngine === 'claude' ? claudeBuffers : agyBuffers
         if (activeBuffers[activeProject]) {
-            term.write(activeBuffers[activeProject]);
+            term.write(activeBuffers[activeProject])
         } else {
-            term.write(`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`);
+            term.write(
+                `\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`
+            )
         }
 
         try {
             // Lazy spawn or switch to the engine on backend
-            await invoke<{ shell_pid: number, is_new_session: boolean }>('switch_active_project', { 
-                projectPath: activeProject, 
-                engine: currentEngine 
-            });
+            await invoke<{ shell_pid: number; is_new_session: boolean }>(
+                'switch_active_project',
+                {
+                    projectPath: activeProject,
+                    engine: currentEngine,
+                }
+            )
 
             // PTY auto-spawn is now handled directly by the backend to bypass zsh rc files and launch instantly
         } catch (err) {
-            console.error('Failed to toggle engine session on backend:', err);
+            console.error('Failed to toggle engine session on backend:', err)
         }
-        
-        resizePty();
-    });
-});
+
+        resizePty()
+    })
+})
 
 // ----------------------------------------------------
 // 8. Input Interception & Routing
 // ----------------------------------------------------
 const adjustHeight = () => {
     if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
-        resizePty();
+        textarea.style.height = 'auto'
+        textarea.style.height = textarea.scrollHeight + 'px'
+        resizePty()
     }
-};
+}
 
 textarea?.addEventListener('input', () => {
-    savePromptDraft(textarea.value);
+    savePromptDraft(textarea.value)
     // Instantly toggle to terminal mode when user types exactly "!" in empty field
     if (textarea.value === '!') {
-        isTerminalMode = true;
-        const currentProj = projects.find(p => p.path === activeProject);
+        isTerminalMode = true
+        const currentProj = projects.find((p) => p.path === activeProject)
         if (currentProj) {
-            currentProj.isTerminalMode = true;
-            saveProjects();
+            currentProj.isTerminalMode = true
+            saveProjects()
         }
-        applyTerminalModeUI();
-        textarea.value = '';
-        adjustHeight();
+        applyTerminalModeUI()
+        textarea.value = ''
+        adjustHeight()
     } else {
-        adjustHeight();
-        
+        adjustHeight()
+
         // Expand terminal if typing a slash command
-        const tuiContainer = document.getElementById('terminal-container');
+        const tuiContainer = document.getElementById('terminal-container')
         if (tuiContainer && !isTuiExpanded) {
             if (textarea.value.trim().startsWith('/')) {
-                tuiContainer.style.height = '320px';
-                debouncedResizePty();
+                tuiContainer.style.height = '320px'
+                debouncedResizePty()
             } else if (tuiContainer.style.height === '320px') {
-                tuiContainer.style.height = '64px';
-                debouncedResizePty();
+                tuiContainer.style.height = '64px'
+                debouncedResizePty()
             }
         }
     }
-});
+})
 const loadCommandHistory = (projectPath: string): string[] => {
     try {
-        const historyJson = localStorage.getItem(`ai-os-history-${projectPath}`);
+        const historyJson = localStorage.getItem(`ai-os-history-${projectPath}`)
         if (historyJson) {
-            return JSON.parse(historyJson);
+            return JSON.parse(historyJson)
         }
     } catch (e) {
-        console.error('Failed to load command history', e);
+        console.error('Failed to load command history', e)
     }
-    return [];
-};
+    return []
+}
 
 const saveCommandHistory = (projectPath: string, history: string[]) => {
     try {
-        localStorage.setItem(`ai-os-history-${projectPath}`, JSON.stringify(history));
+        localStorage.setItem(
+            `ai-os-history-${projectPath}`,
+            JSON.stringify(history)
+        )
     } catch (e) {
-        console.error('Failed to save command history', e);
+        console.error('Failed to save command history', e)
     }
-};
+}
 
-let commandHistory: string[] = loadCommandHistory(activeProject);
-let historyIndex = -1;
-let currentDraft = '';
+let commandHistory: string[] = loadCommandHistory(activeProject)
+let historyIndex = -1
+let currentDraft = ''
 
-let arrowUpPressedOnce = false;
-let arrowUpTimeout: any = null;
-let arrowUpOverlay: HTMLDivElement | null = null;
+let arrowUpPressedOnce = false
+let arrowUpTimeout: any = null
+let arrowUpOverlay: HTMLDivElement | null = null
 
 const showArrowUpOverlay = () => {
     if (!arrowUpOverlay) {
-        arrowUpOverlay = document.createElement('div');
-        arrowUpOverlay.className = 'absolute top-0 left-0 right-0 bg-blue-600/90 text-white text-xs font-bold px-3 py-1.5 flex items-center justify-center rounded-t pointer-events-none z-10 animate-pulse transition-opacity';
-        arrowUpOverlay.textContent = 'Press ArrowUp again to recall history';
-        const bottomArea = document.getElementById('bottom-input-area');
+        arrowUpOverlay = document.createElement('div')
+        arrowUpOverlay.className =
+            'absolute top-0 left-0 right-0 bg-blue-600/90 text-white text-xs font-bold px-3 py-1.5 flex items-center justify-center rounded-t pointer-events-none z-10 animate-pulse transition-opacity'
+        arrowUpOverlay.textContent = 'Press ArrowUp again to recall history'
+        const bottomArea = document.getElementById('bottom-input-area')
         if (bottomArea) {
-            bottomArea.appendChild(arrowUpOverlay);
+            bottomArea.appendChild(arrowUpOverlay)
         }
     }
-    arrowUpOverlay.style.opacity = '1';
-};
+    arrowUpOverlay.style.opacity = '1'
+}
 
 const hideArrowUpOverlay = () => {
     if (arrowUpOverlay) {
-        arrowUpOverlay.style.opacity = '0';
+        arrowUpOverlay.style.opacity = '0'
         setTimeout(() => {
             if (arrowUpOverlay && arrowUpOverlay.style.opacity === '0') {
-                arrowUpOverlay.remove();
-                arrowUpOverlay = null;
+                arrowUpOverlay.remove()
+                arrowUpOverlay = null
             }
-        }, 300);
+        }, 300)
     }
-};
-
+}
 
 textarea?.addEventListener('keydown', async (e) => {
     if (e.key === 'ArrowUp') {
         if (textarea.selectionStart === 0 || historyIndex !== -1) {
             // If the textarea is empty, we don't need the double tap
-            const isEmpty = textarea.value.trim() === '';
-            
-            if (!isEmpty && historyIndex === -1 && !arrowUpPressedOnce && commandHistory.length > 0) {
-                arrowUpPressedOnce = true;
-                showArrowUpOverlay();
-                
-                if (arrowUpTimeout) clearTimeout(arrowUpTimeout);
+            const isEmpty = textarea.value.trim() === ''
+
+            if (
+                !isEmpty &&
+                historyIndex === -1 &&
+                !arrowUpPressedOnce &&
+                commandHistory.length > 0
+            ) {
+                arrowUpPressedOnce = true
+                showArrowUpOverlay()
+
+                if (arrowUpTimeout) clearTimeout(arrowUpTimeout)
                 arrowUpTimeout = setTimeout(() => {
-                    arrowUpPressedOnce = false;
-                    hideArrowUpOverlay();
-                }, 2000);
-                
+                    arrowUpPressedOnce = false
+                    hideArrowUpOverlay()
+                }, 2000)
+
                 const resetArrowUpState = () => {
-                    arrowUpPressedOnce = false;
-                    hideArrowUpOverlay();
-                    textarea.removeEventListener('input', resetArrowUpState);
-                    textarea.removeEventListener('blur', resetArrowUpState);
-                };
-                textarea.addEventListener('input', resetArrowUpState);
-                textarea.addEventListener('blur', resetArrowUpState);
-                return;
+                    arrowUpPressedOnce = false
+                    hideArrowUpOverlay()
+                    textarea.removeEventListener('input', resetArrowUpState)
+                    textarea.removeEventListener('blur', resetArrowUpState)
+                }
+                textarea.addEventListener('input', resetArrowUpState)
+                textarea.addEventListener('blur', resetArrowUpState)
+                return
             }
-            
-            e.preventDefault();
-            
-            if (arrowUpTimeout) clearTimeout(arrowUpTimeout);
-            arrowUpPressedOnce = false;
-            hideArrowUpOverlay();
-            
+
+            e.preventDefault()
+
+            if (arrowUpTimeout) clearTimeout(arrowUpTimeout)
+            arrowUpPressedOnce = false
+            hideArrowUpOverlay()
+
             if (historyIndex === -1) {
-                currentDraft = textarea.value;
+                currentDraft = textarea.value
             }
             if (historyIndex < commandHistory.length - 1) {
-                historyIndex++;
-                textarea.value = commandHistory[commandHistory.length - 1 - historyIndex];
-                adjustHeight();
+                historyIndex++
+                textarea.value =
+                    commandHistory[commandHistory.length - 1 - historyIndex]
+                adjustHeight()
             }
         }
     } else if (e.key === 'ArrowDown') {
-        if (arrowUpTimeout) clearTimeout(arrowUpTimeout);
-        arrowUpPressedOnce = false;
-        hideArrowUpOverlay();
-        
+        if (arrowUpTimeout) clearTimeout(arrowUpTimeout)
+        arrowUpPressedOnce = false
+        hideArrowUpOverlay()
+
         if (historyIndex !== -1) {
-            e.preventDefault();
+            e.preventDefault()
             if (historyIndex > 0) {
-                historyIndex--;
-                textarea.value = commandHistory[commandHistory.length - 1 - historyIndex];
-                adjustHeight();
+                historyIndex--
+                textarea.value =
+                    commandHistory[commandHistory.length - 1 - historyIndex]
+                adjustHeight()
             } else if (historyIndex === 0) {
-                historyIndex = -1;
-                textarea.value = currentDraft;
-                adjustHeight();
+                historyIndex = -1
+                textarea.value = currentDraft
+                adjustHeight()
             }
         }
     } else if (e.key === 'Enter') {
         if (e.shiftKey) {
             // Shift+Enter: insert a newline at the cursor position explicitly
-            e.preventDefault();
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const value = textarea.value;
-            textarea.value = value.substring(0, start) + '\n' + value.substring(end);
-            textarea.selectionStart = textarea.selectionEnd = start + 1;
-            adjustHeight();
-            return;
+            e.preventDefault()
+            const start = textarea.selectionStart
+            const end = textarea.selectionEnd
+            const value = textarea.value
+            textarea.value =
+                value.substring(0, start) + '\n' + value.substring(end)
+            textarea.selectionStart = textarea.selectionEnd = start + 1
+            adjustHeight()
+            return
         }
 
-        e.preventDefault();
-        
-        let rawInput = textarea.value;
-        const trimmedInput = rawInput.trim();
-        if (!trimmedInput) return;
+        e.preventDefault()
+
+        let rawInput = textarea.value
+        const trimmedInput = rawInput.trim()
+        if (!trimmedInput) return
 
         if (!activeThreadId) {
-            isWaitingForNewThread = true;
+            isWaitingForNewThread = true
             try {
-                const currentThreads = await invoke<ThreadLog[]>('get_project_threads', { projectPath: activeProject });
-                waitingExistingThreadIds = new Set(currentThreads.map(t => t.id));
+                const currentThreads = await invoke<ThreadLog[]>(
+                    'get_project_threads',
+                    { projectPath: activeProject }
+                )
+                waitingExistingThreadIds = new Set(
+                    currentThreads.map((t) => t.id)
+                )
             } catch (err) {
-                console.error('Failed to get current threads on Enter press:', err);
-                waitingExistingThreadIds = new Set(Array.from(threadFilepaths.keys()));
+                console.error(
+                    'Failed to get current threads on Enter press:',
+                    err
+                )
+                waitingExistingThreadIds = new Set(
+                    Array.from(threadFilepaths.keys())
+                )
             }
         }
 
-        commandHistory.push(trimmedInput);
-        saveCommandHistory(activeProject, commandHistory);
-        historyIndex = -1;
+        commandHistory.push(trimmedInput)
+        saveCommandHistory(activeProject, commandHistory)
+        historyIndex = -1
 
         // Prompt Mode Engine Routing Logic
-        let processedInput = trimmedInput;
+        let processedInput = trimmedInput
 
         // Obsidian Knowledge Routing
         if (processedInput.toLowerCase().includes('notes')) {
-            processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`;
+            processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`
         }
 
-        let isRunning = false;
+        let isRunning = false
         try {
-            isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine, projectPath: activeProject });
+            isRunning = await invoke<boolean>('is_engine_running', {
+                engine: currentEngine,
+                projectPath: activeProject,
+            })
         } catch (err) {
-            console.error('Failed to check if engine is running:', err);
+            console.error('Failed to check if engine is running:', err)
         }
 
-        const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
-        const shouldClear = clearCheckbox ? clearCheckbox.checked : true;
-        const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear;
+        const clearCheckbox = document.getElementById(
+            'clear-context-checkbox'
+        ) as HTMLInputElement
+        const shouldClear = clearCheckbox ? clearCheckbox.checked : true
+        const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear
 
         // Load the latest context dynamically from the thread's log file if inside a thread
-        let currentContext = activeThreadContext;
+        let currentContext = activeThreadContext
         if (activeThreadId && currentEngine === 'agy') {
-            const filepath = threadFilepaths.get(activeThreadId);
+            const filepath = threadFilepaths.get(activeThreadId)
             if (filepath) {
                 try {
-                    const content = await invoke<string>('read_thread_log', { filepath });
-                    currentContext = getCompactifiedContext(content);
+                    const content = await invoke<string>('read_thread_log', {
+                        filepath,
+                    })
+                    currentContext = getCompactifiedContext(content)
                 } catch (err) {
-                    console.error('Failed to load active thread context:', err);
+                    console.error('Failed to load active thread context:', err)
                 }
             }
         }
 
         if (isRunning) {
             if (activeThreadId && currentContext) {
-                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
-                await new Promise((resolve) => setTimeout(resolve, 450));
-                
-                const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`;
-                const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`;
-                invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+                invoke('write_to_pty', {
+                    data: '/clear\r',
+                    projectPath: activeProject,
+                    terminalType: currentEngine,
+                })
+                await new Promise((resolve) => setTimeout(resolve, 450))
+
+                const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
+                const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`
+                invoke('write_to_pty', {
+                    data: dataToSend,
+                    projectPath: activeProject,
+                    terminalType: currentEngine,
+                })
             } else {
-                const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
+                const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`
                 if (isBypass) {
-                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+                    invoke('write_to_pty', {
+                        data: dataToSend,
+                        projectPath: activeProject,
+                        terminalType: currentEngine,
+                    })
                 } else {
-                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: currentEngine });
-                    await new Promise((resolve) => setTimeout(resolve, 450));
-                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: currentEngine });
+                    invoke('write_to_pty', {
+                        data: '/clear\r',
+                        projectPath: activeProject,
+                        terminalType: currentEngine,
+                    })
+                    await new Promise((resolve) => setTimeout(resolve, 450))
+                    invoke('write_to_pty', {
+                        data: dataToSend,
+                        projectPath: activeProject,
+                        terminalType: currentEngine,
+                    })
                 }
             }
         } else {
             if (currentEngine === 'agy') {
                 try {
-                    await invoke('spawn_fresh_engine', { projectPath: activeProject, engine: 'agy' });
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                    await invoke('spawn_fresh_engine', {
+                        projectPath: activeProject,
+                        engine: 'agy',
+                    })
+                    await new Promise((resolve) => setTimeout(resolve, 1000))
                 } catch (err) {
-                    console.error('Failed to spawn fresh agy engine:', err);
+                    console.error('Failed to spawn fresh agy engine:', err)
                 }
-                
+
                 if (activeThreadId && currentContext) {
-                    invoke('write_to_pty', { data: `/resume ${activeThreadId}\r`, projectPath: activeProject, terminalType: 'agy' });
-                    await new Promise((resolve) => setTimeout(resolve, 600));
-                    
-                    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
-                    await new Promise((resolve) => setTimeout(resolve, 450));
-                    
-                    const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`;
-                    const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`;
-                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                    invoke('write_to_pty', {
+                        data: `/resume ${activeThreadId}\r`,
+                        projectPath: activeProject,
+                        terminalType: 'agy',
+                    })
+                    await new Promise((resolve) => setTimeout(resolve, 600))
+
+                    invoke('write_to_pty', {
+                        data: '/clear\r',
+                        projectPath: activeProject,
+                        terminalType: 'agy',
+                    })
+                    await new Promise((resolve) => setTimeout(resolve, 450))
+
+                    const combinedPrompt = `Continuing conversation from history.\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
+                    const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`
+                    invoke('write_to_pty', {
+                        data: dataToSend,
+                        projectPath: activeProject,
+                        terminalType: 'agy',
+                    })
                 } else {
-                    const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`;
-                    invoke('write_to_pty', { data: dataToSend, projectPath: activeProject, terminalType: 'agy' });
+                    const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`
+                    invoke('write_to_pty', {
+                        data: dataToSend,
+                        projectPath: activeProject,
+                        terminalType: 'agy',
+                    })
                 }
             } else {
-                const escapedInput = processedInput.replace(/"/g, '\\"');
-                let commandToExecute = '';
+                const escapedInput = processedInput.replace(/"/g, '\\"')
+                let commandToExecute = ''
 
                 if (currentEngine === 'claude') {
-                    commandToExecute = `claude -p "${escapedInput}"`;
+                    commandToExecute = `claude -p "${escapedInput}"`
                 }
 
-                invoke('write_to_pty', { data: commandToExecute + '\r', projectPath: activeProject, terminalType: currentEngine });
+                invoke('write_to_pty', {
+                    data: commandToExecute + '\r',
+                    projectPath: activeProject,
+                    terminalType: currentEngine,
+                })
             }
         }
 
-        textarea.value = '';
-        savePromptDraft('');
-        adjustHeight();
+        textarea.value = ''
+        savePromptDraft('')
+        adjustHeight()
 
         // Auto-clear context toggle turns itself back on after each message is sent
         if (clearCheckbox) {
-            clearCheckbox.checked = true;
-            autoClearContext = true;
-            localStorage.setItem('ai-os-auto-clear', 'true');
+            clearCheckbox.checked = true
+            autoClearContext = true
+            localStorage.setItem('ai-os-auto-clear', 'true')
             // We poll is_engine_running in the background, but we can optimistically call updatePlaceholder(true) since we just spawned/used it
-            updatePlaceholder(true);
+            updatePlaceholder(true)
         }
     }
-});
+})
 
 // Tauri File Drop handling
 listen<string[]>('tauri://file-drop', (event) => {
-    if (!textarea) return;
-    const paths = event.payload;
+    if (!textarea) return
+    const paths = event.payload
     if (paths && paths.length > 0) {
-        const textToAppend = paths.join(' ');
+        const textToAppend = paths.join(' ')
         if (textarea.value) {
-            textarea.value += ' ' + textToAppend;
+            textarea.value += ' ' + textToAppend
         } else {
-            textarea.value = textToAppend;
+            textarea.value = textToAppend
         }
-        adjustHeight();
+        adjustHeight()
     }
-});
+})
 
 // ----------------------------------------------------
 // 8. Clipboard Copy & Paste for TUI (xterm.js)
@@ -2037,203 +2469,259 @@ listen<string[]>('tauri://file-drop', (event) => {
 document.addEventListener('keydown', (e) => {
     // Intercept Cmd+C (Mac) or Ctrl+C to copy selected text from xterm.js or window
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
-        let textToCopy = '';
-        const activeEl = document.activeElement;
-        
+        let textToCopy = ''
+        const activeEl = document.activeElement
+
         // Only prioritize xterm.js selections if the terminal elements are focused
-        if (activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl))) {
+        if (
+            activeEl &&
+            (container?.contains(activeEl) || term.element?.contains(activeEl))
+        ) {
             if (term.hasSelection()) {
-                textToCopy = term.getSelection();
+                textToCopy = term.getSelection()
             } else {
-                invoke('copy_tmux_selection', { projectPath: activeProject, terminalType: currentEngine }).catch((err) => {
-                    console.error('Failed to copy tmux selection:', err);
-                });
+                invoke('copy_tmux_selection', {
+                    projectPath: activeProject,
+                    terminalType: currentEngine,
+                }).catch((err) => {
+                    console.error('Failed to copy tmux selection:', err)
+                })
             }
-        } else if (activeEl && (miniContainer?.contains(activeEl) || miniTerm.element?.contains(activeEl))) {
+        } else if (
+            activeEl &&
+            (miniContainer?.contains(activeEl) ||
+                miniTerm.element?.contains(activeEl))
+        ) {
             if (miniTerm.hasSelection()) {
-                textToCopy = miniTerm.getSelection();
+                textToCopy = miniTerm.getSelection()
             } else {
-                invoke('copy_tmux_selection', { projectPath: activeProject, terminalType: 'mini' }).catch((err) => {
-                    console.error('Failed to copy tmux selection:', err);
-                });
+                invoke('copy_tmux_selection', {
+                    projectPath: activeProject,
+                    terminalType: 'mini',
+                }).catch((err) => {
+                    console.error('Failed to copy tmux selection:', err)
+                })
             }
         } else {
-            textToCopy = window.getSelection()?.toString() || '';
+            textToCopy = window.getSelection()?.toString() || ''
         }
-        
+
         if (textToCopy) {
             navigator.clipboard.writeText(textToCopy).catch((err) => {
-                console.error('Failed to copy text:', err);
-            });
+                console.error('Failed to copy text:', err)
+            })
         }
     }
-});
+})
 
 document.addEventListener('paste', async (e) => {
     // If user is focused on the prompt input, let default paste happen
     if (document.activeElement === textarea) {
-        return;
+        return
     }
-    let pastedText = e.clipboardData?.getData('text');
+    let pastedText = e.clipboardData?.getData('text')
     if (pastedText) {
-        const activeEl = document.activeElement;
-        const isEngineFocus = activeEl && (container?.contains(activeEl) || term.element?.contains(activeEl));
-        
+        const activeEl = document.activeElement
+        const isEngineFocus =
+            activeEl &&
+            (container?.contains(activeEl) || term.element?.contains(activeEl))
+
         if (isEngineFocus) {
-            let isRunning = false;
+            let isRunning = false
             try {
-                isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine, projectPath: activeProject });
+                isRunning = await invoke<boolean>('is_engine_running', {
+                    engine: currentEngine,
+                    projectPath: activeProject,
+                })
             } catch (err) {
-                console.error('Failed to check if engine is running:', err);
+                console.error('Failed to check if engine is running:', err)
             }
             if (isRunning) {
                 // When pasting directly into an active interactive session, map newlines to Esc+LF (\x1b\n)
                 // so the interactive shell buffers the entire pasted block without submitting line-by-line
-                pastedText = pastedText.replace(/\r\n/g, '\n').replace(/\n/g, '\x1b\n');
+                pastedText = pastedText
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\n/g, '\x1b\n')
             }
-            invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: currentEngine });
-        } else if (activeEl && (miniContainer?.contains(activeEl) || miniTerm.element?.contains(activeEl))) {
+            invoke('write_to_pty', {
+                data: pastedText,
+                projectPath: activeProject,
+                terminalType: currentEngine,
+            })
+        } else if (
+            activeEl &&
+            (miniContainer?.contains(activeEl) ||
+                miniTerm.element?.contains(activeEl))
+        ) {
             // For raw terminals/shells, use bracketed paste sequences if multiline to prevent premature executes
             if (pastedText.includes('\n')) {
-                invoke('write_to_pty', { data: '\x1b[200~' + pastedText + '\x1b[201~', projectPath: activeProject, terminalType: 'mini' });
+                invoke('write_to_pty', {
+                    data: '\x1b[200~' + pastedText + '\x1b[201~',
+                    projectPath: activeProject,
+                    terminalType: 'mini',
+                })
             } else {
-                invoke('write_to_pty', { data: pastedText, projectPath: activeProject, terminalType: 'mini' });
+                invoke('write_to_pty', {
+                    data: pastedText,
+                    projectPath: activeProject,
+                    terminalType: 'mini',
+                })
             }
         }
     }
-});
+})
 
 // ----------------------------------------------------
 // 9. Focus Management & Initialization
 // ----------------------------------------------------
-textarea?.focus();
+textarea?.focus()
 
 // Auto-clear context checkbox handling
-const clearCheckbox = document.getElementById('clear-context-checkbox') as HTMLInputElement;
-let autoClearContext = true;
-const savedAutoClear = localStorage.getItem('ai-os-auto-clear');
+const clearCheckbox = document.getElementById(
+    'clear-context-checkbox'
+) as HTMLInputElement
+let autoClearContext = true
+const savedAutoClear = localStorage.getItem('ai-os-auto-clear')
 if (savedAutoClear !== null) {
-    autoClearContext = savedAutoClear === 'true';
+    autoClearContext = savedAutoClear === 'true'
 }
 
 const updatePlaceholder = (isRunning = true) => {
-    const contextContainer = document.getElementById('clear-context-container');
-    const labelText = document.getElementById('clear-context-label-text');
+    const contextContainer = document.getElementById('clear-context-container')
+    const labelText = document.getElementById('clear-context-label-text')
     if (textarea) {
         if (!isRunning) {
-            textarea.placeholder = `Type a prompt... [Will launch ${currentEngine} and send] (Enter to send, Shift+Enter for newline)`;
+            textarea.placeholder = `Type a prompt... [Will launch ${currentEngine} and send] (Enter to send, Shift+Enter for newline)`
             if (contextContainer) {
-                contextContainer.style.display = 'none';
+                contextContainer.style.display = 'none'
             }
         } else {
             if (contextContainer) {
-                contextContainer.style.display = 'flex';
+                contextContainer.style.display = 'flex'
             }
             if (clearCheckbox && clearCheckbox.checked) {
-                textarea.placeholder = "Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)";
+                textarea.placeholder =
+                    'Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-bold px-2 py-0.5 rounded border transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400";
+                    contextContainer.className =
+                        'flex items-center cursor-pointer select-none text-xs font-bold px-2 py-0.5 rounded border transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                 }
-                if (labelText) labelText.textContent = "Auto-Clear: ACTIVE";
+                if (labelText) labelText.textContent = 'Auto-Clear: ACTIVE'
             } else {
-                textarea.placeholder = "Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)";
+                textarea.placeholder =
+                    'Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className = "flex items-center cursor-pointer select-none text-xs font-medium px-2 py-0.5 rounded border transition-all bg-gray-900/40 border-gray-800 text-gray-500 hover:text-gray-400";
+                    contextContainer.className =
+                        'flex items-center cursor-pointer select-none text-xs font-medium px-2 py-0.5 rounded border transition-all bg-gray-900/40 border-gray-800 text-gray-500 hover:text-gray-400'
                 }
-                if (labelText) labelText.textContent = "Auto-Clear: OFF";
+                if (labelText) labelText.textContent = 'Auto-Clear: OFF'
             }
         }
     }
-};
+}
 
 if (clearCheckbox) {
-    clearCheckbox.checked = autoClearContext;
+    clearCheckbox.checked = autoClearContext
     clearCheckbox.addEventListener('change', () => {
-        autoClearContext = clearCheckbox.checked;
-        localStorage.setItem('ai-os-auto-clear', String(autoClearContext));
-        updatePlaceholder();
-    });
+        autoClearContext = clearCheckbox.checked
+        localStorage.setItem('ai-os-auto-clear', String(autoClearContext))
+        updatePlaceholder()
+    })
     // Call initially
-    setTimeout(updatePlaceholder, 100);
+    setTimeout(updatePlaceholder, 100)
 }
 
 document.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    const selection = window.getSelection();
-    
+    const target = e.target as HTMLElement
+    const selection = window.getSelection()
+
     // Focus appropriate terminal or textarea
-    const isEngineTermClick = container?.contains(target);
-    const isMiniTermClick = miniContainer?.contains(target);
-    const isSidebarClick = document.getElementById('projects-sidebar')?.contains(target);
+    const isEngineTermClick = container?.contains(target)
+    const isMiniTermClick = miniContainer?.contains(target)
+    const isSidebarClick = document
+        .getElementById('projects-sidebar')
+        ?.contains(target)
 
     if (isEngineTermClick) {
-        term.focus();
+        term.focus()
     } else if (isMiniTermClick) {
-        miniTerm.focus();
-    } else if (!isSidebarClick && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && (!selection || selection.toString() === '')) {
+        miniTerm.focus()
+    } else if (
+        !isSidebarClick &&
+        target.tagName !== 'INPUT' &&
+        target.tagName !== 'TEXTAREA' &&
+        (!selection || selection.toString() === '')
+    ) {
         if (isTerminalMode) {
-            miniTerm.focus();
+            miniTerm.focus()
         } else {
-            textarea?.focus();
-            updatePlaceholder();
+            textarea?.focus()
+            updatePlaceholder()
         }
     }
-});
+})
 
 // Initialize workspace session
-(async () => {
-    await syncProjectsFromAllThreads();
+;(async () => {
+    await syncProjectsFromAllThreads()
     try {
-        const initialProject = await invoke<string | null>('get_initial_project');
+        const initialProject = await invoke<string | null>(
+            'get_initial_project'
+        )
         if (initialProject) {
-            const cleanPath = initialProject.trim();
-            const existing = projects.find(p => p.path === cleanPath);
+            const cleanPath = initialProject.trim()
+            const existing = projects.find((p) => p.path === cleanPath)
             if (existing) {
-                activeProject = cleanPath;
+                activeProject = cleanPath
             } else {
-                const name = cleanPath.split('/').pop() || 'unknown-project';
+                const name = cleanPath.split('/').pop() || 'unknown-project'
                 const newProj: Project = {
                     path: cleanPath,
                     name,
                     color: getRandomProjectColor(),
                     lastActive: Date.now(),
                     engine: 'agy',
-                    isTerminalMode: false
-                };
-                projects.push(newProj);
-                saveProjects();
-                activeProject = cleanPath;
+                    isTerminalMode: false,
+                }
+                projects.push(newProj)
+                saveProjects()
+                activeProject = cleanPath
             }
         } else {
             // Sort by recency to get the most recent active project on startup
-            const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive);
+            const sorted = [...projects].sort(
+                (a, b) => b.lastActive - a.lastActive
+            )
             if (sorted.length > 0) {
-                activeProject = sorted[0].path;
+                activeProject = sorted[0].path
             }
         }
     } catch (e) {
-        console.error('Failed to get initial project:', e);
-        const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive);
+        console.error('Failed to get initial project:', e)
+        const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive)
         if (sorted.length > 0) {
-            activeProject = sorted[0].path;
+            activeProject = sorted[0].path
         }
     }
-    await switchToProject(activeProject, true);
-})();
+    await switchToProject(activeProject, true)
+})()
 
 // Periodically sync projects from threads
-setInterval(syncProjectsFromAllThreads, 10000);
+setInterval(syncProjectsFromAllThreads, 10000)
 
 // Poll engine running state
 setInterval(async () => {
-    if (!activeProject || isTerminalMode) return;
+    if (!activeProject || isTerminalMode) return
     try {
-        const isRunning = await invoke<boolean>('is_engine_running', { engine: currentEngine, projectPath: activeProject });
+        const isRunning = await invoke<boolean>('is_engine_running', {
+            engine: currentEngine,
+            projectPath: activeProject,
+        })
         // Only update if we aren't showing the arrow up overlay (so we don't mess up placeholder)
         if (!arrowUpPressedOnce) {
-            updatePlaceholder(isRunning);
+            updatePlaceholder(isRunning)
         }
     } catch (e) {
-        console.error(e);
+        console.error(e)
     }
-}, 1000);
+}, 1000)
