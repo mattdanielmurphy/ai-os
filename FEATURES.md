@@ -3,15 +3,10 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
-### [2026-06-30] Resizable Panes & Layout Flexibility
-* **Resizable Sidebar & Lists:** Added sidebar width resizing (via `sidebar-splitter`) and project list vs project threads height resizing (via `sidebar-list-splitter`) to the Left Sidebar, solving layout space issues for the projects list.
-* **Horizontal Main split handle:** Added horizontal main split resizing (via `main-splitter`) between the Terminals wrapper (left) and Output Preview wrapper (right) to allow custom pane layout allocation.
-* **Delta-Based Smooth Dragging & Invisible Hitboxes:** Refactored all splitter resizing math in `main.ts` to use mousedown delta offsets (startY/startX offsets), completely eliminating jumps, lag, and sudden pane offsets. Redesigned all splitters in `index.html` to use a generous 12px active drag hitbox (`w-3`/`h-3`) with a thin nested divider line that thickens on hover/active, keeping layout spacing perfectly stable.
-
-### [2026-06-30] Antigravity Thread Integration & Auto-Hiding Scrollbars
-* **Sidebar Project Threads Integration:** Replaced the mockup folder list with a robust integration that reads actual historical `agy` threads (conversations) from the global `~/.gemini/antigravity-cli/brain/` directory. Substrings of project paths are verified and exact-matched to route each thread to its correct project.
-* **Compactified Context Resumption:** Clicking a project thread in the sidebar loads the selected thread in `agy` via the `/resume <id>` command. When a user submits a prompt, the system automatically runs `/clear` first, and then sends the thread's compactified context (extracting the user inputs and assistant responses from `transcript.jsonl` while stripping out heavy code blocks to prevent token bloat) along with the prompt.
-* **New Thread Creation:** Added a "+" button to the "Project Threads" header in the sidebar, which clears the selected thread highlights, resets the preview pane, switches the active active engine to `agy`, and issues a `/clear` command to start a clean thread session.
+### [2026-06-30] Inline Project Threads & Simplified Sidebar Layout
+* **Unified Projects & Threads Sidebar:** Removed the split sidebar panes and the vertical list splitter, merging project lists and threads into a single elegant tree-like view. Clicking a project now expands its list of threads directly underneath it, slightly indented.
+* **Inline New Thread Creation:** Added a "+" button next to the inline "Threads" header under the active project, allowing users to start a new thread session without cluttering the main layout.
+* **Resizable Sidebar & Panes:** Retained smooth, delta-based sidebar width resizing and main horizontal splitter scaling, while removing the obsolete list height splitter.
 * **Glow-in-Dark Conversation Preview:** Custom-styled the Output Preview Pane to parse and display `transcript.jsonl` files as beautiful, fully rendered, styled chat conversations (User vs. Assistant message blocks) instead of raw text.
 * **Auto-Hiding Modern macOS Scrollbars:** Applied premium webkit-scrollbar styling globally. Scrollbars are completely transparent/hidden by default and fade in as modern rounded pill shapes when hovering over scrollable containers, resolving theme inconsistencies in dark mode.
 * **Tauri Thread Log FS Scope Bypass:** Implemented backend Rust command `read_thread_log` to load historical thread logs directly, resolving frontend Tauri filesystem scope errors (`path not allowed on the configured scope`) when accessing hidden `.gemini` configurations.

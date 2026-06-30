@@ -503,45 +503,6 @@ if (sidebarSplitter && sidebar) {
     });
 }
 
-// 4b. Projects List Height Resizing
-const sidebarListSplitter = document.getElementById('sidebar-list-splitter');
-const projectsList = document.getElementById('projects-list');
-
-if (sidebarListSplitter && projectsList && sidebar) {
-    let isDragging = false;
-    let startY = 0;
-    let startHeight = 0;
-    
-    sidebarListSplitter.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        startY = e.clientY;
-        startHeight = projectsList.offsetHeight;
-        document.body.style.cursor = 'row-resize';
-        e.preventDefault();
-    });
-    
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        
-        const deltaY = e.clientY - startY;
-        const newHeight = startHeight + deltaY;
-        const minHeight = 80;
-        
-        const sidebarHeight = sidebar.getBoundingClientRect().height;
-        const maxHeight = sidebarHeight - 120;
-        
-        if (newHeight >= minHeight && newHeight <= maxHeight) {
-            projectsList.style.height = `${newHeight}px`;
-        }
-    });
-    
-    document.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
-            document.body.style.cursor = '';
-        }
-    });
-}
 
 // 4c. Main Panes Horizontal Resizing
 const mainSplitter = document.getElementById('main-splitter');
@@ -631,14 +592,20 @@ const renderProjects = () => {
         const item = document.createElement('div');
         const isActive = project.path === activeProject;
         
-        item.className = `flex items-center justify-between p-2 rounded cursor-pointer transition-all border ${
+        item.className = `flex flex-col p-1 rounded transition-all border ${
             isActive 
-                ? 'bg-gray-800 border-gray-700 text-white font-medium shadow-sm' 
-                : 'bg-transparent border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+                ? 'bg-gray-800/40 border-gray-700/80 shadow-sm' 
+                : 'bg-transparent border-transparent'
         }`;
         
-        // Tab content
-        item.innerHTML = `
+        const header = document.createElement('div');
+        header.className = `flex items-center justify-between p-1.5 rounded cursor-pointer transition-all ${
+            isActive 
+                ? 'text-white font-medium bg-gray-800 border border-gray-700' 
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
+        }`;
+        
+        header.innerHTML = `
             <div class="flex items-center gap-2.5 truncate">
                 <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${project.color}"></span>
                 <span class="truncate text-xs">${project.name}</span>
@@ -650,7 +617,7 @@ const renderProjects = () => {
         `;
         
         // Swap project click
-        item.addEventListener('click', (e) => {
+        header.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
             
             // Delete project
@@ -681,8 +648,8 @@ const renderProjects = () => {
         });
         
         // Show buttons on hover
-        item.addEventListener('mouseenter', () => {
-            const btns = item.querySelector('.action-btns') as HTMLElement;
+        header.addEventListener('mouseenter', () => {
+            const btns = header.querySelector('.action-btns') as HTMLElement;
             if (btns) {
                 btns.style.opacity = '1';
                 const delBtn = btns.querySelector('.delete-btn') as HTMLElement;
@@ -691,10 +658,54 @@ const renderProjects = () => {
                 }
             }
         });
-        item.addEventListener('mouseleave', () => {
-            const btns = item.querySelector('.action-btns') as HTMLElement;
+        header.addEventListener('mouseleave', () => {
+            const btns = header.querySelector('.action-btns') as HTMLElement;
             if (btns) btns.style.opacity = '0';
         });
+
+        item.appendChild(header);
+
+        if (isActive) {
+            const threadsContainer = document.createElement('div');
+            threadsContainer.className = 'mt-1.5 ml-2.5 pl-2.5 border-l border-gray-700/80 flex flex-col space-y-1.5';
+            
+            const threadsHeader = document.createElement('div');
+            threadsHeader.className = 'flex items-center justify-between pr-1.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500';
+            threadsHeader.innerHTML = `
+                <span>Threads</span>
+                <button class="new-thread-btn text-[9px] font-bold text-gray-400 hover:text-white px-1 py-0.5 rounded hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
+            `;
+            
+            const threadsList = document.createElement('div');
+            threadsList.id = 'project-threads-list';
+            threadsList.className = 'max-h-48 overflow-y-auto space-y-1.5 pr-1';
+            threadsList.innerHTML = '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>';
+            
+            threadsContainer.appendChild(threadsHeader);
+            threadsContainer.appendChild(threadsList);
+            item.appendChild(threadsContainer);
+            
+            // Attach event listener for the "+" button to start a new thread
+            const newThreadBtn = threadsHeader.querySelector('.new-thread-btn');
+            newThreadBtn?.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                activeThreadId = null;
+                activeThreadContext = null;
+                updatePlaceholder(true);
+
+                threadsList.querySelectorAll(':scope > div').forEach((child) => {
+                    child.className = 'p-1.5 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
+                });
+
+                const previewPane = document.getElementById('markdown-preview-pane');
+                if (previewPane) {
+                    previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>';
+                }
+
+                await selectAgyEngine();
+                invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
+            });
+        }
 
         projectsListEl.appendChild(item);
     });
@@ -909,7 +920,7 @@ const renderProjectThreads = async (projectPath: string) => {
     try {
         const threads = await invoke<ThreadLog[]>('get_project_threads', { projectPath });
         if (threads.length === 0) {
-            listEl.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">No threads found for this project</div>';
+            listEl.innerHTML = '<div class="text-[9px] text-gray-500 dark:text-gray-600 italic text-center p-3">No threads found for this project</div>';
             return;
         }
 
@@ -917,27 +928,27 @@ const renderProjectThreads = async (projectPath: string) => {
             const el = document.createElement('div');
             const isActive = activeThreadId === thread.id;
             el.className = isActive 
-                ? 'p-2 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-1'
-                : 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
+                ? 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
+                : 'p-1.5 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
             
             const dateStr = thread.mtime > 0 
                 ? new Date(thread.mtime * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'Unknown Date';
 
             el.innerHTML = `
-                <div class="flex items-center justify-between text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                <div class="flex items-center justify-between text-[9px] font-medium text-gray-500 dark:text-gray-400">
                     <span class="truncate pr-1">#${thread.id.substring(0, 8)}</span>
-                    <span class="shrink-0 text-[9px] text-gray-400 dark:text-gray-500 font-mono">${dateStr}</span>
+                    <span class="shrink-0 text-[8px] text-gray-400 dark:text-gray-500 font-mono">${dateStr}</span>
                 </div>
-                <div class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate" title="${thread.title}">${thread.title}</div>
-                <div class="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed" title="${thread.snippet}">${thread.snippet}</div>
+                <div class="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate" title="${thread.title}">${thread.title}</div>
+                <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-2 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
             `;
 
             el.addEventListener('click', async () => {
                 document.querySelectorAll('#project-threads-list > div').forEach((child) => {
-                    child.className = 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
+                    child.className = 'p-1.5 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5';
                 });
-                el.className = 'p-2 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-1';
+                el.className = 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 hover:bg-blue-500/10 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5';
 
                 activeThreadId = thread.id;
                 await selectAgyEngine();
@@ -1042,26 +1053,6 @@ const closeModal = () => {
 const addProjectBtn = document.getElementById('add-project-btn');
 addProjectBtn?.addEventListener('click', openModal);
 closeModalBtn?.addEventListener('click', closeModal);
-
-// Start New Thread
-const newThreadBtn = document.getElementById('new-thread-btn');
-newThreadBtn?.addEventListener('click', async () => {
-    activeThreadId = null;
-    activeThreadContext = null;
-    updatePlaceholder(true);
-
-    document.querySelectorAll('#project-threads-list > div').forEach((child) => {
-        child.className = 'p-2 rounded border border-gray-250 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-800/80 cursor-pointer transition-all space-y-1';
-    });
-
-    const previewPane = document.getElementById('markdown-preview-pane');
-    if (previewPane) {
-        previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>';
-    }
-
-    await selectAgyEngine();
-    invoke('write_to_pty', { data: '/clear\r', projectPath: activeProject, terminalType: 'agy' });
-});
 
 // Close modal when clicking on the backdrop (outside modal content)
 addProjectModal?.addEventListener('click', (e) => {
