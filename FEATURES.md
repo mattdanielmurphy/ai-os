@@ -6,6 +6,7 @@
 ### [2026-06-30] Global Pathname Formatting & Sidebar Project Paths
 * **Global Pathname Formatting:** Implemented a global utility `formatPathForUser` that formats pathnames to use relative paths for files within the active project, and replaces the absolute user home directory with `~` for external paths.
 * **Visible Project Paths in Sidebar:** Upgraded the project sidebar list to render the formatted pathname directly beneath the project name, resolving confusion with duplicate project names and auto-generated thread wrappers.
+* **Regex and Boundary Matching Fixes:** Fixed a character-boundary indexing bug in `get_project_threads` and `patch_thread_log_with_output` in the Rust backend where byte offsets were mixed with character indexes, and corrected `detect_project_path` to strip markdown styling punctuation (`*`, `` ` ``) and brackets to ensure correct thread-to-project association.
 
 ### [2026-06-30] Detailed Timeline Step Information & Clickable Paths
 * **Bold Tool Summaries & Clickable Target Paths:** Enhanced custom TUI step logs by bolding tool action summaries and appending secondary-colored, clickable relative file/directory links where applicable (e.g. for file edits, searches, directory listings). Clicking a path triggers Tauri to open the file locally.

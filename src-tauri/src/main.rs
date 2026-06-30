@@ -1127,8 +1127,8 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
                     let content = String::from_utf8_lossy(&buffer);
 
                     if let Some(pos) = content.find(&project_path) {
-                        let next_char = content.chars().nth(pos + project_path.len());
-                        let is_exact = match next_char {
+                        let after_match = &content[pos + project_path.len()..];
+                        let is_exact = match after_match.chars().next() {
                             Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
                             None => true,
                         };
@@ -1192,9 +1192,15 @@ fn detect_project_path(content: &str) -> Option<String> {
     
     if let Some(pos) = content.find(&projects_prefix) {
         let after_prefix = &content[pos + projects_prefix.len()..];
-        let end_pos = after_prefix.find(|c: char| c == '/' || c == '"' || c == '\'' || c == '\\' || c == ',' || c.is_whitespace())
-            .unwrap_or(after_prefix.len());
-        let project_name = &after_prefix[..end_pos];
+        let end_pos = after_prefix.find(|c: char| {
+            c == '/' || c == '"' || c == '\'' || c == '\\' || c == ',' || c == '`' || c == '*' || c == ')' || c == ']' || c == '}' || c == ':' || c == ';' || c == '.' || c.is_whitespace()
+        }).unwrap_or(after_prefix.len());
+        
+        let mut project_name = &after_prefix[..end_pos];
+        // Strip trailing markdown punctuation/styling chars
+        while !project_name.is_empty() && project_name.ends_with(|c: char| c == '`' || c == '*' || c == '.' || c == ',' || c == ':' || c == ';' || c == ')' || c == ']') {
+            project_name = &project_name[..project_name.len() - 1];
+        }
         if !project_name.is_empty() {
             return Some(format!("{}{}", projects_prefix, project_name));
         }
@@ -1426,8 +1432,8 @@ fn patch_thread_log_with_output(
                                     let content = String::from_utf8_lossy(&buffer);
 
                                     if let Some(pos) = content.find(&project_path) {
-                                        let next_char = content.chars().nth(pos + project_path.len());
-                                        let is_exact = match next_char {
+                                        let after_match = &content[pos + project_path.len()..];
+                                        let is_exact = match after_match.chars().next() {
                                             Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
                                             None => true,
                                         };
