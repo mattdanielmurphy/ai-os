@@ -1673,16 +1673,19 @@ function getCompactifiedContext(jsonlContent: string): string {
 
 const renderProjectThreads = async (
     projectPath: string,
-    autoSelectFirstThread: boolean = false
+    autoSelectFirstThread: boolean = false,
+    preFetchedThreads?: ThreadLog[]
 ) => {
     const listEl = document.getElementById('project-threads-list')
     if (!listEl) return
-    listEl.innerHTML = ''
 
     try {
-        const threads = await invoke<ThreadLog[]>('get_project_threads', {
-            projectPath,
-        })
+        const threads =
+            preFetchedThreads ||
+            (await invoke<ThreadLog[]>('get_project_threads', {
+                projectPath,
+            }))
+        listEl.innerHTML = ''
         if (threads.length === 0) {
             listEl.innerHTML =
                 '<div class="text-[9px] text-gray-500 dark:text-gray-600 italic text-center p-3">No threads found for this project</div>'
@@ -1809,7 +1812,7 @@ const pollThreadsList = async () => {
                 updatePlaceholder(true)
 
                 lastThreadsJson = threadsJson
-                await renderProjectThreads(activeProject)
+                await renderProjectThreads(activeProject, false, threads)
 
                 const filepath = newestThread.filepath
                 if (filepath) {
@@ -1825,7 +1828,7 @@ const pollThreadsList = async () => {
 
         if (threadsJson !== lastThreadsJson) {
             lastThreadsJson = threadsJson
-            await renderProjectThreads(activeProject, false)
+            await renderProjectThreads(activeProject, false, threads)
         }
     } catch (err) {
         console.error('Failed in pollThreadsList:', err)

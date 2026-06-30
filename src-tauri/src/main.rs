@@ -1183,7 +1183,11 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
     let mut thread_logs = Vec::new();
 
     for (root_id, mut members) in groups {
-        members.sort_by_key(|id| thread_mtimes.get(id).cloned().unwrap_or(0));
+        members.sort_by(|a, b| {
+            thread_mtimes.get(a).cloned().unwrap_or(0)
+                .cmp(&thread_mtimes.get(b).cloned().unwrap_or(0))
+                .then_with(|| a.cmp(b))
+        });
         
         let root_thread_id = &root_id;
         let latest_thread_id = members.last().unwrap();
@@ -1267,7 +1271,7 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
         }
     }
 
-    thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
+    thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime).then_with(|| a.id.cmp(&b.id)));
     Ok(thread_logs)
 }
 
@@ -1319,7 +1323,11 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
     let mut thread_logs = Vec::new();
 
     for (root_id, mut members) in groups {
-        members.sort_by_key(|id| thread_mtimes.get(id).cloned().unwrap_or(0));
+        members.sort_by(|a, b| {
+            thread_mtimes.get(a).cloned().unwrap_or(0)
+                .cmp(&thread_mtimes.get(b).cloned().unwrap_or(0))
+                .then_with(|| a.cmp(b))
+        });
         
         let root_thread_id = &root_id;
         let latest_thread_id = members.last().unwrap();
@@ -1387,7 +1395,7 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
         });
     }
 
-    thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
+    thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime).then_with(|| a.id.cmp(&b.id)));
     Ok(thread_logs)
 }
 
