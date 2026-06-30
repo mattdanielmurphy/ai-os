@@ -1,21 +1,15 @@
-# Simplified Sidebar Layout with Inline Threads Implemented
+# Thread History Context Bug Fixed
 
-I have refactored the sidebar to simplify the UI, removing the redundant second pane and providing a nested tree structure for threads.
+I have successfully resolved the issue where continuing threads in `agy` would either lose context on subsequent prompts or send heavily truncated/nested histories that missed the most recent and important user request.
 
-## Key Changes
+## Core Issues Identified & Resolved
 
-1. **Merged Sidebar Panes**
-   - Removed the separate **Project Threads** header and bottom list container from the HTML.
-   - Removed the **list height splitter** (`#sidebar-list-splitter`), allowing the primary projects list to naturally occupy all remaining vertical space in the sidebar.
+1. **Context Cleared on Subsequent Prompts:** Previously, the frontend loaded the compactified thread context *once* when clicking a thread in the sidebar, set `activeThreadContext`, and then cleared it to `null` immediately after sending the first prompt. As a result, sending any subsequent prompts in the same thread would clear the session and attach zero historical context.
+   * **Solution:** Added a dynamic lookup pattern. The frontend now stores a map of active thread log paths (`threadFilepaths`) and reads the latest transcript file directly from the filesystem *right before sending each prompt*, ensuring the context is always fully up-to-date.
 
-2. **Inline, Indented Tree Structure**
-   - When you click/select a project, it is marked active and is now appended with a slightly indented list of its historical threads directly beneath it.
-   - The rest of the projects display below it, scrolling naturally as needed.
-   - The inline threads area has a limited height window (`max-h-48`) and displays scrollbars when threads overflow.
+2. **Truncation of the Most Recent Prompts:** When a thread was resumed, the previous prompt was stored as a combined message containing the historical context at the beginning and the actual user request at the bottom. Since the parser (`getCompactifiedContext`) truncated step prompts to 300 characters, it ended up only preserving the old history prefix and completely cutting off the actual user request.
+   * **Solution:** Updated `getCompactifiedContext` to search for the last occurrence of the `User request:` marker. If present, it extracts the actual prompt from the end of the combined text, ensuring it is never cut off by truncation.
 
-3. **Inline Thread Operations**
-   - Added a tiny, clean `+` button next to the inline "Threads" label under the active project. Clicking it triggers the standard "Start New Thread" flow, resetting context and starting fresh.
+3. **Context Window Safety (Turns Cap):** We now slice the parsed conversation history to only include the last 6 steps (last 3 turns), ensuring the most recent messages (the last user prompt and assistant reply) are always sent as context, while preventing context window blowouts.
 
-4. **Code Cleanup**
-   - Removed obsolete drag resizing events for the old divider.
-   - Cleaned up obsolete selectors and styling configurations.
+4. **New Thread Auto-Association:** Updated the backend Rust command `patch_thread_log_with_output` to return the resolved thread ID. The frontend now automatically captures this ID when a new conversation starts, ensuring the sidebar highlights the active thread and continues associating subsequent messages properly.
