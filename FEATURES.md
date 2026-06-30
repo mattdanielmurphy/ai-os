@@ -9,6 +9,8 @@
 * **New Thread Creation:** Added a "+" button to the "Project Threads" header in the sidebar, which clears the selected thread highlights, resets the preview pane, switches the active active engine to `agy`, and issues a `/clear` command to start a clean thread session.
 * **Glow-in-Dark Conversation Preview:** Custom-styled the Output Preview Pane to parse and display `transcript.jsonl` files as beautiful, fully rendered, styled chat conversations (User vs. Assistant message blocks) instead of raw text.
 * **Auto-Hiding Modern macOS Scrollbars:** Applied premium webkit-scrollbar styling globally. Scrollbars are completely transparent/hidden by default and fade in as modern rounded pill shapes when hovering over scrollable containers, resolving theme inconsistencies in dark mode.
+* **Tauri Thread Log FS Scope Bypass:** Implemented backend Rust command `read_thread_log` to load historical thread logs directly, resolving frontend Tauri filesystem scope errors (`path not allowed on the configured scope`) when accessing hidden `.gemini` configurations.
+* **macOS Copy/Paste Keyboard Shortcut Support:** Integrated standard macOS system menus via `tauri::Menu::os_default` in the Rust backend, enabling OS-level shortcuts like `Cmd+V`, `Cmd+C`, `Cmd+X`, and `Cmd+A` to function properly inside text inputs and the main prompt textarea on macOS.
 
 ### [2026-06-29] Theme and Styling Bug Fixes
 * **Tailwind Configuration Custom Theme Extension:** Defined a custom `gray-850` color (`#18202f`) within `tailwind.config.js` to fix a styling glitch where bars and buttons using `dark:bg-gray-850` fell back to a light or transparent background on dark mode, restoring the dark-mode theme cohesion across the header, modal, and context panel components.

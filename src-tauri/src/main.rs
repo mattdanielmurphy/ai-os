@@ -1182,8 +1182,16 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
     Ok(thread_logs)
 }
 
+#[tauri::command]
+fn read_thread_log(filepath: String) -> Result<String, String> {
+    use std::fs;
+    fs::read_to_string(filepath).map_err(|e| format!("Failed to read thread log: {}", e))
+}
+
 fn main() {
+    let context = tauri::generate_context!();
     tauri::Builder::default()
+        .menu(tauri::Menu::os_default(&context.package_info().name))
         .setup(|app| {
             let app_handle = app.handle();
             
@@ -1215,8 +1223,9 @@ fn main() {
             get_initial_project,
             get_project_threads,
             copy_tmux_selection,
-            open_path
+            open_path,
+            read_thread_log
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }

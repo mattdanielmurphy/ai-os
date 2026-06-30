@@ -800,7 +800,7 @@ const renderProjectThreads = async (projectPath: string) => {
 
                 const previewPane = document.getElementById('markdown-preview-pane');
                 try {
-                    const content = await readTextFile(thread.filepath);
+                    const content = await invoke<string>('read_thread_log', { filepath: thread.filepath });
                     activeThreadContext = getCompactifiedContext(content);
                     updatePlaceholder(true);
 
