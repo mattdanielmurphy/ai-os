@@ -1075,6 +1075,8 @@ struct ThreadLog {
     snippet: String,
     filepath: String,
     mtime: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    detected_project_path: Option<String>,
 }
 
 #[tauri::command]
@@ -1170,6 +1172,7 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
                                 snippet,
                                 filepath: transcript_path.to_string_lossy().to_string(),
                                 mtime,
+                                detected_project_path: Some(project_path.clone()),
                             });
                         }
                     }
@@ -1178,6 +1181,122 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
         }
     }
 
+    thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
+
+    Ok(thread_logs)
+}
+
+fn detect_project_path(content: &str) -> Option<String> {
+    let home = std::env::var("HOME").ok()?;
+    let projects_prefix = format!("{}/projects/", home);
+    
+    if let Some(pos) = content.find(&projects_prefix) {
+        let after_prefix = &content[pos + projects_prefix.len()..];
+        let end_pos = after_prefix.find(|c: char| c == '/' || c == '"' || c == '\'' || c == '\\' || c == ',' || c.is_whitespace())
+            .unwrap_or(after_prefix.len());
+        let project_name = &after_prefix[..end_pos];
+        if !project_name.is_empty() {
+            return Some(format!("{}{}", projects_prefix, project_name));
+        }
+    }
+    None
+}
+
+#[tauri::command]
+fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
+    use std::fs;
+    use std::path::Path;
+    use std::io::Read;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let brain_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("brain");
+
+    if !brain_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let entries = fs::read_dir(&brain_dir)
+        .map_err(|e| format!("Failed to read brain directory: {}", e))?;
+
+    let mut thread_logs = Vec::new();
+
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            if path.is_dir() {
+                let thread_id = path.file_name().unwrap().to_string_lossy().to_string();
+                let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
+                
+                if transcript_path.exists() {
+                    let metadata = match fs::metadata(&transcript_path) {
+                        Ok(m) => m,
+                        Err(_) => continue,
+                    };
+                    let mtime = metadata.modified()
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+
+                    let file = match fs::File::open(&transcript_path) {
+                        Ok(f) => f,
+                        Err(_) => continue,
+                    };
+                    
+                    let mut buffer = Vec::new();
+                    let _ = file.take(131072).read_to_end(&mut buffer);
+                    let content = String::from_utf8_lossy(&buffer);
+
+                    let mut title = thread_id.clone();
+                    let mut snippet = String::new();
+                    
+                    for line in content.lines() {
+                        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+                            if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+                                if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
+                                    let mut raw_prompt = prompt_content.to_string();
+                                    if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
+                                        if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
+                                            raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
+                                        }
+                                    }
+                                    
+                                    let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
+                                    let char_count = clean_prompt.chars().count();
+                                    title = if char_count > 40 {
+                                        format!("{}...", clean_prompt.chars().take(40).collect::<String>())
+                                    } else {
+                                        clean_prompt.clone()
+                                    };
+                                    snippet = if char_count > 120 {
+                                        format!("{}...", clean_prompt.chars().take(120).collect::<String>())
+                                    } else {
+                                        clean_prompt
+                                    };
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    let detected_project_path = detect_project_path(&content);
+                    
+                    thread_logs.push(ThreadLog {
+                        id: thread_id,
+                        title,
+                        snippet,
+                        filepath: transcript_path.to_string_lossy().to_string(),
+                        mtime,
+                        detected_project_path,
+                    });
+                }
+            }
+        }
+    }
+
+    // Sort by mtime descending (newest first)
     thread_logs.sort_by(|a, b| b.mtime.cmp(&a.mtime));
 
     Ok(thread_logs)
@@ -1412,6 +1531,7 @@ fn main() {
             create_new_project,
             get_initial_project,
             get_project_threads,
+            get_all_agy_threads,
             copy_tmux_selection,
             open_path,
             save_prompt_draft,

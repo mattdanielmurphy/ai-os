@@ -230,3 +230,6 @@
 * **Vertical Split & Toggleable Terminal:** Replaced the side-by-side split layout with a vertical split configuration. The main area displays the custom HTML log view, and the bottom contains the original `agy` TUI terminal, which starts in a space-saving collapsed view (64px) and expands to near full screen upon clicking the divider toggle button.
 ### [2026-06-30] New Thread Selection Tracking Fix
 * **Thread ID Tracking:** Added tracking of existing thread IDs when starting a new thread or sending the first prompt in a new session. This ensures that the background polling loop correctly waits for a new thread ID to be written to disk rather than prematurely selecting an existing newest thread.
+### [2026-06-30] Comprehensive Agy Thread Discovery & Sync
+* **Every Agy Thread Accounted For:** Added background directory scanning of all `agy` session logs. Any thread not matched with a known project is auto-discovered.
+* **Auto-Created AI-OS Projects:** If a thread has a detected workspace path, that project path is dynamically added to the sidebar projects list. For lone/orphaned threads without a project path, a custom project container is started for that thread, ensuring all conversational history is accessible.

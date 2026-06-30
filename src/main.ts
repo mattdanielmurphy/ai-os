@@ -1197,7 +1197,55 @@ interface ThreadLog {
     snippet: string;
     filepath: string;
     mtime: number;
+    detected_project_path?: string;
 }
+
+const syncProjectsFromAllThreads = async () => {
+    try {
+        const allThreads = await invoke<ThreadLog[]>('get_all_agy_threads');
+        let projectsModified = false;
+        
+        for (const thread of allThreads) {
+            let targetPath = thread.detected_project_path;
+            
+            // If the thread is a lone agy thread without a detected project path
+            if (!targetPath) {
+                targetPath = `/Users/matthewmurphy/projects/thread-${thread.id}`;
+            }
+            
+            // Check if a project with this path already exists
+            const exists = projects.some(p => p.path === targetPath);
+            if (!exists) {
+                // Determine a name for the new project
+                let name = '';
+                if (thread.detected_project_path) {
+                    name = thread.detected_project_path.split('/').pop() || 'Unnamed';
+                } else {
+                    name = thread.title || `Thread ${thread.id.substring(0, 8)}`;
+                }
+                
+                projects.push({
+                    path: targetPath,
+                    name: name,
+                    color: getRandomProjectColor(),
+                    lastActive: thread.mtime > 0 ? thread.mtime * 1000 : Date.now(),
+                    engine: 'agy',
+                    isTerminalMode: false
+                });
+                projectsModified = true;
+            }
+        }
+        
+        if (projectsModified) {
+            // Sort projects by lastActive descending
+            projects.sort((a, b) => b.lastActive - a.lastActive);
+            saveProjects();
+            renderProjects();
+        }
+    } catch (err) {
+        console.error('Failed to sync projects from all threads:', err);
+    }
+};
 
 const selectAgyEngine = async () => {
     if (currentEngine !== 'agy') {
@@ -2072,6 +2120,7 @@ document.addEventListener('click', (e) => {
 
 // Initialize workspace session
 (async () => {
+    await syncProjectsFromAllThreads();
     try {
         const initialProject = await invoke<string | null>('get_initial_project');
         if (initialProject) {
@@ -2109,6 +2158,9 @@ document.addEventListener('click', (e) => {
     }
     await switchToProject(activeProject, true);
 })();
+
+// Periodically sync projects from threads
+setInterval(syncProjectsFromAllThreads, 10000);
 
 // Poll engine running state
 setInterval(async () => {
