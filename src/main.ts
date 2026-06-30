@@ -2355,6 +2355,10 @@ textarea?.addEventListener('keydown', async (e) => {
         } else {
             if (currentEngine === 'agy') {
                 try {
+                    await invoke('switch_active_project', {
+                        projectPath: activeProject,
+                        engine: 'agy',
+                    })
                     await invoke('spawn_fresh_engine', {
                         projectPath: activeProject,
                         engine: 'agy',
@@ -2370,7 +2374,7 @@ textarea?.addEventListener('keydown', async (e) => {
                         projectPath: activeProject,
                         terminalType: 'agy',
                     })
-                    await new Promise((resolve) => setTimeout(resolve, 600))
+                    await new Promise((resolve) => setTimeout(resolve, 800))
 
                     invoke('write_to_pty', {
                         data: '/clear\r',
