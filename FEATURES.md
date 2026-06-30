@@ -3,6 +3,12 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [2026-06-30] New Thread Creation Detection & Prompt Autosaving
+* **Background Threads Polling:** Added a 1000ms background polling mechanism that queries thread lists and dynamically refreshes the sidebar tree.
+* **Auto-Select New Threads:** If a user clicks "+ New Thread" and submits a prompt, the system waits for the thread directory to be initialized on disk, automatically selects/highlights the new thread, and triggers instant preview timeline rendering.
+* **Double-layered Prompt Autosaving:** Implemented real-time prompt draft saving. Saves directly to `localStorage` on every keystroke, writes immediately to physical disk (`~/.gemini/antigravity-cli/drafts/`) when word boundaries (space/newline) are detected, and debounces all other keystrokes by 150ms.
+* **Draft Recovery on Startup/Reload:** Automatically restores the active prompt draft from `localStorage` upon project switch or Vite reload, and validates/updates it asynchronously from the physical disk backup to prevent any data loss.
+
 ### [2026-06-30] Inline Project Threads & Simplified Sidebar Layout
 * **Automatic Startup Thread Recall & Selection:** Fixed a bug where the project threads list displayed "Loading threads..." forever on startup due to a redundant `renderProjects` call overwriting the DOM. Added support for automatic thread recall: on app startup, the system automatically resolves the most recently active project and clicks/selects its most recent thread to trigger instant preview rendering and session resumption.
 * **Collapsed Agentic Timeline Steps:** Implemented timeline step-collapsing in the output preview. Contiguous agentic steps (tool call executions) are grouped together, and if a group contains more than 2 steps, the older steps are wrapped in a collapsed-by-default `<details>` drop-down, keeping the workspace display clean while showing the latest 2 active steps.
