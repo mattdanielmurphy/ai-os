@@ -1,15 +1,21 @@
-# Thread History Context Bug Fixed
+# UI Refactoring: Unified HTML TUI Log View & Expandable Bottom Terminal
 
-I have successfully resolved the issue where continuing threads in `agy` would either lose context on subsequent prompts or send heavily truncated/nested histories that missed the most recent and important user request.
+We have successfully migrated the layout of the AI OS interface from the side-by-side two-pane view into a vertical unified version. 
 
-## Core Issues Identified & Resolved
+### Key Deliverables Implemented
 
-1. **Context Cleared on Subsequent Prompts:** Previously, the frontend loaded the compactified thread context *once* when clicking a thread in the sidebar, set `activeThreadContext`, and then cleared it to `null` immediately after sending the first prompt. As a result, sending any subsequent prompts in the same thread would clear the session and attach zero historical context.
-   * **Solution:** Added a dynamic lookup pattern. The frontend now stores a map of active thread log paths (`threadFilepaths`) and reads the latest transcript file directly from the filesystem *right before sending each prompt*, ensuring the context is always fully up-to-date.
+1. **Unified Custom HTML Log Parser & Viewer**:
+   - Polling checks of the active thread log file (`transcript.jsonl`) run every 500ms.
+   - We parse user requests, active tool call activities (e.g. searching the web, directory analysis, editing files), and assistant responses dynamically.
+   - Keeps track of all files edited during the thread conversation and displays them as a horizontal list of clickable file badges at the top of the timeline.
+   - Shows a glowing, pulsating status animation (`Agent is thinking & working...`) when the agent is actively executing background tasks.
 
-2. **Truncation of the Most Recent Prompts:** When a thread was resumed, the previous prompt was stored as a combined message containing the historical context at the beginning and the actual user request at the bottom. Since the parser (`getCompactifiedContext`) truncated step prompts to 300 characters, it ended up only preserving the old history prefix and completely cutting off the actual user request.
-   * **Solution:** Updated `getCompactifiedContext` to search for the last occurrence of the `User request:` marker. If present, it extracts the actual prompt from the end of the combined text, ensuring it is never cut off by truncation.
+2. **Expandable Bottom Terminal Container**:
+   - Replaced side-by-side resizing pane splitters with a toggleable vertical split layout.
+   - The primary `agy` TUI terminal container resides at the bottom, initialized in a compact collapsed view (64px height) to display the interactive prompt and autocompletion list.
+   - Implemented an expand/collapse toggle bar (`#tui-toggle-bar`) with a button (`#toggle-tui-btn`).
+   - Clicking **Expand Terminal** collapses the HTML log view and resizes the PTY terminal container to take up almost 100% of the screen height, allowing full inspection of artifacts and terminal history. Clicking **Collapse Terminal** returns it to the compact 64px view.
 
-3. **Context Window Safety (Turns Cap):** We now slice the parsed conversation history to only include the last 6 steps (last 3 turns), ensuring the most recent messages (the last user prompt and assistant reply) are always sent as context, while preventing context window blowouts.
-
-4. **New Thread Auto-Association:** Updated the backend Rust command `patch_thread_log_with_output` to return the resolved thread ID. The frontend now automatically captures this ID when a new conversation starts, ensuring the sidebar highlights the active thread and continues associating subsequent messages properly.
+3. **Compilation & Packaging**:
+   - Cleaned up legacy drag splitter handles and mini-term elements safely without breaking existing Javascript references.
+   - Verified clean TS compilation and asset bundling via `pnpm build`.
