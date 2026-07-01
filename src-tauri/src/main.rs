@@ -1734,7 +1734,20 @@ fn open_devtools(window: tauri::Window) {
 
 #[tauri::command]
 fn get_quota() -> Result<String, String> {
-    let output = std::process::Command::new("ag-quota")
+    let mut cmd = std::process::Command::new("ag-quota");
+    
+    let home = std::env::var("HOME").unwrap_or_default();
+    let accounts_path = format!("{}/.gemini/google_accounts.json", home);
+    
+    if let Ok(content) = std::fs::read_to_string(accounts_path) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(active) = json.get("active").and_then(|v| v.as_str()) {
+                cmd.arg("--account").arg(active);
+            }
+        }
+    }
+
+    let output = cmd
         .arg("-j")
         .output()
         .map_err(|e| e.to_string())?;
