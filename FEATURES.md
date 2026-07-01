@@ -3,6 +3,11 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 
+### [2026-06-30] Thread List Caching & Typing Performance Optimization
+* **Debounced Projects Autosave:** Postponed local storage updates and JSON serialization of projects lists during rapid typing by introducing a 500ms debounced auto-save function. This prevents blocking the main browser thread on every keystroke.
+* **Layout-Based PTY Resizing:** Optimized the `adjustHeight` function in the prompt editor. Instead of resizing both xterm.js terminal instances and making synchronous Tauri IPC calls on *every* typed keystroke, the system now tracks the actual textarea height and only triggers a debounced PTY resize when the height changes (e.g. when text wraps to a new line).
+* **Rust Metadata Caching (`OnceLock`):** Implemented thread-safe, global lazy-loaded caches (`OnceLock<Mutex<HashMap<...>>>`) in the Rust backend for parent-child thread mappings (`CHILD_TO_PARENT_CACHE`) and parsed thread details (`THREAD_INFO_CACHE`). Thread transcripts are now scanned on disk only once on discovery, and parsed thread headers/snippets are cached and served directly unless the underlying files' modified timestamp (`mtime`) or size changes, resolving disk/CPU overhead from polling.
+
 ### [2026-06-30] Unified AI-OS Active Thread Timeline View
 * **Thread Chain Consolidation:** Implemented backend-level consolidation of continued threads. In personal AI-OS, each subsequent user message in a thread is run in a fresh backend turn (initiated via `/clear`), creating a new individual thread folder under the hood. The Rust backend now detects these continuation links (looking for parent thread ID headers), groups them by their root thread ID, and exposes them in the sidebar as a single unified AI-OS thread with its `mtime`, title, and snippet reflecting the latest segment in the chain.
 * **Merged Thread Log Stitching:** Configured `read_thread_log` to seamlessly stitch together the individual JSONL logs of all chain segments in chronological order, allowing the timeline UI to display the complete message history extended in the same window.

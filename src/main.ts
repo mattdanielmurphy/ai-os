@@ -52,6 +52,13 @@ let lastThreadsJson = ''
 let isWaitingForNewThread = false
 let waitingExistingThreadIds: Set<string> = new Set()
 let saveDraftTimeout: any = null
+let saveProjectsTimeout: any = null
+const saveProjectsDebounced = () => {
+    if (saveProjectsTimeout) clearTimeout(saveProjectsTimeout)
+    saveProjectsTimeout = setTimeout(() => {
+        saveProjects()
+    }, 500)
+}
 
 const savePromptDraft = (content: string) => {
     if (!activeProject) return
@@ -60,7 +67,7 @@ const savePromptDraft = (content: string) => {
     const currentProj = projects.find((p) => p.path === activeProject)
     if (currentProj) {
         currentProj.promptDraft = content
-        saveProjects()
+        saveProjectsDebounced()
     }
 
     const isWordCompleted =
@@ -2072,11 +2079,16 @@ engineRadios.forEach((radio) => {
 // ----------------------------------------------------
 // 8. Input Interception & Routing
 // ----------------------------------------------------
+let lastTextareaHeight = 0
 const adjustHeight = () => {
     if (textarea) {
         textarea.style.height = 'auto'
-        textarea.style.height = textarea.scrollHeight + 'px'
-        resizePty()
+        const newHeight = textarea.scrollHeight
+        textarea.style.height = newHeight + 'px'
+        if (newHeight !== lastTextareaHeight) {
+            lastTextareaHeight = newHeight
+            debouncedResizePty()
+        }
     }
 }
 

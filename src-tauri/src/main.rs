@@ -1093,9 +1093,61 @@ fn get_root_thread_id(thread_id: &str, child_to_parent: &HashMap<String, String>
     current
 }
 
+static CHILD_TO_PARENT_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, String>>> = std::sync::OnceLock::new();
+
+#[derive(Clone)]
+struct CachedThreadInfo {
+    mtime: u64,
+    size: u64,
+    project_path: Option<String>,
+    title: String,
+    snippet: String,
+}
+
+static THREAD_INFO_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, CachedThreadInfo>>> = std::sync::OnceLock::new();
+
+fn get_child_to_parent_map(brain_dir: &std::path::Path) -> HashMap<String, String> {
+    let cache_mutex = CHILD_TO_PARENT_CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    let mut cache = cache_mutex.lock().unwrap();
+
+    if let Ok(entries) = std::fs::read_dir(brain_dir) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(thread_id) = path.file_name().map(|n| n.to_string_lossy().to_string()) {
+                        if cache.contains_key(&thread_id) {
+                            continue;
+                        }
+                        let transcript_path = path.join(".system_generated").join("logs").join("transcript.jsonl");
+                        if transcript_path.exists() {
+                            use std::io::Read;
+                            if let Ok(mut file) = std::fs::File::open(&transcript_path) {
+                                let mut buffer = vec![0; 4096];
+                                if let Ok(n) = file.read(&mut buffer) {
+                                    let content = String::from_utf8_lossy(&buffer[..n]);
+                                    if let Some(pos) = content.find("Continuing conversation from history (Thread ID:") {
+                                        let after = &content[pos + "Continuing conversation from history (Thread ID:".len()..];
+                                        if let Some(end_pos) = after.find(')') {
+                                            let parent_id = after[..end_pos].trim().to_string();
+                                            if parent_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
+                                                cache.insert(thread_id.clone(), parent_id);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    cache.clone()
+}
+
 fn scan_brain_threads(brain_dir: &std::path::Path) -> (HashMap<String, String>, HashMap<String, u64>) {
-    use std::io::Read;
-    let mut child_to_parent = HashMap::new();
+    let child_to_parent = get_child_to_parent_map(brain_dir);
     let mut thread_mtimes = HashMap::new();
 
     if let Ok(entries) = std::fs::read_dir(brain_dir) {
@@ -1113,22 +1165,6 @@ fn scan_brain_threads(brain_dir: &std::path::Path) -> (HashMap<String, String>, 
                                     .unwrap_or(0);
                                 thread_mtimes.insert(thread_id.clone(), mtime);
                             }
-
-                            if let Ok(mut file) = std::fs::File::open(&transcript_path) {
-                                let mut buffer = vec![0; 4096];
-                                if let Ok(n) = file.read(&mut buffer) {
-                                    let content = String::from_utf8_lossy(&buffer[..n]);
-                                    if let Some(pos) = content.find("Continuing conversation from history (Thread ID:") {
-                                        let after = &content[pos + "Continuing conversation from history (Thread ID:".len()..];
-                                        if let Some(end_pos) = after.find(')') {
-                                            let parent_id = after[..end_pos].trim().to_string();
-                                            if parent_id.chars().all(|c| c.is_alphanumeric() || c == '-') {
-                                                child_to_parent.insert(thread_id.clone(), parent_id);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -1137,6 +1173,78 @@ fn scan_brain_threads(brain_dir: &std::path::Path) -> (HashMap<String, String>, 
     }
 
     (child_to_parent, thread_mtimes)
+}
+
+fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &str) -> Option<CachedThreadInfo> {
+    let metadata = std::fs::metadata(latest_filepath).ok()?;
+    let mtime = metadata.modified()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let size = metadata.len();
+
+    let cache_mutex = THREAD_INFO_CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    {
+        let cache = cache_mutex.lock().unwrap();
+        if let Some(info) = cache.get(latest_thread_id) {
+            if info.mtime == mtime && info.size == size {
+                return Some(info.clone());
+            }
+        }
+    }
+
+    // Cache miss or modified file. Let's read and parse.
+    use std::fs;
+    use std::io::Read;
+    let file = fs::File::open(latest_filepath).ok()?;
+    let mut buffer = Vec::new();
+    let _ = file.take(131072).read_to_end(&mut buffer);
+    let content = String::from_utf8_lossy(&buffer);
+
+    let project_path = detect_project_path(&content);
+    let mut title = latest_thread_id.to_string();
+    let mut snippet = String::new();
+
+    for line in content.lines() {
+        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+            if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+                if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
+                    let mut raw_prompt = prompt_content.to_string();
+                    if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
+                        if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
+                            raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
+                        }
+                    }
+                    
+                    let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
+                    let char_count = clean_prompt.chars().count();
+                    title = if char_count > 40 {
+                        format!("{}...", clean_prompt.chars().take(40).collect::<String>())
+                    } else {
+                        clean_prompt.clone()
+                    };
+                    snippet = if char_count > 120 {
+                        format!("{}...", clean_prompt.chars().take(120).collect::<String>())
+                    } else {
+                        clean_prompt
+                    };
+                    break;
+                }
+            }
+        }
+    }
+
+    let info = CachedThreadInfo {
+        mtime,
+        size,
+        project_path,
+        title,
+        snippet,
+    };
+
+    let mut cache = cache_mutex.lock().unwrap();
+    cache.insert(latest_thread_id.to_string(), info.clone());
+    Some(info)
 }
 
 fn get_thread_chain(
@@ -1156,9 +1264,7 @@ fn get_thread_chain(
 
 #[tauri::command]
 fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
-    use std::fs;
     use std::path::Path;
-    use std::io::Read;
 
     let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
     let brain_dir = Path::new(&home)
@@ -1202,68 +1308,37 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
             continue;
         }
 
-        let file = match fs::File::open(&latest_filepath) {
-            Ok(f) => f,
-            Err(_) => continue,
+        let info = match get_cached_thread_info(&latest_filepath, latest_thread_id) {
+            Some(i) => i,
+            None => continue,
         };
-        let mut buffer = Vec::new();
-        let _ = file.take(131072).read_to_end(&mut buffer);
-        let content = String::from_utf8_lossy(&buffer);
 
         let matched = if is_misc {
-            detect_project_path(&content).is_none()
+            info.project_path.is_none()
         } else {
-            if let Some(pos) = content.find(&project_path) {
-                let after_match = &content[pos + project_path.len()..];
-                let is_exact = match after_match.chars().next() {
-                    Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
-                    None => true,
-                };
-                is_exact
+            if let Some(ref p_path) = info.project_path {
+                if let Some(pos) = p_path.find(&project_path) {
+                    let after_match = &p_path[pos + project_path.len()..];
+                    let is_exact = match after_match.chars().next() {
+                        Some(c) => !c.is_alphanumeric() && c != '_' && c != '-',
+                        None => true,
+                    };
+                    is_exact
+                } else {
+                    false
+                }
             } else {
                 false
             }
         };
 
         if matched {
-            let mut title = latest_thread_id.clone();
-            let mut snippet = String::new();
-            
-            for line in content.lines() {
-                if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-                    if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
-                        if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
-                            let mut raw_prompt = prompt_content.to_string();
-                            if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
-                                if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
-                                    raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
-                                }
-                            }
-                            
-                            let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
-                            let char_count = clean_prompt.chars().count();
-                            title = if char_count > 40 {
-                                format!("{}...", clean_prompt.chars().take(40).collect::<String>())
-                            } else {
-                                clean_prompt.clone()
-                            };
-                            snippet = if char_count > 120 {
-                                format!("{}...", clean_prompt.chars().take(120).collect::<String>())
-                            } else {
-                                clean_prompt
-                            };
-                            break;
-                        }
-                    }
-                }
-            }
-
             let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
 
             thread_logs.push(ThreadLog {
                 id: root_id,
-                title,
-                snippet,
+                title: info.title,
+                snippet: info.snippet,
                 filepath: root_filepath.to_string_lossy().to_string(),
                 mtime: latest_mtime,
                 detected_project_path: Some(project_path.clone()),
@@ -1298,9 +1373,7 @@ fn detect_project_path(content: &str) -> Option<String> {
 
 #[tauri::command]
 fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
-    use std::fs;
     use std::path::Path;
-    use std::io::Read;
 
     let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
     let brain_dir = Path::new(&home)
@@ -1342,56 +1415,20 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
             continue;
         }
 
-        let file = match fs::File::open(&latest_filepath) {
-            Ok(f) => f,
-            Err(_) => continue,
+        let info = match get_cached_thread_info(&latest_filepath, latest_thread_id) {
+            Some(i) => i,
+            None => continue,
         };
-        let mut buffer = Vec::new();
-        let _ = file.take(131072).read_to_end(&mut buffer);
-        let content = String::from_utf8_lossy(&buffer);
-
-        let mut title = latest_thread_id.clone();
-        let mut snippet = String::new();
-        
-        for line in content.lines() {
-            if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-                if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
-                    if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
-                        let mut raw_prompt = prompt_content.to_string();
-                        if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
-                            if let Some(end_idx) = raw_prompt.find("</USER_REQUEST>") {
-                                raw_prompt = raw_prompt[start_idx + 14..end_idx].trim().to_string();
-                            }
-                        }
-                        
-                        let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
-                        let char_count = clean_prompt.chars().count();
-                        title = if char_count > 40 {
-                            format!("{}...", clean_prompt.chars().take(40).collect::<String>())
-                        } else {
-                            clean_prompt.clone()
-                        };
-                        snippet = if char_count > 120 {
-                            format!("{}...", clean_prompt.chars().take(120).collect::<String>())
-                        } else {
-                            clean_prompt
-                        };
-                        break;
-                    }
-                }
-            }
-        }
 
         let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
-        let detected_project_path = detect_project_path(&content);
 
         thread_logs.push(ThreadLog {
             id: root_id,
-            title,
-            snippet,
+            title: info.title,
+            snippet: info.snippet,
             filepath: root_filepath.to_string_lossy().to_string(),
             mtime: latest_mtime,
-            detected_project_path,
+            detected_project_path: info.project_path,
         });
     }
 
