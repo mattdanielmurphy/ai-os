@@ -1739,6 +1739,7 @@ fn main() {
             create_new_project,
             get_initial_project,
             get_project_threads,
+            delete_thread,
             get_all_agy_threads,
             copy_tmux_selection,
             open_path,

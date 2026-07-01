@@ -1393,6 +1393,25 @@ const renderProjects = () => {
                 `
                 threadsList.prepend(placeholderEl)
 
+                placeholderEl.addEventListener('click', (e) => {
+                    e.stopPropagation()
+                    activeThreadId = null
+                    isWaitingForNewThread = true
+                    threadsList
+                        .querySelectorAll(':scope > div')
+                        .forEach((child) => {
+                            child.className =
+                                'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                        })
+                    placeholderEl.className =
+                        'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                    
+                    const previewPane = document.getElementById('markdown-preview-pane')
+                    if (previewPane) {
+                        previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                    }
+                })
+
                 const previewPane = document.getElementById(
                     'markdown-preview-pane'
                 )
@@ -1741,13 +1760,42 @@ const renderProjectThreads = async (
                     : 'Unknown Date'
 
             el.innerHTML = `
-                <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
-                    <span class="truncate pr-1">#${thread.id.substring(0, 8)}</span>
-                    <span class="shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">${dateStr}</span>
+                <div class="flex items-start justify-between">
+                    <div class="flex-1 min-w-0 pr-1">
+                        <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
+                            <span class="truncate pr-1">#${thread.id.substring(0, 8)}</span>
+                            <span class="shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">${dateStr}</span>
+                        </div>
+                        <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="${thread.title}">${thread.title}</div>
+                        <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
+                    </div>
+                    <button class="delete-thread-btn opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all select-none self-center p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0" title="Delete Thread">✕</button>
                 </div>
-                <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="${thread.title}">${thread.title}</div>
-                <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
             `
+            
+            el.classList.add('group')
+
+            const delBtn = el.querySelector('.delete-thread-btn')
+            if (delBtn) {
+                delBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation()
+                    try {
+                        await invoke('delete_thread', { id: thread.id })
+                        if (activeThreadId === thread.id) {
+                            activeThreadId = null
+                            activeThreadContext = null
+                            updatePlaceholder(true)
+                            const previewPane = document.getElementById('markdown-preview-pane')
+                            if (previewPane) {
+                                previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                            }
+                        }
+                        pollThreadsList()
+                    } catch (err) {
+                        console.error('Failed to delete thread:', err)
+                    }
+                })
+            }
 
             el.addEventListener('click', async () => {
                 document
