@@ -404,6 +404,7 @@ fn spawn_single_pty(
 
     cmd.env("LANG", "en_US.UTF-8");
     cmd.env("LC_ALL", "en_US.UTF-8");
+    cmd.env("TERM", "xterm-256color");
 
     println!("[DEBUG] Spawning command for project={}, type={}", project_path, terminal_type);
     let _child = pair.slave.spawn_command(cmd).map_err(|e| {
@@ -1697,14 +1698,13 @@ fn open_devtools(window: tauri::Window) {
 }
 
 fn main() {
-    if let Ok(path) = std::env::var("PATH") {
-        let home = std::env::var("HOME").unwrap_or_default();
-        let new_path = format!(
-            "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:{}/.local/bin:{}/.cargo/bin:{}/.gemini/antigravity-cli/bin:{}/.nvm/versions/node/v18.17.0/bin:{}/.nvm/versions/node/v26.3.0/bin:{}/bin:{}",
-            home, home, home, home, home, home, path
-        );
-        std::env::set_var("PATH", new_path);
-    }
+    let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
+    let home = std::env::var("HOME").unwrap_or_default();
+    let new_path = format!(
+        "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:{}/.local/bin:{}/.cargo/bin:{}/.gemini/antigravity-cli/bin:{}/.nvm/versions/node/v18.17.0/bin:{}/.nvm/versions/node/v26.3.0/bin:{}/bin:{}",
+        home, home, home, home, home, home, path
+    );
+    std::env::set_var("PATH", new_path);
 
     let context = tauri::generate_context!();
     tauri::Builder::default()
