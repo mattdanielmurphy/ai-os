@@ -63,6 +63,7 @@ let isTuiExpanded: boolean = false
 let activeThreadId: string | null = null
 let activeThreadContext: string | null = null
 const threadFilepaths = new Map<string, string>()
+const threadLatestLeafIds = new Map<string, string>()
 let lastThreadsJson = ''
 let isWaitingForNewThread = false
 let waitingExistingThreadIds: Set<string> = new Set()
@@ -1616,6 +1617,7 @@ const switchToProject = async (
 
 interface ThreadLog {
     id: string
+    latest_leaf_id: string
     title: string
     snippet: string
     filepath: string
@@ -1808,6 +1810,7 @@ const renderProjectThreads = async (
 
         threads.forEach((thread) => {
             threadFilepaths.set(thread.id, thread.filepath)
+            threadLatestLeafIds.set(thread.id, thread.latest_leaf_id)
             const el = document.createElement('div')
             const isActive = activeThreadId === thread.id
             el.className = isActive
@@ -1915,7 +1918,7 @@ const renderProjectThreads = async (
                     )
                 }
                 invoke('write_to_pty', {
-                    data: `/resume ${thread.id}\r`,
+                    data: `/resume ${thread.latest_leaf_id}\r`,
                     projectPath: activeProject,
                     terminalType: 'agy',
                 })
@@ -2544,8 +2547,9 @@ ${escapedInput}
                 }
 
                 if (activeThreadId && currentContext) {
+                    const leafId = threadLatestLeafIds.get(activeThreadId) || activeThreadId
                     invoke('write_to_pty', {
-                        data: `/resume ${activeThreadId}\r`,
+                        data: `/resume ${leafId}\r`,
                         projectPath: activeProject,
                         terminalType: 'agy',
                     })
