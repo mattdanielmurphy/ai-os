@@ -901,59 +901,56 @@ Would you like to write a quick JavaScript validation script to test if the Orch
 ---
 
 [2026-07-01 01:24] User:
-ok, give me a prompt to introduce this including your new invariants please
+ok, give me a prompt to introduce this, including your new invariants please
+
+It should ask my coding agent to implement these rules so the orchestrator follows them.
 
 ---
 
 [2026-07-01 01:24] Assistant:
-Here is the exact prompt to feed into your AI distillation workflow. This prompt takes your existing distilled rules, surgically strips out the irrelevant print legacy components, injects the vital vector-geometric laws, and formats it as a production-ready system configuration context block.
+Here is the prompt to feed into your coding agent. It is designed to take your distilled Müller-Brockmann Protocol, clean out the print layout artifacts, inject the new vector-specific constraints, and implement the validation logic directly into your app's Orchestrator service.
 
 Plaintext
 
 ```
-Role: Senior AI Prompt Engineer & Systems Architect
+Role: Senior JavaScript & AI Prompt Engineer
+Task: Integrate the Müller-Brockmann Protocol (Swiss Grid System) into the Orchestrator AI configuration.
 
-Task: Finalize the "MÜLLER-BROCKMANN PROTOCOL" layout engine system prompt block by combining user-provided print layout constraints with essential vector art and geometric invariants. 
+Context: 
+We are upgrading our app's Orchestrator to use a single, strict, mathematical framework for layouts. We have distilled Josef Müller-Brockmann's design guidelines into absolute constraints. We need to implement this as a system prompt constant and inject it into every Orchestrator API request.
 
-Execute the following modifications to the provided draft:
-1. STRIP PRINT DNA: Remove the entire [Pagination coordinates] section. 
-2. REFACTOR MARGINS: Replace the asymmetric print margins with perfectly symmetrical layout margins to ensure logos and icons are centered. Set: MARGIN_L = 64, MARGIN_R = 64, MARGIN_T = 64, MARGIN_B = 64.
-3. INJECT VECTOR LAWS: Append a new section titled [VECTOR_OBJECT_INVARIANTS] to handle shape geometry, visual balance, and layering rules.
+Action:
+1. Create a new configuration file or constant named `DesignSystemProtocol.js` (or integrate it directly into `GenerationService.js` as a system constant).
+2. Clean out the print-only DNA (asymmetric margins, pagination) and inject the finalized rulebook below:
 
-Generate the final, compressed rulebook block below inside a markdown code block so it can be copied directly into the application context.
-
----
-
-# AI LAYOUT ORCHESTRATOR RULEBOOK: MÜLLER-BROCKMANN PROTOCOL
+```text
+# AI LAYOUT ORCHESTRATOR RULEBOOK: MÜLLER-BROCKMANN PROTOCOL (VECTOR EDITION)
 # SYSTEM: 1024x1024 COORDINATE MATRIX
 
 [SPATIAL_CONSTANTS]
 CANVAS_W = 1024
 CANVAS_H = 1024
 
-# Symmetrical Margins for Balanced Graphic Composition
-MARGIN_L = 64
-MARGIN_R = 64
-MARGIN_T = 64
-MARGIN_B = 64
+# Symmetrical Margins for a square digital vector workspace
+MARGIN_GLOBAL = 64
+MARGIN_L = MARGIN_GLOBAL
+MARGIN_R = MARGIN_GLOBAL
+MARGIN_T = MARGIN_GLOBAL
+MARGIN_B = MARGIN_GLOBAL
 
 # Active Area bounds
 ACTIVE_W = CANVAS_W - (MARGIN_L + MARGIN_R)
 ACTIVE_H = CANVAS_H - (MARGIN_T + MARGIN_B)
 
-# Modularity Parameters
-VAR VALID_DIVISIONS = [8, 12, 16, 32]
-GRID_COLS = {SELECT_FROM_VALID_DIVISIONS_X}
-GRID_ROWS = {SELECT_FROM_VALID_DIVISIONS_Y}
-
-# Gutters (Locked to 0 for flat vector assembly unless explicit spacing is requested)
+# Modularity Parameters (Force 16x16 grid grid for clean 64px increments)
+GRID_COLS = 16
+GRID_ROWS = 16
 GUTTER_X = 0
 GUTTER_Y = 0
 
-# Module calculations
+# Module calculations (1024 - 128 = 896 / 16 = 56px modules)
 MODULE_W = ACTIVE_W / GRID_COLS
 MODULE_H = ACTIVE_H / GRID_ROWS
-
 
 [PLACEMENT_INVARIANTS]
 # Snapping Rules
@@ -963,31 +960,23 @@ RULE_OBJ_W: ALL(OBJ.W) = N * MODULE_W
 RULE_OBJ_H: ALL(OBJ.H) = N * MODULE_H
 
 # Boundary constraints
-IF INTERSECT(OBJ, MARGIN_BOUNDS) THEN RETURN EXCEPTION_ILLEGAL_OUT_OF_BOUNDS
-
-
-[PROPORTIONAL_HIERARCHY]
-# Visual Hierarchy Scale Constants
-SIZE_HERO = 1.0          # Dominant scale element
-SIZE_SUPPORTING = 0.618  # Golden ratio reduction for secondary elements
-SIZE_ACCENT = 0.382      # Tertiary detail elements
-
-# Structural Distribution Rule
-RULE_VISUAL_WEIGHT: The primary "Hero" layer must occupy a grid zone that is mathematically larger than all supporting elements combined.
-
+IF OBJ.X1 < MARGIN_L OR (OBJ.X1 + OBJ.W) > (CANVAS_W - MARGIN_R) THEN ILLEGAL_LAYOUT
+IF OBJ.Y1 < MARGIN_T OR (OBJ.Y1 + OBJ.H) > (CANVAS_H - MARGIN_B) THEN ILLEGAL_LAYOUT
 
 [VECTOR_OBJECT_INVARIANTS]
-# Visual Center of Gravity
-RULE_CENTER_OF_GRAVITY: The geometric center point of the primary visual group must align precisely with the canvas center coordinate (512, 512).
-
+# Visual Weight Balance
+RULE_CENTER_OF_GRAVITY: The combined bounding box center of the primary visual components must align exactly with the center coordinates of the canvas (512, 512).
 # Shape Geometry Constraints
-RULE_SHAPE_SIMPLICITY: Force the use of standard primitives (rect, circle) wherever possible. Path objects (<path>) are restricted to a maximum of 8 anchor points to maintain clean, human-editable Bézier curves.
-
-# Corner Radius Constraints
-IF OBJ.TYPE == RECT AND HAS_CORNER_RADIUS:
-    CORNER_RADIUS MUST_EQUAL (0.25 * MODULE_W) OR (0.5 * MODULE_W)
-
-# Layer Stacking & Color Hierarchy
-RULE_Z_INDEX_COLOR: Lower Z-indexed layers (background/base shapes) must use lower Semantic Palette indexes (Index 0, Index 1). Higher Z-indexed layers (foreground details/highlights) must strictly map to higher Semantic Palette indexes.
+RULE_SHAPE_SIMPLICITY: Prefer standard primitives (rect, circle) over complex paths. Workers will be instructed to restrict paths to a maximum of 8 anchor points unless drawing purely organic elements.
+RULE_CORNER_RADIUS: If a rectangle uses a corner radius, it must equal exactly 0.25 * MODULE_W or 0.5 * MODULE_W. Random radii are illegal.
+# Layer Stacking Hierarchy
+RULE_Z_INDEX_COLOR: Lower Z-index layers must use lower Semantic Palette indexes (darker/background values). Higher Z-index layers must use higher Semantic Palette indexes (highlights/foreground).
 
 ```
+
+
+Modify the Orchestrator AI request logic: Append this entire rulebook string directly to the `systemInstruction` or `systemPrompt` when calling the Gemini/OpenRouter API for the Orchestrator phase.
+
+Ensure the `OrchestratorSchema` enforces that every generated layer's `x, y, width, height` properties match the output of these mathematical definitions.
+
+Goal: The Orchestrator must be completely bounded by these geometric laws, outputting layer skeletons that are mathematically aligned to a perfect Swiss layout before sending tasks to individual workers.

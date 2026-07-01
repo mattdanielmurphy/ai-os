@@ -975,7 +975,24 @@ const renderCustomTuiLog = (jsonlContent: string) => {
         `
     }
 
+    // Preserve state of <details> elements
+    const openDetailsIndices: number[] = []
+    const detailsElements = markdownPreviewPane.querySelectorAll('details')
+    detailsElements.forEach((el, index) => {
+        if (el.open) {
+            openDetailsIndices.push(index)
+        }
+    })
+
     markdownPreviewPane.innerHTML = html
+
+    // Restore state of <details> elements
+    const newDetailsElements = markdownPreviewPane.querySelectorAll('details')
+    openDetailsIndices.forEach((index) => {
+        if (newDetailsElements[index]) {
+            newDetailsElements[index].open = true
+        }
+    })
 
     // Auto-scroll the preview pane to bottom if it is currently generating
     if (isThinking) {
