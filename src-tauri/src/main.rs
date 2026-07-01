@@ -1737,12 +1737,16 @@ fn get_quota() -> Result<String, String> {
     let mut cmd = std::process::Command::new("ag-quota");
     
     let home = std::env::var("HOME").unwrap_or_default();
-    let accounts_path = format!("{}/.gemini/google_accounts.json", home);
+    let log_path = format!("{}/.gemini/antigravity-cli/log", home);
     
-    if let Ok(content) = std::fs::read_to_string(accounts_path) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-            if let Some(active) = json.get("active").and_then(|v| v.as_str()) {
-                cmd.arg("--account").arg(active);
+    if let Ok(content) = std::fs::read_to_string(log_path) {
+        for line in content.lines().rev() {
+            if let Some(idx) = line.find("authenticated successfully as ") {
+                let email = line[idx + "authenticated successfully as ".len()..].trim();
+                if !email.is_empty() {
+                    cmd.arg("--account").arg(email);
+                    break;
+                }
             }
         }
     }
