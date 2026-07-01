@@ -1056,8 +1056,14 @@ fn copy_tmux_selection(project_path: String, terminal_type: String) -> Result<()
 
 #[tauri::command]
 fn open_path(path: String) -> Result<(), String> {
+    let mut actual_path = path.clone();
+    if actual_path.starts_with("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            actual_path = actual_path.replacen("~/", &format!("{}/", home), 1);
+        }
+    }
     std::process::Command::new("open")
-        .arg(&path)
+        .arg(&actual_path)
         .spawn()
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -1071,6 +1077,7 @@ fn get_initial_project() -> Option<String> {
 #[derive(serde::Serialize)]
 struct ThreadLog {
     id: String,
+    latest_leaf_id: String,
     title: String,
     snippet: String,
     filepath: String,
@@ -1337,6 +1344,7 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
 
             thread_logs.push(ThreadLog {
                 id: root_id,
+                latest_leaf_id: latest_thread_id.clone(),
                 title: info.title,
                 snippet: info.snippet,
                 filepath: root_filepath.to_string_lossy().to_string(),
@@ -1424,6 +1432,7 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
 
         thread_logs.push(ThreadLog {
             id: root_id,
+            latest_leaf_id: latest_thread_id.clone(),
             title: info.title,
             snippet: info.snippet,
             filepath: root_filepath.to_string_lossy().to_string(),
@@ -1682,7 +1691,21 @@ fn patch_thread_log_with_output(
     Ok(target_thread_id)
 }
 
+#[tauri::command]
+fn open_devtools(window: tauri::Window) {
+    window.open_devtools();
+}
+
 fn main() {
+    if let Ok(path) = std::env::var("PATH") {
+        let home = std::env::var("HOME").unwrap_or_default();
+        let new_path = format!(
+            "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:{}/.local/bin:{}/.cargo/bin:{}/.gemini/antigravity-cli/bin:{}/.nvm/versions/node/v18.17.0/bin:{}/.nvm/versions/node/v26.3.0/bin:{}/bin:{}",
+            home, home, home, home, home, home, path
+        );
+        std::env::set_var("PATH", new_path);
+    }
+
     let context = tauri::generate_context!();
     tauri::Builder::default()
         .menu(tauri::Menu::os_default(&context.package_info().name))
@@ -1723,7 +1746,8 @@ fn main() {
             load_prompt_draft,
             read_thread_log,
             file_exists,
-            patch_thread_log_with_output
+            patch_thread_log_with_output,
+            open_devtools
         ])
         .run(context)
         .expect("error while running tauri application");

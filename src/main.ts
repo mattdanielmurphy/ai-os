@@ -11,6 +11,12 @@ import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
 import { open } from '@tauri-apps/api/shell'
 
+window.addEventListener('keydown', (e) => {
+    if (e.metaKey && e.altKey && e.key.toLowerCase() === 'i') {
+        invoke('open_devtools').catch(console.error)
+    }
+})
+
 // ----------------------------------------------------
 // 1. Interfaces & Types
 // ----------------------------------------------------
@@ -324,8 +330,8 @@ const term = new Terminal({
 const fitAddon = new FitAddon()
 term.loadAddon(fitAddon)
 
-const handleLink = (e: MouseEvent, uri: string) => {
-    if (e.metaKey || e.ctrlKey) {
+const handleLink = (_e: MouseEvent, uri: string) => {
+    if (true) {
         let finalUri = uri
 
         // Handle web URLs
