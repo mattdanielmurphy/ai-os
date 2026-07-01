@@ -624,6 +624,21 @@ interface RenderBlock {
     threadId?: string
 }
 
+const renderer = {
+    code(token: any) {
+        const text = token.text || '';
+        const lang = token.lang || '';
+        const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        return `
+            <div class="relative group my-4">
+                <button class="absolute top-2 right-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-sans opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-700 cursor-pointer" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+                <pre style="margin:0;"><code class="language-${lang}">${escapedText}</code></pre>
+            </div>
+        `;
+    }
+};
+marked.use({ renderer });
+
 const buildTimelineHtml = (steps: Step[]): string => {
     const blocks: RenderBlock[] = []
     let currentToolCalls: ToolCallItem[] = []
@@ -831,7 +846,8 @@ ${block.historicalContext}
             }
             html += `
             <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 text-sm font-sans whitespace-pre-wrap shadow-sm">
+                <div class="group relative max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 text-sm font-sans whitespace-pre-wrap shadow-sm">
+                    <button class="absolute -top-3 -right-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
                     ${block.content}
                 </div>
             </div>
@@ -839,7 +855,8 @@ ${block.historicalContext}
         } else if (block.type === 'planner_response' && block.content) {
             html += `
             <div class="w-full flex justify-start mb-4 select-text">
-                <div class="w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
+                <div class="group relative w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
+                    <button class="absolute -top-3 -left-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
                     ${marked.parse(block.content)}
                 </div>
             </div>
