@@ -1737,17 +1737,36 @@ fn get_quota() -> Result<String, String> {
     let mut cmd = std::process::Command::new("ag-quota");
     
     let home = std::env::var("HOME").unwrap_or_default();
-    let log_path = format!("{}/.gemini/antigravity-cli/log", home);
+    let log_dir_path = format!("{}/.gemini/antigravity-cli/log", home);
     
-    if let Ok(content) = std::fs::read_to_string(log_path) {
-        for line in content.lines().rev() {
-            if let Some(idx) = line.find("authenticated successfully as ") {
-                let email = line[idx + "authenticated successfully as ".len()..].trim();
-                if !email.is_empty() {
-                    cmd.arg("--account").arg(email);
-                    break;
+    if let Ok(entries) = std::fs::read_dir(log_dir_path) {
+        let mut paths: Vec<_> = entries
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .collect();
+        paths.sort(); // Sorts chronologically since format is cli-YYYYMMDD_HHMMSS.log
+        
+        let mut found_email = None;
+        for path in paths.iter().rev() {
+            if let Ok(content) = std::fs::read_to_string(path) {
+                for line in content.lines().rev() {
+                    if let Some(idx) = line.find("authenticated successfully as ") {
+                        let email = line[idx + "authenticated successfully as ".len()..].trim();
+                        if !email.is_empty() {
+                            found_email = Some(email.to_string());
+                            break;
+                        }
+                    }
                 }
             }
+            if found_email.is_some() {
+                break;
+            }
+        }
+        
+        if let Some(email) = found_email {
+            cmd.arg("--account").arg(email);
         }
     }
 
