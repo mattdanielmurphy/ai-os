@@ -1376,6 +1376,23 @@ const renderProjects = () => {
                             'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
                     })
 
+                const loadingMsg = threadsList.querySelector('.italic')
+                if (loadingMsg && loadingMsg.textContent?.includes('Loading')) {
+                    loadingMsg.remove()
+                }
+
+                const placeholderEl = document.createElement('div')
+                placeholderEl.className = 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                placeholderEl.innerHTML = `
+                    <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
+                        <span class="truncate pr-1">#New Thread...</span>
+                        <span class="shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">Just now</span>
+                    </div>
+                    <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="New Thread">New Thread</div>
+                    <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal">Starting...</div>
+                `
+                threadsList.prepend(placeholderEl)
+
                 const previewPane = document.getElementById(
                     'markdown-preview-pane'
                 )
@@ -2294,6 +2311,24 @@ textarea?.addEventListener('keydown', async (e) => {
         commandHistory.push(trimmedInput)
         saveCommandHistory(activeProject, commandHistory)
         historyIndex = -1
+
+        const previewPane = document.getElementById('markdown-preview-pane')
+        if (previewPane) {
+            if (previewPane.innerHTML.includes('Select a thread')) {
+                previewPane.innerHTML = ''
+            }
+            const escapedInput = trimmedInput.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const blockHtml = `
+            <div class="w-full flex justify-end mb-4 select-text">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
+${escapedInput}
+                </div>
+            </div>`
+            previewPane.innerHTML += blockHtml
+            setTimeout(() => {
+                previewPane.scrollTop = previewPane.scrollHeight
+            }, 10)
+        }
 
         // Prompt Mode Engine Routing Logic
         let processedInput = trimmedInput
