@@ -15,6 +15,13 @@ window.addEventListener('keydown', (e) => {
     if (e.metaKey && e.altKey && e.key.toLowerCase() === 'i') {
         invoke('open_devtools').catch(console.error)
     }
+    if (e.metaKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        const newThreadBtn = document.querySelector('.new-thread-btn') as HTMLButtonElement | null
+        if (newThreadBtn) {
+            newThreadBtn.click()
+        }
+    }
 })
 
 // ----------------------------------------------------
@@ -641,27 +648,51 @@ const buildTimelineHtml = (steps: Step[]): string => {
 
             let historicalContextText = ''
             let threadId = ''
-            
+
             if (prompt.includes('Continuing conversation from history')) {
                 // Find thread ID if present
-                const threadIdMatch = prompt.match(/Thread ID:\s*([a-fA-F0-9-]+)/)
+                const threadIdMatch = prompt.match(
+                    /Thread ID:\s*([a-fA-F0-9-]+)/
+                )
                 if (threadIdMatch) {
                     threadId = threadIdMatch[1]
                 }
-                
+
                 // Find historical context boundary
                 const histIdx = prompt.indexOf('Historical Context:\n')
                 const userReqIdx = prompt.indexOf('\n\nUser request: ')
-                
-                if (histIdx !== -1 && userReqIdx !== -1 && userReqIdx > histIdx) {
-                    historicalContextText = prompt.substring(histIdx + 'Historical Context:\n'.length, userReqIdx).trim()
-                    prompt = prompt.substring(userReqIdx + '\n\nUser request: '.length).trim()
+
+                if (
+                    histIdx !== -1 &&
+                    userReqIdx !== -1 &&
+                    userReqIdx > histIdx
+                ) {
+                    historicalContextText = prompt
+                        .substring(
+                            histIdx + 'Historical Context:\n'.length,
+                            userReqIdx
+                        )
+                        .trim()
+                    prompt = prompt
+                        .substring(userReqIdx + '\n\nUser request: '.length)
+                        .trim()
                 } else {
                     const oldHistIdx = prompt.indexOf('Historical Context:\n')
                     const oldUserReqIdx = prompt.lastIndexOf('User request: ')
-                    if (oldHistIdx !== -1 && oldUserReqIdx !== -1 && oldUserReqIdx > oldHistIdx) {
-                        historicalContextText = prompt.substring(oldHistIdx + 'Historical Context:\n'.length, oldUserReqIdx).trim()
-                        prompt = prompt.substring(oldUserReqIdx + 'User request: '.length).trim()
+                    if (
+                        oldHistIdx !== -1 &&
+                        oldUserReqIdx !== -1 &&
+                        oldUserReqIdx > oldHistIdx
+                    ) {
+                        historicalContextText = prompt
+                            .substring(
+                                oldHistIdx + 'Historical Context:\n'.length,
+                                oldUserReqIdx
+                            )
+                            .trim()
+                        prompt = prompt
+                            .substring(oldUserReqIdx + 'User request: '.length)
+                            .trim()
                     }
                 }
             }
@@ -670,7 +701,7 @@ const buildTimelineHtml = (steps: Step[]): string => {
                 type: 'user_input',
                 content: prompt,
                 historicalContext: historicalContextText || undefined,
-                threadId: threadId || undefined
+                threadId: threadId || undefined,
             })
         } else {
             if (step.tool_calls && step.tool_calls.length > 0) {
@@ -1042,7 +1073,7 @@ if (toggleTuiBtn && tuiContainer && previewWrapper) {
             `
         } else {
             // Collapse
-            tuiContainer.style.height = '64px'
+            tuiContainer.style.height = '110px'
             previewWrapper.style.display = 'flex'
             toggleTuiBtn.innerHTML = `
                 <span>Expand Terminal</span>
@@ -1323,7 +1354,7 @@ const renderProjects = () => {
         if (isActive) {
             const threadsContainer = document.createElement('div')
             threadsContainer.className =
-                'mt-1.5 ml-2.5 pl-2.5 border-l border-gray-300 dark:border-gray-700/80 flex flex-col space-y-1.5'
+                'mt-1.5 ml-0.5 pl-2.5 border-l border-gray-300 dark:border-gray-700/80 flex flex-col'
 
             const threadsHeader = document.createElement('div')
             threadsHeader.className =
@@ -1335,7 +1366,7 @@ const renderProjects = () => {
 
             const threadsList = document.createElement('div')
             threadsList.id = 'project-threads-list'
-            threadsList.className = 'max-h-96 overflow-y-auto space-y-1.5 pr-1'
+            threadsList.className = 'max-h-96 overflow-y-auto pr-1'
             threadsList.innerHTML =
                 '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>'
 
@@ -1373,7 +1404,7 @@ const renderProjects = () => {
                     .querySelectorAll(':scope > div')
                     .forEach((child) => {
                         child.className =
-                            'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                            'p-2 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
                     })
 
                 const loadingMsg = threadsList.querySelector('.italic')
@@ -1382,7 +1413,8 @@ const renderProjects = () => {
                 }
 
                 const placeholderEl = document.createElement('div')
-                placeholderEl.className = 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                placeholderEl.className =
+                    'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
                 placeholderEl.innerHTML = `
                     <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
                         <span class="truncate pr-1">#New Thread...</span>
@@ -1405,10 +1437,13 @@ const renderProjects = () => {
                         })
                     placeholderEl.className =
                         'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
-                    
-                    const previewPane = document.getElementById('markdown-preview-pane')
+
+                    const previewPane = document.getElementById(
+                        'markdown-preview-pane'
+                    )
                     if (previewPane) {
-                        previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                        previewPane.innerHTML =
+                            '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
                     }
                 })
 
@@ -1426,6 +1461,7 @@ const renderProjects = () => {
                     projectPath: activeProject,
                     terminalType: 'agy',
                 })
+                textarea?.focus()
             })
         }
 
@@ -1772,7 +1808,7 @@ const renderProjectThreads = async (
                     <button class="delete-thread-btn opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all select-none self-center p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0" title="Delete Thread">✕</button>
                 </div>
             `
-            
+
             el.classList.add('group')
 
             const delBtn = el.querySelector('.delete-thread-btn')
@@ -1785,9 +1821,12 @@ const renderProjectThreads = async (
                             activeThreadId = null
                             activeThreadContext = null
                             updatePlaceholder(true)
-                            const previewPane = document.getElementById('markdown-preview-pane')
+                            const previewPane = document.getElementById(
+                                'markdown-preview-pane'
+                            )
                             if (previewPane) {
-                                previewPane.innerHTML = '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                                previewPane.innerHTML =
+                                    '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
                             }
                         }
                         pollThreadsList()
@@ -2365,7 +2404,10 @@ textarea?.addEventListener('keydown', async (e) => {
             if (previewPane.innerHTML.includes('Select a thread')) {
                 previewPane.innerHTML = ''
             }
-            const escapedInput = trimmedInput.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const escapedInput = trimmedInput
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
             const blockHtml = `
             <div class="w-full flex justify-end mb-4 select-text">
                 <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
@@ -2810,3 +2852,98 @@ setInterval(async () => {
         console.error(e)
     }
 }, 1000)
+
+// Poll Quota
+async function updateQuotaDisplay() {
+    try {
+        const quotaJson = await invoke<string>('get_quota')
+        const data = JSON.parse(quotaJson)
+
+        let googlePct = '0%'
+        let anthropicPct = '0%'
+
+        const googleModels = data.Models.filter(
+            (m: any) =>
+                m.Provider === 'MODEL_PROVIDER_GOOGLE' &&
+                !m.ResetTime.startsWith('0001')
+        )
+        const anthropicModels = data.Models.filter(
+            (m: any) => 
+                m.Provider === 'MODEL_PROVIDER_ANTHROPIC' &&
+                !m.ResetTime.startsWith('0001')
+        )
+
+        if (googleModels.length > 0) {
+            const minRem = Math.min(
+                ...googleModels.map((m: any) => m.RemainingFraction)
+            )
+            googlePct = (minRem * 100).toFixed(0) + '%'
+        }
+
+        if (anthropicModels.length > 0) {
+            const minRem = Math.min(
+                ...anthropicModels.map((m: any) => m.RemainingFraction)
+            )
+            anthropicPct = (minRem * 100).toFixed(0) + '%'
+        }
+
+        const display = document.getElementById('quota-display')
+        if (display) {
+            display.innerText = `QUOTAS | Google: ${googlePct}, Anthropic: ${anthropicPct}`
+            display.classList.remove('hidden')
+        }
+
+        const tooltip = document.getElementById('quota-tooltip')
+        if (tooltip) {
+            tooltip.innerHTML = '<div class="flex gap-8"><div id="quota-col-google" class="flex flex-col gap-2"></div><div id="quota-col-anthropic" class="flex flex-col gap-2"></div></div>'
+            
+            const getProviderData = (name: string, pName: string, colId: string) => {
+                const allModels = data.Models.filter((m: any) => m.Provider === pName && !m.ResetTime.startsWith('0001'))
+                const col = document.getElementById(colId)
+                if (!col) return
+                
+                col.innerHTML += `<div class="font-bold text-gray-200 mb-1 border-b border-gray-700 pb-1">${name}</div>`
+                
+                const highModels = allModels.filter((m: any) => !(m.ModelID.includes('-low') || (m.DisplayName && m.DisplayName.includes('(Low)'))))
+                const lowModels = allModels.filter((m: any) => m.ModelID.includes('-low') || (m.DisplayName && m.DisplayName.includes('(Low)')))
+                
+                const renderBucket = (label: string, models: any[]) => {
+                    if (models.length === 0) return
+                    const minRem = Math.min(...models.map((m: any) => m.RemainingFraction))
+                    const pct = (minRem * 100).toFixed(0) + '%'
+                    
+                    const rt = models[0].ResetTime
+                    const d = new Date(rt as string)
+                    
+                    const diffMs = d.getTime() - Date.now()
+                    let timeStr = 'Now'
+                    if (diffMs > 0) {
+                        const h = Math.floor(diffMs / 3600000)
+                        const m = Math.floor((diffMs % 3600000) / 60000)
+                        let localT = d.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'}).toLowerCase()
+                        localT = localT.replace(/\s+/g, '').replace('am', 'a').replace('pm', 'p')
+                        timeStr = `in ${h}h ${m}m (${localT})`
+                    }
+                    
+                    const row = document.createElement('div')
+                    row.className = 'flex justify-between items-center gap-4 font-mono text-[11px] whitespace-nowrap'
+                    row.innerHTML = `<span class="font-bold text-gray-400 w-12">${label}:</span> <div class="flex gap-2 text-right"> <span class="${minRem < 0.2 ? 'text-red-400' : 'text-green-400'} font-bold w-9">${pct}</span> <span class="text-gray-500">resets ${timeStr}</span></div>`
+                    col.appendChild(row)
+                }
+
+                renderBucket('5-hr', highModels)
+                renderBucket('Weekly', lowModels)
+            }
+
+            getProviderData('Google', 'MODEL_PROVIDER_GOOGLE', 'quota-col-google')
+            getProviderData('Anthropic', 'MODEL_PROVIDER_ANTHROPIC', 'quota-col-anthropic')
+            
+            tooltip.classList.remove('hidden')
+        }
+    } catch (e) {
+        console.error('Failed to update quota:', e)
+    }
+}
+
+updateQuotaDisplay()
+setInterval(updateQuotaDisplay, 60000)

@@ -1447,6 +1447,41 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
 }
 
 #[tauri::command]
+fn delete_thread(id: String) -> Result<(), String> {
+    use std::path::Path;
+
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let brain_dir = Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("brain");
+
+    if !brain_dir.exists() {
+        return Ok(());
+    }
+
+    let (child_to_parent, thread_mtimes) = scan_brain_threads(&brain_dir);
+    let root_id = get_root_thread_id(&id, &child_to_parent);
+
+    for thread_id in thread_mtimes.keys() {
+        if get_root_thread_id(thread_id, &child_to_parent) == root_id {
+            let thread_dir = brain_dir.join(thread_id);
+            if thread_dir.exists() {
+                let _ = std::fs::remove_dir_all(&thread_dir);
+            }
+        }
+    }
+    
+    // In case it wasn't in mtimes
+    let root_dir = brain_dir.join(&root_id);
+    if root_dir.exists() {
+        let _ = std::fs::remove_dir_all(&root_dir);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 fn save_prompt_draft(project_path: String, content: String) -> Result<(), String> {
     use std::fs;
     use std::path::Path;
@@ -1697,6 +1732,15 @@ fn open_devtools(window: tauri::Window) {
     window.open_devtools();
 }
 
+#[tauri::command]
+fn get_quota() -> Result<String, String> {
+    let output = std::process::Command::new("ag-quota")
+        .arg("-j")
+        .output()
+        .map_err(|e| e.to_string())?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
 fn main() {
     let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
     let home = std::env::var("HOME").unwrap_or_default();
@@ -1748,7 +1792,8 @@ fn main() {
             read_thread_log,
             file_exists,
             patch_thread_log_with_output,
-            open_devtools
+            open_devtools,
+            get_quota
         ])
         .run(context)
         .expect("error while running tauri application");
