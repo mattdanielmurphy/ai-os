@@ -17,7 +17,9 @@ window.addEventListener('keydown', (e) => {
     }
     if (e.metaKey && e.key.toLowerCase() === 'n') {
         e.preventDefault()
-        const newThreadBtn = document.querySelector('.new-thread-btn') as HTMLButtonElement | null
+        const newThreadBtn = document.querySelector(
+            '.new-thread-btn'
+        ) as HTMLButtonElement | null
         if (newThreadBtn) {
             newThreadBtn.click()
         }
@@ -828,7 +830,7 @@ ${block.historicalContext}
             }
             html += `
             <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
+                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 text-sm font-sans whitespace-pre-wrap shadow-sm">
                     ${block.content}
                 </div>
             </div>
@@ -1378,6 +1380,16 @@ const renderProjects = () => {
             const newThreadBtn = threadsHeader.querySelector('.new-thread-btn')
             newThreadBtn?.addEventListener('click', async (e) => {
                 e.stopPropagation()
+                const existingPlaceholder = threadsList.querySelector('.new-thread-placeholder') as HTMLElement
+                if (existingPlaceholder) {
+                    existingPlaceholder.click()
+                    const textarea = document.getElementById(
+                        'prompt-entry-textarea'
+                    ) as HTMLTextAreaElement | null
+                    textarea?.focus()
+                    return
+                }
+
                 activeThreadId = null
                 activeThreadContext = null
                 isWaitingForNewThread = true
@@ -1404,7 +1416,7 @@ const renderProjects = () => {
                     .querySelectorAll(':scope > div')
                     .forEach((child) => {
                         child.className =
-                            'p-2 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                            'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
                     })
 
                 const loadingMsg = threadsList.querySelector('.italic')
@@ -1414,7 +1426,7 @@ const renderProjects = () => {
 
                 const placeholderEl = document.createElement('div')
                 placeholderEl.className =
-                    'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                    'group new-thread-placeholder p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
                 placeholderEl.innerHTML = `
                     <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
                         <span class="truncate pr-1">#New Thread...</span>
@@ -1433,10 +1445,10 @@ const renderProjects = () => {
                         .querySelectorAll(':scope > div')
                         .forEach((child) => {
                             child.className =
-                                'p-1.5 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                                'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
                         })
                     placeholderEl.className =
-                        'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                        'group new-thread-placeholder p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
 
                     const previewPane = document.getElementById(
                         'markdown-preview-pane'
@@ -1782,8 +1794,8 @@ const renderProjectThreads = async (
             const el = document.createElement('div')
             const isActive = activeThreadId === thread.id
             el.className = isActive
-                ? 'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
-                : 'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                ? 'group p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
+                : 'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
 
             const dateStr =
                 thread.mtime > 0
@@ -1809,7 +1821,7 @@ const renderProjectThreads = async (
                 </div>
             `
 
-            el.classList.add('group')
+
 
             const delBtn = el.querySelector('.delete-thread-btn')
             if (delBtn) {
@@ -1841,10 +1853,10 @@ const renderProjectThreads = async (
                     .querySelectorAll('#project-threads-list > div')
                     .forEach((child) => {
                         child.className =
-                            'p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                            'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
                     })
                 el.className =
-                    'p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
+                    'group p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
 
                 activeThreadId = thread.id
                 await selectAgyEngine()
@@ -2868,7 +2880,7 @@ async function updateQuotaDisplay() {
                 !m.ResetTime.startsWith('0001')
         )
         const anthropicModels = data.Models.filter(
-            (m: any) => 
+            (m: any) =>
                 m.Provider === 'MODEL_PROVIDER_ANTHROPIC' &&
                 !m.ResetTime.startsWith('0001')
         )
@@ -2895,38 +2907,67 @@ async function updateQuotaDisplay() {
 
         const tooltip = document.getElementById('quota-tooltip')
         if (tooltip) {
-            tooltip.innerHTML = '<div class="flex gap-8"><div id="quota-col-google" class="flex flex-col gap-2"></div><div id="quota-col-anthropic" class="flex flex-col gap-2"></div></div>'
-            
-            const getProviderData = (name: string, pName: string, colId: string) => {
-                const allModels = data.Models.filter((m: any) => m.Provider === pName && !m.ResetTime.startsWith('0001'))
+            tooltip.innerHTML =
+                '<div class="flex gap-8"><div id="quota-col-google" class="flex flex-col gap-2"></div><div id="quota-col-anthropic" class="flex flex-col gap-2"></div></div>'
+
+            const getProviderData = (
+                name: string,
+                pName: string,
+                colId: string
+            ) => {
+                const allModels = data.Models.filter(
+                    (m: any) =>
+                        m.Provider === pName && !m.ResetTime.startsWith('0001')
+                )
                 const col = document.getElementById(colId)
                 if (!col) return
-                
+
                 col.innerHTML += `<div class="font-bold text-gray-200 mb-1 border-b border-gray-700 pb-1">${name}</div>`
-                
-                const highModels = allModels.filter((m: any) => !(m.ModelID.includes('-low') || (m.DisplayName && m.DisplayName.includes('(Low)'))))
-                const lowModels = allModels.filter((m: any) => m.ModelID.includes('-low') || (m.DisplayName && m.DisplayName.includes('(Low)')))
-                
+
+                const highModels = allModels.filter(
+                    (m: any) =>
+                        !(
+                            m.ModelID.includes('-low') ||
+                            (m.DisplayName && m.DisplayName.includes('(Low)'))
+                        )
+                )
+                const lowModels = allModels.filter(
+                    (m: any) =>
+                        m.ModelID.includes('-low') ||
+                        (m.DisplayName && m.DisplayName.includes('(Low)'))
+                )
+
                 const renderBucket = (label: string, models: any[]) => {
                     if (models.length === 0) return
-                    const minRem = Math.min(...models.map((m: any) => m.RemainingFraction))
+                    const minRem = Math.min(
+                        ...models.map((m: any) => m.RemainingFraction)
+                    )
                     const pct = (minRem * 100).toFixed(0) + '%'
-                    
+
                     const rt = models[0].ResetTime
                     const d = new Date(rt as string)
-                    
+
                     const diffMs = d.getTime() - Date.now()
                     let timeStr = 'Now'
                     if (diffMs > 0) {
                         const h = Math.floor(diffMs / 3600000)
                         const m = Math.floor((diffMs % 3600000) / 60000)
-                        let localT = d.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'}).toLowerCase()
-                        localT = localT.replace(/\s+/g, '').replace('am', 'a').replace('pm', 'p')
+                        let localT = d
+                            .toLocaleTimeString([], {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                            })
+                            .toLowerCase()
+                        localT = localT
+                            .replace(/\s+/g, '')
+                            .replace('am', 'a')
+                            .replace('pm', 'p')
                         timeStr = `in ${h}h ${m}m (${localT})`
                     }
-                    
+
                     const row = document.createElement('div')
-                    row.className = 'flex justify-between items-center gap-4 font-mono text-[11px] whitespace-nowrap'
+                    row.className =
+                        'flex justify-between items-center gap-4 font-mono text-[11px] whitespace-nowrap'
                     row.innerHTML = `<span class="font-bold text-gray-400 w-12">${label}:</span> <div class="flex gap-2 text-right"> <span class="${minRem < 0.2 ? 'text-red-400' : 'text-green-400'} font-bold w-9">${pct}</span> <span class="text-gray-500">resets ${timeStr}</span></div>`
                     col.appendChild(row)
                 }
@@ -2935,9 +2976,17 @@ async function updateQuotaDisplay() {
                 renderBucket('Weekly', lowModels)
             }
 
-            getProviderData('Google', 'MODEL_PROVIDER_GOOGLE', 'quota-col-google')
-            getProviderData('Anthropic', 'MODEL_PROVIDER_ANTHROPIC', 'quota-col-anthropic')
-            
+            getProviderData(
+                'Google',
+                'MODEL_PROVIDER_GOOGLE',
+                'quota-col-google'
+            )
+            getProviderData(
+                'Anthropic',
+                'MODEL_PROVIDER_ANTHROPIC',
+                'quota-col-anthropic'
+            )
+
             tooltip.classList.remove('hidden')
         }
     } catch (e) {
