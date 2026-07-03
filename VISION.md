@@ -381,6 +381,8 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
   - [ ] add a max-width to the chat and have it aligned in the center
   - [ ] The list of "Edited files" at the top of the preview window has a trailing `"` at the end of each file name. And they should be clickable links and reveal each file in finder.
   - [ ] It seems when there's a good amount of historical context being included, sometimes, instead of getting a "historical context" textbox that's collapsed and another box for the user prompt, we just see a user prompt which has a truncated portion of the historical context. Even when we have an extremely long user prompt, we need to be able to show it all. You can and should truncate the super long user prompt, but it must have an expand button and a copy button to copy the whole thing.
+  - [ ] Copy buttons should be fixed to the top of the window (like sticky headers) so you can copy the box from the top OR the bottom etc.
+  - [ ] Add "breadcrumbs" showing the starts of each message in the thread
 
 ### BUGS
 - [ ] A strange amount of top-margin and indent gets added to the first sentence of the user prompt after it's sent.

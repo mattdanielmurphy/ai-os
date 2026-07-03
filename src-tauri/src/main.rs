@@ -1961,19 +1961,12 @@ fn main() {
                     }
 
                     .ai-os-compressed .isolated-target {
-                        width: 100vw !important; 
-                        height: 100vh !important;
                         position: fixed !important;
                         top: 0 !important;
                         left: 0 !important;
                         z-index: 2147483647 !important;
                         margin: 0 !important;
-                        background: var(--md-sys-color-surface) !important;
-                        display: flex !important; 
-                        justify-content: center;
-                        align-items: center;
-                        border-radius: 12px;
-                        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+                        background: var(--md-sys-color-surface, white) !important;
                     }
 
                     .ai-os-compressed .isolated-path {
@@ -2042,6 +2035,14 @@ fn main() {
                     window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(660, 80));
                 }
 
+                document.addEventListener('keydown', (e) => {
+                    if (e.metaKey && e.altKey && e.code === 'KeyI') {
+                        if (window.__TAURI__) {
+                            window.__TAURI__.invoke('open_devtools');
+                        }
+                    }
+                });
+
                 console.log("Isolation complete.");
                 
                 // Expand window slightly on input
@@ -2106,6 +2107,17 @@ fn main() {
             });
 
             Ok(())
+        })
+        .on_page_load(|window, _| {
+            let _ = window.eval(r#"
+                document.addEventListener('keydown', (e) => {
+                    if (e.metaKey && e.altKey && e.code === 'KeyI') {
+                        if (window.__TAURI__) {
+                            window.__TAURI__.invoke('open_devtools');
+                        }
+                    }
+                });
+            "#);
         })
         .invoke_handler(tauri::generate_handler![
             spawn_fresh_engine,
