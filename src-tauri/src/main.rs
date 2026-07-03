@@ -1928,15 +1928,6 @@ fn main() {
     let context = tauri::generate_context!();
     tauri::Builder::default()
         .menu(tauri::Menu::os_default(&context.package_info().name))
-        .on_window_event(|event| {
-            if event.window().label() == "floating" {
-                if let tauri::WindowEvent::Focused(focused) = event.event() {
-                    if !focused {
-                        let _ = event.window().hide();
-                    }
-                }
-            }
-        })
         .setup(|app| {
             let app_handle = app.handle();
     let floating_init_script = r#"
@@ -2022,7 +2013,6 @@ fn main() {
     )
     .title("Gemini Floating")
     .initialization_script(floating_init_script)
-    .always_on_top(true)
     .visible(false)
     .build()
     .unwrap();
