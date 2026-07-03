@@ -352,6 +352,22 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 3. **Deeper macOS Automation:** Expanding permissions safely to interact with native macOS apps via JXA/AppleScript wrappers.
 
 
+## 10. Human-Centric UI Architecture Rules
+
+### 1. Styling Constraints
+- DO NOT use Tailwind CSS, utility-class frameworks, or inline styles.
+- Use standard, vanilla CSS via CSS Modules (`*.module.css`).
+- Keep presentation layout separate from logic. A human must be able to open the `.css` file and tweak margins, colors, and padding using standard web specifications.
+
+### 2. File Organization & Discoverability
+- Every UI component must live in its own dedicated directory named after the component (PascalCase).
+- Absolute ban on multi-component files. If a component requires a sub-item (like a list row), spin it out into its own folder.
+- File structure must mirror visual hierarchy where practical.
+
+### 3. DOM Tagging for Human Maintenance
+- The top-level element of every component must include a descriptive `data-ui` attribute matching the component or feature name (e.g., `data-ui="midi-track-row"`).
+- This is a strict requirement to allow human operators to use browser developer tools to inspect an element and instantly map it back to the source file via global search.
+
 # New Unorganized Eventual Features
 - [x] Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
   - The context of these threads is pruned (omitting code and large file outputs, leaving only high-level steps/discoveries).
