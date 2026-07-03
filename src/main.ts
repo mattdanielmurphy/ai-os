@@ -1087,9 +1087,9 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
 
         if (project_path === activeProject) {
             if (terminal_type === 'mini') {
-                miniTerm.write(data)
+                try { miniTerm.write(data) } catch (e) {}
             } else if (terminal_type === currentEngine) {
-                term.write(data)
+                try { term.write(data) } catch (e) {}
             }
         }
     }
