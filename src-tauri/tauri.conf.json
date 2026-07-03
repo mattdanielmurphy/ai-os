@@ -44,12 +44,14 @@
       },
       {
         "label": "floating",
-        "url": "/floating.html",
-        "decorations": false,
-        "transparent": true,
-        "hiddenTitle": true,
+        "url": "https://gemini.google.com",
+        "decorations": true,
+        "transparent": false,
+        "hiddenTitle": false,
         "alwaysOnTop": true,
-        "visible": false
+        "visible": false,
+        "width": 1000,
+        "height": 800
       }
     ],
     "security": {
