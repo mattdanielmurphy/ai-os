@@ -1777,6 +1777,80 @@ fn get_quota() -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct BrowserContext {
+    pub url: String,
+    pub title: String,
+    pub inner_text: String,
+}
+
+#[tauri::command]
+async fn get_browser_context() -> Result<BrowserContext, String> {
+    let script = r#"
+        try {
+            var chrome = Application('Google Chrome Canary');
+            if (chrome.windows.length === 0) {
+                JSON.stringify({error: "No windows open"});
+            } else {
+                var tab = chrome.windows[0].activeTab();
+                var url = tab.url();
+                var title = tab.title();
+                
+                var js = `
+                    (function() {
+                        var text = document.body ? document.body.innerText : "";
+                        if (text.length > 20000) {
+                            text = text.substring(0, 20000) + "... [truncated]";
+                        }
+                        return text;
+                    })();
+                `;
+                
+                var inner_text = tab.execute({javascript: js}) || "";
+                
+                JSON.stringify({
+                    url: url || "",
+                    title: title || "",
+                    inner_text: inner_text
+                });
+            }
+        } catch (e) {
+            JSON.stringify({error: e.toString()});
+        }
+    "#;
+
+    let output = std::process::Command::new("osascript")
+        .arg("-l")
+        .arg("JavaScript")
+        .arg("-e")
+        .arg(script)
+        .output()
+        .map_err(|e| format!("osascript failed to execute: {}", e))?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr).into_owned();
+        return Err(format!("osascript error: {}", err_msg));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    let data: serde_json::Value = serde_json::from_str(stdout.trim()).map_err(|e| format!("Failed to parse browser context JSON: {}", e))?;
+    
+    if let Some(err) = data.get("error") {
+        let err_str = err.as_str().unwrap_or("Unknown error from browser script");
+        if err_str.contains("Executing JavaScript through AppleScript is turned off") {
+            return Err("JavaScript via Apple Events is disabled in Chrome Canary. Enable it via View > Developer > Allow JavaScript from Apple Events.".to_string());
+        }
+        return Err(err_str.to_string());
+    }
+
+    Ok(BrowserContext {
+        url: data.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        title: data.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+        inner_text: data.get("inner_text").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+    })
+}
+
 fn main() {
     let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
     let home = std::env::var("HOME").unwrap_or_default();
@@ -1829,7 +1903,8 @@ fn main() {
             file_exists,
             patch_thread_log_with_output,
             open_devtools,
-            get_quota
+            get_quota,
+            get_browser_context
         ])
         .run(context)
         .expect("error while running tauri application");

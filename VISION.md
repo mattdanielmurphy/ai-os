@@ -377,6 +377,12 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
 - [ ] Help the main smart agent stop doing menial tasks like git commits etc.
   - [ ] For git commits in particular, it should just finish, and when it finishes, we commit everything with a dead simple script that just heavily summarizes what the agent said its task was. In fact, we could ask the agent to provide what it would say as a git commit message, and then our script just commits automatically. This accomplishes two things: a tiny amount of token savings for the big model, and the user will see the response faster instead of having to wait for the git commit each time.
   - [ ] I think another menial task that should be optimized significantly is agent-log searching. We should maybe use a dumb and cheap triage model before sending anything to `agy` that finds relevant context, and maybe rewrites the user's message or formulates it into more of a plan; does basic organization. We'll have to be careful that it doesn't editorialize too much though.
+  - [ ] The copy button for the whole response is weird; it should appear on the right side, and there should be a thin outline around the reponse, with space above it between the in-progress subtasks.
+  - [ ] add a max-width to the chat and have it aligned in the center
+  - [ ] we should NOT be providing historical context when we decide to turn auto-clear off and continue the agy thread 
+
+### BUGS
+- [ ] A strange amount of top-margin and indent gets added to the first sentence of the user prompt after it's sent.
 
 ## In Progress / Testing
 - automatic os-synced light/dark mode (might be tough with agy/claude code TUIs, but I think we can easily inject a `/theme <light>` command to switch the internal theme, which has been the issue in other terminals that I've used which have auto dark/light switching)
