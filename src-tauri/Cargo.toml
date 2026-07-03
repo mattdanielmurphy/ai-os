@@ -11,7 +11,7 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = [ "fs-read-file", "fs-exists", "shell-open", "dialog", "devtools", "global-shortcut", "window-hide", "window-show" ] }
+tauri = { version = "1", features = [ "global-shortcut-all", "fs-read-file", "fs-exists", "shell-open", "dialog", "devtools", "global-shortcut"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 portable-pty = "0.8"

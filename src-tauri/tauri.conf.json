@@ -41,17 +41,6 @@
         "title": "ai-os",
         "width": 1000,
         "height": 800
-      },
-      {
-        "label": "floating",
-        "url": "https://gemini.google.com",
-        "decorations": true,
-        "transparent": false,
-        "hiddenTitle": false,
-        "alwaysOnTop": true,
-        "visible": false,
-        "width": 1000,
-        "height": 800
       }
     ],
     "security": {
