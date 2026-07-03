@@ -2513,7 +2513,7 @@ ${escapedInput}
         }
 
         if (isRunning) {
-            if (activeThreadId && currentContext) {
+            if (activeThreadId && currentContext && !isBypass) {
                 invoke('write_to_pty', {
                     data: '/clear\r',
                     projectPath: activeProject,
