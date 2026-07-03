@@ -44,7 +44,14 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousRemoteDomainIpcAccess": [
+        {
+          "domain": "gemini.google.com",
+          "windows": ["floating"],
+          "enableTauriAPI": true
+        }
+      ]
     },
     "bundle": {
       "active": true,

@@ -1942,121 +1942,70 @@ fn main() {
     let floating_init_script = r#"
         (function() {
             function initIsolation() {
-                const target = document.querySelector('.text-input-field') || document.querySelector('rich-textarea')?.parentElement?.parentElement || document.querySelector('form');
-                if (!target) {
-                    setTimeout(initIsolation, 500);
-                    return;
-                }
+              const target = document.querySelector('.input-area-container');
+              
+              if (!target) {
+                setTimeout(initIsolation, 500);
+                return;
+              }
 
-                // 1. Inject styles
-                const styleEl = document.createElement('style');
-                styleEl.id = 'ai-os-isolation-styles';
-                styleEl.textContent = `
-                    .ai-os-compressed * {
-                        visibility: hidden !important;
-                    }
-
-                    .ai-os-compressed html, .ai-os-compressed body, .ai-os-compressed .isolated-path, .ai-os-compressed .isolated-target, .ai-os-compressed .isolated-target * {
-                        visibility: visible !important;
-                    }
-
-                    .ai-os-compressed .isolated-target {
-                        position: fixed !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        z-index: 2147483647 !important;
-                        margin: 0 !important;
-                        background: var(--md-sys-color-surface, white) !important;
-                    }
-
-                    .ai-os-compressed .isolated-path {
-                        background: none !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        transform: none !important;
-                        overflow: visible !important;
-                        opacity: 1 !important;
-                    }
-
-                    .ai-os-compressed html, .ai-os-compressed body {
-                        background: transparent !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                    
-                    #ai-os-toggle-mode {
-                        position: fixed;
-                        top: 10px;
-                        right: 10px;
-                        z-index: 2147483648;
-                        background: #333;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        padding: 5px 10px;
-                        cursor: pointer;
-                    }
-                `;
-                document.head.appendChild(styleEl);
-
-                // 2. Add classes to the target and its ancestors
-                target.classList.add('isolated-target');
-                let curr = target.parentElement;
-                while (curr && curr !== document.documentElement) {
-                    curr.classList.add('isolated-path');
-                    curr = curr.parentElement;
+              // 1. Traverse and hide structural siblings
+              let current = target;
+              while (current && current !== document.body && current !== document.documentElement) {
+                const siblings = current.parentElement.children;
+                
+                for (let sibling of siblings) {
+                  if (sibling !== current) {
+                    sibling.style.visibility = 'hidden';
+                    sibling.style.pointerEvents = 'none';
+                  }
                 }
                 
-                // 3. Add a button to toggle modes
-                const toggleBtn = document.createElement('button');
-                toggleBtn.id = 'ai-os-toggle-mode';
-                toggleBtn.textContent = 'Expand';
-                toggleBtn.onclick = () => {
-                    const isCompressed = document.body.classList.contains('ai-os-compressed');
-                    if (isCompressed) {
-                        document.body.classList.remove('ai-os-compressed');
-                        toggleBtn.textContent = 'Compress';
-                        if (window.__TAURI__) {
-                            window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(1000, 800));
-                        }
-                    } else {
-                        document.body.classList.add('ai-os-compressed');
-                        toggleBtn.textContent = 'Expand';
-                        if (window.__TAURI__) {
-                            window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(660, 80));
-                        }
-                    }
-                };
-                document.body.appendChild(toggleBtn);
-
-                // Enable compressed mode by default
-                document.body.classList.add('ai-os-compressed');
-                if (window.__TAURI__) {
-                    window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(660, 80));
+                current.style.visibility = 'visible';
+                if (current !== target) {
+                  current.style.background = 'transparent';
+                  current.style.backgroundImage = 'none'; 
                 }
-
-                document.addEventListener('keydown', (e) => {
-                    if (e.metaKey && e.altKey && e.code === 'KeyI') {
-                        if (window.__TAURI__) {
-                            window.__TAURI__.invoke('open_devtools');
-                        }
-                    }
-                });
-
-                console.log("Isolation complete.");
                 
-                // Expand window slightly on input
-                const richTextArea = target.querySelector('rich-textarea') || target.querySelector('textarea') || target.querySelector('div[contenteditable="true"]');
-                if (richTextArea) {
-                    richTextArea.addEventListener('input', () => {
-                         if (document.body.classList.contains('ai-os-compressed')) {
-                             if (window.__TAURI__) {
-                                 // Simple expansion heuristic based on height or just a fixed larger height
-                                 window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(660, 400));
-                             }
-                         }
-                    });
-                }
+                current = current.parentElement;
+              }
+
+              // 2. Set the base background color
+              const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              const bgColor = isDarkMode ? '#131314' : '#ffffff';
+              document.documentElement.style.background = bgColor;
+              document.body.style.background = bgColor;
+
+              // 3. Tactic A: Strip the classes responsible for triggering the ::before element
+              const chatWindow = document.querySelector('chat-window');
+              if (chatWindow) {
+                chatWindow.classList.remove('show-lm-background', 'lm-canvas-styling');
+              }
+
+              // 4. Tactic B: Constructable Stylesheets (Bypasses <style> tag CSP restrictions)
+              try {
+                const sheet = new CSSStyleSheet();
+                sheet.replaceSync(`
+                  chat-window::before, 
+                  chat-window::after {
+                    display: none !important;
+                    background-image: none !important;
+                    opacity: 0 !important;
+                  }
+                `);
+                // Append the new stylesheet to the document's adopted stylesheets
+                document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+              } catch (e) {
+                console.log('Constructable stylesheets blocked or unsupported, relying on class removal.', e);
+              }
+
+              document.addEventListener('keydown', (e) => {
+                  if (e.metaKey && e.altKey && e.code === 'KeyI') {
+                      if (window.__TAURI__) {
+                          window.__TAURI__.invoke('open_devtools');
+                      }
+                  }
+              });
             }
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initIsolation);
