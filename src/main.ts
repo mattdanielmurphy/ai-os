@@ -156,6 +156,9 @@ listen<{ project_path: string; status: 'Running' | 'Pending' | 'Paused' }>(
         const { project_path, status } = event.payload
         if (project_path === activeProject) {
             updatePauseUI(status)
+            if (activeThreadId && typeof lastRenderedThreadLog === 'string' && typeof renderCustomTuiLog === 'function') {
+                renderCustomTuiLog(lastRenderedThreadLog)
+            }
         }
     }
 )

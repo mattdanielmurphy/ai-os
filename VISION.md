@@ -379,14 +379,10 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
   - [ ] I think another menial task that should be optimized significantly is agent-log searching. We should maybe use a dumb and cheap triage model before sending anything to `agy` that finds relevant context, and maybe rewrites the user's message or formulates it into more of a plan; does basic organization. We'll have to be careful that it doesn't editorialize too much though.
   - [ ] The copy button for the whole response is weird; it should appear on the right side, and there should be a thin outline around the reponse, with space above it between the in-progress subtasks.
   - [ ] add a max-width to the chat and have it aligned in the center
-  - [ ] we should NOT be providing historical context when we decide to turn auto-clear off and continue the agy thread 
+  - [ ] we should NOT be providing historical context when we decide to turn auto-clear off and continue the agy thread
 
 ### BUGS
 - [ ] A strange amount of top-margin and indent gets added to the first sentence of the user prompt after it's sent.
+- cmd-click links in tmux TUIs: **not working!**
 
 ## In Progress / Testing
-- automatic os-synced light/dark mode (might be tough with agy/claude code TUIs, but I think we can easily inject a `/theme <light>` command to switch the internal theme, which has been the issue in other terminals that I've used which have auto dark/light switching)
-- the output.md doesn't open in the side pane even though it was apparently written
-
-## Mostly done
-- cmd-click links in tmux TUIs: DONE, but truncated filepaths don't work (might be tough to actually implement this... One way that occurs to me is if behind the scenes there's a super-wide TUI that we extract all the text from and pump into our own version of a TUI that's fit to the window, and so we still see the truncated file path but behind the scenes, it's a markdown link that is linked to the full filepath)
