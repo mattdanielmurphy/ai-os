@@ -1973,27 +1973,74 @@ fn main() {
                   }
               });
 
-              let isExpanded = false;
-              const toggleBtn = document.createElement('button');
-              toggleBtn.innerHTML = '↕️';
-              toggleBtn.style.position = 'fixed';
-              toggleBtn.style.top = '10px';
-              toggleBtn.style.right = '10px';
-              toggleBtn.style.zIndex = '10000';
-              toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-              toggleBtn.style.color = '#fff';
-              toggleBtn.style.border = '1px solid rgba(255, 255, 255, 0.2)';
-              toggleBtn.style.borderRadius = '8px';
-              toggleBtn.style.padding = '8px';
-              toggleBtn.style.cursor = 'pointer';
-              toggleBtn.style.backdropFilter = 'blur(4px)';
-              toggleBtn.onclick = () => {
-                  isExpanded = !isExpanded;
-                  if (window.__TAURI__) {
-                      window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(960, isExpanded ? 800 : 180));
+              // Robust auto-resizing
+              let lastHeight = 180;
+              let resizeTimeout;
+              
+              function calculateAndSetSize() {
+                  let desiredHeight = 180; // Base height
+                  
+                  // 1. Generic way to find the main input area:
+                  const textboxes = Array.from(document.querySelectorAll('textarea, [contenteditable=\"true\"], rich-textarea'));
+                  let mainInput = null;
+                  let maxArea = 0;
+                  for (const tb of textboxes) {
+                      const rect = tb.getBoundingClientRect();
+                      const area = rect.width * rect.height;
+                      if (area > maxArea) {
+                          maxArea = area;
+                          mainInput = tb;
+                      }
                   }
-              };
-              document.body.appendChild(toggleBtn);
+                  
+                  if (mainInput) {
+                      const rect = mainInput.getBoundingClientRect();
+                      // Assuming default height is ~50-60. If it grows, we add the difference.
+                      if (rect.height > 60) {
+                          desiredHeight += (rect.height - 60);
+                      }
+                  }
+                  
+                  // 2. Generic way to detect if there's a chat history:
+                  let hasHistory = false;
+                  // Fast path for Gemini
+                  if (document.querySelector('user-message, model-message, message-list')) {
+                      hasHistory = true;
+                  } else {
+                      // Generic fallback: check if body innerText length is significantly larger than input length
+                      let inputText = mainInput ? (mainInput.value || mainInput.innerText || \"\") : \"\";
+                      let bodyText = document.body.innerText || \"\";
+                      if (bodyText.length - inputText.length > 500) {
+                          hasHistory = true;
+                      }
+                  }
+                  
+                  if (hasHistory) {
+                      desiredHeight = 800;
+                  }
+                  
+                  // Clamp
+                  desiredHeight = Math.max(180, Math.min(800, desiredHeight));
+                  
+                  if (Math.abs(desiredHeight - lastHeight) > 5) {
+                      lastHeight = desiredHeight;
+                      if (window.__TAURI__) {
+                          window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(960, desiredHeight));
+                      }
+                  }
+              }
+
+              const resizeObserver = new ResizeObserver(() => {
+                  clearTimeout(resizeTimeout);
+                  resizeTimeout = setTimeout(calculateAndSetSize, 50);
+              });
+              resizeObserver.observe(document.body);
+              
+              const mutObserver = new MutationObserver(() => {
+                  clearTimeout(resizeTimeout);
+                  resizeTimeout = setTimeout(calculateAndSetSize, 50);
+              });
+              mutObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
               // 3. Tactic A: Strip the classes responsible for triggering the ::before element
               const chatWindow = document.querySelector('chat-window');
               if (chatWindow) {
