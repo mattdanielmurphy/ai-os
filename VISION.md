@@ -380,7 +380,7 @@ git commit -m "Revision executed via Web UI Sync" --allow-empty
   - [ ] The copy button for the whole response is weird; it should appear on the right side, and there should be a thin outline around the reponse, with space above it between the in-progress subtasks.
   - [ ] add a max-width to the chat and have it aligned in the center
   - [ ] The list of "Edited files" at the top of the preview window has a trailing `"` at the end of each file name.
-  - [ ] It seems when there's a good amount of historical context being included, sometimes, instead of getting a "historical context" textbox that's collapsed and another box for the user prompt, we just see a user prompt which has a truncated portion
+  - [ ] It seems when there's a good amount of historical context being included, sometimes, instead of getting a "historical context" textbox that's collapsed and another box for the user prompt, we just see a user prompt which has a truncated portion of the historical context. Even when we have an extremely long user prompt, we need to be able to show it all. You can and should truncate the super long user prompt, but it must have an expand button and a copy button to copy the whole thing.
 
 ### BUGS
 - [ ] A strange amount of top-margin and indent gets added to the first sentence of the user prompt after it's sent.

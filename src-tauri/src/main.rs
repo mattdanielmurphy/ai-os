@@ -1851,6 +1851,71 @@ async fn get_browser_context() -> Result<BrowserContext, String> {
     })
 }
 
+#[tauri::command]
+fn dispatch_to_gemini(app_handle: tauri::AppHandle, prompt: String, context: Option<BrowserContext>) -> Result<(), String> {
+    let mut final_prompt = prompt;
+    if let Some(ctx) = context {
+        final_prompt = format!("{}\n\n[Browser Context]\nURL: {}\nTitle: {}\n\n{}", final_prompt, ctx.url, ctx.title, ctx.inner_text);
+    }
+    
+    let init_script = r#"
+        window.__TAURI__.event.listen('populate-gemini-prompt', (event) => {
+            const promptText = event.payload;
+            
+            const checkExist = setInterval(function() {
+                const inputBox = document.querySelector('rich-textarea') || document.querySelector('div[contenteditable="true"]') || document.querySelector('textarea');
+                if (inputBox) {
+                    clearInterval(checkExist);
+                    
+                    if (inputBox.tagName.toLowerCase() === 'rich-textarea' || inputBox.hasAttribute('contenteditable')) {
+                        inputBox.innerHTML = '';
+                        inputBox.appendChild(document.createTextNode(promptText));
+                    } else {
+                        inputBox.value = promptText;
+                    }
+                    
+                    inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    setTimeout(() => {
+                        const sendBtns = Array.from(document.querySelectorAll('button')).filter(b => 
+                            (b.getAttribute('aria-label') || '').toLowerCase().includes('send') ||
+                            (b.getAttribute('mattooltip') || '').toLowerCase().includes('send')
+                        );
+                        let sendBtn = sendBtns[0] || document.querySelector('button[type="submit"]');
+                        if (sendBtn) {
+                            sendBtn.click();
+                        }
+                    }, 500);
+                }
+            }, 500);
+        });
+    "#;
+
+    if let Some(window) = app_handle.get_window("gemini_mode") {
+        let _ = window.set_focus();
+        window.emit("populate-gemini-prompt", final_prompt).map_err(|e| e.to_string())?;
+    } else {
+        let window = tauri::WindowBuilder::new(
+            &app_handle,
+            "gemini_mode",
+            tauri::WindowUrl::External("https://gemini.google.com".parse().unwrap())
+        )
+        .title("Gemini")
+        .initialization_script(init_script)
+        .build()
+        .map_err(|e| e.to_string())?;
+        
+        let final_prompt_clone = final_prompt.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(3000));
+            let _ = window.emit("populate-gemini-prompt", final_prompt_clone);
+        });
+    }
+    
+    Ok(())
+}
+
+
 fn main() {
     let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
     let home = std::env::var("HOME").unwrap_or_default();
@@ -1926,7 +1991,8 @@ fn main() {
             patch_thread_log_with_output,
             open_devtools,
             get_quota,
-            get_browser_context
+            get_browser_context,
+            dispatch_to_gemini
         ])
         .run(context)
         .expect("error while running tauri application");
