@@ -2,7 +2,7 @@ use portable_pty::{CommandBuilder, MasterPty, NativePtySystem, PtySize, PtySyste
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use tauri::Manager;
+use tauri::{Manager, GlobalShortcutManager};
 use axum::{
     routing::post,
     Router,
@@ -1863,9 +1863,31 @@ fn main() {
     let context = tauri::generate_context!();
     tauri::Builder::default()
         .menu(tauri::Menu::os_default(&context.package_info().name))
+        .on_window_event(|event| {
+            if event.window().label() == "floating" {
+                if let tauri::WindowEvent::Focused(focused) = event.event() {
+                    if !focused {
+                        let _ = event.window().hide();
+                    }
+                }
+            }
+        })
         .setup(|app| {
             let app_handle = app.handle();
             
+            let app_handle_clone = app_handle.clone();
+            let mut shortcut_manager = app.global_shortcut_manager();
+            let _ = shortcut_manager.register("Cmd+Option+Space", move || {
+                if let Some(window) = app_handle_clone.get_window("floating") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            });
+
             spawn_axum_server(app_handle.clone());
             
             let sessions = Arc::new(Mutex::new(HashMap::new()));

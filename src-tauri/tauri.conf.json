@@ -31,6 +31,9 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "globalShortcut": {
+        "all": true
       }
     },
     "windows": [
@@ -38,6 +41,15 @@
         "title": "ai-os",
         "width": 1000,
         "height": 800
+      },
+      {
+        "label": "floating",
+        "url": "/floating.html",
+        "decorations": false,
+        "transparent": true,
+        "hiddenTitle": true,
+        "alwaysOnTop": true,
+        "visible": false
       }
     ],
     "security": {
