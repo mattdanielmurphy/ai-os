@@ -1961,12 +1961,39 @@ fn main() {
                 current = current.parentElement;
               }
 
-              // 2. Set the base background color
-              const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-              const bgColor = isDarkMode ? '#131314' : '#ffffff';
-              document.documentElement.style.background = bgColor;
-              document.body.style.background = bgColor;
+              // 2. Set the base background color to transparent
+              document.documentElement.style.background = 'transparent';
+              document.body.style.background = 'transparent';
 
+              target.addEventListener('mousedown', (e) => {
+                  if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+                      if (window.__TAURI__) {
+                          window.__TAURI__.window.appWindow.startDragging();
+                      }
+                  }
+              });
+
+              let isExpanded = false;
+              const toggleBtn = document.createElement('button');
+              toggleBtn.innerHTML = '↕️';
+              toggleBtn.style.position = 'fixed';
+              toggleBtn.style.top = '10px';
+              toggleBtn.style.right = '10px';
+              toggleBtn.style.zIndex = '10000';
+              toggleBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+              toggleBtn.style.color = '#fff';
+              toggleBtn.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+              toggleBtn.style.borderRadius = '8px';
+              toggleBtn.style.padding = '8px';
+              toggleBtn.style.cursor = 'pointer';
+              toggleBtn.style.backdropFilter = 'blur(4px)';
+              toggleBtn.onclick = () => {
+                  isExpanded = !isExpanded;
+                  if (window.__TAURI__) {
+                      window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(960, isExpanded ? 800 : 180));
+                  }
+              };
+              document.body.appendChild(toggleBtn);
               // 3. Tactic A: Strip the classes responsible for triggering the ::before element
               const chatWindow = document.querySelector('chat-window');
               if (chatWindow) {
@@ -1997,6 +2024,13 @@ fn main() {
                       }
                   }
               });
+
+              //  5. Get rid of top padding
+              const chatApp = document.querySelector('chat-app');
+              if (chatApp) {
+                chatApp.style.setProperty('padding-top', '0px', 'important');
+              }
+
             }
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initIsolation);
@@ -2009,16 +2043,18 @@ fn main() {
     let floating_window = tauri::WindowBuilder::new(
         &app_handle,
         "floating",
-        tauri::WindowUrl::External("https://gemini.google.com".parse().unwrap())
+        tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap())
     )
     .title("Gemini Floating")
     .initialization_script(floating_init_script)
     .visible(false)
+    .decorations(false)
+    .transparent(true)
     .build()
     .unwrap();
     
     // Set initial size
-    let _ = floating_window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 660, height: 80 }));
+    let _ = floating_window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 960, height: 180 }));
             
             let app_handle_clone = app_handle.clone();
             let mut shortcut_manager = app.global_shortcut_manager();
@@ -2027,6 +2063,7 @@ fn main() {
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
+                        let _ = window.eval("window.location.href = 'https://gemini.google.com/app';");
                         let _ = window.show();
                         let _ = window.set_focus();
                     }
