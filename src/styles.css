@@ -287,7 +287,7 @@ textarea {
 
 .input-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   font-size: 0.8rem;
   color: var(--text-muted);
 }
@@ -295,16 +295,18 @@ textarea {
 .input-options {
   display: flex;
   gap: 16px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .prompt-input {
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   border-radius: 8px;
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
   resize: none;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   transition: border-color 0.2s;
 }
 
@@ -560,8 +562,8 @@ textarea {
 }
 
 .project-item-header-active {
-  background: rgba(86, 69, 197, 0.15) !important;
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff;
 }
 
 /* Generic styling for the project info structure */
@@ -632,9 +634,9 @@ textarea {
   display: flex;
   flex-direction: column;
   margin-top: 4px;
-  padding-left: 12px;
+  padding-left: 8px;
   border-left: 2px solid var(--border-color);
-  margin-left: 16px;
+  margin-left: 8px;
   margin-bottom: 8px;
 }
 
@@ -664,14 +666,14 @@ textarea {
 .thread-history-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0px;
 }
 
 .thread-history-item,
 .thread-history-item-alt,
 .thread-placeholder-item,
 .thread-placeholder-item-active {
-  padding: 4px 8px;
+  padding: 2px 4px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.85rem;
@@ -732,7 +734,7 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.8;
+  color: #fff;
 }
 
 .thread-snippet {
