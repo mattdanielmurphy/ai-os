@@ -171,20 +171,35 @@
                 <div
                     class="px-3 py-1 bg-gray-100/80 dark:bg-gray-850/80 border-b border-gray-200 dark:border-gray-800 text-[11px] font-mono text-gray-600 dark:text-gray-400 flex items-center justify-between"
                 >
-                    <label
-                        id="clear-context-container"
-                        class="flex items-center cursor-pointer select-none text-xs font-semibold px-2 py-0.5 rounded border transition-all"
-                    >
-                        <input
-                            type="checkbox"
-                            id="clear-context-checkbox"
-                            checked
-                            class="w-3.5 h-3.5 cursor-pointer mr-1.5 accent-emerald-500"
-                        />
-                        <span id="clear-context-label-text"
-                            >Auto-Clear Context</span
+                    <div class="flex items-center gap-3">
+                        <label
+                            id="clear-context-container"
+                            class="flex items-center cursor-pointer select-none text-xs font-semibold px-2 py-0.5 rounded border transition-all"
                         >
-                    </label>
+                            <input
+                                type="checkbox"
+                                id="clear-context-checkbox"
+                                checked
+                                class="w-3.5 h-3.5 cursor-pointer mr-1.5 accent-emerald-500"
+                            />
+                            <span id="clear-context-label-text"
+                                >Auto-Clear Context</span
+                            >
+                        </label>
+                        <label
+                            id="pre-triage-container"
+                            class="flex items-center cursor-pointer select-none text-xs font-semibold px-2 py-0.5 rounded border transition-all"
+                        >
+                            <input
+                                type="checkbox"
+                                id="pre-triage-checkbox"
+                                class="w-3.5 h-3.5 cursor-pointer mr-1.5 accent-purple-500"
+                            />
+                            <span id="pre-triage-label-text"
+                                >Pre-triage Mode</span
+                            >
+                        </label>
+                    </div>
                     <span id="current-dir-path" class="truncate ml-4"
                         >/Users/matthewmurphy/projects/ai-os</span
                     >

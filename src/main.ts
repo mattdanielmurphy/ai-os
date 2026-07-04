@@ -9,6 +9,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
+import { WORKER_BEE_RULES, TRIAGE_MODE_RULES } from './systemPromptConfig'
 import { open } from '@tauri-apps/api/shell'
 
 window.addEventListener('keydown', (e) => {
@@ -2479,6 +2480,14 @@ ${escapedInput}
         if (processedInput.toLowerCase().includes('notes')) {
             processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`
         }
+
+        const preTriageCheckbox = document.getElementById(
+            'pre-triage-checkbox'
+        ) as HTMLInputElement
+        const isPreTriage = preTriageCheckbox ? preTriageCheckbox.checked : false
+        
+        const systemDirectives = isPreTriage ? TRIAGE_MODE_RULES : WORKER_BEE_RULES
+        processedInput += `\n\n${systemDirectives}`
 
         let isRunning = false
         try {
