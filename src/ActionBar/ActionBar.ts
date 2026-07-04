@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri'
+import { getRelativeDateStr, getFullDateStr } from '../dateUtils'
 // @ts-ignore
 import styles from './ActionBar.module.css'
 
@@ -147,15 +148,27 @@ export class ActionBar {
                 el.classList.add(styles.selected);
             }
             
+            const headerEl = document.createElement('div');
+            headerEl.className = styles.actionBarResultHeader;
+
             const titleEl = document.createElement('div');
             titleEl.className = styles.actionBarResultTitle;
             titleEl.textContent = result.thread.title || result.thread.id;
+
+            const dateEl = document.createElement('div');
+            dateEl.className = styles.actionBarResultDate;
+            const ts = result.thread.mtime > 0 ? result.thread.mtime * 1000 : Date.now();
+            dateEl.textContent = getRelativeDateStr(ts);
+            dateEl.title = getFullDateStr(ts);
+
+            headerEl.appendChild(titleEl);
+            headerEl.appendChild(dateEl);
             
             const previewEl = document.createElement('div');
             previewEl.className = styles.actionBarResultPreview;
             previewEl.textContent = result.preview;
 
-            el.appendChild(titleEl);
+            el.appendChild(headerEl);
             el.appendChild(previewEl);
 
             el.addEventListener('click', () => {

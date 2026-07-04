@@ -11,6 +11,7 @@ It should start expanded, but have a max-height of 50vh.
 - I want to be able to edit a markdown file in vscode and have that add notes to various threads.
 	Perhaps when you create a thread, you can add that to the markdown file or something?
 	Basically, I'm making all these todos for each project, and I'm copying the prompts back and forth... it'd be easier if there was a way to sync like "thread notes" basically.
+	- testing note: it's not working at all. there was no thread notes file, and I want it to be in the PROJECT directory, not my Obsidian notes, although I get why you made that mistake.
 
 
 This existing version is hard to read:

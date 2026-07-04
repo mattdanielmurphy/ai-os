@@ -48,9 +48,18 @@
 .actionBarResultItem:hover {
     background: #2a2d3e;
 }
+.actionBarResultHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 .actionBarResultTitle {
     color: #fff;
     font-weight: 500;
+}
+.actionBarResultDate {
+    color: #666;
+    font-size: 11px;
 }
 .actionBarResultPreview {
     color: #888;

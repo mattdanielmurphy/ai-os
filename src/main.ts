@@ -12,6 +12,7 @@ import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
 import { WORKER_BEE_RULES, TRIAGE_MODE_RULES } from './systemPromptConfig'
 import { open } from '@tauri-apps/api/shell'
+import { getRelativeDateStr, getFullDateStr } from './dateUtils'
 
 window.addEventListener('keydown', (e) => {
     if (e.metaKey && e.altKey && e.key.toLowerCase() === 'i') {
@@ -2084,22 +2085,16 @@ const renderProjectThreads = async (
             const isActive = activeThreadId === thread.id
             el.className = isActive ? 'thread-history-item active group' : 'thread-history-item group'
 
-            const dateStr =
-                thread.mtime > 0
-                    ? new Date(thread.mtime * 1000).toLocaleString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                      })
-                    : 'Unknown Date'
+            const ts = thread.mtime > 0 ? thread.mtime * 1000 : Date.now()
+            const dateStr = getRelativeDateStr(ts)
+            const fullDateStr = getFullDateStr(ts)
 
             el.innerHTML = `
                 <div class="thread-info">
                     <div class="thread-header">
-                        <span class="thread-date">${dateStr}</span>
+                        <div class="thread-title" title="${thread.title}">${thread.title}</div>
+                        <span class="thread-date" title="${fullDateStr}">${dateStr}</span>
                     </div>
-                    <div class="thread-title" title="${thread.title}">${thread.title}</div>
                     <div class="thread-snippet" title="${thread.snippet}">${thread.snippet}</div>
                 </div>
                 <button class="delete-thread-btn" title="Delete Thread">✕</button>
