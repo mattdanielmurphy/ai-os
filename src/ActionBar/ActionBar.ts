@@ -26,6 +26,7 @@ export class ActionBar {
     private onSelectThread: (thread: ThreadLog) => void;
     private selectedIndex: number = -1;
     private currentResults: ThreadSearchResult[] = [];
+    private previousFocus: HTMLElement | null = null;
 
     constructor(
         activeProjectCallback: () => string | null,
@@ -189,6 +190,7 @@ export class ActionBar {
     }
 
     public open() {
+        this.previousFocus = document.activeElement as HTMLElement;
         this.overlay.classList.add(styles.active);
         this.input.focus();
         this.input.select();
@@ -197,5 +199,9 @@ export class ActionBar {
 
     public close() {
         this.overlay.classList.remove(styles.active);
+        if (this.previousFocus) {
+            this.previousFocus.focus();
+            this.previousFocus = null;
+        }
     }
 }

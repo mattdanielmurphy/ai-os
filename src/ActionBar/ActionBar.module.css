@@ -2,7 +2,10 @@
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    display: none;
+    display: flex;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.08s ease-out, visibility 0.08s ease-out;
     align-items: flex-start;
     justify-content: center;
     padding-top: 10vh;
@@ -10,7 +13,8 @@
     backdrop-filter: blur(2px);
 }
 .actionBarOverlay.active {
-    display: flex;
+    visibility: visible;
+    opacity: 1;
 }
 .actionBarContainer {
     background: #1e1e1e;
@@ -22,6 +26,11 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transform: scale(0.97);
+    transition: transform 0.08s ease-out;
+}
+.actionBarOverlay.active .actionBarContainer {
+    transform: scale(1);
 }
 .actionBarInput {
     background: transparent;

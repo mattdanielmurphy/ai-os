@@ -2290,7 +2290,7 @@ fn main() {
 #[derive(serde::Serialize, Clone)]
 struct ThreadSearchResult {
     thread: ThreadLog,
-    score: i32,
+    score: u64,
     preview: String,
 }
 
@@ -2304,11 +2304,11 @@ fn search_project_threads(project_path: String, query: String) -> Result<Vec<Thr
     let brain_dir = std::path::Path::new(&home).join(".gemini").join("antigravity-cli").join("brain");
 
     for thread in threads {
-        let mut score = 0;
+        let mut score: u64 = 0;
         let mut preview = String::new();
         
         if thread.title.to_lowercase().contains(&query_lower) {
-            score += 100;
+            score += 100_000_000;
         }
         
         let latest_filepath = brain_dir.join(&thread.latest_leaf_id).join(".system_generated").join("logs").join("transcript.jsonl");
@@ -2321,14 +2321,14 @@ fn search_project_threads(project_path: String, query: String) -> Result<Vec<Thr
                     if step_type == "USER_INPUT" {
                         let user_prompt = extract_user_request(content_str);
                         if user_prompt.to_lowercase().contains(&query_lower) {
-                            score += 50;
+                            score += 50_000_000;
                             if preview.is_empty() {
                                 preview = truncate_preview(&user_prompt, &query_lower);
                             }
                         }
                     } else if step_type == "PLANNER_RESPONSE" || step_type == "MODEL" {
                         if content_str.to_lowercase().contains(&query_lower) {
-                            score += 10;
+                            score += 10_000_000;
                             if preview.is_empty() {
                                 preview = truncate_preview(content_str, &query_lower);
                             }
@@ -2339,6 +2339,7 @@ fn search_project_threads(project_path: String, query: String) -> Result<Vec<Thr
         }
         
         if score > 0 {
+            score += thread.mtime as u64;
             results.push(ThreadSearchResult {
                 thread,
                 score,

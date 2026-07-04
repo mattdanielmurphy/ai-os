@@ -734,6 +734,8 @@ textarea {
   font-size: 0.7rem;
   opacity: 0.7;
   flex-shrink: 0;
+  min-width: 55px;
+  text-align: right;
 }
 
 .thread-title {
@@ -741,6 +743,7 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 .thread-snippet {
