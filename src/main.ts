@@ -1111,6 +1111,38 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
                 try { miniTerm.write(data) } catch (e) {}
             } else if (terminal_type === currentEngine) {
                 try { term.write(data) } catch (e) {}
+                
+                // Auto-expand TUI if interactive prompt is detected
+                setTimeout(() => {
+                    const tuiContainer = document.getElementById('terminal-container')
+                    if (tuiContainer && !isTuiExpanded) {
+                        let isInteractive = false;
+                        let recentText = '';
+                        // Check the last few lines of the terminal buffer for prompts
+                        const baseY = term.buffer.active.baseY;
+                        const cursorY = term.buffer.active.cursorY;
+                        const numLinesToCheck = 5;
+                        const startLine = Math.max(0, baseY + cursorY - numLinesToCheck);
+                        
+                        for (let i = startLine; i <= baseY + cursorY; i++) {
+                            const line = term.buffer.active.getLine(i);
+                            if (line) {
+                                const text = line.translateToString(true).trim();
+                                recentText += text + '\n';
+                                if (text.match(/(\? |> |\(y\/n\)|\[y\/N\]|Select |Choose |Approve\?)/i) || text.endsWith('❯')) {
+                                    isInteractive = true;
+                                }
+                            }
+                        }
+                        
+                        if (isInteractive) {
+                            const toggleBtn = document.getElementById('toggle-tui-btn');
+                            if (toggleBtn) {
+                                toggleBtn.click(); // Auto-expand
+                            }
+                        }
+                    }
+                }, 50);
             }
         }
     }
