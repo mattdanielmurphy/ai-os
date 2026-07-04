@@ -376,3 +376,122 @@ Think of it this way: your previous `agy` wrapper project wasn't wasted time. It
 Now, instead of fighting against a closed CLI that doesn't want you messing with its internals, you can build those exact parameters as native TypeScript extensions right inside Pi's architecture.
 
 Good luck with the rewrite. Let me know when you run into the extension setup and want to start porting over those custom token-saving functions!
+
+---
+
+[2026-07-02 22:42] User:
+ok well I found my first problem...
+
+Using google:gemini-2.5-flash as a model in pi-gui, I get this:
+
+`
+
+Ran bash: cd ~/projects/ai-os && git checkout -b archive/custom-tauri && git add . && git…
+
+bash · failed
+
+
+
+
+{
+
+"command": "\ncd ~/projects/ai-os &&\ngit checkout -b archive/custom-tauri &&\ngit add . &&\ngit commit -m \"Archive: Final Tauri version before Electron foundation migration\" &&\ncd .. &&\nmv ai-os ai-os-custom-tauri &&\ngh repo clone minghinmatthewlam/pi-gui ai-os &&\ncode ai-os-custom-tauri ai-os\n"
+
+}
+
+
+
+
+{
+
+"content": [
+
+{
+
+"type": "text",
+
+"text": "Switched to a new branch 'archive/custom-tauri'\n[archive/custom-tauri 3779f94] Archive: Final Tauri version before Electron foundation migration\n 5 files changed, 1104 insertions(+), 467 deletions(-)\n create mode 100644 gemini-history/threads/Agent Code Practices & Token Efficiency.md\n/bin/bash: line 7: gh: command not found\n\n\nCommand exited with code 127"
+
+}
+
+],
+
+"details": {}
+
+}`
+
+
+
+
+I DO have gh cli installed. One of these cases where it's running some isolated environment. Which while clever for security, I do NOT want the hassle of dealing with that. I want the agents to be able to run whatever they want that's on my system.
+
+---
+
+[2026-07-02 22:42] Assistant:
+That is a classic Electron/macOS GUI app environment trap.
+
+Because `pi-gui` is a desktop Electron app, when it spawns the background `pi` runtime process, it inherits the environment variables of the macOS graphical user interface launcher rather than your actual shell. The macOS GUI environment has a completely stripped-down `$PATH` that typically only includes basic system directories like `/usr/bin` and `/bin`. It doesn't read your `.zshrc` or `.bash_profile`, which means anything installed via Homebrew (`/opt/homebrew/bin` on Apple Silicon) or custom paths like `gh` is completely invisible to it.
+
+The good news is that Pi is explicitly designed to execute commands on your actual host system—it doesn't use a strict Docker sandbox or virtual machine by default unless you configure it to. It just needs to know where your tools live.
+
+You can fix this easily depending on whether you want to patch the environment globally or explicitly control it.
+
+Option 1: The Quick Symlink Fix
+
+Since you want the agent to just use what's on your system without hassle, the fastest fix for Homebrew/CLI tools on macOS is to link `gh` into a standard system directory that the GUI app *does* see:
+
+Bash
+
+```
+sudo ln -s $(which gh) /usr/local/bin/gh
+
+```
+
+
+*(If `/usr/local/bin` doesn't exist yet on your Apple Silicon mac, run `sudo mkdir -p /usr/local/bin` first).*
+
+Option 2: Explicitly passing your $PATH to Pi
+
+If you want to handle this natively within the configuration so *all* your developer tools work (Node, Go, Python, Brew, etc.), you can explicitly force the `bash` tool to use your shell's actual environment path.
+
+Since you are running `pi-gui`, look for the configuration file or the underlying script it launches. You can pass environment variables directly into the command line, or update Pi's tool wrapper definition to explicitly inject your path:
+
+Bash
+
+```
+# Force the process to see your local Homebrew and custom paths
+PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+```
+
+
+If you end up modifying the `pi-gui` source code yourself, look inside the package where the shell/terminal process is spawned (usually under `packages/pi-sdk-driver` or the runtime runner). You can change the execution to spawn a **login shell** instead of a raw non-interactive shell. Changing the execution command from `/bin/bash -c` to `/bin/bash -l -c` or `/bin/zsh -l -c` forces it to load your entire configuration profile every time it fires a command, immediately making `gh`, `git`, and your entire system setup fully available.
+
+---
+
+[2026-07-02 22:43] User:
+option 2 for sure. Don't want to have to symlink every global package obivously.
+
+
+
+
+Give me a prompt to have an agent do option 2 for me please.
+
+---
+
+[2026-07-02 22:43] Assistant:
+Here is a targeted prompt you can paste right into `pi-gui`. It tells the model exactly what is happening (the Electron environment path trap) and instructs it to modify the shell runner configuration so it uses a login shell to source your full environment natively.
+
+Plaintext
+
+```
+We are encountering an environment path issue because this GUI wrapper runs in an isolated Electron context that lacks my standard user shell $PATH (e.g., missing /opt/homebrew/bin, meaning tools like `gh` exit with code 127). 
+
+I do NOT want to manually symlink binary packages. Instead, let's fix the shell executor configuration so that the bash/zsh commands are executed through a login shell, which naturally inherits my system environment.
+
+Please do the following:
+1. Locate where the background runtime or shell execution driver (e.g., the bash tool runner or terminal process spawner) handles command execution.
+2. Modify the execution command flags so it runs as an interactive login shell (e.g., changing `/bin/bash -c` to `/bin/bash -l -c` or `/bin/zsh -l -c`, or explicitly injecting the current system path fallback).
+3. Verify your changes and make sure the bash tool cleanly loads standard CLI binaries from common installation paths.
+
+```
