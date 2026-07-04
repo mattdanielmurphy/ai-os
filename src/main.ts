@@ -342,8 +342,8 @@ const term = new Terminal({
 const fitAddon = new FitAddon()
 term.loadAddon(fitAddon)
 
-const handleLink = (_e: MouseEvent, uri: string) => {
-    if (true) {
+const handleLink = (e: MouseEvent, uri: string) => {
+    if (e.metaKey) {
         let finalUri = uri
 
         // Handle web URLs
@@ -449,6 +449,16 @@ term.onData((data) => {
 })
 
 term.attachCustomKeyEventHandler((e) => {
+    if (e.key === 'v' && e.metaKey && e.type === 'keydown') {
+        navigator.clipboard.readText().then((text) => {
+            invoke('write_to_pty', {
+                data: text,
+                projectPath: activeProject,
+                terminalType: currentEngine,
+            }).catch(console.error)
+        })
+        return false
+    }
     if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
         e.preventDefault()
         invoke('write_to_pty', {
@@ -528,6 +538,16 @@ miniTerm.onData((data) => {
 })
 
 miniTerm.attachCustomKeyEventHandler((e) => {
+    if (e.key === 'v' && e.metaKey && e.type === 'keydown') {
+        navigator.clipboard.readText().then((text) => {
+            invoke('write_to_pty', {
+                data: text,
+                projectPath: activeProject,
+                terminalType: 'mini',
+            }).catch(console.error)
+        })
+        return false
+    }
     if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
         e.preventDefault()
         invoke('write_to_pty', {
@@ -551,8 +571,17 @@ const exitTerminalMode = () => {
 }
 
 const resizePty = () => {
-    fitAddon.fit()
-    miniFitAddon.fit()
+    try {
+        fitAddon.fit()
+        if (term.element && term.element.clientHeight > 0) {
+            // Force redraw to fix disappearing terminal issue
+            const r = term.rows;
+            term.resize(term.cols, r);
+        }
+    } catch(e) {}
+    try {
+        miniFitAddon.fit()
+    } catch(e) {}
     invoke('resize_pty', {
         rows: term.rows,
         cols: term.cols,
