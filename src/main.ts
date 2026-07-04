@@ -645,6 +645,7 @@ interface ToolCallItem {
     actionSummary: string
     icon: string
     targetPath?: string
+    args?: any
 }
 
 interface RenderBlock {
@@ -653,6 +654,7 @@ interface RenderBlock {
     calls?: ToolCallItem[]
     historicalContext?: string
     threadId?: string
+    thought?: string
 }
 
 const renderer = {
@@ -674,9 +676,9 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
     const blocks: RenderBlock[] = []
     let currentToolCalls: ToolCallItem[] = []
 
-    const flushToolCalls = () => {
-        if (currentToolCalls.length > 0) {
-            blocks.push({ type: 'tool_calls', calls: [...currentToolCalls] })
+    const flushToolCalls = (thought?: string) => {
+        if (currentToolCalls.length > 0 || thought) {
+            blocks.push({ type: 'tool_calls', calls: [...currentToolCalls], thought })
             currentToolCalls = []
         }
     }
@@ -812,6 +814,7 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
                         actionSummary,
                         icon,
                         targetPath: targetPath || undefined,
+                        args: call.args
                     })
                 })
             }
@@ -821,8 +824,23 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
                 step.type === 'PLANNER_RESPONSE' &&
                 step.content
             ) {
-                flushToolCalls()
-                blocks.push({ type: 'planner_response', content: step.content })
+                let thoughtProcess = undefined;
+                const thoughtMatch = step.content.match(/<thought>([\s\S]*?)<\/thought>/i);
+                if (thoughtMatch) {
+                    thoughtProcess = thoughtMatch[1].trim();
+                    step.content = step.content.replace(/<thought>[\s\S]*?<\/thought>/i, '').trim();
+                }
+
+                if (currentToolCalls.length > 0 || thoughtProcess) {
+                    flushToolCalls(thoughtProcess);
+                } else {
+                    flushToolCalls();
+                }
+                
+                const cleanedContent = step.content.replace(/<THREAD_NAME>[\s\S]*?<\/THREAD_NAME>/ig, '').trim();
+                if (cleanedContent) {
+                    blocks.push({ type: 'planner_response', content: cleanedContent })
+                }
             }
         }
     })
@@ -836,11 +854,21 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
             const displayPath = formatPathForUser(call.targetPath)
             pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="ts-html-element-3" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
         }
+        
+        let argsHtml = ''
+        if (call.args) {
+            const argsStr = JSON.stringify(call.args, null, 2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            argsHtml = `<pre style="font-size: 0.7rem; color: var(--text-muted); background: rgba(0,0,0,0.1); padding: 4px; border-radius: 4px; margin-top: 4px; white-space: pre-wrap; word-break: break-all; width: 100%; box-sizing: border-box;"><code>${argsStr}</code></pre>`
+        }
+
         return `
             <div class="unified-tool-call-row">
-                <div class="unified-tool-call-info">
-                    <span>${call.icon}</span>
-                    <span class="tool-summary">${call.actionSummary}</span>${pathHtml}
+                <div class="unified-tool-call-info" style="flex-direction: column; align-items: flex-start; width: 100%;">
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <span>${call.icon}</span>
+                        <span class="tool-summary" style="margin-left: 8px;">${call.actionSummary}</span>${pathHtml}
+                    </div>
+                    ${argsHtml}
                 </div>
             </div>
         `
@@ -892,21 +920,36 @@ ${block.historicalContext}
                 </div>
             </div>
             `
-        } else if (block.type === 'tool_calls' && block.calls && block.calls.length > 0) {
+        } else if (block.type === 'tool_calls' && (block.calls?.length || block.thought)) {
             const isLast = block === lastToolCallsBlock;
             const shouldOpen = isLast && isThinking;
             const boxId = isLast ? 'unified-tool-calls-box' : `tool-calls-box-${Math.random().toString(36).substr(2, 9)}`;
             const listId = isLast ? 'unified-tool-calls-list' : `tool-calls-list-${Math.random().toString(36).substr(2, 9)}`;
+            
+            let callsHtml = '';
+            if (block.calls && block.calls.length > 0) {
+                callsHtml = block.calls.map(renderToolCallHtml).join('');
+            }
+            
+            let thoughtHtml = '';
+            if (block.thought) {
+                const escapedThought = block.thought.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                thoughtHtml = `<div class="agent-thought" style="padding: 8px; font-size: 0.8rem; color: var(--text-muted); background: rgba(0,0,0,0.05); border-left: 2px solid var(--primary, #5645c5); margin-bottom: 8px; white-space: pre-wrap;">${escapedThought}</div>`;
+            }
+
+            const headerText = (block.calls && block.calls.length > 0) ? `Tool Calls (${block.calls.length})` : `Agent Thinking...`;
+
             html += `
             <div class="chat-message agent tool-call-group" style="margin-top: 16px;">
                 <div class="message-content" style="width: 100%;">
                     <details class="group tool-calls-box" id="${boxId}" ${shouldOpen ? 'open' : ''}>
                         <summary class="historical-summary">
-                            <span>Tool Calls (${block.calls.length})</span>
+                            <span>${headerText}</span>
                             <span class="toggle-icon">▶</span>
                         </summary>
                         <div class="historical-details unified-tool-calls-list" id="${listId}" style="max-height: 50vh; overflow-y: auto;">
-                            ${block.calls.map(renderToolCallHtml).join('')}
+                            ${thoughtHtml}
+                            ${callsHtml}
                         </div>
                     </details>
                 </div>
@@ -1568,14 +1611,15 @@ const renderProjects = () => {
                 }
 
                 const placeholderEl = document.createElement('div')
-                placeholderEl.className = 'thread-placeholder-item group'
+                placeholderEl.className = 'thread-history-item active group'
                 placeholderEl.innerHTML = `
-                    <div class="ts-html-element-45">
-                        <span class="ts-html-element-46">#New Thread...</span>
-                        <span class="ts-html-element-47">Just now</span>
+                <div class="thread-info">
+                    <div class="thread-header">
+                        <span class="thread-date">Just now</span>
                     </div>
-                    <div class="ts-html-element-48" title="New Thread">New Thread</div>
-                    <div class="ts-html-element-49">Starting...</div>
+                    <div class="thread-title" title="New Thread">New Thread</div>
+                    <div class="thread-snippet" title="Starting...">Starting...</div>
+                </div>
                 `
                 threadsList.prepend(placeholderEl)
 
@@ -1588,7 +1632,7 @@ const renderProjects = () => {
                         .forEach((child) => {
                             child.className = 'thread-history-item-alt group'
                         })
-                    placeholderEl.className = 'thread-placeholder-item-active group'
+                    placeholderEl.className = 'thread-history-item active group'
 
                     const previewPane = document.getElementById(
                         'markdown-preview-pane'
@@ -2574,9 +2618,9 @@ textarea?.addEventListener('keydown', async (e) => {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
             const blockHtml = `
-            <div class="ts-html-element-65">
-                <div class="ts-html-element-66">
-${escapedInput}
+            <div class="chat-message user">
+                <div class="message-content group">
+                    <div class="text-content">${escapedInput}</div>
                 </div>
             </div>`
             previewPane.innerHTML += blockHtml

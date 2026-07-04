@@ -698,7 +698,6 @@ textarea {
 .thread-history-item-alt.active,
 .thread-placeholder-item-active {
   background: rgba(86, 69, 197, 0.2);
-  color: var(--primary);
   border-left: 2px solid var(--primary);
 }
 
