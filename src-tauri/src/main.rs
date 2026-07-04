@@ -1277,15 +1277,24 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
     let mut title = latest_thread_id.to_string();
     let mut snippet = String::new();
 
-    if let Some(start_idx) = content.find("<THREAD_NAME>") {
-        if let Some(end_idx) = content[start_idx..].find("</THREAD_NAME>") {
-            title = content[start_idx + 13..start_idx + end_idx].trim().to_string();
-        }
-    }
+    let mut found_title = false;
 
     for line in content.lines() {
         if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-            if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
+            let msg_type = obj.get("type").and_then(|v| v.as_str());
+            
+            if msg_type == Some("PLANNER_RESPONSE") && !found_title {
+                if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
+                    if let Some(start_idx) = content_str.find("<THREAD_NAME>") {
+                        if let Some(end_idx) = content_str[start_idx..].find("</THREAD_NAME>") {
+                            title = content_str[start_idx + 13..start_idx + end_idx].trim().to_string();
+                            found_title = true;
+                        }
+                    }
+                }
+            }
+            
+            if msg_type == Some("USER_INPUT") && snippet.is_empty() {
                 if let Some(prompt_content) = obj.get("content").and_then(|v| v.as_str()) {
                     let mut raw_prompt = prompt_content.to_string();
                     if let Some(start_idx) = raw_prompt.find("<USER_REQUEST>") {
@@ -1308,20 +1317,25 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                     
                     let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
                     let char_count = clean_prompt.chars().count();
-                    if title == latest_thread_id.to_string() {
+                    
+                    if !found_title {
                         title = if char_count > 40 {
                             format!("{}...", clean_prompt.chars().take(40).collect::<String>())
                         } else {
                             clean_prompt.clone()
                         };
                     }
+                    
                     snippet = if char_count > 120 {
                         format!("{}...", clean_prompt.chars().take(120).collect::<String>())
                     } else {
                         clean_prompt
                     };
-                    break;
                 }
+            }
+            
+            if found_title && !snippet.is_empty() {
+                break;
             }
         }
     }

@@ -7,6 +7,7 @@
   --panel-bg: rgba(255, 255, 255, 0.05);
   --border-color: rgba(255, 255, 255, 0.1);
   --primary: #5645C5;
+  --primary-bright: #6a55f1;
   --primary-hover: #6c5be0;
   --text-main: #f0f0f5;
   --text-muted: #a0a0b0;
@@ -86,6 +87,11 @@ button {
   background: none;
   font-family: inherit;
   color: inherit;
+}
+
+a {
+  color: var(--primary-bright);
+  text-decoration: underline;
 }
 
 input,
@@ -778,6 +784,11 @@ textarea {
   justify-content: flex-start;
 }
 
+.chat-message.agent.tool-call {
+  height: auto;
+  padding: 0;
+}
+
 .message-content {
   max-width: 80%;
   padding: 12px 16px;
@@ -811,8 +822,10 @@ textarea {
   word-wrap: break-word;
 }
 
-.message-content.prose ul, .message-content.prose ol,
-.text-content ul, .text-content ol {
+.message-content.prose ul,
+.message-content.prose ol,
+.text-content ul,
+.text-content ol {
   padding-left: 24px;
   margin-top: 4px;
   margin-bottom: 4px;
