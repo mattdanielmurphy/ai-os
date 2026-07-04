@@ -667,20 +667,23 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0px;
+  max-height: 50vh;
+  overflow-y: auto;
 }
 
 .thread-history-item,
 .thread-history-item-alt,
 .thread-placeholder-item,
 .thread-placeholder-item-active {
-  padding: 2px 4px;
+  padding: 1px 4px;
   border-radius: 4px;
   cursor: pointer;
+  user-select: none;
   font-size: 0.85rem;
   color: var(--text-muted);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0px;
   transition: all 0.2s;
 }
 
@@ -691,12 +694,16 @@ textarea {
   color: var(--text-main);
 }
 
-.thread-history-item.active {
-  background: rgba(86, 69, 197, 0.1);
+.thread-history-item.active,
+.thread-history-item-alt.active,
+.thread-placeholder-item-active {
+  background: rgba(86, 69, 197, 0.2);
   color: var(--primary);
+  border-left: 2px solid var(--primary);
 }
 
-.thread-history-item.active * {
+.thread-history-item.active *,
+.thread-history-item-alt.active * {
   color: inherit !important;
 }
 
@@ -711,7 +718,7 @@ textarea {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  gap: 2px;
+  gap: 0px;
   flex: 1;
 }
 
@@ -719,7 +726,7 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 
@@ -813,7 +820,7 @@ textarea {
 }
 
 .message-content {
-  max-width: 80%;
+  max-width: 80ch;
   padding: 12px 16px;
   border-radius: 8px;
   position: relative;
@@ -893,7 +900,12 @@ textarea {
   margin-top: 12px;
   font-size: 0.85rem;
   white-space: pre-wrap;
-  max-width: 65ch;
+  display: flex;
+  flex-direction: column;
+}
+
+.unified-tool-call-row {
+  padding: 4px 0;
 }
 
 .toggle-icon {
