@@ -1037,9 +1037,6 @@ const renderCustomTuiLog = (jsonlContent: string) => {
         }
     }
 
-    if (!isThinking && pauseStatus === 'Running') {
-        isThinking = true;
-    }
 
     // 3. Timeline Steps
     html += buildTimelineHtml(steps, isThinking)
@@ -1054,7 +1051,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
                 </div>
                 <span class="ts-html-element-32">Agent is thinking & working...</span>
             </div>
-            <div id="live-stream-pane" style="margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 13px; color: #a1a1aa; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; overflow-x: auto; max-height: 400px; overflow-y: auto;">${liveAgyStream.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <div id="live-stream-pane" class="live-stream-pane">${liveAgyStream.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         </div>
         `
     }
