@@ -29,6 +29,7 @@ We should see that markdown block rendered properly, and newlines actually just 
 - we have to never use a thread name like "Continuing conversation from history" which is what `agy` apparently picks as the thread name? If the newest thread in the collection of threads that we call ai-os threads
 
 - I think we should establish a clear nomenclature: ai-os threads: ie, the user-facing threads which, because we run `/clear` all the time just so we can compactify the context for EVERY message, but maintain a thread nonetheless by passing the context off; and then we have agy threads, because technically with running `/clear`, *to agy's perspective* we're creating a new thread all the time... so I mean, they're both "threads" in equal rights, and it feels wrong not to call them anything else. I think maybe I just want it to be documented in this app, in a way where agents operating on this project read this documentation, and they know: "agy thread" is a specific thing and "ai-os thread", or simply "thread" is another
+  
 - when continuing a thread (auto-clear off), you don't have to inject system instructions into the prompt, because they haven't changed since the start of the thread, and we can assume the the system instructions are already in the thread. We only inject system instructions into brand new threads, aka when auto-clear is enabled.
 
 
@@ -36,3 +37,31 @@ We should see that markdown block rendered properly, and newlines actually just 
 Obviously you'll change the corresponding css selector if it exists.
 
 - If I type /queue, that should put a message into the queue for THIS thread, running `/clear` first UNLESS the user unchecked it.
+
+- tool calls box STILL auto-folds and fights the user expanding it when they shouldn't be.
+  while the agent works, the tool calls box is expanded by default. I don't know how many times I need to say it
+
+- there's still a ton of information missing from the preview window. With ctrl-o mode, you can see all these thoughts; and I'd like to see them in a log on the screen interleaved with the tool calls (if that's hard, separated is fine too)
+```
+▾ Thought for 2s, 775 tokens
+  Prioritizing Tool Usage
+
+  I'm now focusing on tool selection, emphasizing specific tools over general ones where possible. The goal is to optimize efficiency
+  by leveraging tools tailored to particular tasks, like viewing files. This strategy promises a more targeted and less error-prone
+  approach to problem-solving, which I will continue to refine and implement moving forward.
+
+
+  Refining Tool Application
+
+  I'm now integrating new rules: avoid `cat` for file operations, favoring `grep_search` and other specialized tools. Before tool
+  execution, I'll explicitly list related tools, ensuring the chosen set is optimal. My current focus involves debugging a terminal
+  resize issue, examining the `fitAddon.fit()` call to understand the root cause of repeated top lines.
+
+
+  Investigating Resize Interactions
+
+  I'm now investigating a potential conflict with terminal resizing. It seems calling `term.resize()` manually after `fitAddon.fit()`
+  might be redundant, potentially triggering resize events and impacting the terminal's rendering. I'm considering that incorrect
+  rows/cols passed to the PTY via `invoke('resize_pty')`, especially within a `tmux` session, could be the root of the garbled output
+  observed by the user. I'll examine the calls to `invoke('resize_pty')` more closely for now.
+```

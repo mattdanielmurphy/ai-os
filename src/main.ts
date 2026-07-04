@@ -429,6 +429,7 @@ term.onData((data) => {
         console.error('Failed to write key to Engine PTY:', err)
     })
 
+
     // Auto-adjust terminal height when user starts typing a slash command
     setTimeout(() => {
         const cursorLine = term.buffer.active.getLine(
@@ -446,6 +447,19 @@ term.onData((data) => {
             }
         }
     }, 20)
+})
+
+term.onResize(({ cols, rows }) => {
+    if (cols > 0 && rows > 0) {
+        invoke('resize_pty', {
+            rows,
+            cols,
+            projectPath: activeProject,
+            terminalType: 'engine',
+        }).catch((err) => {
+            console.error('Failed to resize Engine PTY:', err)
+        })
+    }
 })
 
 term.attachCustomKeyEventHandler((e) => {
@@ -537,6 +551,19 @@ miniTerm.onData((data) => {
     }
 })
 
+miniTerm.onResize(({ cols, rows }) => {
+    if (cols > 0 && rows > 0) {
+        invoke('resize_pty', {
+            rows,
+            cols,
+            projectPath: activeProject,
+            terminalType: 'mini',
+        }).catch((err) => {
+            console.error('Failed to resize Mini PTY:', err)
+        })
+    }
+})
+
 miniTerm.attachCustomKeyEventHandler((e) => {
     if (e.key === 'v' && e.metaKey && e.type === 'keydown') {
         navigator.clipboard.readText().then((text) => {
@@ -571,33 +598,16 @@ const exitTerminalMode = () => {
 }
 
 const resizePty = () => {
-    try {
-        fitAddon.fit()
-        if (term.element && term.element.clientHeight > 0) {
-            // Force redraw to fix disappearing terminal issue
-            const r = term.rows;
-            term.resize(term.cols, r);
-        }
-    } catch(e) {}
-    try {
-        miniFitAddon.fit()
-    } catch(e) {}
-    invoke('resize_pty', {
-        rows: term.rows,
-        cols: term.cols,
-        projectPath: activeProject,
-        terminalType: 'engine',
-    }).catch((err) => {
-        console.error('Failed to resize Engine PTY:', err)
-    })
-    invoke('resize_pty', {
-        rows: miniTerm.rows,
-        cols: miniTerm.cols,
-        projectPath: activeProject,
-        terminalType: 'mini',
-    }).catch((err) => {
-        console.error('Failed to resize Mini PTY:', err)
-    })
+    if (term.element && term.element.clientWidth > 0 && term.element.clientHeight > 0) {
+        try {
+            fitAddon.fit()
+        } catch(e) {}
+    }
+    if (miniTerm.element && miniTerm.element.clientWidth > 0 && miniTerm.element.clientHeight > 0) {
+        try {
+            miniFitAddon.fit()
+        } catch(e) {}
+    }
 }
 
 let resizePtyTimeout: any = null
@@ -861,7 +871,7 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
             try {
                 if (typeof call.args === 'object' && call.args !== null) {
                     for (const [key, value] of Object.entries(call.args)) {
-                        let displayValue = value;
+                        let displayValue: any = value;
                         let isMultiline = false;
                         
                         if (typeof displayValue === 'string') {
