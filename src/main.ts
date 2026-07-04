@@ -861,16 +861,28 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
             try {
                 if (typeof call.args === 'object' && call.args !== null) {
                     for (const [key, value] of Object.entries(call.args)) {
-                        if (typeof value === 'string' && value.includes('\n')) {
-                            const parsedHtml = marked.parse(value) as string;
-                            argsListHtml += `<div style="margin-top: 4px;"><strong>${key}:</strong><div class="prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border" style="margin-top: 4px; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid rgba(0,0,0,0.05); overflow-x: auto;">${parsedHtml}</div></div>`
-                        } else if (typeof value === 'string') {
-                            argsListHtml += `<div><strong>${key}:</strong> <span style="color: var(--text-muted);">${value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></div>`
+                        let displayValue = value;
+                        let isMultiline = false;
+                        
+                        if (typeof displayValue === 'string') {
+                            if (displayValue.includes('\\n')) {
+                                displayValue = displayValue.replace(/\\n/g, '\n');
+                            }
+                            if (displayValue.includes('\n')) {
+                                isMultiline = true;
+                            }
+                        }
+
+                        if (isMultiline) {
+                            const parsedHtml = marked.parse(displayValue as string) as string;
+                            argsListHtml += `<tr><td style="vertical-align: top; padding: 4px 8px 4px 0; font-weight: 600; color: var(--text-muted); width: 120px; word-break: break-word;">${key}</td><td style="padding: 4px 0;"><div class="prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border" style="padding: 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid rgba(0,0,0,0.05); overflow-x: auto; width: 100%; box-sizing: border-box;">${parsedHtml}</div></td></tr>`
+                        } else if (typeof displayValue === 'string') {
+                            argsListHtml += `<tr><td style="vertical-align: top; padding: 4px 8px 4px 0; font-weight: 600; color: var(--text-muted); width: 120px; word-break: break-word;">${key}</td><td style="padding: 4px 0; word-break: break-word;"><span style="color: var(--text-muted);">${displayValue.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></td></tr>`
                         } else {
-                            argsListHtml += `<div><strong>${key}:</strong> <pre style="display:inline; margin:0; padding:2px 4px; font-size:0.8em; background: rgba(0,0,0,0.05); border-radius: 4px;"><code>${JSON.stringify(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre></div>`
+                            argsListHtml += `<tr><td style="vertical-align: top; padding: 4px 8px 4px 0; font-weight: 600; color: var(--text-muted); width: 120px; word-break: break-word;">${key}</td><td style="padding: 4px 0; word-break: break-word;"><pre style="display:inline; margin:0; padding:2px 4px; font-size:0.8em; background: rgba(0,0,0,0.05); border-radius: 4px;"><code>${JSON.stringify(displayValue).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre></td></tr>`
                         }
                     }
-                    argsHtml = `<div style="font-size: 0.85rem; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; width: 100%; box-sizing: border-box;">${argsListHtml}</div>`
+                    argsHtml = `<table style="font-size: 0.85rem; margin-top: 8px; width: 100%; border-collapse: collapse; table-layout: fixed;"><tbody>${argsListHtml}</tbody></table>`
                 } else {
                     throw new Error("Not an object");
                 }
@@ -881,11 +893,11 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
         }
 
         return `
-            <div class="unified-tool-call-row">
+            <div class="unified-tool-call-row" style="border: 1px solid rgba(128,128,128,0.2); border-radius: 6px; padding: 8px; margin-bottom: 8px; background: rgba(128,128,128,0.02);">
                 <div class="unified-tool-call-info" style="flex-direction: column; align-items: flex-start; width: 100%;">
-                    <div style="display: flex; align-items: center; width: 100%;">
+                    <div style="display: flex; align-items: center; width: 100%; margin-bottom: 4px;">
                         <span>${call.icon}</span>
-                        <span class="tool-summary" style="margin-left: 8px;">${call.actionSummary}</span>${pathHtml}
+                        <span class="tool-summary" style="margin-left: 8px; font-weight: 500;">${call.actionSummary}</span>${pathHtml}
                     </div>
                     ${argsHtml}
                 </div>
