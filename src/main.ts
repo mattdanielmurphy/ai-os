@@ -672,7 +672,6 @@ marked.use({ renderer });
 
 const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
     const blocks: RenderBlock[] = []
-    let allToolCalls: ToolCallItem[] = []
     let currentToolCalls: ToolCallItem[] = []
 
     const flushToolCalls = () => {
@@ -808,7 +807,7 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
                         else if (typeof call.args.SearchPath === 'string') targetPath = call.args.SearchPath
                     }
 
-                    allToolCalls.push({
+                    currentToolCalls.push({
                         name: call.name,
                         actionSummary,
                         icon,
@@ -822,10 +821,13 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
                 step.type === 'PLANNER_RESPONSE' &&
                 step.content
             ) {
+                flushToolCalls()
                 blocks.push({ type: 'planner_response', content: step.content })
             }
         }
     })
+
+    flushToolCalls()
 
     let html = ''
     const renderToolCallHtml = (call: ToolCallItem) => {
@@ -842,6 +844,14 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
                 </div>
             </div>
         `
+    }
+
+    let lastToolCallsBlock = null;
+    for (let i = blocks.length - 1; i >= 0; i--) {
+        if (blocks[i].type === 'tool_calls') {
+            lastToolCallsBlock = blocks[i];
+            break;
+        }
     }
 
     blocks.forEach((block) => {
@@ -882,26 +892,29 @@ ${block.historicalContext}
                 </div>
             </div>
             `
+        } else if (block.type === 'tool_calls' && block.calls && block.calls.length > 0) {
+            const isLast = block === lastToolCallsBlock;
+            const shouldOpen = isLast && isThinking;
+            const boxId = isLast ? 'unified-tool-calls-box' : `tool-calls-box-${Math.random().toString(36).substr(2, 9)}`;
+            const listId = isLast ? 'unified-tool-calls-list' : `tool-calls-list-${Math.random().toString(36).substr(2, 9)}`;
+            html += `
+            <div class="chat-message agent tool-call-group" style="margin-top: 16px;">
+                <div class="message-content" style="width: 100%;">
+                    <details class="group tool-calls-box" id="${boxId}" ${shouldOpen ? 'open' : ''}>
+                        <summary class="historical-summary">
+                            <span>Tool Calls (${block.calls.length})</span>
+                            <span class="toggle-icon">▶</span>
+                        </summary>
+                        <div class="historical-details unified-tool-calls-list" id="${listId}" style="max-height: 50vh; overflow-y: auto;">
+                            ${block.calls.map(renderToolCallHtml).join('')}
+                        </div>
+                    </details>
+                </div>
+            </div>
+            `
         }
     })
 
-    if (allToolCalls.length > 0) {
-        html += `
-        <div class="chat-message agent tool-call-group" style="margin-top: 16px;">
-            <div class="message-content" style="width: 100%;">
-                <details class="group tool-calls-box" id="unified-tool-calls-box" ${isThinking ? 'open' : ''}>
-                    <summary class="historical-summary">
-                        <span>All Tool Calls (${allToolCalls.length})</span>
-                        <span class="toggle-icon">▶</span>
-                    </summary>
-                    <div class="historical-details unified-tool-calls-list" id="unified-tool-calls-list" style="${isThinking ? 'max-height: 50vh; overflow-y: auto;' : 'max-height: 300px; overflow-y: auto;'}">
-                        ${allToolCalls.map(renderToolCallHtml).join('')}
-                    </div>
-                </details>
-            </div>
-        </div>
-        `
-    }
 
     return html
 }

@@ -10,7 +10,13 @@ When the agent finishes the task, unless the user is actively interacting with t
 
 ## In Progress
 The tool calls box closes as soon as more output is added, aka while the agent works.
-The tool calls box should actually be expanded while the agent works, and only co
+The tool calls box should actually be expanded while the agent works, and only collapse when it's done AND NO LONGER WORKING.
+It should start expanded, but have a max-height of 50vh.
+
+right now: if an output is given by the agent, it's considered "done" by my app's logic, and the tool calls are moved beneath the output for some reason.
+They can stay on top of the output please.
+And they're not automatically done if they've given an output. They sometimes continue, and give further output.
+In which case, we should have a group of tool calls above the first output, then a second group of tool calls, and then the second output. 
 
 ## To do
 when continuing a thread (auto-clear off), you don't have to inject system instructions into the prompt, because they haven't changed since the start of the thread, and we can assume the the system instructions are already in the thread. We only inject system instructions into brand new threads, aka when auto-clear is enabled.
