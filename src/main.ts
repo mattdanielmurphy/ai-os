@@ -953,6 +953,7 @@ ${block.historicalContext}
 
 let lastRenderedThreadLog = ''
 let lastRenderedThreadId = ''
+let liveAgyStream = ''
 
 const renderCustomTuiLog = (jsonlContent: string) => {
     if (!markdownPreviewPane) return
@@ -1047,6 +1048,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
                 </div>
                 <span class="ts-html-element-32">Agent is thinking & working...</span>
             </div>
+            <div id="live-stream-pane" style="margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 13px; color: #a1a1aa; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; overflow-x: auto; max-height: 400px; overflow-y: auto;">${liveAgyStream.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         </div>
         `
     }
@@ -1094,6 +1096,9 @@ setInterval(async () => {
                 content !== lastRenderedThreadLog ||
                 activeThreadId !== lastRenderedThreadId
             ) {
+                if (content !== lastRenderedThreadLog || activeThreadId !== lastRenderedThreadId) {
+                    liveAgyStream = ''
+                }
                 lastRenderedThreadLog = content
                 lastRenderedThreadId = activeThreadId
                 renderCustomTuiLog(content)
@@ -1141,6 +1146,22 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
         }
 
         if (project_path === activeProject) {
+            if (terminal_type === 'agy') {
+                const stripped = data.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '')
+                liveAgyStream += stripped
+                if (liveAgyStream.length > 20000) {
+                    liveAgyStream = liveAgyStream.substring(liveAgyStream.length - 10000)
+                }
+                const streamPane = document.getElementById('live-stream-pane')
+                if (streamPane) {
+                    streamPane.textContent = liveAgyStream
+                    const previewPane = document.getElementById('markdown-preview-pane')
+                    if (previewPane) {
+                        previewPane.scrollTop = previewPane.scrollHeight
+                    }
+                }
+            }
+
             if (terminal_type === 'mini') {
                 try { miniTerm.write(data) } catch (e) {}
             } else if (terminal_type === currentEngine) {
