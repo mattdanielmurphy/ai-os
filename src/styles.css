@@ -720,13 +720,6 @@ textarea {
   gap: 8px;
 }
 
-.thread-id {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-main);
-}
 
 .thread-date {
   font-size: 0.7rem;

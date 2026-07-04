@@ -1938,7 +1938,6 @@ const renderProjectThreads = async (
             el.innerHTML = `
                 <div class="thread-info">
                     <div class="thread-header">
-                        <span class="thread-id">#${thread.id.substring(0, 8)}</span>
                         <span class="thread-date">${dateStr}</span>
                     </div>
                     <div class="thread-title" title="${thread.title}">${thread.title}</div>
