@@ -1,0 +1,28 @@
+@@ -829,6 +829,18 @@
+     }
+ }
+ 
++#[tauri::command]
++fn read_thread_notes_file() -> Result<String, String> {
++    let path = "/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md";
++    std::fs::read_to_string(path).map_err(|e| e.to_string())
++}
++
++#[tauri::command]
++fn write_thread_notes_file(content: String) -> Result<(), String> {
++    let path = "/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md";
++    std::fs::write(path, content).map_err(|e| e.to_string())
++}
++
+ #[derive(serde::Serialize, serde::Deserialize, Clone)]
+ struct ThreadLog {
+     id: String,
+@@ -2279,6 +2291,8 @@
+             sync_settings,
+             delete_project_thread,
+             load_floating_page,
++            read_thread_notes_file,
++            write_thread_notes_file,
+         ])
+         .run(tauri::generate_context!())
+         .expect("error while running tauri application");

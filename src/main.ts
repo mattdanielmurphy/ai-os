@@ -7,6 +7,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { invoke } from '@tauri-apps/api/tauri'
+import { renderThreadNotesSidebar } from './threadNotes'
 import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
 import { WORKER_BEE_RULES, TRIAGE_MODE_RULES } from './systemPromptConfig'
@@ -1660,6 +1661,7 @@ const renderProjects = () => {
                 }
 
                 activeThreadId = null
+                renderThreadNotesSidebar(activeProject, activeThreadId)
                 activeThreadContext = null
                 isWaitingForNewThread = true
                 try {
@@ -2139,6 +2141,7 @@ const renderProjectThreads = async (
                 el.className = 'project-thread-item-active group'
 
                 activeThreadId = thread.id
+                renderThreadNotesSidebar(activeProject, activeThreadId)
                 await selectAgyEngine()
 
                 const previewPane = document.getElementById(
@@ -2216,6 +2219,7 @@ const pollThreadsList = async () => {
             const newestThread = threads[0]
             if (!waitingExistingThreadIds.has(newestThread.id)) {
                 activeThreadId = newestThread.id
+                renderThreadNotesSidebar(activeProject, activeThreadId)
                 isWaitingForNewThread = false
                 waitingExistingThreadIds.clear()
 
