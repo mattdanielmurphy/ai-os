@@ -1192,7 +1192,16 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
         if (project_path === activeProject) {
             if (terminal_type === 'agy') {
                 const stripped = data.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '')
-                liveAgyStream += stripped
+                for (let i = 0; i < stripped.length; i++) {
+                    if (stripped[i] === '\\r') {
+                        const lastNewline = liveAgyStream.lastIndexOf('\\n');
+                        liveAgyStream = liveAgyStream.substring(0, lastNewline + 1);
+                    } else if (stripped[i] === '\\b') {
+                        liveAgyStream = liveAgyStream.slice(0, -1);
+                    } else {
+                        liveAgyStream += stripped[i];
+                    }
+                }
                 if (liveAgyStream.length > 20000) {
                     liveAgyStream = liveAgyStream.substring(liveAgyStream.length - 10000)
                 }
