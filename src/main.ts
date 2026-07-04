@@ -1397,14 +1397,14 @@ const renderProjects = () => {
             threadsHeader.className = 'ts-class-78 '
             threadsHeader.innerHTML = `
                 <span>Threads</span>
-                <button class="ts-html-element-43  new-thread-btn text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
+                <button class="ts-html-element-43 new-thread-btn" title="Start New Thread">+</button>
             `
 
             const threadsList = document.createElement('div')
             threadsList.id = 'project-threads-list'
             threadsList.className = 'ts-class-79 '
             threadsList.innerHTML =
-                '<div class="ts-html-element-44  text-[9px] text-gray-500 italic p-1">Loading...</div>'
+                '<div class="ts-html-element-44 threads-loading">Loading...</div>'
 
             threadsContainer.appendChild(threadsHeader)
             threadsContainer.appendChild(threadsList)

@@ -1,1 +1,0 @@
-/Users/matthewmurphy/.gemini/GEMINI.md

@@ -6440,3 +6440,33 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(3 7 18 / var(--tw-bg-opacity, 1));
 }
+
+/* Extracted Semantic Classes from main.ts */
+.new-thread-btn {
+  font-size: 9px;
+  font-weight: 700;
+  color: #9ca3af;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.new-thread-btn:hover {
+  color: #111827;
+  background-color: #e5e7eb;
+}
+:is(.dark .new-thread-btn) {
+  color: #6b7280;
+}
+:is(.dark .new-thread-btn):hover {
+  color: #ffffff;
+  background-color: #374151;
+}
+
+.threads-loading {
+  font-size: 9px;
+  color: #6b7280;
+  font-style: italic;
+  padding: 0.25rem;
+}
