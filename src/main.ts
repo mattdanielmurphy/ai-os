@@ -44,6 +44,7 @@ interface Project {
 // 2. Global State Management
 // ----------------------------------------------------
 let activeProject: string = '/Users/matthewmurphy/projects/ai-os'
+let maxVisibleThreads: number = 15
 
 const formatPathForUser = (
     path: string,
@@ -1633,6 +1634,13 @@ const renderProjects = () => {
             threadsList.innerHTML =
                 '<div class="ts-html-element-44 threads-loading">Loading...</div>'
 
+            threadsList.addEventListener('scroll', () => {
+                if (threadsList.scrollTop + threadsList.clientHeight >= threadsList.scrollHeight - 20) {
+                    maxVisibleThreads += 15
+                    renderProjectThreads(activeProject, false)
+                }
+            })
+
             threadsContainer.appendChild(threadsHeader)
             threadsContainer.appendChild(threadsList)
             item.appendChild(threadsContainer)
@@ -1753,6 +1761,7 @@ const switchToProject = async (
     }
 
     activeProject = path
+    maxVisibleThreads = 15
     activeThreadId = null
     activeThreadContext = null
     isWaitingForNewThread = false
@@ -2055,9 +2064,10 @@ const renderProjectThreads = async (
             (await invoke<ThreadLog[]>('get_project_threads', {
                 projectPath,
             }))
+        const prevScrollTop = listEl.scrollTop
         listEl.innerHTML = ''
         
-        const threadsToShow = threads.slice(0, 5)
+        const threadsToShow = threads.slice(0, maxVisibleThreads)
         
         if (threadsToShow.length === 0) {
             listEl.innerHTML =
@@ -2185,6 +2195,8 @@ const renderProjectThreads = async (
                 firstChild.click()
             }
         }
+        
+        listEl.scrollTop = prevScrollTop
     } catch (err) {
         console.error('Failed to load project threads:', err)
         listEl.innerHTML = `<div class="ts-html-element-63">Error: ${err}</div>`

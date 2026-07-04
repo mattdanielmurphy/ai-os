@@ -1,9 +1,12 @@
 ## apparently done
-
-## In Progress
 - The tool calls box closes as soon as more output is added, aka while the agent works.
 The tool calls box should actually be expanded while the agent works, and only collapse when it's done AND NO LONGER WORKING.
 It should start expanded, but have a max-height of 50vh.
+
+## In Progress
+- I want to be able to edit a markdown file in vscode and have that add notes to various threads.
+	Perhaps when you create a thread, you can add that to the markdown file or something?
+	Basically, I'm making all these todos for each project
 
 - the threads list for each project should keep loading older ones as you scroll, and never stop
 
