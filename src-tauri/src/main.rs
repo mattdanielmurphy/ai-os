@@ -1452,8 +1452,8 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
             thread_logs.push(ThreadLog {
                 id: root_id,
                 latest_leaf_id: latest_thread_id.clone(),
-                title: root_info.title,
-                snippet: root_info.snippet,
+                title: info.title,
+                snippet: info.snippet,
                 filepath: root_filepath.to_string_lossy().to_string(),
                 mtime: latest_mtime,
                 detected_project_path: Some(project_path.clone()),
@@ -1545,8 +1545,8 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
         thread_logs.push(ThreadLog {
             id: root_id,
             latest_leaf_id: latest_thread_id.clone(),
-            title: root_info.title,
-            snippet: root_info.snippet,
+            title: info.title,
+            snippet: info.snippet,
             filepath: root_filepath.to_string_lossy().to_string(),
             mtime: latest_mtime,
             detected_project_path: info.project_path,

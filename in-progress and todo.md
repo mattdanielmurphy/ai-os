@@ -6,8 +6,7 @@ We're even going to try and stream in plaintext the final output *as it appears*
 
 ## To do
 
-the tui display has really gone downhill. First of all, whenever I do collapse or expand, everything on the terminal screen is liable to disappear completely.
-I'm unable to paste directly as well, and cmd-clicking links won't open them.
+the tui display has really gone downhill. First of all, often whenever I do collapse or expand, or expand the window, or I run a commnd or something, everything on the terminal screen is liable to disappear completely, and I don't know how to get it back. It seems the screen content comes back when it gets refreshed somehow. Sometimes it gets in a state where I'm unable to paste directly as well. md-clicking links won't open them.
 
 rename EVERY instance of: `ts-html-element-\d*` (that's regex syntax) to a reasonable classname.
-Obviously you'll change corresponding css selector if it exists.
+Obviously you'll change the corresponding css selector if it exists.
