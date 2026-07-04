@@ -1277,6 +1277,12 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
     let mut title = latest_thread_id.to_string();
     let mut snippet = String::new();
 
+    if let Some(start_idx) = content.find("<THREAD_NAME>") {
+        if let Some(end_idx) = content[start_idx..].find("</THREAD_NAME>") {
+            title = content[start_idx + 13..start_idx + end_idx].trim().to_string();
+        }
+    }
+
     for line in content.lines() {
         if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
             if obj.get("type").and_then(|v| v.as_str()) == Some("USER_INPUT") {
@@ -1302,11 +1308,13 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                     
                     let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
                     let char_count = clean_prompt.chars().count();
-                    title = if char_count > 40 {
-                        format!("{}...", clean_prompt.chars().take(40).collect::<String>())
-                    } else {
-                        clean_prompt.clone()
-                    };
+                    if title == latest_thread_id.to_string() {
+                        title = if char_count > 40 {
+                            format!("{}...", clean_prompt.chars().take(40).collect::<String>())
+                        } else {
+                            clean_prompt.clone()
+                        };
+                    }
                     snippet = if char_count > 120 {
                         format!("{}...", clean_prompt.chars().take(120).collect::<String>())
                     } else {

@@ -76,6 +76,10 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 ## 3. DOM Tagging for Human Maintenance
 - The top-level element of every component must include a descriptive \`data-ui\` attribute matching the component or feature name (e.g., \`data-ui="midi-track-row"\`).
 - This is a strict requirement to allow human operators to use browser developer tools to inspect an element and instantly map it back to the source file via global search.
+
+<THREAD_NAMING>
+When you respond to a new task in a fresh thread, please begin your very first response with \`<THREAD_NAME>A short 2-5 word title summarizing the task</THREAD_NAME>\`. This will be used to name the thread in the UI.
+</THREAD_NAMING>
 </SYSTEM_INSTRUCTIONS>
 `;
 
@@ -104,5 +108,9 @@ Guidelines:
 <AGENT_WORK_LOGS>
 At the END of your triage process, record an agent work log mapping out the architecture and the breakdown of tasks you delegated.
 </AGENT_WORK_LOGS>
+
+<THREAD_NAMING>
+When you respond to a new task in a fresh thread, please begin your very first response with \`<THREAD_NAME>A short 2-5 word title summarizing the task</THREAD_NAME>\`. This will be used to name the thread in the UI.
+</THREAD_NAMING>
 </SYSTEM_INSTRUCTIONS>
 `;

@@ -877,11 +877,12 @@ ${block.historicalContext}
             </div>
             `
         } else if (block.type === 'planner_response' && block.content) {
+            const cleanedContent = block.content.replace(/<THREAD_NAME>[\s\S]*?<\/THREAD_NAME>/g, '').trim()
             html += `
             <div class="chat-message agent">
                 <div class="message-content group prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border">
-                    <button class="copy-btn" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
-                    <div class="text-content">${marked.parse(block.content)}</div>
+                    <button class="copy-btn" data-content="${encodeURIComponent(cleanedContent)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+                    <div class="text-content">${marked.parse(cleanedContent)}</div>
                 </div>
             </div>
             `
