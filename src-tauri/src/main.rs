@@ -1289,6 +1289,7 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                         if let Some(end_idx) = content_str[start_idx..].find("</THREAD_NAME>") {
                             title = content_str[start_idx + 13..start_idx + end_idx].trim().to_string();
                             found_title = true;
+                            println!("[DEBUG thread-naming] Extracted title '{}' from PLANNER_RESPONSE in {}", title, latest_thread_id);
                         }
                     }
                 }
@@ -1324,6 +1325,7 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                         } else {
                             clean_prompt.clone()
                         };
+                        println!("[DEBUG thread-naming] Fallback title set to '{}' for {}", title, latest_thread_id);
                     }
                     
                     snippet = if char_count > 120 {
@@ -1331,6 +1333,7 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                     } else {
                         clean_prompt
                     };
+                    println!("[DEBUG thread-naming] Snippet set for {}", latest_thread_id);
                 }
             }
             
@@ -1419,6 +1422,11 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
             None => continue,
         };
 
+        let root_info = match get_cached_thread_info(&root_filepath, root_thread_id) {
+            Some(i) => i,
+            None => continue,
+        };
+
         let matched = if is_misc {
             info.project_path.is_none()
         } else {
@@ -1444,8 +1452,8 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
             thread_logs.push(ThreadLog {
                 id: root_id,
                 latest_leaf_id: latest_thread_id.clone(),
-                title: info.title,
-                snippet: info.snippet,
+                title: root_info.title,
+                snippet: root_info.snippet,
                 filepath: root_filepath.to_string_lossy().to_string(),
                 mtime: latest_mtime,
                 detected_project_path: Some(project_path.clone()),
@@ -1527,13 +1535,18 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
             None => continue,
         };
 
+        let root_info = match get_cached_thread_info(&root_filepath, root_thread_id) {
+            Some(i) => i,
+            None => continue,
+        };
+
         let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
 
         thread_logs.push(ThreadLog {
             id: root_id,
             latest_leaf_id: latest_thread_id.clone(),
-            title: info.title,
-            snippet: info.snippet,
+            title: root_info.title,
+            snippet: root_info.snippet,
             filepath: root_filepath.to_string_lossy().to_string(),
             mtime: latest_mtime,
             detected_project_path: info.project_path,
