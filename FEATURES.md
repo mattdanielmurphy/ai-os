@@ -2,6 +2,9 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+### [2026-07-04] Live Text Stream Parsing & Plaintext TUI Preview
+* **Live TUI Stream Rendering:** Implemented real-time plaintext streaming for the `agy` TUI in the frontend. It dynamically intercepts the terminal stream from the PTY, strips the ANSI styling escape codes, and streams the raw agent output (thoughts, tool calls, and prose) immediately into a live text block under the active "Thinking Indicator".
+* **Auto-Clearing Stream State:** Programmed the live stream pane to automatically clear and reset itself whenever the `transcript.jsonl` log updates with a completed step or when the thread ID switches. This ensures seamless transition from live plaintext streaming to fully parsed and rendered markdown chat-bubbles.
 
 ### [2026-06-30] Thread List Caching & Typing Performance Optimization
 * **Debounced Projects Autosave:** Postponed local storage updates and JSON serialization of projects lists during rapid typing by introducing a 500ms debounced auto-save function. This prevents blocking the main browser thread on every keystroke.
