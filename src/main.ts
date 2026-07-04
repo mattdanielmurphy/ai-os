@@ -125,16 +125,13 @@ const updatePauseUI = (status: 'Running' | 'Pending' | 'Paused') => {
     if (pauseBtnEl) {
         if (status === 'Pending') {
             pauseBtnEl.textContent = 'Pending...'
-            pauseBtnEl.className =
-                'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 border border-orange-500/30 animate-pulse transition-all select-none cursor-pointer'
+            pauseBtnEl.className = 'pause-btn pause-btn-pending'
         } else if (status === 'Paused') {
             pauseBtnEl.textContent = 'Resume'
-            pauseBtnEl.className =
-                'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-all select-none cursor-pointer'
+            pauseBtnEl.className = 'pause-btn pause-btn-paused'
         } else {
             pauseBtnEl.textContent = 'Pause'
-            pauseBtnEl.className =
-                'px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-all select-none cursor-pointer'
+            pauseBtnEl.className = 'pause-btn pause-btn-running'
         }
     }
 }
@@ -634,8 +631,10 @@ const renderer = {
         const lang = token.lang || '';
         const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         return `
-            <div class="relative group my-4">
-                <button class="absolute top-2 right-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-sans opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-700 cursor-pointer" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+            <div class="group my-4 rounded-xl border border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
+                <div class="sticky top-2 w-full flex justify-end px-2 z-10 h-0 overflow-visible">
+                    <button class="mt-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-sans opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-700 cursor-pointer" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+                </div>
                 <pre style="margin:0;"><code class="language-${lang}">${escapedText}</code></pre>
             </div>
         `;
@@ -859,8 +858,10 @@ ${block.historicalContext}
         } else if (block.type === 'planner_response' && block.content) {
             html += `
             <div class="w-full flex justify-start mb-4 select-text">
-                <div class="group relative w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900">
-                    <button class="absolute -top-3 -left-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+                <div class="group w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900 border border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-colors rounded-xl px-2 py-1">
+                    <div class="sticky top-2 w-full flex justify-end z-10 h-0 overflow-visible">
+                        <button class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+                    </div>
                     ${marked.parse(block.content)}
                 </div>
             </div>
@@ -1394,12 +1395,10 @@ const renderProjects = () => {
 
         if (isActive) {
             const threadsContainer = document.createElement('div')
-            threadsContainer.className =
-                'mt-1.5 ml-0.5 pl-2.5 border-l border-gray-300 dark:border-gray-700/80 flex flex-col'
+            threadsContainer.className = 'threads-container'
 
             const threadsHeader = document.createElement('div')
-            threadsHeader.className =
-                'flex items-center justify-between pr-1.5 text-[9px] font-semibold uppercase tracking-wider text-gray-500'
+            threadsHeader.className = 'threads-header'
             threadsHeader.innerHTML = `
                 <span>Threads</span>
                 <button class="new-thread-btn text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
@@ -1407,7 +1406,7 @@ const renderProjects = () => {
 
             const threadsList = document.createElement('div')
             threadsList.id = 'project-threads-list'
-            threadsList.className = 'max-h-96 overflow-y-auto pr-1'
+            threadsList.className = 'threads-list'
             threadsList.innerHTML =
                 '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>'
 
@@ -1454,8 +1453,7 @@ const renderProjects = () => {
                 threadsList
                     .querySelectorAll(':scope > div')
                     .forEach((child) => {
-                        child.className =
-                            'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                        child.className = 'thread-item thread-item-inactive'
                     })
 
                 const loadingMsg = threadsList.querySelector('.italic')
@@ -1464,8 +1462,7 @@ const renderProjects = () => {
                 }
 
                 const placeholderEl = document.createElement('div')
-                placeholderEl.className =
-                    'group new-thread-placeholder p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                placeholderEl.className = 'thread-item new-thread-placeholder'
                 placeholderEl.innerHTML = `
                     <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
                         <span class="truncate pr-1">#New Thread...</span>
@@ -1483,11 +1480,9 @@ const renderProjects = () => {
                     threadsList
                         .querySelectorAll(':scope > div')
                         .forEach((child) => {
-                            child.className =
-                                'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                            child.className = 'thread-item thread-item-inactive'
                         })
-                    placeholderEl.className =
-                        'group new-thread-placeholder p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 cursor-pointer transition-all space-y-0.5'
+                    placeholderEl.className = 'thread-item new-thread-placeholder'
 
                     const previewPane = document.getElementById(
                         'markdown-preview-pane'
@@ -1834,9 +1829,7 @@ const renderProjectThreads = async (
             threadLatestLeafIds.set(thread.id, thread.latest_leaf_id)
             const el = document.createElement('div')
             const isActive = activeThreadId === thread.id
-            el.className = isActive
-                ? 'group p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
-                : 'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+            el.className = 'thread-item thread-item-' + (isActive ? 'active' : 'inactive')
 
             const dateStr =
                 thread.mtime > 0
@@ -1893,11 +1886,9 @@ const renderProjectThreads = async (
                 document
                     .querySelectorAll('#project-threads-list > div')
                     .forEach((child) => {
-                        child.className =
-                            'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
+                        child.className = 'thread-item thread-item-inactive'
                     })
-                el.className =
-                    'group p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
+                el.className = 'thread-item thread-item-active'
 
                 activeThreadId = thread.id
                 await selectAgyEngine()
@@ -2318,8 +2309,7 @@ let arrowUpOverlay: HTMLDivElement | null = null
 const showArrowUpOverlay = () => {
     if (!arrowUpOverlay) {
         arrowUpOverlay = document.createElement('div')
-        arrowUpOverlay.className =
-            'absolute top-0 left-0 right-0 bg-blue-600/90 text-white text-xs font-bold px-3 py-1.5 flex items-center justify-center rounded-t pointer-events-none z-10 animate-pulse transition-opacity'
+        arrowUpOverlay.className = 'arrow-up-overlay'
         arrowUpOverlay.textContent = 'Press ArrowUp again to recall history'
         const bottomArea = document.getElementById('bottom-input-area')
         if (bottomArea) {
@@ -2792,16 +2782,14 @@ const updatePlaceholder = (isRunning = true) => {
                 textarea.placeholder =
                     'Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className =
-                        'flex items-center cursor-pointer select-none text-xs font-bold px-2 py-0.5 rounded border transition-all bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    contextContainer.className = 'toggle-label context-container-clear'
                 }
                 if (labelText) labelText.textContent = 'Auto-Clear: ACTIVE'
             } else {
                 textarea.placeholder =
                     'Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className =
-                        'flex items-center cursor-pointer select-none text-xs font-medium px-2 py-0.5 rounded border transition-all bg-gray-900/40 border-gray-800 text-gray-500 hover:text-gray-400'
+                    contextContainer.className = 'toggle-label context-container-continue'
                 }
                 if (labelText) labelText.textContent = 'Auto-Clear: OFF'
             }
@@ -3016,8 +3004,7 @@ async function updateQuotaDisplay() {
                     }
 
                     const row = document.createElement('div')
-                    row.className =
-                        'flex justify-between items-center gap-4 font-mono text-[11px] whitespace-nowrap'
+                    row.className = 'quota-row'
                     row.innerHTML = `<span class="font-bold text-gray-400 w-12">${label}:</span> <div class="flex gap-2 text-right"> <span class="${minRem < 0.2 ? 'text-red-400' : 'text-green-400'} font-bold w-9">${pct}</span> <span class="text-gray-500">resets ${timeStr}</span></div>`
                     col.appendChild(row)
                 }
