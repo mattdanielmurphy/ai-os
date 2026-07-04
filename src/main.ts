@@ -1879,13 +1879,16 @@ const renderProjectThreads = async (
                 projectPath,
             }))
         listEl.innerHTML = ''
-        if (threads.length === 0) {
+        
+        const threadsToShow = threads.slice(0, 5)
+        
+        if (threadsToShow.length === 0) {
             listEl.innerHTML =
                 '<div class="ts-html-element-52">No threads found for this project</div>'
             return
         }
 
-        threads.forEach((thread) => {
+        threadsToShow.forEach((thread) => {
             threadFilepaths.set(thread.id, thread.filepath)
             threadLatestLeafIds.set(thread.id, thread.latest_leaf_id)
             const el = document.createElement('div')
