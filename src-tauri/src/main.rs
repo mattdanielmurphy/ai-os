@@ -563,6 +563,50 @@ struct SwitchResult {
 }
 
 #[tauri::command]
+fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), String> {
+    if !is_tmux_available() {
+        return Ok(());
+    }
+    let spare_session = format!("{}_spare", get_tmux_session_name(&project_path, &engine));
+    if has_tmux_session(&spare_session) {
+        return Ok(());
+    }
+
+    let project_path_clone = project_path.clone();
+    let engine_clone = engine.clone();
+    std::thread::spawn(move || {
+        let mut args = vec![
+            "-u".to_string(),
+            "new-session".to_string(),
+            "-d".to_string(),
+            "-s".to_string(),
+            spare_session.clone(),
+            "-c".to_string(),
+            project_path_clone.clone(),
+        ];
+        if engine_clone == "claude" {
+            args.push("claude --dangerously-skip-permissions".to_string());
+        } else if engine_clone == "agy" {
+            args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path_clone));
+        }
+
+        let _ = std::process::Command::new("tmux")
+            .args(&args)
+            .status();
+
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        let _ = std::process::Command::new("tmux")
+            .args(&["-u", "set-option", "-t", &spare_session, "status", "off"])
+            .status();
+        let _ = std::process::Command::new("tmux")
+            .args(&["-u", "set-option", "-s", "copy-command", "pbcopy"])
+            .status();
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
 fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<AppState>) -> Result<u32, String> {
     let app_handle = state.app_handle.clone();
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
@@ -570,10 +614,23 @@ fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<
 
     if is_tmux_available() {
         let session_name = get_tmux_session_name(&project_path, &engine);
-        if has_tmux_session(&session_name) {
+        let spare_session = format!("{}_spare", session_name);
+
+        if has_tmux_session(&spare_session) {
+            if has_tmux_session(&session_name) {
+                let _ = std::process::Command::new("tmux")
+                    .args(&["kill-session", "-t", &session_name])
+                    .status();
+            }
             let _ = std::process::Command::new("tmux")
-                .args(&["kill-session", "-t", &session_name])
+                .args(&["rename-session", "-t", &spare_session, &session_name])
                 .status();
+        } else {
+            if has_tmux_session(&session_name) {
+                let _ = std::process::Command::new("tmux")
+                    .args(&["kill-session", "-t", &session_name])
+                    .status();
+            }
         }
     }
 
@@ -589,6 +646,13 @@ fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<
     }
 
     trigger_tmux_refresh(&project_path, &engine);
+    
+    let path_clone = project_path.clone();
+    let engine_clone = engine.clone();
+    std::thread::spawn(move || {
+        let _ = prepare_spare_engine(path_clone, engine_clone);
+    });
+
     Ok(pid)
 }
 
@@ -2157,6 +2221,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             spawn_fresh_engine,
             initialize_project_session,
+            prepare_spare_engine,
             switch_active_project,
             write_to_pty,
             resize_pty,

@@ -2554,6 +2554,11 @@ ${escapedInput}
         const shouldClear = clearCheckbox ? clearCheckbox.checked : true
         const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear
 
+        // Force a fresh engine swap if not bypassing, to guarantee the prompt is processed cleanly.
+        if (!isBypass && currentEngine === 'agy') {
+            isRunning = false;
+        }
+
         // Load the latest context dynamically from the thread's log file if inside a thread
         let currentContext = activeThreadContext
         if (activeThreadId && currentEngine === 'agy') {
@@ -2619,7 +2624,7 @@ ${escapedInput}
                         projectPath: activeProject,
                         engine: 'agy',
                     })
-                    await new Promise((resolve) => setTimeout(resolve, 1000))
+                    await new Promise((resolve) => setTimeout(resolve, 500))
                 } catch (err) {
                     console.error('Failed to spawn fresh agy engine:', err)
                 }
