@@ -1141,7 +1141,7 @@ fn get_initial_project() -> Option<String> {
     std::env::var("AIOS_INITIAL_PROJECT").ok()
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 struct ThreadLog {
     id: String,
     latest_leaf_id: String,
@@ -1331,7 +1331,7 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                     }
                     
                     snippet = if char_count > 120 {
-                        format!("{}...", clean_prompt.chars().take(120).collect::<String>())
+                        format!("{}...", clean_prompt.chars().take(30).collect::<String>())
                     } else {
                         clean_prompt
                     };
@@ -2281,8 +2281,96 @@ fn main() {
             open_devtools,
             get_quota,
             get_browser_context,
-            dispatch_to_gemini
+            dispatch_to_gemini,
+            search_project_threads
         ])
         .run(context)
         .expect("error while running tauri application");
+}
+#[derive(serde::Serialize, Clone)]
+struct ThreadSearchResult {
+    thread: ThreadLog,
+    score: i32,
+    preview: String,
+}
+
+#[tauri::command]
+fn search_project_threads(project_path: String, query: String) -> Result<Vec<ThreadSearchResult>, String> {
+    let threads = get_project_threads(project_path)?;
+    let query_lower = query.to_lowercase();
+    let mut results = Vec::new();
+    
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME".to_string())?;
+    let brain_dir = std::path::Path::new(&home).join(".gemini").join("antigravity-cli").join("brain");
+
+    for thread in threads {
+        let mut score = 0;
+        let mut preview = String::new();
+        
+        if thread.title.to_lowercase().contains(&query_lower) {
+            score += 100;
+        }
+        
+        let latest_filepath = brain_dir.join(&thread.latest_leaf_id).join(".system_generated").join("logs").join("transcript.jsonl");
+        if let Ok(content) = std::fs::read_to_string(&latest_filepath) {
+            for line in content.lines() {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(line) {
+                    let step_type = parsed.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                    let content_str = parsed.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                    
+                    if step_type == "USER_INPUT" {
+                        let user_prompt = extract_user_request(content_str);
+                        if user_prompt.to_lowercase().contains(&query_lower) {
+                            score += 50;
+                            if preview.is_empty() {
+                                preview = truncate_preview(&user_prompt, &query_lower);
+                            }
+                        }
+                    } else if step_type == "PLANNER_RESPONSE" || step_type == "MODEL" {
+                        if content_str.to_lowercase().contains(&query_lower) {
+                            score += 10;
+                            if preview.is_empty() {
+                                preview = truncate_preview(content_str, &query_lower);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if score > 0 {
+            results.push(ThreadSearchResult {
+                thread,
+                score,
+                preview: if preview.is_empty() { "Matched in title".to_string() } else { preview },
+            });
+        }
+    }
+    
+    results.sort_by(|a, b| b.score.cmp(&a.score));
+    Ok(results)
+}
+
+fn extract_user_request(content: &str) -> String {
+    if let Some(start) = content.find("<USER_REQUEST>") {
+        if let Some(end) = content.find("</USER_REQUEST>") {
+            return content[start + 14..end].trim().to_string();
+        }
+    }
+    content.to_string()
+}
+
+fn truncate_preview(content: &str, query: &str) -> String {
+    let lower = content.to_lowercase();
+    if let Some(pos) = lower.find(query) {
+        let start = pos.saturating_sub(30);
+        let end = (pos + query.len() + 80).min(content.len());
+        let mut prev = String::new();
+        if start > 0 { prev.push_str("..."); }
+        prev.push_str(&content[start..end]);
+        if end < content.len() { prev.push_str("..."); }
+        prev.replace('\n', " ")
+    } else {
+        content.chars().take(100).collect::<String>().replace('\n', " ")
+    }
 }

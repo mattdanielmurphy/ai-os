@@ -1,16 +1,18 @@
+## Done
+- the threads list for each project should keep loading older ones as you scroll, and never stop
+- I want to pretty-print the tool calls
+
 ## apparently done
 - The tool calls box closes as soon as more output is added, aka while the agent works.
 The tool calls box should actually be expanded while the agent works, and only collapse when it's done AND NO LONGER WORKING.
 It should start expanded, but have a max-height of 50vh.
 
 ## In Progress
-- the threads list for each project should keep loading older ones as you scroll, and never stop
-
 - I want to be able to edit a markdown file in vscode and have that add notes to various threads.
 	Perhaps when you create a thread, you can add that to the markdown file or something?
 	Basically, I'm making all these todos for each project, and I'm copying the prompts back and forth... it'd be easier if there was a way to sync like "thread notes" basically.
 
-- I want to pretty-print the tool calls:
+
 This existing version is hard to read:
 	```
 	{

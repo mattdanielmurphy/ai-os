@@ -12,7 +12,7 @@
   --text-main: #f0f0f5;
   --text-muted: #a0a0b0;
 
-  --sidebar-width: 256px;
+  --sidebar-width: min(400px, 30vw);
   --header-height: 50px;
   --input-area-height: auto;
 }
@@ -114,6 +114,7 @@ textarea {
   background-color: rgba(0, 0, 0, 0.2);
   border-right: 1px solid var(--border-color);
   height: 100%;
+  width: var(--sidebar-width);
   flex-shrink: 0;
 }
 
@@ -736,11 +737,10 @@ textarea {
 }
 
 .thread-title {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #fff;
 }
 
 .thread-snippet {
@@ -961,18 +961,4 @@ details[open] .toggle-icon {
   font-size: 0.75rem;
   color: var(--text-main);
   margin-bottom: 4px;
-}
-
-.live-stream-pane {
-  margin-top: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  white-space: pre-wrap;
-  font-size: 13px;
-  color: var(--text-muted);
-  padding: 12px;
-  background: var(--panel-bg);
-  border-radius: 6px;
-  overflow-x: auto;
-  max-height: 400px;
-  overflow-y: auto;
 }

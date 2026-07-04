@@ -1,0 +1,54 @@
+--- src/main.ts
++++ src/main.ts
+@@ -10,6 +10,7 @@
+ import { renderThreadNotesSidebar } from './threadNotes'
+ import { Marked } from 'marked'
+ import markedHighlight from 'marked-highlight'
++import { ActionBar } from './ActionBar/ActionBar'
+ 
+ const Terminal = (window as any).Terminal
+ const FitAddon = (window as any).FitAddon
+@@ -3297,4 +3298,42 @@
+             addProjectModal.style.display = 'flex'
+         }
+     }
+ })
++
++let actionBar: ActionBar | null = null;
++setTimeout(() => {
++    actionBar = new ActionBar(
++        () => activeProject,
++        async (thread) => {
++            if (!activeProject) return;
++            
++            document.querySelectorAll('#project-threads-list > div').forEach((child) => {
++                child.className = 'project-thread-item group';
++            });
++            
++            activeThreadId = thread.id;
++            renderThreadNotesSidebar(activeProject, activeThreadId);
++            await selectAgyEngine();
++
++            const previewPane = document.getElementById('markdown-preview-pane');
++            try {
++                const content = await invoke<string>('read_thread_log', {
++                    filepath: thread.filepath,
++                });
++                activeThreadContext = getCompactifiedContext(content);
++                updatePlaceholder(true);
++
++                if (previewPane) {
++                    renderCustomTuiLog(content);
++                }
++            } catch (err) {
++                console.error('Failed to read thread log:', err);
++            }
++            
++            invoke('write_to_pty', {
++                data: `/resume ${thread.latest_leaf_id}\r`,
++                projectPath: activeProject,
++                terminalType: 'agy',
++            });
++        }
++    );
++}, 1000);
