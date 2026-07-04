@@ -256,3 +256,8 @@
 ### [2026-06-30] Comprehensive Agy Thread Discovery & Sync
 * **Every Agy Thread Accounted For:** Added background directory scanning of all `agy` session logs. Any thread not matched with a known project is auto-discovered.
 * **Auto-Created AI-OS Projects:** If a thread has a detected workspace path, that project path is dynamically added to the sidebar projects list. For lone/orphaned threads without a project path, a custom project container is started for that thread, ensuring all conversational history is accessible.
+
+### Cmd-K Thread Search
+- An interactive Action Bar triggered by `Cmd-K` to quickly search and switch between active project threads.
+- Context-aware search engine built in Rust that accurately scans transcript JSON logs, ignoring system instructions and specifically prioritizing matches in human-authored `<USER_REQUEST>` queries, agent responses, and thread titles.
+- Arrow-key navigation and instant resume switching within the active UI state.
