@@ -192,8 +192,10 @@ export class ActionBar {
     public open() {
         this.previousFocus = document.activeElement as HTMLElement;
         this.overlay.classList.add(styles.active);
-        this.input.focus();
-        this.input.select();
+        setTimeout(() => {
+            this.input.focus();
+            this.input.select();
+        }, 10);
         this.performSearch();
     }
 
