@@ -670,8 +670,9 @@ const renderer = {
 };
 marked.use({ renderer });
 
-const buildTimelineHtml = (steps: Step[]): string => {
+const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
     const blocks: RenderBlock[] = []
+    let allToolCalls: ToolCallItem[] = []
     let currentToolCalls: ToolCallItem[] = []
 
     const flushToolCalls = () => {
@@ -779,22 +780,13 @@ const buildTimelineHtml = (steps: Step[]): string => {
             if (step.tool_calls && step.tool_calls.length > 0) {
                 step.tool_calls.forEach((call) => {
                     let actionSummary = ''
-                    if (
-                        call.args &&
-                        typeof call.args.toolSummary === 'string'
-                    ) {
+                    if (call.args && typeof call.args.toolSummary === 'string') {
                         actionSummary = call.args.toolSummary
-                    } else if (
-                        call.args &&
-                        typeof call.args.toolAction === 'string'
-                    ) {
+                    } else if (call.args && typeof call.args.toolAction === 'string') {
                         actionSummary = call.args.toolAction
                     }
 
-                    if (
-                        actionSummary.startsWith('"') &&
-                        actionSummary.endsWith('"')
-                    ) {
+                    if (actionSummary.startsWith('"') && actionSummary.endsWith('"')) {
                         actionSummary = actionSummary.slice(1, -1)
                     }
 
@@ -803,41 +795,20 @@ const buildTimelineHtml = (steps: Step[]): string => {
                     }
 
                     let icon = '🛠️'
-                    if (
-                        call.name.includes('search') ||
-                        call.name.includes('grep')
-                    )
-                        icon = '🔍'
-                    else if (
-                        call.name.includes('file') ||
-                        call.name.includes('write') ||
-                        call.name.includes('replace')
-                    )
-                        icon = '📝'
-                    else if (
-                        call.name.includes('command') ||
-                        call.name.includes('run')
-                    )
-                        icon = '💻'
-                    else if (
-                        call.name.includes('dir') ||
-                        call.name.includes('list')
-                    )
-                        icon = '📂'
+                    if (call.name.includes('search') || call.name.includes('grep')) icon = '🔍'
+                    else if (call.name.includes('file') || call.name.includes('write') || call.name.includes('replace')) icon = '📝'
+                    else if (call.name.includes('command') || call.name.includes('run')) icon = '💻'
+                    else if (call.name.includes('dir') || call.name.includes('list')) icon = '📂'
 
                     let targetPath = ''
                     if (call.args) {
-                        if (typeof call.args.TargetFile === 'string')
-                            targetPath = call.args.TargetFile
-                        else if (typeof call.args.AbsolutePath === 'string')
-                            targetPath = call.args.AbsolutePath
-                        else if (typeof call.args.DirectoryPath === 'string')
-                            targetPath = call.args.DirectoryPath
-                        else if (typeof call.args.SearchPath === 'string')
-                            targetPath = call.args.SearchPath
+                        if (typeof call.args.TargetFile === 'string') targetPath = call.args.TargetFile
+                        else if (typeof call.args.AbsolutePath === 'string') targetPath = call.args.AbsolutePath
+                        else if (typeof call.args.DirectoryPath === 'string') targetPath = call.args.DirectoryPath
+                        else if (typeof call.args.SearchPath === 'string') targetPath = call.args.SearchPath
                     }
 
-                    currentToolCalls.push({
+                    allToolCalls.push({
                         name: call.name,
                         actionSummary,
                         icon,
@@ -851,12 +822,10 @@ const buildTimelineHtml = (steps: Step[]): string => {
                 step.type === 'PLANNER_RESPONSE' &&
                 step.content
             ) {
-                flushToolCalls()
                 blocks.push({ type: 'planner_response', content: step.content })
             }
         }
     })
-    flushToolCalls()
 
     let html = ''
     const renderToolCallHtml = (call: ToolCallItem) => {
@@ -866,12 +835,10 @@ const buildTimelineHtml = (steps: Step[]): string => {
             pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="ts-html-element-3" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
         }
         return `
-            <div class="chat-message agent tool-call">
-                <div class="message-content">
-                    <div class="tool-call-info">
-                        <span>${call.icon}</span>
-                        <span class="tool-summary">${call.actionSummary}</span>${pathHtml}
-                    </div>
+            <div class="unified-tool-call-row">
+                <div class="unified-tool-call-info">
+                    <span>${call.icon}</span>
+                    <span class="tool-summary">${call.actionSummary}</span>${pathHtml}
                 </div>
             </div>
         `
@@ -915,38 +882,26 @@ ${block.historicalContext}
                 </div>
             </div>
             `
-        } else if (block.type === 'tool_calls' && block.calls) {
-            const calls = block.calls
-            if (calls.length <= 2) {
-                calls.forEach((call) => {
-                    html += renderToolCallHtml(call)
-                })
-            } else {
-                const collapsedCalls = calls.slice(0, -2)
-                const visibleCalls = calls.slice(-2)
-
-                html += `
-                <div class="chat-message agent tool-call-group">
-                    <div class="message-content">
-                        <details class="group">
-                            <summary class="historical-summary">
-                                <span>Show older steps (${collapsedCalls.length})</span>
-                                <span class="toggle-icon">▶</span>
-                            </summary>
-                            <div class="historical-details">
-                                ${collapsedCalls.map(renderToolCallHtml).join('')}
-                            </div>
-                        </details>
-                    </div>
-                </div>
-                `
-
-                visibleCalls.forEach((call) => {
-                    html += renderToolCallHtml(call)
-                })
-            }
         }
     })
+
+    if (allToolCalls.length > 0) {
+        html += `
+        <div class="chat-message agent tool-call-group" style="margin-top: 16px;">
+            <div class="message-content" style="width: 100%;">
+                <details class="group tool-calls-box" id="unified-tool-calls-box" ${isThinking ? 'open' : ''}>
+                    <summary class="historical-summary">
+                        <span>All Tool Calls (${allToolCalls.length})</span>
+                        <span class="toggle-icon">▶</span>
+                    </summary>
+                    <div class="historical-details unified-tool-calls-list" id="unified-tool-calls-list" style="${isThinking ? 'max-height: 50vh; overflow-y: auto;' : 'max-height: 300px; overflow-y: auto;'}">
+                        ${allToolCalls.map(renderToolCallHtml).join('')}
+                    </div>
+                </details>
+            </div>
+        </div>
+        `
+    }
 
     return html
 }
@@ -954,6 +909,8 @@ ${block.historicalContext}
 let lastRenderedThreadLog = ''
 let lastRenderedThreadId = ''
 let liveAgyStream = ''
+let toolCallsAutoScroll = true
+let toolCallsHovered = false
 
 const renderCustomTuiLog = (jsonlContent: string) => {
     if (!markdownPreviewPane) return
@@ -1015,10 +972,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
         `
     }
 
-    // 2. Timeline Steps
-    html += buildTimelineHtml(steps)
-
-    // 3. Thinking Indicator
+    // 2. Compute Thinking Indicator FIRST
     let isThinking = false
     if (steps.length > 0) {
         const lastStep = steps[steps.length - 1]
@@ -1037,6 +991,9 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             isThinking = true
         }
     }
+
+    // 3. Timeline Steps
+    html += buildTimelineHtml(steps, isThinking)
 
     if (isThinking) {
         html += `
@@ -1057,10 +1014,18 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     const openDetailsIndices: number[] = []
     const detailsElements = markdownPreviewPane.querySelectorAll('details')
     detailsElements.forEach((el, index) => {
-        if (el.open) {
+        // Exclude the unified tool calls box from generic details preservation, 
+        // we'll handle its state specifically.
+        if (el.id !== 'unified-tool-calls-box' && el.open) {
             openDetailsIndices.push(index)
         }
     })
+
+    const oldToolCallsList = markdownPreviewPane.querySelector('#unified-tool-calls-list');
+    let savedScrollTop = -1;
+    if (oldToolCallsList) {
+        savedScrollTop = oldToolCallsList.scrollTop;
+    }
 
     markdownPreviewPane.innerHTML = html
 
@@ -1071,6 +1036,36 @@ const renderCustomTuiLog = (jsonlContent: string) => {
             newDetailsElements[index].open = true
         }
     })
+
+    // Manage unified tool calls box
+    const toolCallsList = markdownPreviewPane.querySelector('#unified-tool-calls-list');
+    const toolCallsBox = markdownPreviewPane.querySelector('#unified-tool-calls-box') as HTMLDetailsElement;
+
+    if (toolCallsList && toolCallsBox) {
+        if (!isThinking && !toolCallsHovered) {
+            toolCallsBox.open = false;
+        }
+
+        toolCallsBox.addEventListener('mouseenter', () => { toolCallsHovered = true; });
+        toolCallsBox.addEventListener('mouseleave', () => { toolCallsHovered = false; });
+
+        if (!toolCallsAutoScroll && savedScrollTop >= 0) {
+            toolCallsList.scrollTop = savedScrollTop;
+        }
+
+        toolCallsList.addEventListener('scroll', () => {
+            const isAtBottom = toolCallsList.scrollHeight - toolCallsList.scrollTop <= toolCallsList.clientHeight + 20;
+            toolCallsAutoScroll = isAtBottom;
+        });
+
+        if (toolCallsAutoScroll && isThinking) {
+            setTimeout(() => {
+                if (toolCallsList) {
+                    toolCallsList.scrollTop = toolCallsList.scrollHeight;
+                }
+            }, 30);
+        }
+    }
 
     // Auto-scroll the preview pane to bottom if it is currently generating
     if (isThinking) {
@@ -2590,8 +2585,15 @@ ${escapedInput}
         ) as HTMLInputElement
         const isPreTriage = preTriageCheckbox ? preTriageCheckbox.checked : false
         
-        const systemDirectives = isPreTriage ? TRIAGE_MODE_RULES : WORKER_BEE_RULES
-        processedInput += `\n\n${systemDirectives}`
+        const clearCheckbox = document.getElementById(
+            'clear-context-checkbox'
+        ) as HTMLInputElement
+        const shouldClear = clearCheckbox ? clearCheckbox.checked : true
+
+        if (shouldClear) {
+            const systemDirectives = isPreTriage ? TRIAGE_MODE_RULES : WORKER_BEE_RULES
+            processedInput += `\n\n${systemDirectives}`
+        }
 
         let isRunning = false
         try {
@@ -2603,10 +2605,6 @@ ${escapedInput}
             console.error('Failed to check if engine is running:', err)
         }
 
-        const clearCheckbox = document.getElementById(
-            'clear-context-checkbox'
-        ) as HTMLInputElement
-        const shouldClear = clearCheckbox ? clearCheckbox.checked : true
         const isBypass = e.metaKey || e.ctrlKey || e.altKey || !shouldClear
 
         // Force a fresh engine swap if not bypassing, to guarantee the prompt is processed cleanly.
