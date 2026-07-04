@@ -125,13 +125,13 @@ const updatePauseUI = (status: 'Running' | 'Pending' | 'Paused') => {
     if (pauseBtnEl) {
         if (status === 'Pending') {
             pauseBtnEl.textContent = 'Pending...'
-            pauseBtnEl.className = 'pause-btn pause-btn-pending'
+            pauseBtnEl.className = 'ts-class-74 '
         } else if (status === 'Paused') {
             pauseBtnEl.textContent = 'Resume'
-            pauseBtnEl.className = 'pause-btn pause-btn-paused'
+            pauseBtnEl.className = 'ts-class-75 '
         } else {
             pauseBtnEl.textContent = 'Pause'
-            pauseBtnEl.className = 'pause-btn pause-btn-running'
+            pauseBtnEl.className = 'ts-class-76 '
         }
     }
 }
@@ -631,10 +631,8 @@ const renderer = {
         const lang = token.lang || '';
         const escapedText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         return `
-            <div class="group my-4 rounded-xl border border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
-                <div class="sticky top-2 w-full flex justify-end px-2 z-10 h-0 overflow-visible">
-                    <button class="mt-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-sans opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-700 cursor-pointer" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
-                </div>
+            <div class="ts-html-element-1 group relative my-4">
+                <button class="ts-html-element-2  absolute top-2 right-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 text-[10px] font-sans opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-700 cursor-pointer" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
                 <pre style="margin:0;"><code class="language-${lang}">${escapedText}</code></pre>
             </div>
         `;
@@ -812,13 +810,13 @@ const buildTimelineHtml = (steps: Step[]): string => {
         let pathHtml = ''
         if (call.targetPath) {
             const displayPath = formatPathForUser(call.targetPath)
-            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
+            pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="ts-html-element-3  text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold ml-1" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
         }
         return `
-            <div class="w-full flex justify-start mb-2 select-none">
-                <div class="pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+            <div class="ts-html-element-4  w-full flex justify-start mb-2 select-none">
+                <div class="ts-html-element-5  pl-3 border-l-2 border-blue-500/40 dark:border-blue-500/50 text-[10px] text-gray-500 dark:text-gray-400 font-mono">
                     <span>${call.icon}</span>
-                    <span class="font-bold text-gray-800 dark:text-gray-200">${call.actionSummary}</span>${pathHtml}
+                    <span class="ts-html-element-6  font-bold text-gray-800 dark:text-gray-200">${call.actionSummary}</span>${pathHtml}
                 </div>
             </div>
         `
@@ -829,17 +827,17 @@ const buildTimelineHtml = (steps: Step[]): string => {
             if (block.historicalContext) {
                 const escapedThreadId = block.threadId || ''
                 html += `
-                <div class="w-full flex justify-start mb-4 select-text">
-                    <div class="w-full max-w-[65ch] bg-gray-50/90 dark:bg-gray-900/60 border border-gray-250/70 dark:border-gray-800/80 rounded-xl p-3 text-xs font-sans shadow-sm">
+                <div class="ts-html-element-7  w-full flex justify-start mb-4 select-text">
+                    <div class="ts-html-element-8  w-full max-w-[65ch] bg-gray-50/90 dark:bg-gray-900/60 border dark:border-gray-800/80 rounded-xl p-3 text-xs font-sans shadow-sm">
                         <details class="group">
-                            <summary class="flex items-center justify-between cursor-pointer font-bold text-gray-500 dark:text-gray-400 select-none">
-                                <span class="flex items-center gap-1.5">
+                            <summary class="ts-html-element-9  flex items-center justify-between cursor-pointer font-bold text-gray-500 dark:text-gray-400 select-none">
+                                <span class="ts-html-element-10  flex items-center gap-1.5">
                                     <span class="text-[14px]">📜</span>
                                     <span>Historical Context of active thread ${escapedThreadId ? `(${escapedThreadId.substring(0, 8)}...)` : ''}</span>
                                 </span>
-                                <span class="text-[9px] text-gray-400 dark:text-gray-500 font-mono transition-transform group-open:rotate-90">▶</span>
+                                <span class="ts-html-element-11  text-[9px] text-gray-400 dark:text-gray-500 font-mono transition-transform group-open:rotate-90">▶</span>
                             </summary>
-                            <div class="mt-2.5 text-gray-600 dark:text-gray-300 font-mono whitespace-pre-wrap leading-relaxed max-h-[350px] overflow-y-auto pr-1 text-[11px] border-t border-gray-150 dark:border-gray-800/60 pt-2">
+                            <div class="ts-html-element-12  mt-2.5 text-gray-600 dark:text-gray-300 font-mono whitespace-pre-wrap leading-relaxed max-h-[350px] overflow-y-auto pr-1 text-[11px] border-t dark:border-gray-800/60 pt-2">
 ${block.historicalContext}
                             </div>
                         </details>
@@ -848,20 +846,18 @@ ${block.historicalContext}
                 `
             }
             html += `
-            <div class="w-full flex justify-end mb-4 select-text">
-                <div class="group relative max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 text-sm font-sans whitespace-pre-wrap shadow-sm">
-                    <button class="absolute -top-3 -right-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+            <div class="ts-html-element-13  w-full flex justify-end mb-4 select-text">
+                <div class="ts-html-element-14 group relative max-w-[65ch] dark:bg-gray-800 text-gray-800 dark:text-gray-200 border dark:border-gray-700/60 rounded-2xl px-4 text-sm font-sans whitespace-pre-wrap shadow-sm">
+                    <button class="ts-html-element-15  absolute -top-3 -right-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
                     ${block.content}
                 </div>
             </div>
             `
         } else if (block.type === 'planner_response' && block.content) {
             html += `
-            <div class="w-full flex justify-start mb-4 select-text">
-                <div class="group w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-250 dark:prose-pre:border-gray-900 border border-transparent hover:border-gray-300 dark:hover:border-gray-700 transition-colors rounded-xl px-2 py-1">
-                    <div class="sticky top-2 w-full flex justify-end z-10 h-0 overflow-visible">
-                        <button class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
-                    </div>
+            <div class="ts-html-element-16  w-full flex justify-start mb-4 select-text">
+                <div class="ts-html-element-17 group relative w-full prose dark:prose-invert prose-sm text-gray-800 dark:text-gray-300 prose-headings:text-gray-950 dark:prose-headings:text-white prose-pre:bg-gray-100 dark:prose-pre:bg-gray-950 prose-pre:border dark:prose-pre:border-gray-900">
+                    <button class="ts-html-element-18  absolute -top-3 -left-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-gray-300 dark:border-gray-600 shadow-sm cursor-pointer" data-content="${encodeURIComponent(block.content)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
                     ${marked.parse(block.content)}
                 </div>
             </div>
@@ -877,10 +873,10 @@ ${block.historicalContext}
                 const visibleCalls = calls.slice(-2)
 
                 html += `
-                <details class="group mb-2 max-w-[65ch]">
-                    <summary class="flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-blue-500/70 hover:text-blue-500 dark:text-blue-400/70 dark:hover:text-blue-400 select-none pb-1.5 pl-3 border-l-2 border-blue-500/20 dark:border-blue-500/20">
-                        <span class="font-semibold text-gray-700 dark:text-gray-300">Show older steps (${collapsedCalls.length})</span>
-                        <span class="text-[8px] text-gray-700 dark:text-gray-300 transition-transform group-open:rotate-90">▶</span>
+                <details class="ts-html-element-19 group mb-2 max-w-[65ch]">
+                    <summary class="ts-html-element-20  flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-blue-500/70 hover:text-blue-500 dark:text-blue-400/70 dark:hover:text-blue-400 select-none pb-1.5 pl-3 border-l-2 border-blue-500/20 dark:border-blue-500/20">
+                        <span class="ts-html-element-21  font-semibold text-gray-700 dark:text-gray-300">Show older steps (${collapsedCalls.length})</span>
+                        <span class="ts-html-element-22  text-[8px] text-gray-700 dark:text-gray-300 transition-transform group-open:rotate-90">▶</span>
                     </summary>
                     <div class="mt-1">
                         ${collapsedCalls.map(renderToolCallHtml).join('')}
@@ -938,7 +934,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
 
     if (steps.length === 0) {
         markdownPreviewPane.innerHTML =
-            '<div class="text-gray-400 dark:text-gray-600 italic text-center mt-10">No conversation steps found.</div>'
+            '<div class="ts-html-element-23  text-gray-400 dark:text-gray-600 italic text-center mt-10">No conversation steps found.</div>'
         return
     }
 
@@ -948,13 +944,13 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     if (editedFilesSet.size > 0) {
         const files = Array.from(editedFilesSet)
         html += `
-        <div class="mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
-            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
+        <div class="ts-html-element-24  mb-4 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded border border-blue-100 dark:border-blue-900/30 flex flex-wrap items-center gap-1.5 select-none max-w-[65ch]">
+            <span class="ts-html-element-25  text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Edited Files:</span>
             ${files
                 .map((file) => {
                     const parts = file.split('/')
                     const name = parts[parts.length - 1]
-                    return `<span class="px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${formatPathForUser(file)}">${name}</span>`
+                    return `<span class="ts-html-element-26  px-1.5 py-0.5 bg-blue-100/50 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded text-[10px] font-mono border border-blue-200/50 dark:border-blue-800/60" title="${formatPathForUser(file)}">${name}</span>`
                 })
                 .join('')}
         </div>
@@ -986,13 +982,13 @@ const renderCustomTuiLog = (jsonlContent: string) => {
 
     if (isThinking) {
         html += `
-        <div class="w-full flex justify-start mb-4">
-            <div class="flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
-                <div class="relative flex h-3 w-3">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        <div class="ts-html-element-27  w-full flex justify-start mb-4">
+            <div class="ts-html-element-28  flex items-center gap-2 p-2 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 dark:border-blue-500/30 rounded animate-pulse select-none">
+                <div class="ts-html-element-29  relative flex h-3 w-3">
+                    <span class="ts-html-element-30  animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="ts-html-element-31  relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
                 </div>
-                <span class="text-[10px] font-semibold text-blue-500 dark:text-blue-400 font-mono tracking-wider">Agent is thinking & working...</span>
+                <span class="ts-html-element-32  text-[10px] font-semibold text-blue-500 dark:text-blue-400 font-mono tracking-wider">Agent is thinking & working...</span>
             </div>
         </div>
         `
@@ -1111,7 +1107,7 @@ if (toggleTuiBtn && tuiContainer && previewWrapper) {
             previewWrapper.style.display = 'none'
             toggleTuiBtn.innerHTML = `
                 <span>Collapse Terminal</span>
-                <svg class="w-2.5 h-2.5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                <svg class="ts-html-element-33  w-2.5 h-2.5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
             `
         } else {
             // Collapse
@@ -1119,7 +1115,7 @@ if (toggleTuiBtn && tuiContainer && previewWrapper) {
             previewWrapper.style.display = 'flex'
             toggleTuiBtn.innerHTML = `
                 <span>Expand Terminal</span>
-                <svg class="w-2.5 h-2.5 transform transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                <svg class="ts-html-element-34  w-2.5 h-2.5 transform transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
             `
         }
         setTimeout(() => {
@@ -1320,16 +1316,16 @@ const renderProjects = () => {
         }`
 
         header.innerHTML = `
-            <div class="flex flex-col gap-0.5 truncate select-none min-w-0 flex-1">
-                <div class="flex items-center gap-2 truncate">
-                    <span class="w-2 rounded-full shrink-0 aspect-square" style="background-color: ${project.color}"></span>
-                    <span class="truncate text-xs">${project.name}</span>
+            <div class="ts-html-element-35  flex flex-col gap-0.5 truncate select-none min-w-0 flex-1">
+                <div class="ts-html-element-36  flex items-center gap-2 truncate">
+                    <span class="ts-html-element-37  w-2 rounded-full shrink-0 aspect-square" style="background-color: ${project.color}"></span>
+                    <span class="ts-html-element-38  truncate text-xs">${project.name}</span>
                 </div>
-                <span class="pl-4 truncate text-[9px] text-gray-400 dark:text-gray-500 font-mono">${formatPathForUser(project.path)}</span>
+                <span class="ts-html-element-39  pl-4 truncate text-[9px] text-gray-400 dark:text-gray-500 font-mono">${formatPathForUser(project.path)}</span>
             </div>
-            <div class="flex items-center action-btns opacity-0 transition-opacity ml-1.5 shrink-0">
-                <button class="open-btn text-[10px] text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
-                <button class="delete-btn text-[10px] text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
+            <div class="ts-html-element-40  flex items-center action-btns opacity-0 transition-opacity ml-1.5 shrink-0">
+                <button class="ts-html-element-41  open-btn text-[10px] text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Open in Finder">📁</button>
+                <button class="ts-html-element-42  delete-btn text-[10px] text-gray-500 hover:text-red-600 dark:hover:text-red-400 px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-all select-none" title="Remove Project">✕</button>
             </div>
         `
 
@@ -1395,20 +1391,20 @@ const renderProjects = () => {
 
         if (isActive) {
             const threadsContainer = document.createElement('div')
-            threadsContainer.className = 'threads-container'
+            threadsContainer.className = 'ts-class-77 '
 
             const threadsHeader = document.createElement('div')
-            threadsHeader.className = 'threads-header'
+            threadsHeader.className = 'ts-class-78 '
             threadsHeader.innerHTML = `
                 <span>Threads</span>
-                <button class="new-thread-btn text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
+                <button class="ts-html-element-43  new-thread-btn text-[9px] font-bold text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Start New Thread">+</button>
             `
 
             const threadsList = document.createElement('div')
             threadsList.id = 'project-threads-list'
-            threadsList.className = 'threads-list'
+            threadsList.className = 'ts-class-79 '
             threadsList.innerHTML =
-                '<div class="text-[9px] text-gray-500 italic p-1">Loading...</div>'
+                '<div class="ts-html-element-44  text-[9px] text-gray-500 italic p-1">Loading...</div>'
 
             threadsContainer.appendChild(threadsHeader)
             threadsContainer.appendChild(threadsList)
@@ -1453,7 +1449,7 @@ const renderProjects = () => {
                 threadsList
                     .querySelectorAll(':scope > div')
                     .forEach((child) => {
-                        child.className = 'thread-item thread-item-inactive'
+                        child.className = 'ts-class-80 group'
                     })
 
                 const loadingMsg = threadsList.querySelector('.italic')
@@ -1462,14 +1458,14 @@ const renderProjects = () => {
                 }
 
                 const placeholderEl = document.createElement('div')
-                placeholderEl.className = 'thread-item new-thread-placeholder'
+                placeholderEl.className = 'ts-class-81 group'
                 placeholderEl.innerHTML = `
-                    <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
-                        <span class="truncate pr-1">#New Thread...</span>
-                        <span class="shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">Just now</span>
+                    <div class="ts-html-element-45  flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
+                        <span class="ts-html-element-46  truncate pr-1">#New Thread...</span>
+                        <span class="ts-html-element-47  shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">Just now</span>
                     </div>
-                    <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="New Thread">New Thread</div>
-                    <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal">Starting...</div>
+                    <div class="ts-html-element-48  text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="New Thread">New Thread</div>
+                    <div class="ts-html-element-49  text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal">Starting...</div>
                 `
                 threadsList.prepend(placeholderEl)
 
@@ -1480,16 +1476,16 @@ const renderProjects = () => {
                     threadsList
                         .querySelectorAll(':scope > div')
                         .forEach((child) => {
-                            child.className = 'thread-item thread-item-inactive'
+                            child.className = 'ts-class-82 group'
                         })
-                    placeholderEl.className = 'thread-item new-thread-placeholder'
+                    placeholderEl.className = 'ts-class-83 group'
 
                     const previewPane = document.getElementById(
                         'markdown-preview-pane'
                     )
                     if (previewPane) {
                         previewPane.innerHTML =
-                            '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                            '<div class="ts-html-element-50  text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
                     }
                 })
 
@@ -1498,7 +1494,7 @@ const renderProjects = () => {
                 )
                 if (previewPane) {
                     previewPane.innerHTML =
-                        '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                        '<div class="ts-html-element-51  text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
                 }
 
                 await selectAgyEngine()
@@ -1820,7 +1816,7 @@ const renderProjectThreads = async (
         listEl.innerHTML = ''
         if (threads.length === 0) {
             listEl.innerHTML =
-                '<div class="text-[9px] text-gray-500 dark:text-gray-600 italic text-center p-3">No threads found for this project</div>'
+                '<div class="ts-html-element-52  text-[9px] text-gray-500 dark:text-gray-600 italic text-center p-3">No threads found for this project</div>'
             return
         }
 
@@ -1829,7 +1825,9 @@ const renderProjectThreads = async (
             threadLatestLeafIds.set(thread.id, thread.latest_leaf_id)
             const el = document.createElement('div')
             const isActive = activeThreadId === thread.id
-            el.className = 'thread-item thread-item-' + (isActive ? 'active' : 'inactive')
+            el.className = isActive
+                ? 'group p-1.5 rounded border border-blue-500/30 dark:border-blue-500/40 bg-blue-50/50 dark:bg-blue-500/10 hover:bg-blue-100/50 dark:hover:bg-blue-500/20 cursor-pointer transition-all space-y-0.5'
+                : 'group p-1.5 rounded border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-900/40 hover:bg-gray-100 dark:hover:bg-gray-850 cursor-pointer transition-all space-y-0.5'
 
             const dateStr =
                 thread.mtime > 0
@@ -1842,16 +1840,16 @@ const renderProjectThreads = async (
                     : 'Unknown Date'
 
             el.innerHTML = `
-                <div class="flex items-start justify-between">
-                    <div class="flex-1 min-w-0 pr-1">
-                        <div class="flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
-                            <span class="truncate pr-1">#${thread.id.substring(0, 8)}</span>
-                            <span class="shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">${dateStr}</span>
+                <div class="ts-html-element-53  flex items-start justify-between">
+                    <div class="ts-html-element-54  flex-1 min-w-0 pr-1">
+                        <div class="ts-html-element-55  flex items-center justify-between text-[9px] font-semibold text-gray-500 dark:text-gray-400">
+                            <span class="ts-html-element-56  truncate pr-1">#${thread.id.substring(0, 8)}</span>
+                            <span class="ts-html-element-57  shrink-0 text-[8px] text-gray-700 dark:text-gray-300 font-mono font-medium">${dateStr}</span>
                         </div>
-                        <div class="text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="${thread.title}">${thread.title}</div>
-                        <div class="text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
+                        <div class="ts-html-element-58  text-[10px] font-bold text-gray-900 dark:text-gray-100 truncate" title="${thread.title}">${thread.title}</div>
+                        <div class="ts-html-element-59  text-[9px] text-gray-600 dark:text-gray-400 line-clamp-1 leading-normal" title="${thread.snippet}">${thread.snippet}</div>
                     </div>
-                    <button class="delete-thread-btn opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all select-none self-center p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0" title="Delete Thread">✕</button>
+                    <button class="ts-html-element-60  delete-thread-btn opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all select-none self-center p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0" title="Delete Thread">✕</button>
                 </div>
             `
 
@@ -1872,7 +1870,7 @@ const renderProjectThreads = async (
                             )
                             if (previewPane) {
                                 previewPane.innerHTML =
-                                    '<div class="text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
+                                    '<div class="ts-html-element-61  text-[10px] text-gray-500 dark:text-gray-600 italic text-center p-4">Select a thread or log file to view preview...</div>'
                             }
                         }
                         pollThreadsList()
@@ -1886,9 +1884,9 @@ const renderProjectThreads = async (
                 document
                     .querySelectorAll('#project-threads-list > div')
                     .forEach((child) => {
-                        child.className = 'thread-item thread-item-inactive'
+                        child.className = 'ts-class-84 group'
                     })
-                el.className = 'thread-item thread-item-active'
+                el.className = 'ts-class-85 group'
 
                 activeThreadId = thread.id
                 await selectAgyEngine()
@@ -1908,7 +1906,7 @@ const renderProjectThreads = async (
                     }
                 } catch (err) {
                     if (previewPane) {
-                        previewPane.innerHTML = `<div class="text-red-500 p-4">Error loading thread log file: ${err}</div>`
+                        previewPane.innerHTML = `<div class="ts-html-element-62  text-red-500 p-4">Error loading thread log file: ${err}</div>`
                     }
                 }
 
@@ -1949,7 +1947,7 @@ const renderProjectThreads = async (
         }
     } catch (err) {
         console.error('Failed to load project threads:', err)
-        listEl.innerHTML = `<div class="text-red-500 text-[10px] p-2">Error: ${err}</div>`
+        listEl.innerHTML = `<div class="ts-html-element-63  text-red-500 text-[10px] p-2">Error: ${err}</div>`
     }
 }
 
@@ -2152,7 +2150,7 @@ btnSubmitNewProject?.addEventListener('click', async () => {
     // Disable submit button and show loading state
     const originalText = btnSubmitNewProject.innerHTML
     btnSubmitNewProject.disabled = true
-    btnSubmitNewProject.innerHTML = `<span class="inline-block animate-spin mr-2">🔄</span> Creating...`
+    btnSubmitNewProject.innerHTML = `<span class="ts-html-element-64  inline-block animate-spin mr-2">🔄</span> Creating...`
 
     try {
         const projectPath = await invoke<string>('create_new_project', {
@@ -2309,7 +2307,7 @@ let arrowUpOverlay: HTMLDivElement | null = null
 const showArrowUpOverlay = () => {
     if (!arrowUpOverlay) {
         arrowUpOverlay = document.createElement('div')
-        arrowUpOverlay.className = 'arrow-up-overlay'
+        arrowUpOverlay.className = 'ts-class-86 '
         arrowUpOverlay.textContent = 'Press ArrowUp again to recall history'
         const bottomArea = document.getElementById('bottom-input-area')
         if (bottomArea) {
@@ -2452,8 +2450,8 @@ textarea?.addEventListener('keydown', async (e) => {
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
             const blockHtml = `
-            <div class="w-full flex justify-end mb-4 select-text">
-                <div class="max-w-[65ch] bg-gray-150/80 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-250 dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
+            <div class="ts-html-element-65  w-full flex justify-end mb-4 select-text">
+                <div class="ts-html-element-66  max-w-[65ch] dark:bg-gray-800 text-gray-800 dark:text-gray-200 border dark:border-gray-700/60 rounded-2xl px-4 py-2.5 text-sm font-sans whitespace-pre-wrap shadow-sm">
 ${escapedInput}
                 </div>
             </div>`
@@ -2782,14 +2780,14 @@ const updatePlaceholder = (isRunning = true) => {
                 textarea.placeholder =
                     'Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className = 'toggle-label context-container-clear'
+                    contextContainer.className = 'ts-class-87 '
                 }
                 if (labelText) labelText.textContent = 'Auto-Clear: ACTIVE'
             } else {
                 textarea.placeholder =
                     'Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className = 'toggle-label context-container-continue'
+                    contextContainer.className = 'ts-class-88 '
                 }
                 if (labelText) labelText.textContent = 'Auto-Clear: OFF'
             }
@@ -2946,7 +2944,7 @@ async function updateQuotaDisplay() {
         const tooltip = document.getElementById('quota-tooltip')
         if (tooltip) {
             tooltip.innerHTML =
-                '<div class="flex gap-8"><div id="quota-col-google" class="flex flex-col gap-2"></div><div id="quota-col-anthropic" class="flex flex-col gap-2"></div></div>'
+                '<div class="ts-html-element-67  flex gap-8"><div id="quota-col-google" class="ts-html-element-68  flex flex-col gap-2"></div><div id="quota-col-anthropic" class="ts-html-element-69  flex flex-col gap-2"></div></div>'
 
             const getProviderData = (
                 name: string,
@@ -2960,7 +2958,7 @@ async function updateQuotaDisplay() {
                 const col = document.getElementById(colId)
                 if (!col) return
 
-                col.innerHTML += `<div class="font-bold text-gray-200 mb-1 border-b border-gray-700 pb-1">${name}</div>`
+                col.innerHTML += `<div class="ts-html-element-70  font-bold text-gray-200 mb-1 border-b border-gray-700 pb-1">${name}</div>`
 
                 const highModels = allModels.filter(
                     (m: any) =>
@@ -3004,8 +3002,8 @@ async function updateQuotaDisplay() {
                     }
 
                     const row = document.createElement('div')
-                    row.className = 'quota-row'
-                    row.innerHTML = `<span class="font-bold text-gray-400 w-12">${label}:</span> <div class="flex gap-2 text-right"> <span class="${minRem < 0.2 ? 'text-red-400' : 'text-green-400'} font-bold w-9">${pct}</span> <span class="text-gray-500">resets ${timeStr}</span></div>`
+                    row.className = 'ts-class-89 '
+                    row.innerHTML = `<span class="ts-html-element-71  font-bold text-gray-400 w-12">${label}:</span> <div class="ts-html-element-72  flex gap-2 text-right"> <span class="ts-html-element-73  ${minRem < 0.2 ? 'text-red-400' : 'text-green-400'} font-bold w-9">${pct}</span> <span class="text-gray-500">resets ${timeStr}</span></div>`
                     col.appendChild(row)
                 }
 
