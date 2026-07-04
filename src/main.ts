@@ -61,6 +61,7 @@ const formatPathForUser = (
 
 let isTerminalMode: boolean = false
 let isTuiExpanded: boolean = false
+let userManuallyCollapsedTui: boolean = false
 let activeThreadId: string | null = null
 let activeThreadContext: string | null = null
 const threadFilepaths = new Map<string, string>()
@@ -1115,31 +1116,29 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
                 // Auto-expand TUI if interactive prompt is detected
                 setTimeout(() => {
                     const tuiContainer = document.getElementById('terminal-container')
-                    if (tuiContainer && !isTuiExpanded) {
-                        let isInteractive = false;
-                        let recentText = '';
-                        // Check the last few lines of the terminal buffer for prompts
-                        const baseY = term.buffer.active.baseY;
-                        const cursorY = term.buffer.active.cursorY;
-                        const numLinesToCheck = 5;
-                        const startLine = Math.max(0, baseY + cursorY - numLinesToCheck);
-                        
-                        for (let i = startLine; i <= baseY + cursorY; i++) {
-                            const line = term.buffer.active.getLine(i);
-                            if (line) {
-                                const text = line.translateToString(true).trim();
-                                recentText += text + '\n';
-                                if (text.match(/(\? |> |\(y\/n\)|\[y\/N\]|Select |Choose |Approve\?)/i) || text.endsWith('❯')) {
-                                    isInteractive = true;
-                                }
+                    let isInteractive = false;
+                    let recentText = '';
+                    // Check the last few lines of the terminal buffer for prompts
+                    const baseY = term.buffer.active.baseY;
+                    const cursorY = term.buffer.active.cursorY;
+                    const numLinesToCheck = 5;
+                    const startLine = Math.max(0, baseY + cursorY - numLinesToCheck);
+                    
+                    for (let i = startLine; i <= baseY + cursorY; i++) {
+                        const line = term.buffer.active.getLine(i);
+                        if (line) {
+                            const text = line.translateToString(true).trim();
+                            recentText += text + '\n';
+                            if (text.match(/(\(y\/n\)|\[y\/N\]|Approve\?)$/i) || text.match(/^(Select|Choose) /i) || text.endsWith('❯') || text.endsWith('?')) {
+                                isInteractive = true;
                             }
                         }
-                        
-                        if (isInteractive) {
-                            const toggleBtn = document.getElementById('toggle-tui-btn');
-                            if (toggleBtn) {
-                                toggleBtn.click(); // Auto-expand
-                            }
+                    }
+                    
+                    if (isInteractive && tuiContainer && !isTuiExpanded && !userManuallyCollapsedTui) {
+                        const toggleBtn = document.getElementById('toggle-tui-btn');
+                        if (toggleBtn) {
+                            toggleBtn.click(); // Auto-expand
                         }
                     }
                 }, 50);
@@ -1157,6 +1156,7 @@ if (toggleTuiBtn && tuiContainer && previewWrapper) {
     toggleTuiBtn.addEventListener('click', () => {
         isTuiExpanded = !isTuiExpanded
         if (isTuiExpanded) {
+            userManuallyCollapsedTui = false
             // Expand
             tuiContainer.style.height = 'calc(100% - 28px)'
             previewWrapper.style.display = 'none'
@@ -1165,6 +1165,7 @@ if (toggleTuiBtn && tuiContainer && previewWrapper) {
                 <svg class="ts-html-element-33" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
             `
         } else {
+            userManuallyCollapsedTui = true
             // Collapse
             tuiContainer.style.height = '110px'
             previewWrapper.style.display = 'flex'
@@ -2475,6 +2476,8 @@ textarea?.addEventListener('keydown', async (e) => {
         let rawInput = textarea.value
         const trimmedInput = rawInput.trim()
         if (!trimmedInput) return
+
+        userManuallyCollapsedTui = false
 
         if (!activeThreadId) {
             isWaitingForNewThread = true
