@@ -2930,11 +2930,11 @@ document.addEventListener('click', (e) => {
     const selection = window.getSelection()
 
     // Focus appropriate terminal or textarea
-    const isEngineTermClick = container?.contains(target)
-    const isMiniTermClick = miniContainer?.contains(target)
-    const isSidebarClick = document
-        .getElementById('projects-sidebar')
-        ?.contains(target)
+    const path = e.composedPath()
+    const isEngineTermClick = container && path.includes(container)
+    const isMiniTermClick = miniContainer && path.includes(miniContainer)
+    const sidebar = document.getElementById('projects-sidebar')
+    const isSidebarClick = sidebar && path.includes(sidebar)
 
     if (isEngineTermClick) {
         term.focus()
