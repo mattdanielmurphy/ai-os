@@ -258,20 +258,9 @@ fn get_tmux_pane_pid(session_name: &str) -> Option<u32> {
 }
 
 fn is_engine_running_proc(engine: &str, project_path: &str, shell_pid: Option<u32>) -> bool {
-    let root_pid = if is_tmux_available() {
-        let session_name = get_tmux_session_name(project_path, engine);
-        if !has_tmux_session(&session_name) {
-            return false;
-        }
-        match get_tmux_pane_pid(&session_name) {
-            Some(pid) => pid,
-            None => return false,
-        }
-    } else {
-        match shell_pid {
-            Some(pid) => pid,
-            None => return false,
-        }
+    let root_pid = match shell_pid {
+        Some(pid) => pid,
+        None => return false,
     };
 
     let output = match std::process::Command::new("ps")
@@ -351,7 +340,7 @@ fn spawn_single_pty(
     }).map_err(|e| e.to_string())?;
 
     let mut is_new_tmux = false;
-    let mut cmd = if is_tmux_available() {
+    let mut cmd = if is_tmux_available() && terminal_type == "mini" {
         let session_name = get_tmux_session_name(project_path, terminal_type);
         println!("[DEBUG] tmux is available. Checking for session: {}", session_name);
         if !has_tmux_session(&session_name) {
@@ -497,14 +486,6 @@ fn ensure_engine_pty(
             client_alive = is_process_alive(pid);
         }
         if !agy_alive || !client_alive {
-            if is_tmux_available() && !agy_alive {
-                let session_name = get_tmux_session_name(project_path, "claude");
-                if has_tmux_session(&session_name) {
-                    let _ = std::process::Command::new("tmux")
-                        .args(&["kill-session", "-t", &session_name])
-                        .status();
-                }
-            }
             let (writer, master, pid, is_new) = spawn_single_pty(project_path, "claude", app_handle)?;
             session.claude_writer = Some(writer);
             session.claude_master = Some(master);
@@ -521,14 +502,6 @@ fn ensure_engine_pty(
             client_alive = is_process_alive(pid);
         }
         if !agy_alive || !client_alive {
-            if is_tmux_available() && !agy_alive {
-                let session_name = get_tmux_session_name(project_path, "agy");
-                if has_tmux_session(&session_name) {
-                    let _ = std::process::Command::new("tmux")
-                        .args(&["kill-session", "-t", &session_name])
-                        .status();
-                }
-            }
             let (writer, master, pid, is_new) = spawn_single_pty(project_path, "agy", app_handle)?;
             session.agy_writer = Some(writer);
             session.agy_master = Some(master);
@@ -564,45 +537,6 @@ struct SwitchResult {
 
 #[tauri::command]
 fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), String> {
-    if !is_tmux_available() {
-        return Ok(());
-    }
-    let spare_session = format!("{}_spare", get_tmux_session_name(&project_path, &engine));
-    if has_tmux_session(&spare_session) {
-        return Ok(());
-    }
-
-    let project_path_clone = project_path.clone();
-    let engine_clone = engine.clone();
-    std::thread::spawn(move || {
-        let mut args = vec![
-            "-u".to_string(),
-            "new-session".to_string(),
-            "-d".to_string(),
-            "-s".to_string(),
-            spare_session.clone(),
-            "-c".to_string(),
-            project_path_clone.clone(),
-        ];
-        if engine_clone == "claude" {
-            args.push("claude --dangerously-skip-permissions".to_string());
-        } else if engine_clone == "agy" {
-            args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path_clone));
-        }
-
-        let _ = std::process::Command::new("tmux")
-            .args(&args)
-            .status();
-
-        std::thread::sleep(std::time::Duration::from_millis(150));
-        let _ = std::process::Command::new("tmux")
-            .args(&["-u", "set-option", "-t", &spare_session, "status", "off"])
-            .status();
-        let _ = std::process::Command::new("tmux")
-            .args(&["-u", "set-option", "-s", "copy-command", "pbcopy"])
-            .status();
-    });
-
     Ok(())
 }
 
@@ -611,28 +545,6 @@ fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<
     let app_handle = state.app_handle.clone();
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     let session = sessions.get_mut(&project_path).ok_or_else(|| "No session found".to_string())?;
-
-    if is_tmux_available() {
-        let session_name = get_tmux_session_name(&project_path, &engine);
-        let spare_session = format!("{}_spare", session_name);
-
-        if has_tmux_session(&spare_session) {
-            if has_tmux_session(&session_name) {
-                let _ = std::process::Command::new("tmux")
-                    .args(&["kill-session", "-t", &session_name])
-                    .status();
-            }
-            let _ = std::process::Command::new("tmux")
-                .args(&["rename-session", "-t", &spare_session, &session_name])
-                .status();
-        } else {
-            if has_tmux_session(&session_name) {
-                let _ = std::process::Command::new("tmux")
-                    .args(&["kill-session", "-t", &session_name])
-                    .status();
-            }
-        }
-    }
 
     let (writer, master, pid, _) = spawn_single_pty(&project_path, &engine, &app_handle)?;
     if engine == "claude" {
@@ -1012,12 +924,10 @@ fn toggle_process_pause(project_path: String, engine: String, pause: bool, state
 fn close_project_session(project_path: String, state: tauri::State<AppState>) -> Result<(), String> {
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
     if let Some(_) = sessions.remove(&project_path) {
-        for term_type in &["claude", "agy", "mini"] {
-            let session_name = get_tmux_session_name(&project_path, term_type);
-            let _ = std::process::Command::new("tmux")
-                .args(&["-u", "kill-session", "-t", &session_name])
-                .status();
-        }
+        let session_name = get_tmux_session_name(&project_path, "mini");
+        let _ = std::process::Command::new("tmux")
+            .args(&["-u", "kill-session", "-t", &session_name])
+            .status();
     }
     Ok(())
 }
