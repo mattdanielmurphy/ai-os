@@ -1038,14 +1038,7 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     }
 
     if (!isThinking && pauseStatus === 'Running') {
-        const lastStep = steps[steps.length - 1]
-        if (
-            lastStep &&
-            (lastStep.type === 'USER_INPUT' ||
-                (lastStep.tool_calls && lastStep.tool_calls.length > 0))
-        ) {
-            isThinking = true
-        }
+        isThinking = true;
     }
 
     // 3. Timeline Steps
