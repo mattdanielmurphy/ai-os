@@ -857,8 +857,27 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
         
         let argsHtml = ''
         if (call.args) {
-            const argsStr = JSON.stringify(call.args, null, 2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            argsHtml = `<pre style="font-size: 0.7rem; color: var(--text-muted); background: rgba(0,0,0,0.1); padding: 4px; border-radius: 4px; margin-top: 4px; white-space: pre-wrap; word-break: break-all; width: 100%; box-sizing: border-box;"><code>${argsStr}</code></pre>`
+            let argsListHtml = ''
+            try {
+                if (typeof call.args === 'object' && call.args !== null) {
+                    for (const [key, value] of Object.entries(call.args)) {
+                        if (typeof value === 'string' && value.includes('\n')) {
+                            const parsedHtml = marked.parse(value) as string;
+                            argsListHtml += `<div style="margin-top: 4px;"><strong>${key}:</strong><div class="prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border" style="margin-top: 4px; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid rgba(0,0,0,0.05); overflow-x: auto;">${parsedHtml}</div></div>`
+                        } else if (typeof value === 'string') {
+                            argsListHtml += `<div><strong>${key}:</strong> <span style="color: var(--text-muted);">${value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></div>`
+                        } else {
+                            argsListHtml += `<div><strong>${key}:</strong> <pre style="display:inline; margin:0; padding:2px 4px; font-size:0.8em; background: rgba(0,0,0,0.05); border-radius: 4px;"><code>${JSON.stringify(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre></div>`
+                        }
+                    }
+                    argsHtml = `<div style="font-size: 0.85rem; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; width: 100%; box-sizing: border-box;">${argsListHtml}</div>`
+                } else {
+                    throw new Error("Not an object");
+                }
+            } catch (e) {
+                const argsStr = JSON.stringify(call.args, null, 2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                argsHtml = `<pre style="font-size: 0.7rem; color: var(--text-muted); background: rgba(0,0,0,0.1); padding: 4px; border-radius: 4px; margin-top: 4px; white-space: pre-wrap; word-break: break-all; width: 100%; box-sizing: border-box;"><code>${argsStr}</code></pre>`
+            }
         }
 
         return `
