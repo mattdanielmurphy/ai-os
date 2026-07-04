@@ -37,3 +37,22 @@ This mode should be explicitly toggled on for complex or extensive refactoring r
 
 ## Configuration & Customization
 Historically, the system rules were defined globally via a `GEMINI.md` file. With the introduction of multi-mode prompt routing, the `GEMINI.md` file is intentionally left empty. The operational rules have been migrated to `src/systemPromptConfig.ts` within the AI-OS source code, enabling dynamic injection at runtime based on the selected mode.
+
+## Architecture Overview
+
+The ai-os workspace is composed of several key components:
+
+- **Orchestration & Bootloading:** A shell-wrapping bootloader (`bin/ai-os`, `.zshrc_aios`) that intercepts destructive commands and injects quiet-run wrappers.
+- **Tauri GUI & PTY Layer:** A React/TS frontend utilizing `xterm.js` to render multiplexed background processes via Rust bindings (`src/main.ts`, `src-tauri/src/main.rs`).
+- **Cost & Quota Telemetry Engine:** Sub-model cost math and token refresh flows (`scripts/telemetry_db.py`).
+- **Triage Editing System:** Surgical text mutations and LLM-driven patch applications (`scripts/precision_edit.py`, `scripts/mechanical_editor.py`).
+- **Git Memory Pipeline:** Multi-layer indexing for safe history retrieval (`scripts/memory_search.sh`, `scripts/memory_diff.sh`).
+- **Dynamic Rules Injection:** Manages context routing to active models and global rulesets (`scripts/append_system_rule.py`).
+- **Automated Context Handoff:** Creates standardized context log files in `.agent-logs/` conforming to the Indexed Handoff Protocol (`scripts/context_handoff.py`).
+
+### Roadmap & Planned Features
+- **Rust API Bridge Layer:** Expanding Tauri `main.rs` to include HTTP server infrastructure for web-chat syncing and stateless revision loops.
+- **Codebase Ingestion Parser (AST Upgrades):** Upgrading from regex/while-loop parsing to formal AST parsing (e.g., `tree-sitter`) for deeper code structure understanding.
+- **Browser Extension / Web Context Sync:** Siphoning web sessions directly into the local repo.
+- **Automated Auth Rotation Daemon:** Headless account-swapping component to rotate Google Accounts.
+- **Semantic Thought Layer:** Integrating local vector embeddings and native macOS automation (JXA/AppleScript wrappers).
