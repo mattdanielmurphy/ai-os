@@ -1224,6 +1224,18 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                         }
                     }
                     
+                    if let Some(sys_idx) = raw_prompt.find("<SYSTEM_INSTRUCTIONS>") {
+                        raw_prompt = raw_prompt[..sys_idx].trim().to_string();
+                    }
+                    
+                    if raw_prompt.contains("Continuing conversation from history") {
+                        if let Some(user_req_idx) = raw_prompt.find("\nUser request:") {
+                            raw_prompt = raw_prompt[user_req_idx + "\nUser request:".len()..].trim().to_string();
+                        } else if let Some(user_req_idx) = raw_prompt.rfind("User request:") {
+                            raw_prompt = raw_prompt[user_req_idx + "User request:".len()..].trim().to_string();
+                        }
+                    }
+                    
                     let clean_prompt = raw_prompt.replace("\r", "").replace("\n", " ");
                     let char_count = clean_prompt.chars().count();
                     title = if char_count > 40 {

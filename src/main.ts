@@ -655,6 +655,26 @@ const buildTimelineHtml = (steps: Step[]): string => {
         if (step.type === 'USER_INPUT' && step.content) {
             flushToolCalls()
             let prompt = step.content
+
+            // Strip system directives entirely
+            prompt = prompt.replace(/<SYSTEM_INSTRUCTIONS>[\s\S]*?<\/SYSTEM_INSTRUCTIONS>/gi, '').trim()
+            prompt = prompt.replace(/<ADDITIONAL_METADATA>[\s\S]*?<\/ADDITIONAL_METADATA>/gi, '').trim()
+            prompt = prompt.replace(/<USER_SETTINGS_CHANGE>[\s\S]*?<\/USER_SETTINGS_CHANGE>/gi, '').trim()
+            prompt = prompt.replace(/<user_rules>[\s\S]*?<\/user_rules>/gi, '').trim()
+            prompt = prompt.replace(/<ephemeral_message>[\s\S]*?<\/ephemeral_message>/gi, '').trim()
+            prompt = prompt.replace(/\[SYSTEM DIRECTIVE:[\s\S]*?\]\n*/g, '').trim()
+
+            let historicalContextText = ''
+            let threadId = ''
+
+            // Extract the new IDE-injected Conversation History
+            const convHistoryMarker = '# Conversation History\n'
+            const convHistoryIdx = prompt.indexOf(convHistoryMarker)
+            if (convHistoryIdx !== -1) {
+                historicalContextText = prompt.substring(convHistoryIdx).trim()
+                prompt = prompt.substring(0, convHistoryIdx).trim()
+            }
+
             const startTag = '<USER_REQUEST>'
             const endTag = '</USER_REQUEST>'
             const startIdx = prompt.indexOf(startTag)
@@ -664,9 +684,6 @@ const buildTimelineHtml = (steps: Step[]): string => {
                     .substring(startIdx + startTag.length, endIdx)
                     .trim()
             }
-
-            let historicalContextText = ''
-            let threadId = ''
 
             if (prompt.includes('Continuing conversation from history')) {
                 // Find thread ID if present
@@ -686,12 +703,15 @@ const buildTimelineHtml = (steps: Step[]): string => {
                     userReqIdx !== -1 &&
                     userReqIdx > histIdx
                 ) {
-                    historicalContextText = prompt
+                    const legacyContext = prompt
                         .substring(
                             histIdx + 'Historical Context:\n'.length,
                             userReqIdx
                         )
                         .trim()
+                    historicalContextText = historicalContextText 
+                        ? legacyContext + '\n\n' + historicalContextText
+                        : legacyContext
                     prompt = prompt
                         .substring(userReqIdx + '\n\nUser request: '.length)
                         .trim()
@@ -703,12 +723,15 @@ const buildTimelineHtml = (steps: Step[]): string => {
                         oldUserReqIdx !== -1 &&
                         oldUserReqIdx > oldHistIdx
                     ) {
-                        historicalContextText = prompt
+                        const legacyContext = prompt
                             .substring(
                                 oldHistIdx + 'Historical Context:\n'.length,
                                 oldUserReqIdx
                             )
                             .trim()
+                        historicalContextText = historicalContextText 
+                            ? legacyContext + '\n\n' + historicalContextText
+                            : legacyContext
                         prompt = prompt
                             .substring(oldUserReqIdx + 'User request: '.length)
                             .trim()
@@ -1744,6 +1767,20 @@ function getCompactifiedContext(jsonlContent: string): string {
             if (type === 'USER_INPUT' && content) {
                 stepCount++
                 let prompt = content
+
+                prompt = prompt.replace(/<SYSTEM_INSTRUCTIONS>[\s\S]*?<\/SYSTEM_INSTRUCTIONS>/gi, '').trim()
+                prompt = prompt.replace(/<ADDITIONAL_METADATA>[\s\S]*?<\/ADDITIONAL_METADATA>/gi, '').trim()
+                prompt = prompt.replace(/<USER_SETTINGS_CHANGE>[\s\S]*?<\/USER_SETTINGS_CHANGE>/gi, '').trim()
+                prompt = prompt.replace(/<user_rules>[\s\S]*?<\/user_rules>/gi, '').trim()
+                prompt = prompt.replace(/<ephemeral_message>[\s\S]*?<\/ephemeral_message>/gi, '').trim()
+                prompt = prompt.replace(/\[SYSTEM DIRECTIVE:[\s\S]*?\]\n*/g, '').trim()
+
+                const convHistoryMarker = '# Conversation History\n'
+                const convHistoryIdx = prompt.indexOf(convHistoryMarker)
+                if (convHistoryIdx !== -1) {
+                    prompt = prompt.substring(0, convHistoryIdx).trim()
+                }
+
                 const startTag = '<USER_REQUEST>'
                 const endTag = '</USER_REQUEST>'
                 const startIdx = prompt.indexOf(startTag)
