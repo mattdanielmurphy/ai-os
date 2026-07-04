@@ -125,13 +125,13 @@ const updatePauseUI = (status: 'Running' | 'Pending' | 'Paused') => {
     if (pauseBtnEl) {
         if (status === 'Pending') {
             pauseBtnEl.textContent = 'Pending...'
-            pauseBtnEl.className = 'ts-class-74'
+            pauseBtnEl.className = 'pause-btn-base'
         } else if (status === 'Paused') {
             pauseBtnEl.textContent = 'Resume'
-            pauseBtnEl.className = 'ts-class-75'
+            pauseBtnEl.className = 'pause-btn-hover'
         } else {
             pauseBtnEl.textContent = 'Pause'
-            pauseBtnEl.className = 'ts-class-76'
+            pauseBtnEl.className = 'pause-btn-active'
         }
     }
 }
@@ -1383,10 +1383,10 @@ const renderProjects = () => {
 
         if (isActive) {
             const threadsContainer = document.createElement('div')
-            threadsContainer.className = 'ts-class-77'
+            threadsContainer.className = 'thread-history-container'
 
             const threadsHeader = document.createElement('div')
-            threadsHeader.className = 'ts-class-78'
+            threadsHeader.className = 'thread-history-header'
             threadsHeader.innerHTML = `
                 <span>Threads</span>
                 <button class="ts-html-element-43 new-thread-btn" title="Start New Thread">+</button>
@@ -1394,7 +1394,7 @@ const renderProjects = () => {
 
             const threadsList = document.createElement('div')
             threadsList.id = 'project-threads-list'
-            threadsList.className = 'ts-class-79'
+            threadsList.className = 'thread-history-list'
             threadsList.innerHTML =
                 '<div class="ts-html-element-44 threads-loading">Loading...</div>'
 
@@ -1441,7 +1441,7 @@ const renderProjects = () => {
                 threadsList
                     .querySelectorAll(':scope > div')
                     .forEach((child) => {
-                        child.className = 'ts-class-80 group'
+                        child.className = 'thread-history-item group'
                     })
 
                 const loadingMsg = threadsList.querySelector('.italic')
@@ -1450,7 +1450,7 @@ const renderProjects = () => {
                 }
 
                 const placeholderEl = document.createElement('div')
-                placeholderEl.className = 'ts-class-81 group'
+                placeholderEl.className = 'thread-placeholder-item group'
                 placeholderEl.innerHTML = `
                     <div class="ts-html-element-45">
                         <span class="ts-html-element-46">#New Thread...</span>
@@ -1468,9 +1468,9 @@ const renderProjects = () => {
                     threadsList
                         .querySelectorAll(':scope > div')
                         .forEach((child) => {
-                            child.className = 'ts-class-82 group'
+                            child.className = 'thread-history-item-alt group'
                         })
-                    placeholderEl.className = 'ts-class-83 group'
+                    placeholderEl.className = 'thread-placeholder-item-active group'
 
                     const previewPane = document.getElementById(
                         'markdown-preview-pane'
@@ -1876,9 +1876,9 @@ const renderProjectThreads = async (
                 document
                     .querySelectorAll('#project-threads-list > div')
                     .forEach((child) => {
-                        child.className = 'ts-class-84 group'
+                        child.className = 'project-thread-item group'
                     })
-                el.className = 'ts-class-85 group'
+                el.className = 'project-thread-item-active group'
 
                 activeThreadId = thread.id
                 await selectAgyEngine()
@@ -2299,7 +2299,7 @@ let arrowUpOverlay: HTMLDivElement | null = null
 const showArrowUpOverlay = () => {
     if (!arrowUpOverlay) {
         arrowUpOverlay = document.createElement('div')
-        arrowUpOverlay.className = 'ts-class-86'
+        arrowUpOverlay.className = 'arrow-up-overlay'
         arrowUpOverlay.textContent = 'Press ArrowUp again to recall history'
         const bottomArea = document.getElementById('bottom-input-area')
         if (bottomArea) {
@@ -2772,14 +2772,14 @@ const updatePlaceholder = (isRunning = true) => {
                 textarea.placeholder =
                     'Type a prompt... [Runs /clear first] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className = 'ts-class-87'
+                    contextContainer.className = 'context-container-base'
                 }
                 if (labelText) labelText.textContent = 'Auto-Clear: ACTIVE'
             } else {
                 textarea.placeholder =
                     'Type a prompt... [Continuing thread] (Enter to send, Shift+Enter for newline)'
                 if (contextContainer) {
-                    contextContainer.className = 'ts-class-88'
+                    contextContainer.className = 'context-container-active'
                 }
                 if (labelText) labelText.textContent = 'Auto-Clear: OFF'
             }
@@ -2994,7 +2994,7 @@ async function updateQuotaDisplay() {
                     }
 
                     const row = document.createElement('div')
-                    row.className = 'ts-class-89'
+                    row.className = 'quota-row-item'
                     row.innerHTML = `<span class="ts-html-element-71">${label}:</span> <div class="ts-html-element-72"> <span class="ts-html-element-73 ${minRem < 0.2 ?'text-red-400' : 'text-green-400'} font-bold w-9">${pct}</span> <span class="">resets ${timeStr}</span></div>`
                     col.appendChild(row)
                 }
