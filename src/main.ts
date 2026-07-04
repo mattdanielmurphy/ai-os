@@ -2659,7 +2659,7 @@ ${escapedInput}
                         projectPath: activeProject,
                         engine: 'agy',
                     })
-                    await new Promise((resolve) => setTimeout(resolve, 500))
+                    await new Promise((resolve) => setTimeout(resolve, 3000))
                 } catch (err) {
                     console.error('Failed to spawn fresh agy engine:', err)
                 }
