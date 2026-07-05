@@ -965,3 +965,42 @@ details[open] .toggle-icon {
   color: var(--text-main);
   margin-bottom: 4px;
 }
+/* TUI Resize & Presets */
+.tui-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+}
+.tui-toggle-bar {
+  position: relative;
+}
+.terminal-presets {
+  display: flex;
+  gap: 6px;
+}
+.preset-btn {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.preset-btn:hover {
+  color: var(--text-main);
+  border-color: var(--text-muted);
+}
+.preset-btn.active {
+  background: var(--btn-primary-bg);
+  color: white;
+  border-color: var(--btn-primary-bg);
+}

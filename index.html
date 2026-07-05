@@ -121,26 +121,14 @@
                     class="tui-toggle-bar"
                     data-ui="tui-toggle-bar"
                 >
-                    <span>Engine TUI Session</span>
-                    <button
-                        id="toggle-tui-btn"
-                        class="toggle-tui-btn"
-                        data-ui="toggle-tui-btn"
-                    >
-                        <span>Expand Terminal</span>
-                        <svg
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2.5"
-                                d="M19 9l-7 7-7-7"
-                            ></path>
-                        </svg>
-                    </button>
+                    <div id="tui-resize-handle" class="tui-resize-handle"></div>
+                    <span style="pointer-events: none;">Engine TUI Session</span>
+                    
+                    <div class="terminal-presets" data-ui="terminal-presets">
+                        <button class="preset-btn" data-preset="0" title="Preset 1 (Small)">1</button>
+                        <button class="preset-btn" data-preset="1" title="Preset 2 (Medium)">2</button>
+                        <button class="preset-btn" data-preset="2" title="Preset 3 (Large)">3</button>
+                    </div>
                 </div>
 
                 <!-- Bottom: Original agy TUI (Terminal) -->

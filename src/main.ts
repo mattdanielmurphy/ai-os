@@ -7,6 +7,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { invoke } from '@tauri-apps/api/tauri'
+import { appWindow, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/window'
 import { renderThreadNotesSidebar } from './threadNotes'
 import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
@@ -32,6 +33,31 @@ window.addEventListener('keydown', (e) => {
 // ----------------------------------------------------
 // 1. Interfaces & Types
 // ----------------------------------------------------
+async function restoreWindowState() {
+    try {
+        const sizeStr = localStorage.getItem('windowSize')
+        if (sizeStr) {
+            const { width, height } = JSON.parse(sizeStr)
+            await appWindow.setSize(new PhysicalSize(width, height))
+        }
+        const posStr = localStorage.getItem('windowPosition')
+        if (posStr) {
+            const { x, y } = JSON.parse(posStr)
+            await appWindow.setPosition(new PhysicalPosition(x, y))
+        }
+    } catch (e) {
+        console.error('Failed to restore window state:', e)
+    }
+
+    appWindow.onResized(async ({ payload: size }) => {
+        localStorage.setItem('windowSize', JSON.stringify({ width: size.width, height: size.height }))
+    })
+    appWindow.onMoved(async ({ payload: position }) => {
+        localStorage.setItem('windowPosition', JSON.stringify({ x: position.x, y: position.y }))
+    })
+}
+restoreWindowState()
+
 interface Project {
     path: string
     name: string
@@ -63,8 +89,7 @@ const formatPathForUser = (
 }
 
 let isTerminalMode: boolean = false
-let isTuiExpanded: boolean = false
-let userManuallyCollapsedTui: boolean = false
+
 let activeThreadId: string | null = null
 let activeThreadContext: string | null = null
 const threadFilepaths = new Map<string, string>()
@@ -1302,11 +1327,8 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
                         }
                     }
                     
-                    if (isInteractive && tuiContainer && !isTuiExpanded && !userManuallyCollapsedTui) {
-                        const toggleBtn = document.getElementById('toggle-tui-btn');
-                        if (toggleBtn) {
-                            toggleBtn.click(); // Auto-expand
-                        }
+                    if (isInteractive && tuiContainer && activeTerminalPreset === 0) {
+                        applyTerminalPreset(1); // Auto-expand to medium on prompt if small
                     }
                 }, 50);
             }
@@ -1314,42 +1336,92 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
     }
 )
 
-// TUI Toggle Button Event Listener
-const toggleTuiBtn = document.getElementById('toggle-tui-btn')
+// TUI Presets & Drag Resizing
 const tuiContainer = document.getElementById('terminal-container')
 const previewWrapper = document.getElementById('preview-wrapper')
+const tuiResizeHandle = document.getElementById('tui-resize-handle')
+const presetBtns = document.querySelectorAll('.preset-btn')
 
-if (toggleTuiBtn && tuiContainer && previewWrapper) {
-    toggleTuiBtn.addEventListener('click', () => {
-        isTuiExpanded = !isTuiExpanded
-        if (isTuiExpanded) {
-            userManuallyCollapsedTui = false
-            // Expand
-            tuiContainer.style.height = 'calc(100% - 28px)'
-            previewWrapper.style.display = 'none'
-            toggleTuiBtn.innerHTML = `
-                <span>Collapse Terminal</span>
-                <svg class="ts-html-element-33" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-            `
-        } else {
-            userManuallyCollapsedTui = true
-            // Collapse
-            tuiContainer.style.height = '110px'
-            previewWrapper.style.display = 'flex'
-            toggleTuiBtn.innerHTML = `
-                <span>Expand Terminal</span>
-                <svg class="ts-html-element-34" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-            `
+let terminalPresets = [110, 300, 600]
+try {
+    const savedPresets = localStorage.getItem('terminalPresets')
+    if (savedPresets) terminalPresets = JSON.parse(savedPresets)
+} catch (e) {}
+
+let activeTerminalPreset = 0
+try {
+    const savedActivePreset = localStorage.getItem('activeTerminalPreset')
+    if (savedActivePreset !== null) activeTerminalPreset = parseInt(savedActivePreset, 10)
+} catch (e) {}
+
+function applyTerminalPreset(index: number) {
+    activeTerminalPreset = index
+    localStorage.setItem('activeTerminalPreset', index.toString())
+    presetBtns.forEach(btn => btn.classList.remove('active'))
+    const activeBtn = document.querySelector(`.preset-btn[data-preset="${index}"]`)
+    if (activeBtn) activeBtn.classList.add('active')
+    
+    if (tuiContainer && previewWrapper) {
+        tuiContainer.style.height = `${terminalPresets[index]}px`
+    }
+    
+    setTimeout(() => {
+        try { resizePty(); } catch (e) {}
+    }, 50)
+    setTimeout(() => {
+        try { resizePty(); } catch (e) {}
+    }, 150)
+}
+(window as any).applyTerminalPreset = applyTerminalPreset;
+
+if (presetBtns.length > 0) {
+    presetBtns.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            const el = e.currentTarget as HTMLElement
+            const index = parseInt(el.dataset.preset || '0', 10)
+            applyTerminalPreset(index)
+        })
+    })
+}
+
+// Initial application
+applyTerminalPreset(activeTerminalPreset)
+
+// Resizing logic for Terminal
+if (tuiResizeHandle && tuiContainer && previewWrapper) {
+    let isResizingTui = false
+    let startY = 0
+    let startHeight = 0
+
+    tuiResizeHandle.addEventListener('mousedown', (e) => {
+        isResizingTui = true
+        startY = e.clientY
+        startHeight = tuiContainer.offsetHeight
+        document.body.style.cursor = 'row-resize'
+        e.preventDefault()
+    })
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizingTui) return
+        const deltaY = startY - e.clientY // Dragging UP increases height
+        let newHeight = startHeight + deltaY
+        const minHeight = 50
+        const maxHeight = window.innerHeight - 100
+
+        if (newHeight >= minHeight && newHeight <= maxHeight) {
+            tuiContainer.style.height = `${newHeight}px`
+            terminalPresets[activeTerminalPreset] = newHeight
+            localStorage.setItem('terminalPresets', JSON.stringify(terminalPresets))
+            try { debouncedResizePty() } catch (e) {}
         }
-        setTimeout(() => {
-            resizePty()
-        }, 50)
-        setTimeout(() => {
-            resizePty()
-        }, 150)
-        setTimeout(() => {
-            resizePty()
-        }, 320)
+    })
+
+    document.addEventListener('mouseup', () => {
+        if (isResizingTui) {
+            isResizingTui = false
+            document.body.style.cursor = 'default'
+            try { resizePty() } catch (e) {}
+        }
     })
 }
 
@@ -1402,6 +1474,11 @@ const sidebarSplitter = document.getElementById('sidebar-splitter')
 const sidebar = document.getElementById('projects-sidebar')
 
 if (sidebarSplitter && sidebar) {
+    const savedSidebarWidth = localStorage.getItem('sidebarWidth')
+    if (savedSidebarWidth) {
+        sidebar.style.width = `${savedSidebarWidth}px`
+    }
+
     let isDragging = false
     let startX = 0
     let startWidth = 0
@@ -1424,6 +1501,7 @@ if (sidebarSplitter && sidebar) {
 
         if (newWidth >= minWidth && newWidth <= maxWidth) {
             sidebar.style.width = `${newWidth}px`
+            localStorage.setItem('sidebarWidth', newWidth.toString())
             debouncedResizePty()
         }
     })
@@ -2641,7 +2719,7 @@ textarea?.addEventListener('keydown', async (e) => {
         const trimmedInput = rawInput.trim()
         if (!trimmedInput) return
 
-        userManuallyCollapsedTui = false
+
 
         if (!activeThreadId) {
             isWaitingForNewThread = true
