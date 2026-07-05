@@ -433,23 +433,8 @@ term.onData((data) => {
     })
 
 
-    // Auto-adjust terminal height when user starts typing a slash command
-    setTimeout(() => {
-        const cursorLine = term.buffer.active.getLine(
-            term.buffer.active.cursorY + term.buffer.active.baseY
-        )
-        const lineText = cursorLine ? cursorLine.translateToString().trim() : ''
-        const tuiContainer = document.getElementById('terminal-container')
-        if (tuiContainer && !isTuiExpanded) {
-            if (lineText.startsWith('/')) {
-                tuiContainer.style.height = '320px'
-                debouncedResizePty()
-            } else if (tuiContainer.style.height === '320px') {
-                tuiContainer.style.height = '64px'
-                debouncedResizePty()
-            }
-        }
-    }, 20)
+    // Removed auto-adjust terminal height on slash command here because it causes tmux to frenzy
+    // and checking startsWith('/') on a terminal line is unreliable due to shell prompts.
 })
 
 term.onResize(({ cols, rows }) => {
@@ -2511,17 +2496,7 @@ textarea?.addEventListener('input', () => {
     } else {
         adjustHeight()
 
-        // Expand terminal if typing a slash command
-        const tuiContainer = document.getElementById('terminal-container')
-        if (tuiContainer && !isTuiExpanded) {
-            if (textarea.value.trim().startsWith('/')) {
-                tuiContainer.style.height = '320px'
-                debouncedResizePty()
-            } else if (tuiContainer.style.height === '320px') {
-                tuiContainer.style.height = '64px'
-                debouncedResizePty()
-            }
-        }
+        // Removed flawed auto-expand logic for slash commands in textarea
     }
 })
 const loadCommandHistory = (projectPath: string): string[] => {

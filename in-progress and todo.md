@@ -28,11 +28,13 @@ This existing version is hard to read:
 
 	We should see that markdown block rendered properly, and newlines actually just be newlines as opposed to seeing a bunch of literal `\\n` in the output. So too for `"` instead of `\"`, `\\` instead of `\\\\`, etc.
 
+#### - we have to never use a thread name like "Continuing conversation from history" which is what `agy` apparently picks as the thread name? If the newest thread in the collection of threads that we call ai-os threads
+
 ## To do
 
 - new feature idea: have a mode switch above the threads list for a project that controls parallel vs strict queue mode. I want to be able to start a new thread, enter a message, and have it go into a queue, and have the agent only start working on that when all threads before it have finished. So no agents work simultaneously
 
-- we have to never use a thread name like "Continuing conversation from history" which is what `agy` apparently picks as the thread name? If the newest thread in the collection of threads that we call ai-os threads
+
 
 - I think we should establish a clear nomenclature: ai-os threads: ie, the user-facing threads which, because we run `/clear` all the time just so we can compactify the context for EVERY message, but maintain a thread nonetheless by passing the context off; and then we have agy threads, because technically with running `/clear`, *to agy's perspective* we're creating a new thread all the time... so I mean, they're both "threads" in equal rights, and it feels wrong not to call them anything else. I think maybe I just want it to be documented in this app, in a way where agents operating on this project read this documentation, and they know: "agy thread" is a specific thing and "ai-os thread", or simply "thread" is another
   

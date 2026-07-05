@@ -56,3 +56,5 @@ The ai-os workspace is composed of several key components:
 - **Browser Extension / Web Context Sync:** Siphoning web sessions directly into the local repo.
 - **Automated Auth Rotation Daemon:** Headless account-swapping component to rotate Google Accounts.
 - **Semantic Thought Layer:** Integrating local vector embeddings and native macOS automation (JXA/AppleScript wrappers).
+
+## Notes: Thought Log
