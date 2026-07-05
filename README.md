@@ -65,3 +65,5 @@ I mean; fuck, I don't know.
 I like the idea of making my specific vision, you know?
 But if it's open source I could fork it.
 But I kind of just learned that I shouldn't rush into working on a fork because it's not likely to work exactly how I want. And there's a lot I've built already, several times... and to start over AGAIN is a HUGE DECISION.
+Fuck, so I can't remember the specific one I had heard about before... but I did find https://github.com/BloopAI/vibe-kanban which looks pretty damn good.
+Oh... it's so alluring

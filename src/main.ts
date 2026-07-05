@@ -2154,12 +2154,10 @@ const renderProjectThreads = async (
 
             el.innerHTML = `
                 <div class="thread-info">
-                    <div class="thread-header">
-                        <div class="thread-title" title="${thread.title}">${thread.title}</div>
-                        <span class="thread-date" title="${fullDateStr}">${dateStr}</span>
-                    </div>
+                    <div class="thread-title" title="${thread.title}">${thread.title}</div>
                     <div class="thread-snippet" title="${thread.snippet}">${thread.snippet}</div>
                 </div>
+                <div class="thread-date" title="${fullDateStr}">${dateStr}</div>
                 <button class="delete-thread-btn" title="Delete Thread">✕</button>
             `
 

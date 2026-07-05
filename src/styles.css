@@ -710,8 +710,8 @@ textarea {
 /* Semantic styling for thread items */
 .thread-history-item {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
 }
 
 .thread-info {
@@ -720,22 +720,15 @@ textarea {
   overflow: hidden;
   gap: 0px;
   flex: 1;
+  min-width: 0;
 }
-
-.thread-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px;
-}
-
 
 .thread-date {
   font-size: 0.7rem;
   opacity: 0.7;
   flex-shrink: 0;
-  min-width: 55px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .thread-title {
@@ -743,19 +736,22 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
 }
 
 .thread-snippet {
   font-size: 0.75rem;
   color: var(--text-muted);
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .delete-thread-btn {
   opacity: 0;
   transition: opacity 0.2s;
   padding: 4px;
+  flex-shrink: 0;
 }
 
 .thread-history-item:hover .delete-thread-btn {
