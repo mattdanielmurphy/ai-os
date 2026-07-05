@@ -2028,6 +2028,21 @@ fn dispatch_to_gemini(app_handle: tauri::AppHandle, prompt: String, context: Opt
     Ok(())
 }
 
+#[tauri::command]
+fn read_thread_notes_file() -> Result<String, String> {
+    let path = "/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md";
+    std::fs::read_to_string(path).or_else(|_| Ok("".to_string()))
+}
+
+#[tauri::command]
+fn write_thread_notes_file(content: String) -> Result<(), String> {
+    let path = "/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md";
+    let p = std::path::Path::new(path);
+    if let Some(parent) = p.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(path, content).map_err(|e| e.to_string())
+}
 
 fn main() {
     let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
@@ -2282,7 +2297,9 @@ fn main() {
             get_quota,
             get_browser_context,
             dispatch_to_gemini,
-            search_project_threads
+            search_project_threads,
+            read_thread_notes_file,
+            write_thread_notes_file
         ])
         .run(context)
         .expect("error while running tauri application");
