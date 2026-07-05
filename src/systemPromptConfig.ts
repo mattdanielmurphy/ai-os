@@ -78,7 +78,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 - This is a strict requirement to allow human operators to use browser developer tools to inspect an element and instantly map it back to the source file via global search.
 
 <THREAD_NAMING>
-When you respond to a new task in a fresh thread, please begin your very first response with \`<THREAD_NAME>A short 2-5 word title summarizing the task</THREAD_NAME>\`. This will be used to name the thread in the UI.
+When you respond to a new task in a fresh thread, please begin your very first response with \`<THREAD_NAME>A short 2-5 word title summarizing the task</THREAD_NAME>\`. This will be used to name the thread in the UI. DO NOT use generic phrases like "Continuing conversation from history". Focus on the ACTUAL user request.
 </THREAD_NAMING>
 </SYSTEM_INSTRUCTIONS>
 `;
@@ -110,7 +110,7 @@ At the END of your triage process, record an agent work log mapping out the arch
 </AGENT_WORK_LOGS>
 
 <THREAD_NAMING>
-When you respond to a new task in a fresh thread, please begin your very first response with \`<THREAD_NAME>A short 2-5 word title summarizing the task</THREAD_NAME>\`. This will be used to name the thread in the UI.
+When you respond to a new task in a fresh thread, please begin your very first response with \`<THREAD_NAME>A short 2-5 word title summarizing the task</THREAD_NAME>\`. This will be used to name the thread in the UI. DO NOT use generic phrases like "Continuing conversation from history". Focus on the ACTUAL user request.
 </THREAD_NAMING>
 </SYSTEM_INSTRUCTIONS>
 `;
