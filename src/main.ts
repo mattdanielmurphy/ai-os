@@ -2870,28 +2870,37 @@ textarea?.addEventListener('keydown', async (e) => {
                 }
 
                 if (activeThreadId && currentContext) {
-                    const leafId = threadLatestLeafIds.get(activeThreadId) || activeThreadId
-                    invoke('write_to_pty', {
-                        data: `/resume ${leafId}\r`,
-                        projectPath: activeProject,
-                        terminalType: 'agy',
-                    })
-                    await new Promise((resolve) => setTimeout(resolve, 800))
+                    if (isBypass) {
+                        const leafId = threadLatestLeafIds.get(activeThreadId) || activeThreadId
+                        invoke('write_to_pty', {
+                            data: `/resume ${leafId}\r`,
+                            projectPath: activeProject,
+                            terminalType: 'agy',
+                        })
+                        await new Promise((resolve) => setTimeout(resolve, 800))
 
-                    invoke('write_to_pty', {
-                        data: '/clear\r',
-                        projectPath: activeProject,
-                        terminalType: 'agy',
-                    })
-                    await new Promise((resolve) => setTimeout(resolve, 450))
+                        invoke('write_to_pty', {
+                            data: '/clear\r',
+                            projectPath: activeProject,
+                            terminalType: 'agy',
+                        })
+                        await new Promise((resolve) => setTimeout(resolve, 450))
 
-                    const combinedPrompt = `Continuing conversation from history (Thread ID: ${activeThreadId}).\n\n[SYSTEM DIRECTIVE: This is a summary/compacted view of the thread history. If you need to view the full, untruncated details, tool calls, or files from this thread, you can run the following command in the terminal:\n  pnpm run view-thread ${activeThreadId}\nor specifically for a step:\n  pnpm run view-thread ${activeThreadId} --step <index>\n]\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
-                    const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`
-                    invoke('write_to_pty', {
-                        data: dataToSend,
-                        projectPath: activeProject,
-                        terminalType: 'agy',
-                    })
+                        const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`
+                        invoke('write_to_pty', {
+                            data: dataToSend,
+                            projectPath: activeProject,
+                            terminalType: 'agy',
+                        })
+                    } else {
+                        const combinedPrompt = `Continuing conversation from history (Thread ID: ${activeThreadId}).\n\n[SYSTEM DIRECTIVE: This is a summary/compacted view of the thread history. If you need to view the full, untruncated details, tool calls, or files from this thread, you can run the following command in the terminal:\n  pnpm run view-thread ${activeThreadId}\nor specifically for a step:\n  pnpm run view-thread ${activeThreadId} --step <index>\n]\n\nHistorical Context:\n${currentContext}\n\nUser request: ${processedInput}`
+                        const dataToSend = `\x1b[200~${combinedPrompt}\x1b[201~\r`
+                        invoke('write_to_pty', {
+                            data: dataToSend,
+                            projectPath: activeProject,
+                            terminalType: 'agy',
+                        })
+                    }
                 } else {
                     const dataToSend = `\x1b[200~${processedInput}\x1b[201~\r`
                     invoke('write_to_pty', {
