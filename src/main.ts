@@ -11,7 +11,6 @@ import { appWindow, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/windo
 import { renderThreadNotesSidebar } from './threadNotes'
 import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
-import { WORKER_BEE_RULES, TRIAGE_MODE_RULES } from './systemPromptConfig'
 import { open } from '@tauri-apps/api/shell'
 import { getRelativeDateStr, getFullDateStr } from './dateUtils'
 
@@ -71,7 +70,7 @@ interface Project {
 // ----------------------------------------------------
 // 2. Global State Management
 // ----------------------------------------------------
-let activeProject: string = '/Users/matthewmurphy/projects/ai-os'
+let activeProject: string = '/Users/matt/projects/ai-os'
 let maxVisibleThreads: number = 15
 
 const formatPathForUser = (
@@ -85,7 +84,7 @@ const formatPathForUser = (
     if (path.startsWith(projectPrefix)) {
         return path.substring(projectPrefix.length)
     }
-    return path.replace('/Users/matthewmurphy', '~')
+    return path.replace('/Users/matt', '~')
 }
 
 let isTerminalMode: boolean = false
@@ -193,7 +192,7 @@ listen<{ project_path: string; status: 'Running' | 'Pending' | 'Paused' }>(
 // Hardcoded initial projects list mapped with unique random colors and default engines
 const initialProjects: Project[] = [
     {
-        path: '/Users/matthewmurphy/projects/ai-os',
+        path: '/Users/matt/projects/ai-os',
         name: 'ai-os',
         color: '#3b82f6',
         lastActive: Date.now(),
@@ -201,7 +200,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/structural-constraint-art',
+        path: '/Users/matt/projects/structural-constraint-art',
         name: 'structural-constraint-art',
         color: '#ec4899',
         lastActive: Date.now() - 1000,
@@ -209,7 +208,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/now-music',
+        path: '/Users/matt/projects/now-music',
         name: 'now-music',
         color: '#10b981',
         lastActive: Date.now() - 2000,
@@ -217,7 +216,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/antigravity-optimization',
+        path: '/Users/matt/projects/antigravity-optimization',
         name: 'antigravity-optimization',
         color: '#f59e0b',
         lastActive: Date.now() - 3000,
@@ -225,7 +224,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/webpage-compressor',
+        path: '/Users/matt/projects/webpage-compressor',
         name: 'webpage-compressor',
         color: '#8b5cf6',
         lastActive: Date.now() - 4000,
@@ -233,7 +232,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/tic-tac-toe',
+        path: '/Users/matt/projects/tic-tac-toe',
         name: 'tic-tac-toe',
         color: '#ef4444',
         lastActive: Date.now() - 5000,
@@ -241,7 +240,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/agy-animation',
+        path: '/Users/matt/projects/agy-animation',
         name: 'agy-animation',
         color: '#06b6d4',
         lastActive: Date.now() - 6000,
@@ -249,7 +248,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/atlas-calculator',
+        path: '/Users/matt/projects/atlas-calculator',
         name: 'atlas-calculator',
         color: '#10b981',
         lastActive: Date.now() - 7000,
@@ -257,7 +256,7 @@ const initialProjects: Project[] = [
         isTerminalMode: false,
     },
     {
-        path: '/Users/matthewmurphy/projects/animation_project',
+        path: '/Users/matt/projects/animation_project',
         name: 'animation_project',
         color: '#6366f1',
         lastActive: Date.now() - 8000,
@@ -1669,7 +1668,7 @@ const renderProjects = () => {
                 const delBtn = btns.querySelector('.delete-btn') as HTMLElement
                 if (
                     delBtn &&
-                    project.path === '/Users/matthewmurphy/projects/ai-os'
+                    project.path === '/Users/matt/projects/ai-os'
                 ) {
                     delBtn.style.display = 'none'
                 }
@@ -1950,7 +1949,7 @@ const syncProjectsFromAllThreads = async () => {
 
             // If the thread is a lone agy thread without a detected project path
             if (!targetPath) {
-                targetPath = `/Users/matthewmurphy/projects/Misc`
+                targetPath = `/Users/matt/projects/Misc`
             }
 
             // Strip trailing markdown symbols
@@ -1963,7 +1962,7 @@ const syncProjectsFromAllThreads = async () => {
             if (!exists) {
                 // Determine a name for the new project
                 let name = ''
-                if (targetPath === '/Users/matthewmurphy/projects/Misc') {
+                if (targetPath === '/Users/matt/projects/Misc') {
                     name = 'Misc'
                 } else if (thread.detected_project_path) {
                     name =
@@ -2770,7 +2769,7 @@ textarea?.addEventListener('keydown', async (e) => {
 
         // Obsidian Knowledge Routing
         if (processedInput.toLowerCase().includes('notes')) {
-            processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`
+            processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`
         }
 
         const preTriageCheckbox = document.getElementById(
@@ -2782,11 +2781,6 @@ textarea?.addEventListener('keydown', async (e) => {
             'clear-context-checkbox'
         ) as HTMLInputElement
         const shouldClear = clearCheckbox ? clearCheckbox.checked : true
-
-        if (shouldClear) {
-            const systemDirectives = isPreTriage ? TRIAGE_MODE_RULES : WORKER_BEE_RULES
-            processedInput += `\n\n${systemDirectives}`
-        }
 
         let isRunning = false
         try {
