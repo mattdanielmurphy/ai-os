@@ -280,8 +280,8 @@ let projects: Project[] = (() => {
     const uniqueProjectsMap = new Map<string, Project>()
     for (const p of loadedList) {
         let cleanPath = p.path || ''
-        if (cleanPath.includes('/projects/thread-')) {
-            continue // Filter out legacy mock thread projects
+        if (cleanPath.includes('/projects/thread-') || cleanPath.includes('/Users/matthewmurphy')) {
+            continue // Filter out legacy mock thread projects and legacy user projects
         }
         while (cleanPath.length > 0 && /[`*.,:;)}"\]]$/.test(cleanPath)) {
             cleanPath = cleanPath.slice(0, -1)
@@ -1998,6 +1998,10 @@ const syncProjectsFromAllThreads = async () => {
             // Strip trailing markdown symbols
             while (targetPath.length > 0 && /[`*.,:;)}"\]]$/.test(targetPath)) {
                 targetPath = targetPath.slice(0, -1)
+            }
+
+            if (targetPath.includes('/Users/matthewmurphy')) {
+                continue
             }
 
             // Check if a project with this path already exists
