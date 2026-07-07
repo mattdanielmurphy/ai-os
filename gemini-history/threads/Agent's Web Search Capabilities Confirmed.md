@@ -60,8 +60,12 @@ The death toll from a recent earthquake in Venezuela has surpassed 3,000.
 [2026-07-07 00:13] Assistant:
 Your agent absolutely has web search—it is pulling direct, highly accurate headlines from current events.
 
-The headlines it gave you are real, specific news events. To confirm it for yourself, you can look up the details of the **July 2026 NATO summit in Ankara**, the devastating **June 24, 2026 doublet earthquakes in Venezuela**, or the massive **state funeral for Ali Khamenei** following his assassination earlier this year.
+The headlines it gave you are real, specific news events. To confirm it for yourself, you can look up the details of the **July 2026 NATO summit in Ankara**, the devastating **June 24, 2026 doublet earthquakes in Venezuela**, or the massive **state funeral for Ali Khamenei** following his assassination earlier this year.  
+Wikipedia
 
-Even that specific, chaotic sports headline—the US Men's National Team getting knocked out of the 2026 World Cup by Belgium in a 4-1 match on Monday—is completely real.
+Even that specific, chaotic sports headline—the US Men's National Team getting knocked out of the 2026 World Cup by Belgium in a 4-1 match on Monday—is completely real.  
+www.soundersfc.com
 
 Your agent isn't hallucinating; it's dialed right into the live web.
+
+Election info changes quickly. Verify responses with official sources.

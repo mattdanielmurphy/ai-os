@@ -1378,6 +1378,10 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
     let _ = file.take(131072).read_to_end(&mut buffer);
     let content = String::from_utf8_lossy(&buffer);
 
+    if content.contains("/Users/matthewmurphy") {
+        return None;
+    }
+
     let project_path = detect_project_path(&content);
     let mut title = latest_thread_id.to_string();
     let mut snippet = String::new();
