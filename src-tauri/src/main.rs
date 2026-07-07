@@ -1574,14 +1574,17 @@ fn detect_project_path(content: &str) -> Option<String> {
     let home = std::env::var("HOME").ok()?;
     let projects_prefix = format!("{}/projects/", home);
     
-    if let Some(pos) = content.find(&projects_prefix) {
-        let after_prefix = &content[pos + projects_prefix.len()..];
+    // Normalize content to use current home instead of legacy user matthewmurphy
+    let normalized_content = content.replace("/Users/matthewmurphy", &home);
+    
+    if let Some(pos) = normalized_content.find(&projects_prefix) {
+        let after_prefix = &normalized_content[pos + projects_prefix.len()..];
         let end_pos = after_prefix.find(|c: char| {
             c == '/' || c == '"' || c == '\'' || c == '\\' || c == ',' || c == '`' || c == '*' || c == ')' || c == ']' || c == '}' || c == ':' || c == ';' || c == '.' || c.is_whitespace()
         }).unwrap_or(after_prefix.len());
         
         let mut project_name = &after_prefix[..end_pos];
-        while !project_name.is_empty() && project_name.ends_with(|c: char| c == '`' || c == '*' || c == '.' || c == ',' || c == ':' || c == ';' || c == ')' || c == ']') {
+        while !project_name.is_empty() && project_name.ends_with(|c: char| c == '`' || c == '*' || c == '.' || c == ',' || c == '`' || c == ':' || c == ';' || c == ')' || c == ']') {
             project_name = &project_name[..project_name.len() - 1];
         }
         if !project_name.is_empty() {
@@ -2133,15 +2136,16 @@ fn dispatch_to_gemini(app_handle: tauri::AppHandle, prompt: String, context: Opt
 
 #[tauri::command]
 fn read_thread_notes_file() -> Result<String, String> {
-    let path = "/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md";
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let path = std::path::Path::new(&home).join("Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md");
     std::fs::read_to_string(path).or_else(|_| Ok("".to_string()))
 }
 
 #[tauri::command]
 fn write_thread_notes_file(content: String) -> Result<(), String> {
-    let path = "/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md";
-    let p = std::path::Path::new(path);
-    if let Some(parent) = p.parent() {
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let path = std::path::Path::new(&home).join("Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/thread-notes.md");
+    if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
     std::fs::write(path, content).map_err(|e| e.to_string())
@@ -2288,6 +2292,9 @@ fn main() {
                     background-image: none !important;
                     opacity: 0 !important;
                   }
+                  chat-app {
+                    padding-top: 0px !important;
+                  }
                 `);
                 // Append the new stylesheet to the document's adopted stylesheets
                 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
@@ -2303,11 +2310,18 @@ fn main() {
                   }
               });
 
-              //  5. Get rid of top padding
-              const chatApp = document.querySelector('chat-app');
-              if (chatApp) {
-                chatApp.style.setProperty('padding-top', '0px', 'important');
-              }
+              //  5. Get rid of top padding (with dynamic observation)
+              const applyChatAppPadding = () => {
+                const chatApp = document.querySelector('chat-app');
+                if (chatApp) {
+                  chatApp.style.setProperty('padding-top', '0px', 'important');
+                }
+              };
+              applyChatAppPadding();
+              
+              // Watch for changes to reapply padding if chat-app is dynamically loaded or re-rendered
+              const chatAppObserver = new MutationObserver(applyChatAppPadding);
+              chatAppObserver.observe(document.body, { childList: true, subtree: true });
 
             }
             if (document.readyState === 'loading') {
