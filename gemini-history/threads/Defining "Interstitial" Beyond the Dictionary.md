@@ -34,4 +34,4 @@ Most standard dictionaries (like standard Google search results or Oxford) prior
 
 **Wiktionary:** Because it’s crowdsourced, it tends to skip the academic preen and jump straight to practical usage, synonyms, and context.
 
-**American Heritage Dictionary:** Often includes "Usage Notes" and clear examples that show the word in a real sentence,
+**American Heritage Dictionary:** Often includes "Usage Notes" and clear examples that show the word in a real sentence, which usually does a better job of explaining the concept than the definition itself.

@@ -18,6 +18,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 6. **Local Temp:** NEVER use system-level \`/tmp\`. ALWAYS create and use a \`./tmp\` folder within the current project directory for ALL temporary files, test/debug scripts, scratch files, or patches. NEVER create temporary files or scripts in the project root directory.
 7. **Documentation:** When implementing features or bug fixes, always document any new capabilities, enhancements, or architectural additions by updating the features list in the \`FEATURES.md\` file at the root of the project.
 8. **Token Protection & Builds:** NEVER run raw verbose compile/build commands (like raw \`xcodebuild\` or raw compiler tasks) that output massive build logs. Always filter command outputs to print only the success status or relevant compiler error/warning highlights (and cap total output size/lines) to prevent blowing out the agent input token context window.
+9. **No Interstitial Status Messages:** NEVER output placeholder updates, intermediate status messages, or commentary before executing commands, launching background tasks, or waiting for builds (e.g. "I have initiated the build process...", "I will update you as soon as...", etc.). Execute tools/commands silently. Present only the final completed results.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>
@@ -103,6 +104,7 @@ Guidelines:
 3. **Privacy:** ALL generated GitHub repos MUST use \`--private\`.
 4. **No Repo in ~:** NEVER initialize a git repository in the home directory (\`~\`).
 5. **Local Temp:** NEVER use system-level \`/tmp\`. ALWAYS create and use a \`./tmp\` folder within the current project directory for ALL temporary files, test/debug scripts, scratch files, or patches. NEVER create temporary files or scripts in the project root directory.
+6. **No Interstitial Status Messages:** NEVER output placeholder updates, intermediate status messages, or commentary before executing commands, launching background tasks, or waiting for builds (e.g. "I have initiated the build process...", "I will update you as soon as...", etc.). Execute tools/commands silently. Present only the final completed results.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>

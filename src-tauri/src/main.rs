@@ -24,6 +24,8 @@ struct ProjectSession {
     mini_master: Box<dyn MasterPty + Send>,
     mini_pid: u32,
     project_path: String,
+    thread_id: String,
+    last_accessed: std::time::SystemTime,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -45,6 +47,8 @@ struct AppState {
     app_handle: tauri::AppHandle,
     // Staged execution payload
     staged_payload: Arc<Mutex<Option<ExecutionPayload>>>,
+    // Track the last authenticated account to detect logout/login changes
+    last_active_account: Arc<Mutex<Option<String>>>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -299,6 +303,108 @@ async fn handle_payload_execute(
     Ok("Staged successfully".to_string())
 }
 
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use futures_util::{SinkExt, StreamExt};
+use tokio::sync::mpsc;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+struct WsState {
+    host_tx: Option<mpsc::UnboundedSender<Message>>,
+    clients: HashMap<String, mpsc::UnboundedSender<Message>>,
+}
+
+static WS_STATE: std::sync::OnceLock<std::sync::Mutex<WsState>> = std::sync::OnceLock::new();
+static CLIENT_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+fn get_ws_state() -> &'static std::sync::Mutex<WsState> {
+    WS_STATE.get_or_init(|| {
+        std::sync::Mutex::new(WsState {
+            host_tx: None,
+            clients: HashMap::new(),
+        })
+    })
+}
+
+async fn ws_handler(ws: WebSocketUpgrade) -> impl axum::response::IntoResponse {
+    ws.on_upgrade(handle_socket)
+}
+
+async fn handle_socket(socket: WebSocket) {
+    let (mut sender, mut receiver) = socket.split();
+    let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
+
+    let my_client_id = format!("client_{}", CLIENT_ID_COUNTER.fetch_add(1, Ordering::SeqCst));
+    let client_id_clone = my_client_id.clone();
+
+    let mut write_task = tokio::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            if sender.send(msg).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    let mut registered_role = None;
+
+    while let Some(Ok(msg)) = receiver.next().await {
+        if let Message::Text(text) = msg {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                if let Some(msg_type) = val["type"].as_str() {
+                    match msg_type {
+                        "register" => {
+                            let role = val["role"].as_str().unwrap_or("");
+                            if role == "host" {
+                                registered_role = Some("host");
+                                let mut state = get_ws_state().lock().unwrap();
+                                state.host_tx = Some(tx.clone());
+                            } else if role == "client" {
+                                registered_role = Some("client");
+                                let mut state = get_ws_state().lock().unwrap();
+                                state.clients.insert(my_client_id.clone(), tx.clone());
+                            }
+                        }
+                        "invoke" => {
+                            let mut payload = val.clone();
+                            payload["client_id"] = serde_json::Value::String(my_client_id.clone());
+                            let forward_msg = Message::Text(payload.to_string().into());
+                            let state = get_ws_state().lock().unwrap();
+                            if let Some(host_tx) = &state.host_tx {
+                                        let _ = host_tx.send(forward_msg);
+                            }
+                        }
+                        "invoke_result" => {
+                            if let Some(target_client_id) = val["client_id"].as_str() {
+                                let state = get_ws_state().lock().unwrap();
+                                if let Some(client_tx) = state.clients.get(target_client_id) {
+                                    let _ = client_tx.send(Message::Text(val.to_string().into()));
+                                }
+                            }
+                        }
+                        "event" => {
+                            let state = get_ws_state().lock().unwrap();
+                            let msg_text = val.to_string();
+                            for client_tx in state.clients.values() {
+                                let _ = client_tx.send(Message::Text(msg_text.clone().into()));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
+    let mut state = get_ws_state().lock().unwrap();
+    if let Some(role) = registered_role {
+        if role == "host" {
+            state.host_tx = None;
+        } else {
+            state.clients.remove(&client_id_clone);
+        }
+    }
+    write_task.abort();
+}
+
 fn spawn_axum_server(app_handle: tauri::AppHandle) {
     tauri::async_runtime::spawn(async move {
         let cors = CorsLayer::new()
@@ -307,6 +413,7 @@ fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .allow_headers(Any);
 
         let app = Router::new()
+            .route("/ws", axum::routing::get(ws_handler))
             .route("/api/context/sync", post(handle_sync))
             .route("/api/revision/commit", post(handle_commit))
             .route("/api/gemini/sync", post(handle_gemini_sync))
@@ -339,7 +446,7 @@ fn has_tmux_session(session_name: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn get_tmux_session_name(project_path: &str, terminal_type: &str) -> String {
+fn get_tmux_session_name(project_path: &str, terminal_type: &str, thread_id: Option<&str>) -> String {
     if terminal_type == "mini" {
         let sanitized: String = project_path
             .chars()
@@ -347,6 +454,11 @@ fn get_tmux_session_name(project_path: &str, terminal_type: &str) -> String {
             .collect();
         format!("ai_os_{}_{}", terminal_type, sanitized.trim_matches('_'))
     } else {
+        if let Some(tid) = thread_id {
+            if !tid.is_empty() {
+                return format!("ai_os_{}_{}", terminal_type, tid);
+            }
+        }
         format!("ai_os_{}", terminal_type)
     }
 }
@@ -364,9 +476,9 @@ fn get_tmux_pane_pid(session_name: &str) -> Option<u32> {
     stdout.trim().parse::<u32>().ok()
 }
 
-fn is_engine_running_proc(engine: &str, project_path: &str, shell_pid: Option<u32>) -> bool {
+fn is_engine_running_proc(engine: &str, project_path: &str, thread_id: Option<&str>, shell_pid: Option<u32>) -> bool {
     let root_pid = if is_tmux_available() {
-        let session_name = get_tmux_session_name(project_path, engine);
+        let session_name = get_tmux_session_name(project_path, engine, thread_id);
         if !has_tmux_session(&session_name) {
             return false;
         }
@@ -448,6 +560,7 @@ fn spawn_single_pty(
     project_path: &str,
     terminal_type: &str,
     app_handle: &tauri::AppHandle,
+    thread_id: Option<&str>,
 ) -> Result<(Box<dyn Write + Send>, Box<dyn MasterPty + Send>, u32, bool), String> {
     let pty_system = NativePtySystem::default();
     let pair = pty_system.openpty(PtySize {
@@ -459,7 +572,7 @@ fn spawn_single_pty(
 
     let mut is_new_tmux = false;
     let mut cmd = if is_tmux_available() {
-        let session_name = get_tmux_session_name(project_path, terminal_type);
+        let session_name = get_tmux_session_name(project_path, terminal_type, thread_id);
         println!("[DEBUG] tmux is available. Checking for session: {}", session_name);
         if !has_tmux_session(&session_name) {
             println!("[DEBUG] Session {} does not exist. It will be new.", session_name);
@@ -596,23 +709,24 @@ fn ensure_engine_pty(
     app_handle: &tauri::AppHandle,
     session: &mut ProjectSession,
 ) -> Result<(u32, bool), String> {
+    let thread_id_opt = if session.thread_id.is_empty() { None } else { Some(session.thread_id.as_str()) };
     if engine == "claude" {
         let mut agy_alive = false;
         let mut client_alive = false;
         if let Some(pid) = session.claude_pid {
-            agy_alive = is_engine_running_proc("claude", project_path, session.claude_pid);
+            agy_alive = is_engine_running_proc("claude", project_path, thread_id_opt, session.claude_pid);
             client_alive = is_process_alive(pid);
         }
         if !agy_alive || !client_alive {
             if is_tmux_available() && !agy_alive {
-                let session_name = get_tmux_session_name(project_path, "claude");
+                let session_name = get_tmux_session_name(project_path, "claude", thread_id_opt);
                 if has_tmux_session(&session_name) {
                     let _ = std::process::Command::new("tmux")
                         .args(&["kill-session", "-t", &session_name])
                         .status();
                 }
             }
-            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "claude", app_handle)?;
+            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "claude", app_handle, thread_id_opt)?;
             session.claude_writer = Some(writer);
             session.claude_master = Some(master);
             session.claude_pid = Some(pid);
@@ -624,19 +738,19 @@ fn ensure_engine_pty(
         let mut agy_alive = false;
         let mut client_alive = false;
         if let Some(pid) = session.agy_pid {
-            agy_alive = is_engine_running_proc("agy", project_path, session.agy_pid);
+            agy_alive = is_engine_running_proc("agy", project_path, thread_id_opt, session.agy_pid);
             client_alive = is_process_alive(pid);
         }
         if !agy_alive || !client_alive {
             if is_tmux_available() && !agy_alive {
-                let session_name = get_tmux_session_name(project_path, "agy");
+                let session_name = get_tmux_session_name(project_path, "agy", thread_id_opt);
                 if has_tmux_session(&session_name) {
                     let _ = std::process::Command::new("tmux")
                         .args(&["kill-session", "-t", &session_name])
                         .status();
                 }
             }
-            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "agy", app_handle)?;
+            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "agy", app_handle, thread_id_opt)?;
             session.agy_writer = Some(writer);
             session.agy_master = Some(master);
             session.agy_pid = Some(pid);
@@ -655,7 +769,7 @@ fn ensure_mini_pty(
     session: &mut ProjectSession,
 ) -> Result<(), String> {
     if !is_process_alive(session.mini_pid) {
-        let (writer, master, pid, _) = spawn_single_pty(project_path, "mini", app_handle)?;
+        let (writer, master, pid, _) = spawn_single_pty(project_path, "mini", app_handle, None)?;
         session.mini_writer = writer;
         session.mini_master = master;
         session.mini_pid = pid;
@@ -674,7 +788,7 @@ fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), Stri
     if !is_tmux_available() {
         return Ok(());
     }
-    let spare_session = format!("{}_spare", get_tmux_session_name(&project_path, &engine));
+    let spare_session = format!("{}_spare", get_tmux_session_name(&project_path, &engine, None));
     if has_tmux_session(&spare_session) {
         return Ok(());
     }
@@ -714,14 +828,24 @@ fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<AppState>) -> Result<u32, String> {
+fn spawn_fresh_engine(
+    project_path: String,
+    engine: String,
+    thread_id: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<u32, String> {
     let app_handle = state.app_handle.clone();
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
+
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    let session = sessions.get_mut(&project_path).ok_or_else(|| "No session found".to_string())?;
+    let session = sessions.get_mut(&session_key).ok_or_else(|| "No session found".to_string())?;
+
+    let thread_id_opt = if session.thread_id.is_empty() { None } else { Some(session.thread_id.as_str()) };
 
     if is_tmux_available() {
-        let session_name = get_tmux_session_name(&project_path, &engine);
-        let spare_session = format!("{}_spare", session_name);
+        let session_name = get_tmux_session_name(&project_path, &engine, thread_id_opt);
+        let spare_session = format!("ai_os_{}_spare", engine);
 
         if has_tmux_session(&spare_session) {
             if has_tmux_session(&session_name) {
@@ -741,7 +865,7 @@ fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<
         }
     }
 
-    let (writer, master, pid, _) = spawn_single_pty(&project_path, &engine, &app_handle)?;
+    let (writer, master, pid, _) = spawn_single_pty(&project_path, &engine, &app_handle, thread_id_opt)?;
     if engine == "claude" {
         session.claude_writer = Some(writer);
         session.claude_master = Some(master);
@@ -764,13 +888,16 @@ fn spawn_fresh_engine(project_path: String, engine: String, state: tauri::State<
 }
 
 #[tauri::command]
-fn initialize_project_session(project_path: String, state: tauri::State<AppState>) -> Result<u32, String> {
+fn initialize_project_session(project_path: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<u32, String> {
     let app_handle = state.app_handle.clone();
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
+
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    if !sessions.contains_key(&project_path) {
-        let (mini_writer, mini_master, mini_pid, _) = spawn_single_pty(&project_path, "mini", &app_handle)?;
+    if !sessions.contains_key(&session_key) {
+        let (mini_writer, mini_master, mini_pid, _) = spawn_single_pty(&project_path, "mini", &app_handle, None)?;
         sessions.insert(
-            project_path.clone(),
+            session_key.clone(),
             ProjectSession {
                 claude_writer: None,
                 claude_master: None,
@@ -782,20 +909,61 @@ fn initialize_project_session(project_path: String, state: tauri::State<AppState
                 mini_master,
                 mini_pid,
                 project_path: project_path.clone(),
+                thread_id: thread_id_str.clone(),
+                last_accessed: std::time::SystemTime::now(),
             },
         );
     }
-    let session = sessions.get_mut(&project_path).unwrap();
+    let session = sessions.get_mut(&session_key).unwrap();
+    session.last_accessed = std::time::SystemTime::now();
     let (pid, _) = ensure_engine_pty(&project_path, "agy", &app_handle, session)?;
     Ok(pid)
 }
 
 #[tauri::command]
-fn switch_active_project(project_path: String, engine: String, state: tauri::State<AppState>) -> Result<SwitchResult, String> {
+fn switch_active_project(project_path: String, engine: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<SwitchResult, String> {
     let app_handle = state.app_handle.clone();
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
 
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    let is_new_proj = !sessions.contains_key(&project_path);
+
+    // Evict old sessions if we have too many
+    if sessions.len() >= 20 && !sessions.contains_key(&session_key) {
+        let mut keys_to_evict = Vec::new();
+        let mut sorted_sessions: Vec<_> = sessions.iter().map(|(k, s)| (k.clone(), s.last_accessed)).collect();
+        sorted_sessions.sort_by_key(|&(_, t)| t);
+        
+        let num_to_evict = (sessions.len() - 15).min(sorted_sessions.len());
+        for i in 0..num_to_evict {
+            keys_to_evict.push(sorted_sessions[i].0.clone());
+        }
+        
+        for k in keys_to_evict {
+            if let Some(mut old_session) = sessions.remove(&k) {
+                if let Some(pid) = old_session.claude_pid {
+                    let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).status();
+                }
+                if let Some(pid) = old_session.agy_pid {
+                    let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).status();
+                }
+                let _ = std::process::Command::new("kill").arg("-9").arg(old_session.mini_pid.to_string()).status();
+                
+                if is_tmux_available() {
+                    let thread_id_opt = if old_session.thread_id.is_empty() { None } else { Some(old_session.thread_id.as_str()) };
+                    let cl_session = get_tmux_session_name(&old_session.project_path, "claude", thread_id_opt);
+                    let ag_session = get_tmux_session_name(&old_session.project_path, "agy", thread_id_opt);
+                    let mi_session = get_tmux_session_name(&old_session.project_path, "mini", None);
+                    
+                    let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &cl_session]).status();
+                    let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &ag_session]).status();
+                    let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &mi_session]).status();
+                }
+            }
+        }
+    }
+
+    let is_new_proj = !sessions.contains_key(&session_key);
     if is_new_proj {
         // Spawn mini and engine PTYs in parallel to speed up tab loading
         let app_handle_clone1 = app_handle.clone();
@@ -803,12 +971,14 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
         let path_clone1 = project_path.clone();
         let path_clone2 = project_path.clone();
         let engine_clone = engine.clone();
+        let thread_id_clone1 = thread_id_str.clone();
 
         let mini_thread = std::thread::spawn(move || {
-            spawn_single_pty(&path_clone1, "mini", &app_handle_clone1)
+            spawn_single_pty(&path_clone1, "mini", &app_handle_clone1, None)
         });
         let engine_thread = std::thread::spawn(move || {
-            spawn_single_pty(&path_clone2, &engine_clone, &app_handle_clone2)
+            let thread_id_opt = if thread_id_clone1.is_empty() { None } else { Some(thread_id_clone1.as_str()) };
+            spawn_single_pty(&path_clone2, &engine_clone, &app_handle_clone2, thread_id_opt)
         });
 
         let (mini_writer, mini_master, mini_pid, _) = mini_thread.join()
@@ -827,6 +997,8 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
             mini_master,
             mini_pid,
             project_path: project_path.clone(),
+            thread_id: thread_id_str.clone(),
+            last_accessed: std::time::SystemTime::now(),
         };
 
         if engine == "claude" {
@@ -839,7 +1011,7 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
             session.agy_pid = Some(engine_pid);
         }
 
-        sessions.insert(project_path.clone(), session);
+        sessions.insert(session_key.clone(), session);
 
         let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
         *active = Some(project_path.clone());
@@ -852,7 +1024,8 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
         });
     }
 
-    let session = sessions.get_mut(&project_path).unwrap();
+    let session = sessions.get_mut(&session_key).unwrap();
+    session.last_accessed = std::time::SystemTime::now();
     let (shell_pid, is_new_session) = ensure_engine_pty(&project_path, &engine, &app_handle, session)?;
     ensure_mini_pty(&project_path, &app_handle, session)?;
 
@@ -868,9 +1041,12 @@ fn switch_active_project(project_path: String, engine: String, state: tauri::Sta
 }
 
 #[tauri::command]
-fn write_to_pty(data: String, project_path: String, terminal_type: String, state: tauri::State<AppState>) -> Result<(), String> {
+fn write_to_pty(data: String, project_path: String, terminal_type: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> {
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
+
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    if let Some(session) = sessions.get_mut(&project_path) {
+    if let Some(session) = sessions.get_mut(&session_key) {
         let writer = if terminal_type == "mini" {
             Some(&mut session.mini_writer)
         } else if terminal_type == "claude" {
@@ -893,9 +1069,12 @@ fn write_to_pty(data: String, project_path: String, terminal_type: String, state
 }
 
 #[tauri::command]
-fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String, state: tauri::State<AppState>) -> Result<(), String> {
+fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> {
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
+
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    if let Some(session) = sessions.get(&project_path) {
+    if let Some(session) = sessions.get(&session_key) {
         let size = PtySize {
             rows,
             cols,
@@ -919,9 +1098,12 @@ fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String,
 }
 
 #[tauri::command]
-fn is_engine_running(engine: String, project_path: String, state: tauri::State<AppState>) -> Result<bool, String> {
+fn is_engine_running(engine: String, project_path: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<bool, String> {
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
+
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    let shell_pid = match sessions.get(&project_path) {
+    let shell_pid = match sessions.get(&session_key) {
         Some(s) => {
             if engine == "claude" {
                 s.claude_pid
@@ -933,7 +1115,8 @@ fn is_engine_running(engine: String, project_path: String, state: tauri::State<A
     };
     drop(sessions);
 
-    Ok(is_engine_running_proc(&engine, &project_path, shell_pid))
+    let thread_id_opt = if thread_id_str.is_empty() { None } else { Some(thread_id_str.as_str()) };
+    Ok(is_engine_running_proc(&engine, &project_path, thread_id_opt, shell_pid))
 }
 
 fn find_agent_pid(shell_pid: u32) -> Option<u32> {
@@ -1045,10 +1228,13 @@ struct PauseStatusPayload {
 }
 
 #[tauri::command]
-fn toggle_process_pause(project_path: String, engine: String, pause: bool, state: tauri::State<AppState>) -> Result<(), String> {
+fn toggle_process_pause(project_path: String, engine: String, pause: bool, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> {
+    let thread_id_str = thread_id.unwrap_or_default();
+    let session_key = format!("{}_{}", project_path, thread_id_str);
+
     let sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    let session = sessions.get(&project_path)
-        .ok_or_else(|| format!("No active session for path: {}", project_path))?;
+    let session = sessions.get(&session_key)
+        .ok_or_else(|| format!("No active session for key: {}", session_key))?;
     let shell_pid = if engine == "claude" {
         session.claude_pid
     } else {
@@ -1118,11 +1304,23 @@ fn toggle_process_pause(project_path: String, engine: String, pause: bool, state
 #[tauri::command]
 fn close_project_session(project_path: String, state: tauri::State<AppState>) -> Result<(), String> {
     let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
-    if let Some(_) = sessions.remove(&project_path) {
-        let session_name = get_tmux_session_name(&project_path, "mini");
-        let _ = std::process::Command::new("tmux")
-            .args(&["-u", "kill-session", "-t", &session_name])
-            .status();
+    let prefix = format!("{}_", project_path);
+    let keys_to_remove: Vec<String> = sessions.keys()
+        .filter(|k| k.starts_with(&prefix))
+        .cloned()
+        .collect();
+    
+    for key in keys_to_remove {
+        if let Some(session) = sessions.remove(&key) {
+            let thread_id_opt = if session.thread_id.is_empty() { None } else { Some(session.thread_id.as_str()) };
+            let cl_session = get_tmux_session_name(&project_path, "claude", thread_id_opt);
+            let ag_session = get_tmux_session_name(&project_path, "agy", thread_id_opt);
+            let mi_session = get_tmux_session_name(&project_path, "mini", None);
+            
+            let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &cl_session]).status();
+            let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &ag_session]).status();
+            let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &mi_session]).status();
+        }
     }
     Ok(())
 }
@@ -1208,9 +1406,10 @@ fn create_new_project(name: String, git_repo_name: String) -> Result<String, Str
 }
 
 #[tauri::command]
-fn copy_tmux_selection(project_path: String, terminal_type: String) -> Result<(), String> {
+fn copy_tmux_selection(project_path: String, terminal_type: String, thread_id: Option<String>) -> Result<(), String> {
     if is_tmux_available() {
-        let session_name = get_tmux_session_name(&project_path, &terminal_type);
+        let thread_id_opt = thread_id.as_deref();
+        let session_name = get_tmux_session_name(&project_path, &terminal_type, thread_id_opt);
         let status = std::process::Command::new("tmux")
             .args(&["-u", "send-keys", "-t", &session_name, "-X", "copy-pipe-and-cancel", "pbcopy"])
             .status();
@@ -1951,13 +2150,14 @@ fn open_devtools(window: tauri::Window) {
 }
 
 #[tauri::command]
-fn get_quota() -> Result<String, String> {
+fn get_quota(state: tauri::State<AppState>) -> Result<String, String> {
     let mut cmd = std::process::Command::new("ag-quota");
     
     let home = std::env::var("HOME").unwrap_or_default();
     let log_dir_path = format!("{}/.gemini/antigravity-cli/log", home);
     
-    if let Ok(entries) = std::fs::read_dir(log_dir_path) {
+    let mut found_email = None;
+    if let Ok(entries) = std::fs::read_dir(&log_dir_path) {
         let mut paths: Vec<_> = entries
             .filter_map(|e| e.ok())
             .map(|e| e.path())
@@ -1965,7 +2165,6 @@ fn get_quota() -> Result<String, String> {
             .collect();
         paths.sort(); // Sorts chronologically since format is cli-YYYYMMDD_HHMMSS.log
         
-        let mut found_email = None;
         for path in paths.iter().rev() {
             if let Ok(content) = std::fs::read_to_string(path) {
                 for line in content.lines().rev() {
@@ -1983,8 +2182,42 @@ fn get_quota() -> Result<String, String> {
             }
         }
         
-        if let Some(email) = found_email {
+        if let Some(ref email) = found_email {
             cmd.arg("--account").arg(email);
+            
+            // Check if active account changed to clear and duplicate tmux sessions from the new one
+            let mut last_acct = state.last_active_account.lock().map_err(|e| e.to_string())?;
+            if let Some(ref last) = *last_acct {
+                if last != email {
+                    println!("[DEBUG] Account changed from {} to {}. Clearing all project PTY sessions.", last, email);
+                    
+                    // Lock sessions and clear them
+                    let mut sessions = state.sessions.lock().map_err(|e| e.to_string())?;
+                    sessions.clear();
+                    
+                    // Kill all tmux sessions starting with "ai_os_"
+                    if is_tmux_available() {
+                        if let Ok(output) = std::process::Command::new("tmux")
+                            .args(&["list-sessions", "-F", "#S"])
+                            .output() {
+                            let sessions_str = String::from_utf8_lossy(&output.stdout);
+                            for line in sessions_str.lines() {
+                                let session_name = line.trim();
+                                if session_name.starts_with("ai_os_") {
+                                    println!("[DEBUG] Killing tmux session on account change: {}", session_name);
+                                    let _ = std::process::Command::new("tmux")
+                                        .args(&["kill-session", "-t", session_name])
+                                        .status();
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Emit event to notify frontend that account has changed
+                    let _ = state.app_handle.emit_all("account-changed", email.clone());
+                }
+            }
+            *last_acct = Some(email.clone());
         }
     }
 
@@ -2374,6 +2607,7 @@ fn main() {
             let sessions = Arc::new(Mutex::new(HashMap::new()));
             let active_project = Arc::new(Mutex::new(None));
             let staged_payload = Arc::new(Mutex::new(None));
+            let last_active_account = Arc::new(Mutex::new(None));
             
             // Set up state
             app.manage(AppState {
@@ -2381,6 +2615,7 @@ fn main() {
                 active_project,
                 app_handle,
                 staged_payload,
+                last_active_account,
             });
 
             Ok(())
@@ -2608,7 +2843,12 @@ fn confirm_staged_execution(
         }
     }
 
-    let switch_res = switch_active_project(project_path.clone(), engine.clone(), state.clone())?;
+    let thread_id = {
+        let staged = state.staged_payload.lock().map_err(|e| e.to_string())?;
+        staged.as_ref().map(|s| s.thread_id.clone())
+    };
+
+    let switch_res = switch_active_project(project_path.clone(), engine.clone(), thread_id.clone(), state.clone())?;
 
     let prompt_text = format!(
         "Please read the instructions inside `.agent-logs/current_task_payload.md` and complete the task in {} mode.\n",
@@ -2618,10 +2858,11 @@ fn confirm_staged_execution(
     let app_handle = state.app_handle.clone();
     let project_path_clone = project_path.clone();
     let engine_clone = engine.clone();
+    let thread_id_clone = thread_id.clone();
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(if switch_res.is_new_session { 3000 } else { 1000 }));
         let state_inside = app_handle.state::<AppState>();
-        let _ = write_to_pty(prompt_text, project_path_clone, engine_clone, state_inside);
+        let _ = write_to_pty(prompt_text, project_path_clone, engine_clone, thread_id_clone, state_inside);
     });
 
     if let Some(win) = state.app_handle.get_window("staging-overlay") {

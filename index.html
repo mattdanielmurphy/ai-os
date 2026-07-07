@@ -84,7 +84,6 @@
                         id="pause-btn"
                         class="pause-btn btn-primary"
                         data-ui="pause-btn"
-                        style="padding: 6px 12px"
                     >
                         Pause
                     </button>
@@ -122,7 +121,7 @@
                     data-ui="tui-toggle-bar"
                 >
                     <div id="tui-resize-handle" class="tui-resize-handle"></div>
-                    <span style="pointer-events: none;">Engine TUI Session</span>
+                    <span class="tui-session-title">Engine TUI Session</span>
                     
                     <div class="terminal-presets" data-ui="terminal-presets">
                         <button class="preset-btn" data-preset="0" title="Preset 1 (Small)">1</button>
@@ -141,7 +140,7 @@
                 </div>
 
                 <!-- Hidden legacy containers to prevent JS reference errors -->
-                <div style="display: none">
+                <div class="hidden">
                     <div id="terminals-wrapper"></div>
                     <div id="pane-splitter"></div>
                     <div id="mini-terminal-container"></div>
@@ -228,12 +227,11 @@
                 <!-- Modal Body -->
                 <div class="modal-body" data-ui="modal-body">
                     <!-- Choice Actions -->
-                    <div style="display: flex; gap: 16px">
+                    <div class="modal-choice-container">
                         <button
                             id="btn-choice-existing"
                             class="modal-choice-btn"
                             data-ui="btn-choice-existing"
-                            style="flex: 1"
                         >
                             <span class="modal-choice-icon">📂</span>
                             <span class="modal-choice-title"
@@ -247,7 +245,6 @@
                             id="btn-choice-new"
                             class="modal-choice-btn"
                             data-ui="btn-choice-new"
-                            style="flex: 1"
                         >
                             <span class="modal-choice-icon">✨</span>
                             <span class="modal-choice-title">Start New</span>

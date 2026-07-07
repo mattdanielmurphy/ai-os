@@ -105,12 +105,12 @@ export async function renderThreadNotesSidebar(projectPath: string | null, threa
     if (!sidebar || !content) return;
     
     if (!projectPath || !threadId) {
-        sidebar.style.display = 'none';
+        sidebar.classList.remove('--visible');
         return;
     }
     
-    sidebar.style.display = 'flex';
-    content.innerHTML = '<div style="color: var(--text-muted); font-style: italic;">Loading notes...</div>';
+    sidebar.classList.add('--visible');
+    content.innerHTML = '<div class="notes-loading">Loading notes...</div>';
     
     const todos = await ThreadNotesManager.getTodosForThread(threadId);
     
@@ -118,14 +118,12 @@ export async function renderThreadNotesSidebar(projectPath: string | null, threa
     
     if (todos.length === 0) {
         const noTodos = document.createElement('div');
-        noTodos.style.color = 'var(--text-muted)';
-        noTodos.style.fontStyle = 'italic';
+        noTodos.className = 'notes-empty';
         noTodos.innerText = 'No todos found for this thread.';
         content.appendChild(noTodos);
         
         const initBtn = document.createElement('button');
-        initBtn.className = 'btn-primary';
-        initBtn.style.marginTop = '10px';
+        initBtn.className = 'btn-primary notes-init-btn';
         initBtn.innerText = 'Initialize Thread Notes';
         initBtn.onclick = async () => {
             await ThreadNotesManager.ensureHeading(projectPath, threadId, null);
@@ -136,16 +134,11 @@ export async function renderThreadNotesSidebar(projectPath: string | null, threa
     }
     
     const list = document.createElement('div');
-    list.style.display = 'flex';
-    list.style.flexDirection = 'column';
-    list.style.gap = '8px';
+    list.className = 'notes-todo-list';
     
     for (const todo of todos) {
         const row = document.createElement('label');
-        row.style.display = 'flex';
-        row.style.gap = '8px';
-        row.style.alignItems = 'flex-start';
-        row.style.cursor = 'pointer';
+        row.className = 'notes-todo-row';
         
         const cb = document.createElement('input');
         cb.type = 'checkbox';
@@ -156,10 +149,10 @@ export async function renderThreadNotesSidebar(projectPath: string | null, threa
         };
         
         const text = document.createElement('span');
+        text.className = 'notes-todo-text';
         text.innerText = todo.text;
         if (todo.completed) {
-            text.style.textDecoration = 'line-through';
-            text.style.color = 'var(--text-muted)';
+            text.classList.add('completed');
         }
         
         row.appendChild(cb);

@@ -1,5 +1,5 @@
 import "@xterm/xterm/css/xterm.css"
-import "./styles.css"
+import "./styles.scss"
 
 import type { ILink, ILinkProvider } from "@xterm/xterm"
 import {
@@ -30,6 +30,20 @@ window.addEventListener("keydown", (e) => {
 		) as HTMLButtonElement | null
 		if (newThreadBtn) {
 			newThreadBtn.click()
+		}
+	}
+
+	// Map cmd/alt+1, 2, and 3 to terminal preset sizes
+	if ((e.metaKey || e.altKey) && !e.ctrlKey) {
+		if (e.code === "Digit1") {
+			if (e.altKey) e.preventDefault() //? otherwise will insert a special character into text input
+			applyTerminalPreset(0)
+		} else if (e.code === "Digit2") {
+			if (e.altKey) e.preventDefault() //? otherwise will insert a special character into text input
+			applyTerminalPreset(1)
+		} else if (e.code === "Digit3") {
+			if (e.altKey) e.preventDefault() //? otherwise will insert a special character into text input
+			applyTerminalPreset(2)
 		}
 	}
 })
@@ -84,6 +98,11 @@ interface Project {
 let activeProject: string = "/Users/matt/projects/ai-os"
 let maxVisibleThreads: number = 15
 
+const cleanPath = (path: string): string => {
+	if (!path) return ""
+	return path.replace(/^["'“‘]+|["'”’]+$/g, "").trim()
+}
+
 const formatPathForUser = (
 	path: string,
 	projectPath: string = activeProject,
@@ -100,6 +119,9 @@ const formatPathForUser = (
 let isTerminalMode: boolean = false
 
 let activeThreadId: string | null = null
+setInterval(() => {
+	;(window as any).activeThreadId = activeThreadId
+}, 50)
 let activeThreadContext: string | null = null
 const threadFilepaths = new Map<string, string>()
 const threadLatestLeafIds = new Map<string, string>()
@@ -177,7 +199,9 @@ pauseBtnEl?.addEventListener("click", async () => {
 	try {
 		await invoke("toggle_process_pause", {
 			projectPath: activeProject,
+			engine: currentEngine,
 			pause: requestPause,
+			threadId: activeThreadId || "",
 		})
 	} catch (e) {
 		console.error("Failed to toggle pause:", e)
@@ -710,9 +734,9 @@ const renderer = {
 			.replace(/"/g, "&quot;")
 			.replace(/'/g, "&#39;")
 		return `
-            <div class="ts-html-element-1 group">
-                <button class="ts-html-element-2" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
-                <pre style="margin:0;"><code class="language-${lang}">${escapedText}</code></pre>
+            <div class="group">
+                <button class="copy-btn" data-content="${encodeURIComponent(text)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
+                <pre><code class="language-${lang}">${escapedText}</code></pre>
             </div>
         `
 	},
@@ -878,13 +902,13 @@ const buildTimelineHtml = (
 					let targetPath = ""
 					if (call.args) {
 						if (typeof call.args.TargetFile === "string")
-							targetPath = call.args.TargetFile
+							targetPath = cleanPath(call.args.TargetFile)
 						else if (typeof call.args.AbsolutePath === "string")
-							targetPath = call.args.AbsolutePath
+							targetPath = cleanPath(call.args.AbsolutePath)
 						else if (typeof call.args.DirectoryPath === "string")
-							targetPath = call.args.DirectoryPath
+							targetPath = cleanPath(call.args.DirectoryPath)
 						else if (typeof call.args.SearchPath === "string")
-							targetPath = call.args.SearchPath
+							targetPath = cleanPath(call.args.SearchPath)
 					}
 
 					blocks.push({
@@ -911,7 +935,7 @@ const buildTimelineHtml = (
 		let pathHtml = ""
 		if (call.targetPath) {
 			const displayPath = formatPathForUser(call.targetPath)
-			pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\'")}')" class="ts-html-element-3" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
+			pathHtml = ` <a href="#" onclick="window.openPath('${call.targetPath.replace(/'/g, "\\'")}')" class="file-link" title="${formatPathForUser(call.targetPath)}">${displayPath}</a>`
 		}
 
 		let argsHtml = ""
@@ -934,14 +958,14 @@ const buildTimelineHtml = (
 
 						if (isMultiline) {
 							const parsedHtml = marked.parse(displayValue as string) as string
-							argsListHtml += `<tr><td style="vertical-align: top; padding: 4px 8px 4px 0; font-weight: 600; color: var(--text-muted); width: 120px; word-break: break-word;">${key}</td><td style="padding: 4px 0;"><div class="prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border" style="padding: 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px solid rgba(0,0,0,0.05); overflow-x: auto; width: 100%; box-sizing: border-box;">${parsedHtml}</div></td></tr>`
+							argsListHtml += `<tr><td class="tool-call-arg-name">${key}</td><td class="tool-call-arg-value"><div class="prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border tool-call-multiline-val">${parsedHtml}</div></td></tr>`
 						} else if (typeof displayValue === "string") {
-							argsListHtml += `<tr><td style="vertical-align: top; padding: 4px 8px 4px 0; font-weight: 600; color: var(--text-muted); width: 120px; word-break: break-word;">${key}</td><td style="padding: 4px 0; word-break: break-word;"><span style="color: var(--text-muted);">${displayValue.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span></td></tr>`
+							argsListHtml += `<tr><td class="tool-call-arg-name">${key}</td><td class="tool-call-arg-value"><span class="tool-call-string-val">${displayValue.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span></td></tr>`
 						} else {
-							argsListHtml += `<tr><td style="vertical-align: top; padding: 4px 8px 4px 0; font-weight: 600; color: var(--text-muted); width: 120px; word-break: break-word;">${key}</td><td style="padding: 4px 0; word-break: break-word;"><pre style="display:inline; margin:0; padding:2px 4px; font-size:0.8em; background: rgba(0,0,0,0.05); border-radius: 4px;"><code>${JSON.stringify(displayValue).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre></td></tr>`
+							argsListHtml += `<tr><td class="tool-call-arg-name">${key}</td><td class="tool-call-arg-value"><pre class="tool-call-json-val"><code>${JSON.stringify(displayValue).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre></td></tr>`
 						}
 					}
-					argsHtml = `<table style="font-size: 0.85rem; margin-top: 8px; width: 100%; border-collapse: collapse; table-layout: fixed;"><tbody>${argsListHtml}</tbody></table>`
+					argsHtml = `<table class="tool-call-args-table"><tbody>${argsListHtml}</tbody></table>`
 				} else {
 					throw new Error("Not an object")
 				}
@@ -950,22 +974,21 @@ const buildTimelineHtml = (
 					.replace(/&/g, "&amp;")
 					.replace(/</g, "&lt;")
 					.replace(/>/g, "&gt;")
-				argsHtml = `<pre style="font-size: 0.7rem; color: var(--text-muted); background: rgba(0,0,0,0.1); padding: 4px; border-radius: 4px; margin-top: 4px; white-space: pre-wrap; word-break: break-all; width: 100%; box-sizing: border-box;"><code>${argsStr}</code></pre>`
+				argsHtml = `<pre class="tool-call-raw-args"><code>${argsStr}</code></pre>`
 			}
 		}
 
 		return `
             <div class="unified-tool-call-row">
-                <details class="tool-call-details" style="width: 100%;">
-                    <summary style="display: flex; align-items: center; width: 100%; padding: 8px; cursor: pointer; list-style: none;">
-                        <span class="toggle-icon" style="margin-right: 8px;">▶</span>
-                        <span>${call.icon}</span>
-                        <span class="tool-summary" style="margin-left: 8px; font-weight: 500;">${call.actionSummary}</span>${pathHtml}
-                    </summary>
-                    <div style="padding: 0 8px 8px 8px;">
-                        ${argsHtml}
-                    </div>
-                </details>
+                <details class="tool-call-details">
+                    <summary>
+                        <div>
+                            <span class="toggle-icon">▶</span>
+                            <span>${call.icon}</span>
+                            <span class="tool-summary">${call.actionSummary}</span>
+                        </div>
+                        ${pathHtml ? `<div>${pathHtml}</div>` : ""}
+                    </summary><div class="tool-call-details-body">${argsHtml.trim()}</div></details>
             </div>
         `
 	}
@@ -1008,9 +1031,9 @@ const buildTimelineHtml = (
                                 <span>📜 Historical Context of active thread ${escapedThreadId ? `(${escapedThreadId.substring(0, 8)}...)` : ""}</span>
                                 <span class="toggle-icon">▶</span>
                             </summary>
-                            <div class="historical-details">
-${block.historicalContext}
-                            </div>
+                             <div class="historical-details">
+${marked.parse(block.historicalContext)}
+                             </div>
                         </details>
                     </div>
                 </div>
@@ -1029,22 +1052,34 @@ ${block.historicalContext}
 		const intertwineHtml: string[] = []
 		const textResponses: string[] = []
 
-		turn.agentBlocks.forEach((b) => {
+		turn.agentBlocks.forEach((b, idx) => {
 			if (b.type === "tool_call" && b.call) {
 				intertwineHtml.push(renderToolCallHtml(b.call))
 			} else if (b.type === "thought" && b.content) {
-				const thoughtHtml = `<div class="agent-thought" style="padding: 8px; font-size: 0.8rem; color: var(--text-muted); background: rgba(0,0,0,0.05); border-left: 2px solid var(--primary, #5645c5); margin-bottom: 8px; white-space: pre-wrap;">${b.content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
+				const thoughtHtml = `<div class="agent-thought">${b.content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
 				intertwineHtml.push(thoughtHtml)
 			} else if (b.type === "planner_response" && b.content) {
-				textResponses.push(b.content)
-				if (isLastTurn) {
-					hasOutputInLastTurn = true
+				const followedByToolCall = turn.agentBlocks
+					.slice(idx + 1)
+					.some((sibling) => sibling.type === "tool_call")
+				if (followedByToolCall) {
+					const interstitialHtml = `
+                    <div class="agent-interstitial-response prose prose-sm">
+                        <div class="text-content">${(marked.parse(b.content.trim()) as string).trim()}</div>
+                    </div>
+                    `
+					intertwineHtml.push(interstitialHtml)
+				} else {
+					textResponses.push(b.content)
+					if (isLastTurn) {
+						hasOutputInLastTurn = true
+					}
 				}
 			}
 		})
 
 		if (intertwineHtml.length > 0) {
-			const shouldOpen = isLastTurn && isThinking && !hasOutputInLastTurn
+			const shouldOpen = isLastTurn && isThinking
 			const boxId =
 				isLastTurn ?
 					"unified-tool-calls-box"
@@ -1063,10 +1098,10 @@ ${block.historicalContext}
 				:	`Agent Thinking...`
 
 			html += `
-            <div class="chat-message agent tool-call-group" style="margin-top: 16px;">
-                <div class="message-content" style="width: 100%;">
+            <div class="chat-message agent tool-call-group">
+                <div class="message-content">
                     <details class="group tool-calls-box" id="${boxId}" ${shouldOpen ? "open" : ""}>
-                        <summary class="historical-summary">
+                        <summary class="tool-call-summary">
                             <span>${headerText}</span>
                             <span class="toggle-icon">▶</span>
                         </summary>
@@ -1126,7 +1161,7 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 						call.name === "write_to_file"
 					) {
 						if (call.args && typeof call.args.TargetFile === "string") {
-							editedFilesSet.add(call.args.TargetFile)
+							editedFilesSet.add(cleanPath(call.args.TargetFile))
 						}
 					}
 				}
@@ -1138,7 +1173,7 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 
 	if (steps.length === 0) {
 		markdownPreviewPane.innerHTML =
-			'<div class="ts-html-element-23">No conversation steps found.</div>'
+			'<div class=">No conversation steps found.</div>'
 		return
 	}
 
@@ -1147,13 +1182,14 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 	if (editedFilesSet.size > 0) {
 		const files = Array.from(editedFilesSet)
 		html += `
-        <div class="ts-html-element-24">
-            <span class="ts-html-element-25">Edited Files:</span>
+        <div class="edited-files-container">
+            <span class="edited-files-label">Edited Files:</span>
             ${files
 							.map((file) => {
-								const parts = file.split("/")
+								const cleanedFile = cleanPath(file)
+								const parts = cleanedFile.split("/")
 								const name = parts[parts.length - 1]
-								return `<span class="ts-html-element-26" title="${formatPathForUser(file)}">${name}</span>`
+								return `<a href="#" onclick="window.openPath('${cleanedFile.replace(/'/g, "\\'")}')" class="edited-file-link" title="${formatPathForUser(cleanedFile)}">${name}</a>`
 							})
 							.join("")}
         </div>
@@ -1216,13 +1252,14 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		}
 
 		html += `
-        <div class="ts-html-element-27">
-            <div class="ts-html-element-28">
-                <div class="ts-html-element-29">
-                    <span class="ts-html-element-30"></span>
-                    <span class="ts-html-element-31"></span>
+        <div class="chat-message agent thinking">
+            <div class="message-content">
+                <div class="thinking-loader">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
                 </div>
-                <span class="ts-html-element-32" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">${statusText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+                <span class="thinking-text">${statusText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
             </div>
         </div>
         `
@@ -1282,9 +1319,9 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 	) as HTMLDetailsElement
 
 	if (toolCallsList && toolCallsBox) {
-		if (justStartedThinking && !timelineResult.hasOutputInLastTurn) {
+		if (justStartedThinking) {
 			toolCallsBox.open = true
-		} else if (justFinishedThinking || timelineResult.hasOutputInLastTurn) {
+		} else if (justFinishedThinking) {
 			toolCallsBox.open = false
 		}
 
@@ -1747,16 +1784,16 @@ const renderProjects = () => {
 			:	"project-item-header"
 
 		header.innerHTML = `
-            <div class="ts-html-element-35">
-                <div class="ts-html-element-36">
-                    <span class="ts-html-element-37" style="background-color: ${project.color}"></span>
-                    <span class="ts-html-element-38">${project.name}</span>
+            <div>
+                <div>
+                    <span style="background-color: ${project.color}"></span>
+                    <span>${project.name}</span>
                 </div>
-                <span class="ts-html-element-39">${formatPathForUser(project.path)}</span>
+                <span>${formatPathForUser(project.path)}</span>
             </div>
-            <div class="ts-html-element-40 action-btns">
-                <button class="ts-html-element-41 open-btn" title="Open in Finder">📁</button>
-                <button class="ts-html-element-42 delete-btn" title="Remove Project">✕</button>
+            <div class="action-btns">
+                <button class="open-btn" title="Open in Finder">📁</button>
+                <button class="delete-btn" title="Remove Project">✕</button>
             </div>
         `
 
@@ -1822,14 +1859,13 @@ const renderProjects = () => {
 			threadsHeader.className = "thread-history-header"
 			threadsHeader.innerHTML = `
                 <span>Threads</span>
-                <button class="ts-html-element-43 new-thread-btn" title="Start New Thread">+</button>
+                <button class="new-thread-btn" title="Start New Thread">+</button>
             `
 
 			const threadsList = document.createElement("div")
 			threadsList.id = "project-threads-list"
 			threadsList.className = "thread-history-list"
-			threadsList.innerHTML =
-				'<div class="ts-html-element-44 threads-loading">Loading...</div>'
+			threadsList.innerHTML = '<div class="threads-loading">Loading...</div>'
 
 			threadsList.addEventListener("scroll", () => {
 				if (
@@ -1914,14 +1950,14 @@ const renderProjects = () => {
 					const previewPane = document.getElementById("markdown-preview-pane")
 					if (previewPane) {
 						previewPane.innerHTML =
-							'<div class="ts-html-element-50">Select a thread or log file to view preview...</div>'
+							'<div class=">Select a thread or log file to view preview...</div>'
 					}
 				})
 
 				const previewPane = document.getElementById("markdown-preview-pane")
 				if (previewPane) {
 					previewPane.innerHTML =
-						'<div class="ts-html-element-51">Select a thread or log file to view preview...</div>'
+						'<div class=">Select a thread or log file to view preview...</div>'
 				}
 
 				await selectAgyEngine()
@@ -2261,8 +2297,7 @@ const renderProjectThreads = async (
 		const threadsToShow = threads.slice(0, maxVisibleThreads)
 
 		if (threadsToShow.length === 0) {
-			listEl.innerHTML =
-				'<div class="ts-html-element-52">No threads found for this project</div>'
+			listEl.innerHTML = '<div class=">No threads found for this project</div>'
 			return
 		}
 
@@ -2304,7 +2339,7 @@ const renderProjectThreads = async (
 							)
 							if (previewPane) {
 								previewPane.innerHTML =
-									'<div class="ts-html-element-61">Select a thread or log file to view preview...</div>'
+									'<div class=">Select a thread or log file to view preview...</div>'
 							}
 						}
 						pollThreadsList()
@@ -2318,9 +2353,9 @@ const renderProjectThreads = async (
 				document
 					.querySelectorAll("#project-threads-list > div")
 					.forEach((child) => {
-						child.className = "project-thread-item group"
+						child.className = "thread-history-item group"
 					})
-				el.className = "project-thread-item-active group"
+				el.className = "thread-history-item active group"
 
 				activeThreadId = thread.id
 				renderThreadNotesSidebar(activeProject, activeThreadId)
@@ -2339,7 +2374,7 @@ const renderProjectThreads = async (
 					}
 				} catch (err) {
 					if (previewPane) {
-						previewPane.innerHTML = `<div class="ts-html-element-62">Error loading thread log file: ${err}</div>`
+						previewPane.innerHTML = `<div class=">Error loading thread log file: ${err}</div>`
 					}
 				}
 
@@ -2358,7 +2393,7 @@ const renderProjectThreads = async (
 					console.error("Failed to toggle engine session on backend:", err)
 				}
 				invoke("write_to_pty", {
-					data: `/resume ${thread.latest_leaf_id}\r`,
+					data: `\x15/resume ${thread.latest_leaf_id}\r`,
 					projectPath: activeProject,
 					terminalType: "agy",
 				})
@@ -2377,7 +2412,7 @@ const renderProjectThreads = async (
 		listEl.scrollTop = prevScrollTop
 	} catch (err) {
 		console.error("Failed to load project threads:", err)
-		listEl.innerHTML = `<div class="ts-html-element-63">Error: ${err}</div>`
+		listEl.innerHTML = `<div class=">Error: ${err}</div>`
 	}
 }
 
@@ -2581,7 +2616,7 @@ btnSubmitNewProject?.addEventListener("click", async () => {
 	// Disable submit button and show loading state
 	const originalText = btnSubmitNewProject.innerHTML
 	btnSubmitNewProject.disabled = true
-	btnSubmitNewProject.innerHTML = `<span class="ts-html-element-64">🔄</span> Creating...`
+	btnSubmitNewProject.innerHTML = `<span class=">🔄</span> Creating...`
 
 	try {
 		const projectPath = await invoke<string>("create_new_project", {
@@ -2979,7 +3014,7 @@ textarea?.addEventListener("keydown", async (e) => {
 						const leafId =
 							threadLatestLeafIds.get(activeThreadId) || activeThreadId
 						invoke("write_to_pty", {
-							data: `/resume ${leafId}\r`,
+							data: `\x15/resume ${leafId}\r`,
 							projectPath: activeProject,
 							terminalType: "agy",
 						})
@@ -3229,6 +3264,42 @@ document.addEventListener("click", (e) => {
 	const target = e.target as HTMLElement
 	const selection = window.getSelection()
 
+	// Handle link clicks globally (prevent default and open in system/tauri)
+	const anchor = target.closest("a")
+	if (anchor) {
+		const href = anchor.getAttribute("href")
+		if (href && href !== "#") {
+			e.preventDefault()
+			e.stopPropagation()
+
+			// Check if it's a web link
+			if (href.startsWith("http://") || href.startsWith("https://")) {
+				open(href).catch((err) =>
+					console.error("Failed to open web link:", err),
+				)
+			} else {
+				// Handle file or relative link
+				let finalUri = cleanPath(href)
+				if (finalUri.startsWith("file://")) {
+					finalUri = cleanPath(finalUri.replace("file://", ""))
+				}
+				// Resolve relative paths against the active project
+				if (!finalUri.startsWith("/") && !finalUri.startsWith("~/")) {
+					if (finalUri.startsWith("./")) {
+						finalUri = finalUri.slice(2)
+					}
+					if (activeProject) {
+						finalUri = `${activeProject}/${finalUri}`
+					}
+				}
+				invoke("open_path", { path: finalUri }).catch((err) =>
+					console.error("Failed to open path:", err),
+				)
+			}
+			return
+		}
+	}
+
 	// Focus appropriate terminal or textarea
 	const path = e.composedPath()
 	const isEngineTermClick = container && path.includes(container)
@@ -3359,7 +3430,7 @@ async function updateQuotaDisplay() {
 		const tooltip = document.getElementById("quota-tooltip")
 		if (tooltip) {
 			tooltip.innerHTML =
-				'<div class="ts-html-element-67"><div id="quota-col-google" class="ts-html-element-68"></div><div id="quota-col-anthropic" class="ts-html-element-69"></div></div>'
+				'<div class="><div id="quota-col-google" class="></div><div id="quota-col-anthropic" class="></div></div>'
 
 			const getProviderData = (name: string, pName: string, colId: string) => {
 				const allModels = data.Models.filter(
@@ -3368,7 +3439,7 @@ async function updateQuotaDisplay() {
 				const col = document.getElementById(colId)
 				if (!col) return
 
-				col.innerHTML += `<div class="ts-html-element-70">${name}</div>`
+				col.innerHTML += `<div class=">${name}</div>`
 
 				const highModels = allModels.filter(
 					(m: any) =>
@@ -3413,7 +3484,7 @@ async function updateQuotaDisplay() {
 
 					const row = document.createElement("div")
 					row.className = "quota-row-item"
-					row.innerHTML = `<span class="ts-html-element-71">${label}:</span> <div class="ts-html-element-72"> <span class="ts-html-element-73 ${minRem < 0.2 ? "text-red-400" : "text-green-400"} font-bold w-9">${pct}</span> <span class="">resets ${timeStr}</span></div>`
+					row.innerHTML = `<span class=">${label}:</span> <div class="> <span class="${minRem < 0.2 ? "text-red-400" : "text-green-400"} font-bold w-9">${pct}</span> <span class="">resets ${timeStr}</span></div>`
 					col.appendChild(row)
 				}
 
@@ -3470,10 +3541,28 @@ import("./ActionBar/ActionBar").then(({ ActionBar }) => {
 			}
 
 			invoke("write_to_pty", {
-				data: `/resume ${thread.latest_leaf_id}\r`,
+				data: `\x15/resume ${thread.latest_leaf_id}\r`,
 				projectPath: activeProject,
 				terminalType: "agy",
 			})
 		},
 	)
+})
+
+// Listen for Google account rotation/switch to clear out old tmux PTY sessions and start fresh
+listen<string>("account-changed", async (event) => {
+	console.log("[ai-os] Account changed to:", event.payload)
+	// Clear cached terminal history buffers
+	for (const key of Object.keys(claudeBuffers)) delete claudeBuffers[key]
+	for (const key of Object.keys(agyBuffers)) delete agyBuffers[key]
+	for (const key of Object.keys(miniTermBuffers)) delete miniTermBuffers[key]
+
+	// Reset standard terminal windows
+	term.reset()
+	miniTerm.reset()
+
+	// Automatically refresh active project to recreate PTY sessions on the backend
+	if (activeProject) {
+		await switchToProject(activeProject, true)
+	}
 })

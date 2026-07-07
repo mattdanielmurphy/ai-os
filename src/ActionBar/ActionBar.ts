@@ -59,11 +59,12 @@ export class ActionBar {
 
     private setupListeners() {
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'k' && e.metaKey) {
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
+                e.stopPropagation();
                 this.toggle();
             }
-        });
+        }, true);
 
         this.overlay.addEventListener('mousedown', (e) => {
             if (e.target === this.overlay) {
@@ -192,10 +193,17 @@ export class ActionBar {
     public open() {
         this.previousFocus = document.activeElement as HTMLElement;
         this.overlay.classList.add(styles.active);
+        
+        // Focus immediately
+        this.input.focus();
+        this.input.select();
+        
+        // Focus again after visibility classes are applied to guarantee it sticks
         setTimeout(() => {
             this.input.focus();
             this.input.select();
-        }, 10);
+        }, 50);
+        
         this.performSearch();
     }
 

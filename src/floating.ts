@@ -1,4 +1,4 @@
-import './styles.css';
+import './styles.scss';
 import { invoke, appWindow } from './tauriWrapper';
 
 let attachedContext: any = null;
