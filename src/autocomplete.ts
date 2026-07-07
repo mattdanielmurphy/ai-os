@@ -207,6 +207,12 @@ export class Autocompleter {
             };
             
             this.popup.appendChild(item);
+
+            if (idx === this.selectedIndex) {
+                setTimeout(() => {
+                    item.scrollIntoView({ block: 'nearest' });
+                }, 0);
+            }
         });
     }
 }

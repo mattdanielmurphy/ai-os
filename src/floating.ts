@@ -33,23 +33,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prompt = promptInput.value.trim();
                 if (!prompt && !attachedContext) return;
                 
+                const contextToSend = attachedContext;
+
+                // Reset UI and hide window immediately to make it instant
+                promptInput.value = '';
+                attachedContext = null;
+                if (contextBadge) {
+                    contextBadge.classList.add('hidden');
+                    contextBadge.classList.remove('flex');
+                }
+                appWindow.hide().catch(console.error);
+
                 try {
-                    // Dispatch the command with the prompt and context
+                    // Dispatch the command with the prompt and context in the background
                     await invoke('dispatch_to_gemini', {
                         prompt,
-                        context: attachedContext
+                        context: contextToSend
                     });
-                    
-                    // Reset UI
-                    promptInput.value = '';
-                    attachedContext = null;
-                    if (contextBadge) {
-                        contextBadge.classList.add('hidden');
-                        contextBadge.classList.remove('flex');
-                    }
-                    
-                    // Hide the window
-                    await appWindow.hide();
                 } catch(err) {
                     console.error("Failed to dispatch to Gemini:", err);
                     alert("Dispatch failed: " + String(err));

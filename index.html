@@ -112,6 +112,14 @@
                     >
                         <div>Waiting for output...</div>
                     </div>
+                    <button
+                        id="scroll-to-bottom-btn"
+                        class="scroll-to-bottom-btn"
+                        data-ui="scroll-to-bottom-btn"
+                    >
+                        <span>New messages below</span>
+                        <svg class="chevron-down-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
                 </div>
 
                 <!-- TUI Toggle Bar / Divider -->
@@ -127,6 +135,7 @@
                         <button class="preset-btn" data-preset="0" title="Preset 1 (Small)">1</button>
                         <button class="preset-btn" data-preset="1" title="Preset 2 (Medium)">2</button>
                         <button class="preset-btn" data-preset="2" title="Preset 3 (Large)">3</button>
+                        <button class="preset-btn refresh-btn" id="tui-refresh-btn" title="Refresh / Redraw Terminal (Cmd+Shift+R)">⟳</button>
                     </div>
                 </div>
 

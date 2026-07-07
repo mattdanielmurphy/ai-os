@@ -46,6 +46,15 @@ window.addEventListener("keydown", (e) => {
 			applyTerminalPreset(2)
 		}
 	}
+
+	// Keyboard shortcuts for refreshing/redrawing terminal
+	if ((e.metaKey && e.shiftKey && e.key.toLowerCase() === "r") ||
+		(e.metaKey && e.altKey && e.key.toLowerCase() === "r")) {
+		e.preventDefault()
+		try {
+			(window as any).refreshActiveTerminal()
+		} catch (err) {}
+	}
 })
 
 // ----------------------------------------------------
@@ -446,6 +455,20 @@ const handleLink = (e: MouseEvent, uri: string) => {
 	)
 }
 
+;(window as any).copyTextToClipboard = (text: string, btn: HTMLButtonElement) => {
+	navigator.clipboard.writeText(text).then(() => {
+		const originalHtml = btn.innerHTML
+		btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+		btn.classList.add("copied")
+		setTimeout(() => {
+			btn.innerHTML = originalHtml
+			btn.classList.remove("copied")
+		}, 2000)
+	}).catch(err => {
+		console.error("Failed to copy:", err)
+	})
+}
+
 class LocalPathLinkProvider implements ILinkProvider {
 	constructor(
 		private term: Terminal,
@@ -694,6 +717,55 @@ window.addEventListener("resize", () => {
 // ----------------------------------------------------
 const markdownPreviewPane = document.getElementById("markdown-preview-pane")
 
+let previewAutoScroll = true
+
+const forceScrollToBottom = (pane: HTMLElement) => {
+	previewAutoScroll = true
+	pane.scrollTop = pane.scrollHeight
+	const btn = document.getElementById("scroll-to-bottom-btn")
+	if (btn) {
+		btn.classList.remove("visible")
+	}
+}
+
+const checkAndScrollToBottom = (pane: HTMLElement) => {
+	const btn = document.getElementById("scroll-to-bottom-btn")
+	if (previewAutoScroll) {
+		pane.scrollTop = pane.scrollHeight
+		if (btn) {
+			btn.classList.remove("visible")
+		}
+	} else {
+		if (btn) {
+			btn.classList.add("visible")
+		}
+	}
+}
+
+if (markdownPreviewPane) {
+	markdownPreviewPane.addEventListener("scroll", () => {
+		const isAtBottom =
+			markdownPreviewPane.scrollHeight - markdownPreviewPane.scrollTop <=
+			markdownPreviewPane.clientHeight + 40
+		if (isAtBottom) {
+			previewAutoScroll = true
+			const btn = document.getElementById("scroll-to-bottom-btn")
+			if (btn) {
+				btn.classList.remove("visible")
+			}
+		} else {
+			previewAutoScroll = false
+		}
+	})
+}
+
+const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn")
+if (scrollToBottomBtn && markdownPreviewPane) {
+	scrollToBottomBtn.addEventListener("click", () => {
+		forceScrollToBottom(markdownPreviewPane)
+	})
+}
+
 // Parse transcript steps and render custom TUI log view in real time
 interface Step {
 	step_index: number
@@ -705,6 +777,7 @@ interface Step {
 		name: string
 		args?: Record<string, any>
 	}>
+	created_at?: string
 }
 
 interface ToolCallItem {
@@ -721,6 +794,7 @@ interface RenderBlock {
 	call?: ToolCallItem
 	historicalContext?: string
 	threadId?: string
+	createdAt?: string
 }
 
 const renderer = {
@@ -837,6 +911,7 @@ const buildTimelineHtml = (
 				content: prompt,
 				historicalContext: historicalContextText || undefined,
 				threadId: threadId || undefined,
+				createdAt: step.created_at,
 			})
 		} else {
 			let thoughtProcess = undefined
@@ -865,7 +940,7 @@ const buildTimelineHtml = (
 			}
 
 			if (thoughtProcess) {
-				blocks.push({ type: "thought", content: thoughtProcess })
+				blocks.push({ type: "thought", content: thoughtProcess, createdAt: step.created_at })
 			}
 
 			if (step.tool_calls && step.tool_calls.length > 0) {
@@ -920,12 +995,13 @@ const buildTimelineHtml = (
 							targetPath: targetPath || undefined,
 							args: call.args,
 						},
+						createdAt: step.created_at,
 					})
 				})
 			}
 
 			if (cleanedContent) {
-				blocks.push({ type: "planner_response", content: cleanedContent })
+				blocks.push({ type: "planner_response", content: cleanedContent, createdAt: step.created_at })
 			}
 		}
 	})
@@ -980,8 +1056,7 @@ const buildTimelineHtml = (
 
 		return `
             <div class="unified-tool-call-row">
-                <details class="tool-call-details">
-                    <summary>
+                <details class="tool-call-details"><summary>
                         <div>
                             <span class="toggle-icon">▶</span>
                             <span>${call.icon}</span>
@@ -1016,6 +1091,37 @@ const buildTimelineHtml = (
 
 	let hasOutputInLastTurn = false
 
+	interface MessageItem {
+		sender: "user" | "agent" | "historical"
+		type: "historical" | "user" | "tool-call-group" | "agent-text"
+		createdAt?: string
+		html: string
+		copyContent?: string
+	}
+
+	const messageItems: MessageItem[] = []
+
+	const renderTimestampHtml = (createdAt?: string) => {
+		if (!createdAt) return ""
+		const dateMs = new Date(createdAt).getTime()
+		if (isNaN(dateMs)) return ""
+		const relative = getRelativeDateStr(dateMs)
+		const full = getFullDateStr(dateMs)
+		const escRelative = relative.replace(/'/g, "&#39;")
+		const escFull = full.replace(/'/g, "&#39;")
+		return `
+			<span class="message-timestamp" 
+				  data-relative="${escRelative}" 
+				  data-full="${escFull}" 
+				  data-mode="relative"
+				  onmouseenter="if(this.getAttribute('data-mode')==='relative') this.textContent = this.getAttribute('data-full')" 
+				  onmouseleave="if(this.getAttribute('data-mode')==='relative') this.textContent = this.getAttribute('data-relative')"
+				  onclick="const m = this.getAttribute('data-mode') === 'relative' ? 'full' : 'relative'; this.setAttribute('data-mode', m); this.textContent = this.getAttribute('data-' + m);">
+				${relative}
+			</span>
+		`
+	}
+
 	turns.forEach((turn, index) => {
 		const isLastTurn = index === turns.length - 1
 
@@ -1023,9 +1129,7 @@ const buildTimelineHtml = (
 			const block = turn.userInput
 			if (block.historicalContext) {
 				const escapedThreadId = block.threadId || ""
-				html += `
-                <div class="chat-message agent historical">
-                    <div class="message-content">
+				const historicalHtml = `
                         <details class="group">
                             <summary class="historical-summary">
                                 <span>📜 Historical Context of active thread ${escapedThreadId ? `(${escapedThreadId.substring(0, 8)}...)` : ""}</span>
@@ -1035,42 +1139,60 @@ const buildTimelineHtml = (
 ${marked.parse(block.historicalContext)}
                              </div>
                         </details>
-                    </div>
-                </div>
                 `
+				messageItems.push({
+					sender: "historical",
+					type: "historical",
+					createdAt: block.createdAt,
+					html: historicalHtml
+				})
 			}
-			html += `
-            <div class="chat-message user">
-                <div class="message-content group">
-                    <button class="copy-btn" data-content="${encodeURIComponent(block.content || "")}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
-                    <div class="text-content">${block.content}</div>
-                </div>
-            </div>
-            `
+			const escapedContent = (block.content || "")
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+
+			messageItems.push({
+				sender: "user",
+				type: "user",
+				createdAt: block.createdAt,
+				html: escapedContent,
+				copyContent: block.content || ""
+			})
 		}
 
 		const intertwineHtml: string[] = []
-		const textResponses: string[] = []
+		const textResponses: Array<{ content: string; createdAt?: string }> = []
+		let toolCallCreatedAt: string | undefined = undefined
 
 		turn.agentBlocks.forEach((b, idx) => {
 			if (b.type === "tool_call" && b.call) {
 				intertwineHtml.push(renderToolCallHtml(b.call))
+				if (!toolCallCreatedAt) {
+					toolCallCreatedAt = b.createdAt
+				}
 			} else if (b.type === "thought" && b.content) {
 				const thoughtHtml = `<div class="agent-thought">${b.content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
 				intertwineHtml.push(thoughtHtml)
+				if (!toolCallCreatedAt) {
+					toolCallCreatedAt = b.createdAt
+				}
 			} else if (b.type === "planner_response" && b.content) {
 				const followedByToolCall = turn.agentBlocks
 					.slice(idx + 1)
 					.some((sibling) => sibling.type === "tool_call")
 				if (followedByToolCall) {
 					const interstitialHtml = `
-                    <div class="agent-interstitial-response prose prose-sm">
-                        <div class="text-content">${(marked.parse(b.content.trim()) as string).trim()}</div>
-                    </div>
-                    `
+                     <div class="agent-interstitial-response prose prose-sm">
+                         <div class="text-content">${(marked.parse(b.content.trim()) as string).trim()}</div>
+                     </div>
+                     `
 					intertwineHtml.push(interstitialHtml)
+					if (!toolCallCreatedAt) {
+						toolCallCreatedAt = b.createdAt
+					}
 				} else {
-					textResponses.push(b.content)
+					textResponses.push({ content: b.content, createdAt: b.createdAt })
 					if (isLastTurn) {
 						hasOutputInLastTurn = true
 					}
@@ -1097,9 +1219,30 @@ ${marked.parse(block.historicalContext)}
 					`Tool Calls & Thinking (${toolCallCount})`
 				:	`Agent Thinking...`
 
-			html += `
-            <div class="chat-message agent tool-call-group">
-                <div class="message-content">
+			let toolCallText = ""
+			turn.agentBlocks.forEach((b, idx2) => {
+				if (b.type === "tool_call" && b.call) {
+					let callText = `[Tool Call: ${b.call.name}]\n`
+					if (b.call.targetPath) {
+						callText += `Path: ${b.call.targetPath}\n`
+					}
+					if (b.call.args) {
+						callText += `Arguments: ${JSON.stringify(b.call.args, null, 2)}\n`
+					}
+					toolCallText += callText + "\n"
+				} else if (b.type === "thought" && b.content) {
+					toolCallText += `[Thought]\n${b.content}\n\n`
+				} else if (b.type === "planner_response" && b.content) {
+					const followedByToolCall2 = turn.agentBlocks
+						.slice(idx2 + 1)
+						.some((sibling) => sibling.type === "tool_call")
+					if (followedByToolCall2) {
+						toolCallText += `${b.content}\n\n`
+					}
+				}
+			})
+
+			const toolCallGroupHtml = `
                     <details class="group tool-calls-box" id="${boxId}" ${shouldOpen ? "open" : ""}>
                         <summary class="tool-call-summary">
                             <span>${headerText}</span>
@@ -1109,26 +1252,180 @@ ${marked.parse(block.historicalContext)}
                             ${intertwineHtml.join("")}
                         </div>
                     </details>
+            `
+			messageItems.push({
+				sender: "agent",
+				type: "tool-call-group",
+				createdAt: toolCallCreatedAt,
+				html: toolCallGroupHtml,
+				copyContent: toolCallText.trim()
+			})
+		}
+
+		textResponses.forEach((r) => {
+			const cleanedContent = r.content
+				.replace(/<THREAD_NAME>[\s\S]*?<\/THREAD_NAME>/g, "")
+				.trim()
+			if (cleanedContent) {
+				messageItems.push({
+					sender: "agent",
+					type: "agent-text",
+					createdAt: r.createdAt,
+					html: marked.parse(cleanedContent) as string,
+					copyContent: cleanedContent
+				})
+			}
+		})
+	})
+
+	interface GroupedMessage {
+		sender: "user" | "agent" | "historical"
+		items: MessageItem[]
+	}
+
+	const grouped: GroupedMessage[] = []
+	let currentGroup: GroupedMessage | null = null
+
+	messageItems.forEach((item) => {
+		if (item.sender === "historical") {
+			if (currentGroup) {
+				grouped.push(currentGroup)
+				currentGroup = null
+			}
+			grouped.push({ sender: "historical", items: [item] })
+		} else {
+			if (currentGroup && currentGroup.sender === item.sender) {
+				currentGroup.items.push(item)
+			} else {
+				if (currentGroup) {
+					grouped.push(currentGroup)
+				}
+				currentGroup = { sender: item.sender, items: [item] }
+			}
+		}
+	})
+	if (currentGroup) {
+		grouped.push(currentGroup)
+	}
+
+	grouped.forEach((g) => {
+		if (g.sender === "historical") {
+			const item = g.items[0]
+			html += `
+            <div class="chat-message agent historical">
+                <div class="message-content">
+                    ${item.createdAt ? `<div class="message-meta">${renderTimestampHtml(item.createdAt)}</div>` : ""}
+                    ${item.html}
+                </div>
+            </div>
+            `
+		} else if (g.sender === "user") {
+			let groupContentHtml = ""
+			let copyUserText = ""
+			g.items.forEach((item, idx) => {
+				const isText = item.type === "user" || item.type === "agent-text"
+				groupContentHtml += `
+                <div class="message-sub-block">
+                    <div class="message-meta">
+                        ${renderTimestampHtml(item.createdAt)}
+                    </div>
+                    <div class="message-text-container">
+                        ${isText ? `<div class="text-content">${item.html}</div>` : item.html}
+                    </div>
+                </div>
+                `
+				if (idx < g.items.length - 1) {
+					groupContentHtml += `<div class="message-divider"></div>`
+				}
+				if (item.copyContent) {
+					if (copyUserText) copyUserText += "\n\n"
+					copyUserText += item.copyContent
+				}
+			})
+
+			const encUser = encodeURIComponent(copyUserText)
+			const copyButtonsHtml = `
+            <div class="agent-copy-buttons">
+                ${copyUserText ? `
+                <button class="agent-copy-btn" title="Copy user message" onclick="window.copyTextToClipboard(decodeURIComponent('${encUser.replace(/'/g, "\\'")}'), this)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                ` : ""}
+            </div>
+            `
+
+			html += `
+            <div class="chat-message user">
+                ${copyButtonsHtml}
+                <div class="message-content group">
+                    ${groupContentHtml}
+                </div>
+            </div>
+            `
+		} else if (g.sender === "agent") {
+			let groupContentHtml = ""
+			let copyToolsText = ""
+			let copyMessagesText = ""
+
+			g.items.forEach((item, idx) => {
+				const isText = item.type === "user" || item.type === "agent-text"
+				groupContentHtml += `
+                <div class="message-sub-block">
+                    <div class="message-meta">
+                        ${renderTimestampHtml(item.createdAt)}
+                    </div>
+                    <div class="message-text-container">
+                        ${isText ? `<div class="text-content">${item.html}</div>` : item.html}
+                    </div>
+                </div>
+                `
+				if (idx < g.items.length - 1) {
+					groupContentHtml += `<div class="message-divider"></div>`
+				}
+
+				if (item.type === "tool-call-group" && item.copyContent) {
+					if (copyToolsText) copyToolsText += "\n\n"
+					copyToolsText += item.copyContent
+				} else if (item.type === "agent-text" && item.copyContent) {
+					if (copyMessagesText) copyMessagesText += "\n\n"
+					copyMessagesText += item.copyContent
+				}
+			})
+
+			const copyAllText = [copyToolsText.trim(), copyMessagesText.trim()].filter(Boolean).join("\n\n")
+			const encAll = encodeURIComponent(copyAllText)
+			const encTools = encodeURIComponent(copyToolsText)
+			const encMsgs = encodeURIComponent(copyMessagesText)
+
+			const copyButtonsHtml = `
+            <div class="agent-copy-buttons">
+                ${copyAllText ? `
+                <button class="agent-copy-btn" title="Copy entire response (tool calls + messages)" onclick="window.copyTextToClipboard(decodeURIComponent('${encAll.replace(/'/g, "\\'")}'), this)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                ` : ""}
+                ${copyToolsText ? `
+                <button class="agent-copy-btn" title="Copy tool calls & thinking only" onclick="window.copyTextToClipboard(decodeURIComponent('${encTools.replace(/'/g, "\\'")}'), this)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                </button>
+                ` : ""}
+                ${copyMessagesText ? `
+                <button class="agent-copy-btn" title="Copy agent messages only" onclick="window.copyTextToClipboard(decodeURIComponent('${encMsgs.replace(/'/g, "\\'")}'), this)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="copy-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </button>
+                ` : ""}
+            </div>
+            `
+
+			html += `
+            <div class="chat-message agent">
+                ${copyButtonsHtml}
+                <div class="message-content group prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border">
+                    ${groupContentHtml}
                 </div>
             </div>
             `
 		}
-
-		textResponses.forEach((r) => {
-			const cleanedContent = r
-				.replace(/<THREAD_NAME>[\s\S]*?<\/THREAD_NAME>/g, "")
-				.trim()
-			if (cleanedContent) {
-				html += `
-                <div class="chat-message agent">
-                    <div class="message-content group prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border">
-                        <button class="copy-btn" data-content="${encodeURIComponent(cleanedContent)}" onclick="navigator.clipboard.writeText(decodeURIComponent(this.getAttribute('data-content'))); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000)">Copy</button>
-                        <div class="text-content">${marked.parse(cleanedContent)}</div>
-                    </div>
-                </div>
-                `
-			}
-		})
 	})
 
 	return { html, hasOutputInLastTurn, latestThought }
@@ -1228,6 +1525,11 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 
 	if (isThreadSwitch) {
 		previousIsThinking = isThinking
+		previewAutoScroll = true
+		const btn = document.getElementById("scroll-to-bottom-btn")
+		if (btn) {
+			btn.classList.remove("visible")
+		}
 	}
 
 	const justStartedThinking = isThinking && !previousIsThinking
@@ -1351,7 +1653,7 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 
 	if (isThinking && !timelineResult.hasOutputInLastTurn) {
 		setTimeout(() => {
-			markdownPreviewPane.scrollTop = markdownPreviewPane.scrollHeight
+			checkAndScrollToBottom(markdownPreviewPane)
 		}, 30)
 	}
 }
@@ -1445,7 +1747,7 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
 					streamPane.textContent = liveAgyStream
 					const previewPane = document.getElementById("markdown-preview-pane")
 					if (previewPane) {
-						previewPane.scrollTop = previewPane.scrollHeight
+						checkAndScrollToBottom(previewPane)
 					}
 				}
 			}
@@ -1499,7 +1801,7 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
 const tuiContainer = document.getElementById("terminal-container")
 const previewWrapper = document.getElementById("preview-wrapper")
 const tuiResizeHandle = document.getElementById("tui-resize-handle")
-const presetBtns = document.querySelectorAll(".preset-btn")
+const presetBtns = document.querySelectorAll(".preset-btn:not(.refresh-btn)")
 
 let terminalPresets = [110, 300, 600]
 try {
@@ -1593,6 +1895,60 @@ if (tuiResizeHandle && tuiContainer && previewWrapper) {
 			} catch (e) {}
 		}
 	})
+}
+
+// Refresh terminal functionality
+const refreshActiveTerminal = async () => {
+	if (!activeProject) return
+
+	// Reset xterm.js UI buffers
+	term.reset()
+	const activeBuffers = currentEngine === "claude" ? claudeBuffers : agyBuffers
+	if (activeBuffers[activeProject]) {
+		term.write(activeBuffers[activeProject])
+	} else {
+		term.write(
+			`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`,
+		)
+	}
+
+	// Trigger Rust backend to refresh the tmux client
+	try {
+		await invoke("refresh_tmux_session", {
+			projectPath: activeProject,
+			engine: currentEngine,
+		})
+	} catch (e) {
+		console.error("Failed to trigger tmux refresh on backend:", e)
+	}
+
+	// Force resize
+	resizePty()
+}
+;(window as any).refreshActiveTerminal = refreshActiveTerminal
+
+const refreshBtn = document.getElementById("tui-refresh-btn")
+if (refreshBtn) {
+	refreshBtn.addEventListener("click", () => {
+		refreshActiveTerminal()
+	})
+}
+
+// Focus auto-refresh
+window.addEventListener("focus", () => {
+	refreshActiveTerminal()
+})
+
+// ResizeObserver on the terminal container to auto-resize PTY
+if (tuiContainer) {
+	try {
+		const ro = new ResizeObserver(() => {
+			debouncedResizePty()
+		})
+		ro.observe(tuiContainer)
+	} catch (e) {
+		console.warn("ResizeObserver failed or not supported:", e)
+	}
 }
 
 // ----------------------------------------------------
@@ -2870,6 +3226,11 @@ textarea?.addEventListener("keydown", async (e) => {
 		const trimmedInput = rawInput.trim()
 		if (!trimmedInput) return
 
+		// Clear textarea immediately to keep UI responsive
+		textarea.value = ""
+		savePromptDraft("")
+		adjustHeight()
+
 		if (!activeThreadId) {
 			isWaitingForNewThread = true
 			try {
@@ -2905,12 +3266,59 @@ textarea?.addEventListener("keydown", async (e) => {
             </div>`
 			previewPane.innerHTML += blockHtml
 			setTimeout(() => {
-				previewPane.scrollTop = previewPane.scrollHeight
+				forceScrollToBottom(previewPane)
 			}, 10)
 		}
 
 		// Prompt Mode Engine Routing Logic
 		let processedInput = trimmedInput
+
+		if (processedInput.startsWith("/")) {
+			let isRunning = false
+			try {
+				isRunning = await invoke<boolean>("is_engine_running", {
+					engine: currentEngine,
+					projectPath: activeProject,
+				})
+			} catch (err) {
+				console.error("Failed to check if engine is running:", err)
+			}
+
+			if (!isRunning && currentEngine === "agy") {
+				try {
+					await invoke("switch_active_project", {
+						projectPath: activeProject,
+						engine: "agy",
+					})
+					await invoke("spawn_fresh_engine", {
+						projectPath: activeProject,
+						engine: "agy",
+					})
+					await new Promise((resolve) => setTimeout(resolve, 3000))
+				} catch (err) {
+					console.error("Failed to spawn fresh agy engine:", err)
+				}
+			}
+
+			invoke("write_to_pty", {
+				data: `${processedInput}\r`,
+				projectPath: activeProject,
+				terminalType: currentEngine,
+			})
+
+			// Textarea cleared at the start of submit handler
+
+			const clearCheckbox = document.getElementById(
+				"clear-context-checkbox",
+			) as HTMLInputElement
+			if (clearCheckbox) {
+				clearCheckbox.checked = true
+				autoClearContext = true
+				localStorage.setItem("ai-os-auto-clear", "true")
+				updatePlaceholder(true)
+			}
+			return
+		}
 
 		// Obsidian Knowledge Routing
 		if (processedInput.toLowerCase().includes("notes")) {
@@ -3066,9 +3474,7 @@ textarea?.addEventListener("keydown", async (e) => {
 			}
 		}
 
-		textarea.value = ""
-		savePromptDraft("")
-		adjustHeight()
+		// Textarea cleared at the start of submit handler
 
 		// Auto-clear context toggle turns itself back on after each message is sent
 		if (clearCheckbox) {
