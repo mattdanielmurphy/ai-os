@@ -1,25 +1,21 @@
-## Testing
-- [ ] `/` commands in the textarea with autocomplete for commands AND for filepaths. include commands like `/model` and `/clear`
-
-- [ ] Repetitive output text appears after tool calls because it's not handling loading spinner correctly
-I am seeing this below the tool calls:
-```
-Agent is thinking & working...
-─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── [K─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── esc to cancelGemini 3.1 Pro (Low)○ Ruunni⣾ Runni Runnin● unningnning..⣷ Running...ngg...⣯ Running...⣟ ⡿ Runn⢿ Running..⣻ Running...⣽ Running...⣾ Runn⣷ Running⣯ Running...⣟ Running...⡿ R⢿ Runnin⣻ Running...⣽ Running...⣾ ⣷ Runni⣯ Running...⣟ Running...⡿ ⢿ Runn⣻ Running..⣽ Running...
-```
-
-It's an old problem but remains unfixed. I'm sure you see what's happening here; the interface is refreshing to show the loading spinner, and our interface is NOT refreshing, and it's just appending every new version of the text with the spinner icon to itself creating an unreadable mess.
+## Testing / In Progress
+- [ ] Slash commands
+- [x] When I submit a new prompt, it's slow and the text hangs in the textarea instead of instantly disappearing, making it clear something is happening, but right now it just sits there until the new terminal opens, which feels super janky
+- [ ] When something updates, the page is scrolled down forcibly. I actually WANT it to scroll down by default, but if the user scrolls up, then that auto-scroll behaviour must stop unless the user scrolls back down on their own (or clicks a button that appears when there's new unseen content that scrolls the user down to the bottom)
 
 ## To Do
 
-- [ ] When I submit a new prompt, it's slow and the text hangs in the textarea instead of instantly disappearing, making it clear something is happening, but right now it just sits there until the new terminal opens, which feels super janky
+- [ ] tool calls box should not look like a "message" but rather just text that appears in the output view. it's still a box though. It should have a border when the cursor is hovering over it (while expanded/folded)
+- [ ] add a kanban view for todos with a markdown file that's in sync and I can edit externally
+  - each todo can be assigned to a thread (ai-os thread, a "session" of agy threads is what I'll call it now--update the readme please)
+- [ ] 
 
-- [x] Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
-  - The context of these threads is pruned (omitting code and large file outputs, leaving only high-level steps/discoveries).
-  - Designed to work alongside `/clear` by default, recreating continuity by supplying the agent with a lean historical summary of past threads.
-  - Allows the agent to query detailed transcripts or full step logs via dedicated helper functions (e.g. leveraging `agy` transcripts/detailed logs) when more information is needed.
+
+- [ ] Auto-Clear toggle is hidden sometimes inexplicably
+- [ ] tmux doesn't load reliably when I click on a thread or stay in a thread
+- [ ] tmux instances seem to load with an initial width that's far less than the actual width of the tmux window. the app should remember the last width it was set to, and set it to that to begin with; and then it should immediately trigger a refresh like what happens when I manually switch the prest tmux window size and back.
+
 - [ ] File browser and VSCode and markdown editors
-- [x] open project in Finder button
 - [ ] when I enter shell mode, I see a bunch of these characters:  `1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the terminal input, presumably from using cmd-arrow key and stuff from when it's in prompt mode so it's sending escape sequences for cursor movement is my guess
 - [ ] Queuing of messages
   - The main hurdle to overcome is that if you naively send a /clear along with the prompt, the `/clear` immediately fires, canceling the current task, and the prompt disappears effectively; it's not even run
@@ -28,7 +24,6 @@ It's an old problem but remains unfixed. I'm sure you see what's happening here;
   - 1st of all, the view has to expand when I type `/`
   - 2nd, pasting in is unreliable, can't select anything
   - 3rd the bottom of the terminal is cut off
-- [ ] BUG: When I turn auto-clear off, it's supposed to NOT run `/clear`. It'll just continue the agy thread in addition to the AI-OS thread.
 - [ ] IDEA: have a CODING mode and a CONVERSATION mode
   - makes a lot of sense to me to split these up because the context and instructions are far different (agent coding logs are irrelevant, and there's more things that are relevant like past conversations, web history, etc)
   - conversation mode will just open a (modified) gemini web instance. we can inject our own context still though. maybe we use a CHEAP helper mode to fetch local file context etc
