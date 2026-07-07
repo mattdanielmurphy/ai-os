@@ -6,12 +6,9 @@ import type { ILink, ILinkProvider } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { invoke } from '@tauri-apps/api/tauri'
-import { appWindow, PhysicalSize, PhysicalPosition } from '@tauri-apps/api/window'
+import { invoke, appWindow, PhysicalSize, PhysicalPosition, listen, open } from './tauriWrapper'
 import { renderThreadNotesSidebar } from './threadNotes'
-import { listen } from '@tauri-apps/api/event'
 import { marked } from 'marked'
-import { open } from '@tauri-apps/api/shell'
 import { getRelativeDateStr, getFullDateStr } from './dateUtils'
 
 window.addEventListener('keydown', (e) => {
@@ -48,10 +45,10 @@ async function restoreWindowState() {
         console.error('Failed to restore window state:', e)
     }
 
-    appWindow.onResized(async ({ payload: size }) => {
+    appWindow.onResized(async ({ payload: size }: { payload: any }) => {
         localStorage.setItem('windowSize', JSON.stringify({ width: size.width, height: size.height }))
     })
-    appWindow.onMoved(async ({ payload: position }) => {
+    appWindow.onMoved(async ({ payload: position }: { payload: any }) => {
         localStorage.setItem('windowPosition', JSON.stringify({ x: position.x, y: position.y }))
     })
 }
@@ -915,14 +912,17 @@ const buildTimelineHtml = (steps: Step[], isThinking: boolean): string => {
         }
 
         return `
-            <div class="unified-tool-call-row" style="border: 1px solid rgba(128,128,128,0.2); border-radius: 6px; padding: 8px; margin-bottom: 8px; background: rgba(128,128,128,0.02);">
-                <div class="unified-tool-call-info" style="flex-direction: column; align-items: flex-start; width: 100%;">
-                    <div style="display: flex; align-items: center; width: 100%; margin-bottom: 4px;">
+            <div class="unified-tool-call-row" style="border: 1px solid rgba(128,128,128,0.2); border-radius: 6px; padding: 0; margin-bottom: 8px; background: rgba(128,128,128,0.02);">
+                <details class="tool-call-details" style="width: 100%;">
+                    <summary style="display: flex; align-items: center; width: 100%; padding: 8px; cursor: pointer; list-style: none;">
+                        <span class="toggle-icon" style="margin-right: 8px;">▶</span>
                         <span>${call.icon}</span>
                         <span class="tool-summary" style="margin-left: 8px; font-weight: 500;">${call.actionSummary}</span>${pathHtml}
+                    </summary>
+                    <div style="padding: 0 8px 8px 8px;">
+                        ${argsHtml}
                     </div>
-                    ${argsHtml}
-                </div>
+                </details>
             </div>
         `
     }
@@ -1053,9 +1053,9 @@ let lastRenderedThreadLog = ''
 let lastRenderedThreadId = ''
 let liveAgyStream = ''
 let toolCallsAutoScroll = true
-let toolCallsHovered = false
+let previousIsThinking = false
 
-const renderCustomTuiLog = (jsonlContent: string) => {
+const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
     if (!markdownPreviewPane) return
 
     const lines = jsonlContent.trim().split('\n')
@@ -1117,13 +1117,44 @@ const renderCustomTuiLog = (jsonlContent: string) => {
 
     // 2. Compute Thinking Indicator FIRST
     let isThinking = false
-    if (steps.length > 0) {
-        const lastStep = steps[steps.length - 1]
-        if (lastStep.source === 'MODEL' && lastStep.status !== 'DONE') {
+    if (liveAgyStream.trim().length > 0) {
+        isThinking = true
+    } else if (steps.length > 0) {
+        let foundIndicator = false
+        for (let i = steps.length - 1; i >= 0; i--) {
+            const step = steps[i]
+            if (step.status !== 'DONE' && step.status !== 'ERROR') {
+                isThinking = true
+                foundIndicator = true
+                break
+            }
+            if (step.type === 'PLANNER_RESPONSE') {
+                if (step.tool_calls && step.tool_calls.length > 0) {
+                    isThinking = true
+                } else {
+                    isThinking = false
+                }
+                foundIndicator = true
+                break
+            }
+            if (step.type === 'USER_INPUT') {
+                isThinking = true
+                foundIndicator = true
+                break
+            }
+        }
+        if (!foundIndicator) {
             isThinking = true
         }
     }
 
+    if (isThreadSwitch) {
+        previousIsThinking = isThinking;
+    }
+
+    const justStartedThinking = isThinking && !previousIsThinking;
+    const justFinishedThinking = !isThinking && previousIsThinking;
+    previousIsThinking = isThinking;
 
     // 3. Timeline Steps
     html += buildTimelineHtml(steps, isThinking)
@@ -1144,15 +1175,25 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     }
 
     // Preserve state of <details> elements
-    const openDetailsIndices: number[] = []
+    const detailsState = new Map<string, boolean>()
+    const detailsCounts: Record<string, number> = {}
+    
+    const getDetailsKey = (el: HTMLDetailsElement, counts: Record<string, number>) => {
+        if (el.id === 'unified-tool-calls-box') return el.id;
+        const summaryText = el.querySelector('summary')?.textContent?.trim() || 'no-summary';
+        counts[summaryText] = (counts[summaryText] || 0) + 1;
+        return `${summaryText}-${counts[summaryText]}`;
+    }
+
     const detailsElements = markdownPreviewPane.querySelectorAll('details')
-    detailsElements.forEach((el, index) => {
-        // Exclude the unified tool calls box from generic details preservation, 
-        // we'll handle its state specifically.
-        if (el.id !== 'unified-tool-calls-box' && el.open) {
-            openDetailsIndices.push(index)
-        }
-    })
+    if (!isThreadSwitch) {
+        detailsElements.forEach((el) => {
+            if ((justStartedThinking || justFinishedThinking) && el.id === 'unified-tool-calls-box') {
+                return;
+            }
+            detailsState.set(getDetailsKey(el, detailsCounts), el.open)
+        })
+    }
 
     const oldToolCallsList = markdownPreviewPane.querySelector('#unified-tool-calls-list');
     let savedScrollTop = -1;
@@ -1163,10 +1204,12 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     markdownPreviewPane.innerHTML = html
 
     // Restore state of <details> elements
+    const newDetailsCounts: Record<string, number> = {}
     const newDetailsElements = markdownPreviewPane.querySelectorAll('details')
-    openDetailsIndices.forEach((index) => {
-        if (newDetailsElements[index]) {
-            newDetailsElements[index].open = true
+    newDetailsElements.forEach((el) => {
+        const key = getDetailsKey(el, newDetailsCounts);
+        if (detailsState.has(key)) {
+            el.open = detailsState.get(key)!
         }
     })
 
@@ -1175,12 +1218,11 @@ const renderCustomTuiLog = (jsonlContent: string) => {
     const toolCallsBox = markdownPreviewPane.querySelector('#unified-tool-calls-box') as HTMLDetailsElement;
 
     if (toolCallsList && toolCallsBox) {
-        if (!isThinking && !toolCallsHovered) {
+        if (justStartedThinking) {
+            toolCallsBox.open = true;
+        } else if (justFinishedThinking) {
             toolCallsBox.open = false;
         }
-
-        toolCallsBox.addEventListener('mouseenter', () => { toolCallsHovered = true; });
-        toolCallsBox.addEventListener('mouseleave', () => { toolCallsHovered = false; });
 
         if (!toolCallsAutoScroll && savedScrollTop >= 0) {
             toolCallsList.scrollTop = savedScrollTop;
@@ -1224,12 +1266,13 @@ setInterval(async () => {
                 content !== lastRenderedThreadLog ||
                 activeThreadId !== lastRenderedThreadId
             ) {
-                if (content !== lastRenderedThreadLog || activeThreadId !== lastRenderedThreadId) {
+                const isThreadSwitch = activeThreadId !== lastRenderedThreadId
+                if (isThreadSwitch) {
                     liveAgyStream = ''
                 }
                 lastRenderedThreadLog = content
                 lastRenderedThreadId = activeThreadId
-                renderCustomTuiLog(content)
+                renderCustomTuiLog(content, isThreadSwitch)
             }
         }
     } catch (e) {
@@ -2772,11 +2815,6 @@ textarea?.addEventListener('keydown', async (e) => {
             processedInput += `\n\n[SYSTEM DIRECTIVE: Any read/write operations regarding "notes" MUST exclusively target this absolute path: /Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/]`
         }
 
-        const preTriageCheckbox = document.getElementById(
-            'pre-triage-checkbox'
-        ) as HTMLInputElement
-        const isPreTriage = preTriageCheckbox ? preTriageCheckbox.checked : false
-        
         const clearCheckbox = document.getElementById(
             'clear-context-checkbox'
         ) as HTMLInputElement

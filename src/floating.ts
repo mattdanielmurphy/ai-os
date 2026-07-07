@@ -1,6 +1,5 @@
 import './styles.css';
-import { invoke } from '@tauri-apps/api/tauri';
-import { appWindow } from '@tauri-apps/api/window';
+import { invoke, appWindow } from './tauriWrapper';
 
 let attachedContext: any = null;
 

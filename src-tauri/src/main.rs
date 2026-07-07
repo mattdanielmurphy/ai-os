@@ -26,6 +26,16 @@ struct ProjectSession {
     project_path: String,
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct ExecutionPayload {
+    thread_id: String,
+    thread_title: String,
+    phase: u32,
+    payload: String,
+    source_url: String,
+    security_token: String,
+}
+
 struct AppState {
     // Maps project path (canonical absolute path) to its session state
     sessions: Arc<Mutex<HashMap<String, ProjectSession>>>,
@@ -33,6 +43,8 @@ struct AppState {
     active_project: Arc<Mutex<Option<String>>>,
     // Keep a clone of the app handle to emit events
     app_handle: tauri::AppHandle,
+    // Staged execution payload
+    staged_payload: Arc<Mutex<Option<ExecutionPayload>>>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -198,6 +210,95 @@ async fn handle_gemini_sync(
     Ok("Sync OK".to_string())
 }
 
+#[derive(serde::Serialize)]
+struct SkillItem {
+    name: String,
+    description: String,
+    prompt: String,
+}
+
+async fn handle_skills_list() -> Result<Json<Vec<SkillItem>>, (axum::http::StatusCode, String)> {
+    let list = vec![
+        SkillItem {
+            name: "Brainstorming (Phase 0)".to_string(),
+            description: "Explore the edges of this idea conceptually".to_string(),
+            prompt: "Act as a technical sounding board. I have an idea for a new feature/project, and we need to brainstorm. \n\nDo not try to build it, write code, or structure a final plan yet. Your goal is to help me explore the edges of this idea. Ask me clarifying questions about the core problem, the ideal user experience, and potential pitfalls. Let's keep the conversation fluid and conceptual until I tell you we are ready to lock in a plan.\n\nHere is my initial thought: ".to_string(),
+        },
+        SkillItem {
+            name: "High-Level Plan (Phase 1)".to_string(),
+            description: "Synthesize agreed concept into non-technical product map".to_string(),
+            prompt: "Act as a Product Manager. We are closing the brainstorming phase. Synthesize our agreed-upon concept into a strict High-Level Plan outlining what this feature DOES and the exact user experience. \n\nStrictly avoid discussing how it is built under the hood. Structure your response using this exact framework:\n1. The Trigger: How the user or system initiates the action.\n2. The Staging Area: The intermediate UI, choices, or routing that happens before execution.\n3. Task Configuration: The rules, modes, or constraints applied to the task.\n4. Execution & Feedback: What happens during the process and how the user knows it finished.".to_string(),
+        },
+        SkillItem {
+            name: "Lower-Level Plan (Phase 2)".to_string(),
+            description: "Translate high-level plan into technical architecture".to_string(),
+            prompt: "Act as a Systems Architect. Translate our approved High-Level Plan into a Lower-Level Technical Plan. \n\nFocus on the plumbing and architecture. You may include hyper-specific, uncommon code snippets if they are necessary to illustrate an architectural choice (e.g., a specific Rust/Tauri bridge implementation or complex API endpoint), but do not write the standard implementation logic.\n\nBreak down the architecture into:\n1. Tech Stack & CLI Tools: Required packages or background processes.\n2. Component Bridge: How the layers communicate (e.g., file watchers, HTTP, standard I/O).\n3. State & Context Management: Where temporary data or files live during execution.\n4. Technical Bottlenecks: Highlight 2-3 edge cases or potential fail states to watch out for.".to_string(),
+        },
+        SkillItem {
+            name: "Execution Payload (Phase 3)".to_string(),
+            description: "Generate strict instruction set for local agent".to_string(),
+            prompt: "Act as a Prompt Engineer. We are ready to execute. Take the High-Level Plan and the Lower-Level Technical Plan and generate a strict, optimized instruction set for a local autonomous AI agent.\n\nOutput the final instructions inside a single code block formatted like this:\n```claude-instruction\n[Instructions here]\n```\n\nThe instructions must include:\n- The target context or directory behavior.\n- Strict constraints for the task (e.g., required logging formats, restricted commands).\n- A definitive, step-by-step implementation checklist.\n\nDo not include any conversational filler before or after the code block.".to_string(),
+        },
+        SkillItem {
+            name: "Worker Bee Rules".to_string(),
+            description: "Rules for direct coding contributions".to_string(),
+            prompt: "Worker Bee Mode: Please execute direct code implementations matching the workspace constraints and rule set.".to_string(),
+        },
+        SkillItem {
+            name: "Triage Rules".to_string(),
+            description: "Rules for architectural planning and dispatching".to_string(),
+            prompt: "Triage Mode: Please analyze the prompt, deconstruct the task, and prepare delegated sub-tasks rather than executing directly.".to_string(),
+        },
+    ];
+    Ok(Json(list))
+}
+
+async fn handle_payload_execute(
+    State(app_handle): State<tauri::AppHandle>,
+    Json(payload): Json<ExecutionPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    println!("Received execution payload for thread: {}", payload.thread_id);
+    
+    let state = app_handle.state::<AppState>();
+    if let Ok(mut staged) = state.staged_payload.lock() {
+        *staged = Some(payload.clone());
+    } else {
+        return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to lock staged payload".to_string()));
+    }
+
+    let app_handle_clone = app_handle.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Some(win) = app_handle_clone.get_window("staging-overlay") {
+            let _ = win.show();
+            let _ = win.set_focus();
+            let _ = win.emit("load-payload", payload);
+        } else {
+            let win_builder = tauri::WindowBuilder::new(
+                &app_handle_clone,
+                "staging-overlay",
+                tauri::WindowUrl::App("staging.html".into())
+            )
+            .title("AI-OS: Stage Execution")
+            .inner_size(680.0, 420.0)
+            .resizable(false)
+            .decorations(false)
+            .transparent(true)
+            .always_on_top(true)
+            .center();
+            
+            if let Ok(win) = win_builder.build() {
+                let payload_clone = payload.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    let _ = win.emit("load-payload", payload_clone);
+                });
+            }
+        }
+    });
+
+    Ok("Staged successfully".to_string())
+}
+
 fn spawn_axum_server(app_handle: tauri::AppHandle) {
     tauri::async_runtime::spawn(async move {
         let cors = CorsLayer::new()
@@ -209,6 +310,8 @@ fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/context/sync", post(handle_sync))
             .route("/api/revision/commit", post(handle_commit))
             .route("/api/gemini/sync", post(handle_gemini_sync))
+            .route("/api/payload/execute", post(handle_payload_execute))
+            .route("/api/skills/list", axum::routing::get(handle_skills_list))
             .layer(cors)
             .with_state(app_handle);
 
@@ -2249,12 +2352,14 @@ fn main() {
             
             let sessions = Arc::new(Mutex::new(HashMap::new()));
             let active_project = Arc::new(Mutex::new(None));
+            let staged_payload = Arc::new(Mutex::new(None));
             
             // Set up state
             app.manage(AppState {
                 sessions,
                 active_project,
                 app_handle,
+                staged_payload,
             });
 
             Ok(())
@@ -2299,7 +2404,10 @@ fn main() {
             dispatch_to_gemini,
             search_project_threads,
             read_thread_notes_file,
-            write_thread_notes_file
+            write_thread_notes_file,
+            get_staged_payload,
+            get_recent_workspaces,
+            confirm_staged_execution
         ])
         .run(context)
         .expect("error while running tauri application");
@@ -2391,4 +2499,113 @@ fn truncate_preview(content: &str, query: &str) -> String {
     } else {
         content.chars().take(100).collect::<String>().replace('\n', " ")
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct WorkspaceItem {
+    path: String,
+    last_used: u64,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct WorkspacesConfig {
+    recent: Vec<WorkspaceItem>,
+    pinned: Vec<WorkspaceItem>,
+}
+
+#[tauri::command]
+fn get_staged_payload(state: tauri::State<AppState>) -> Result<Option<ExecutionPayload>, String> {
+    let staged = state.staged_payload.lock().map_err(|e| e.to_string())?;
+    Ok(staged.clone())
+}
+
+#[tauri::command]
+fn get_recent_workspaces() -> Result<WorkspacesConfig, String> {
+    let home = std::env::var("HOME").map_err(|e| e.to_string())?;
+    let path = std::path::Path::new(&home)
+        .join(".gemini")
+        .join("antigravity-cli")
+        .join("workspaces.json");
+    if path.exists() {
+        let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let config: WorkspacesConfig = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        Ok(config)
+    } else {
+        Ok(WorkspacesConfig {
+            recent: vec![],
+            pinned: vec![],
+        })
+    }
+}
+
+#[tauri::command]
+fn confirm_staged_execution(
+    project_path: String,
+    engine: String,
+    mode: String,
+    payload: String,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let agent_logs_dir = std::path::Path::new(&project_path).join(".agent-logs");
+    std::fs::create_dir_all(&agent_logs_dir).map_err(|e| e.to_string())?;
+    let payload_path = agent_logs_dir.join("current_task_payload.md");
+    std::fs::write(&payload_path, &payload).map_err(|e| e.to_string())?;
+
+    if let Ok(home) = std::env::var("HOME") {
+        let workspaces_dir = std::path::Path::new(&home)
+            .join(".gemini")
+            .join("antigravity-cli");
+        let _ = std::fs::create_dir_all(&workspaces_dir);
+        let path = workspaces_dir.join("workspaces.json");
+        let mut config = if path.exists() {
+            let content = std::fs::read_to_string(&path).unwrap_or_default();
+            serde_json::from_str::<WorkspacesConfig>(&content).unwrap_or(WorkspacesConfig {
+                recent: vec![],
+                pinned: vec![],
+            })
+        } else {
+            WorkspacesConfig {
+                recent: vec![],
+                pinned: vec![],
+            }
+        };
+
+        config.recent.retain(|w| w.path != project_path);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        config.recent.insert(0, WorkspaceItem {
+            path: project_path.clone(),
+            last_used: now,
+        });
+        if config.recent.len() > 10 {
+            config.recent.truncate(10);
+        }
+        if let Ok(serialized) = serde_json::to_string_pretty(&config) {
+            let _ = std::fs::write(&path, serialized);
+        }
+    }
+
+    let switch_res = switch_active_project(project_path.clone(), engine.clone(), state.clone())?;
+
+    let prompt_text = format!(
+        "Please read the instructions inside `.agent-logs/current_task_payload.md` and complete the task in {} mode.\n",
+        if mode == "triage" { "Triage" } else { "Worker Bee" }
+    );
+    
+    let app_handle = state.app_handle.clone();
+    let project_path_clone = project_path.clone();
+    let engine_clone = engine.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(if switch_res.is_new_session { 3000 } else { 1000 }));
+        let state_inside = app_handle.state::<AppState>();
+        let _ = write_to_pty(prompt_text, project_path_clone, engine_clone, state_inside);
+    });
+
+    if let Some(win) = state.app_handle.get_window("staging-overlay") {
+        let _ = win.hide();
+    }
+
+    Ok(())
 }

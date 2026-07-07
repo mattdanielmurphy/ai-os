@@ -111,7 +111,7 @@ textarea {
 .projects-sidebar {
   display: flex;
   flex-direction: column;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--panel-bg);
   border-right: 1px solid var(--border-color);
   height: 100%;
   width: var(--sidebar-width);
@@ -563,8 +563,7 @@ textarea {
 }
 
 .project-item-header-active {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: #fff;
+  background: var(--panel-bg) !important;
 }
 
 /* Generic styling for the project info structure */
@@ -650,7 +649,7 @@ textarea {
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.05em;
-  padding: 8px 0;
+  padding: 8px 16px 8px 0;
 }
 
 .new-thread-btn {
@@ -676,15 +675,16 @@ textarea {
 .thread-history-item-alt,
 .thread-placeholder-item,
 .thread-placeholder-item-active {
-  padding: 1px 4px;
+  padding: 6px 8px;
   border-radius: 4px;
   cursor: pointer;
   user-select: none;
   font-size: 0.85rem;
   color: var(--text-muted);
   display: flex;
-  flex-direction: column;
-  gap: 0px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   transition: all 0.2s;
 }
 
@@ -909,10 +909,18 @@ textarea {
 .toggle-icon {
   font-size: 0.7rem;
   transition: transform 0.2s;
+  display: inline-block;
 }
 
-details[open] .toggle-icon {
+details[open] > summary .toggle-icon {
   transform: rotate(90deg);
+}
+
+.compact-prose > :first-child {
+  margin-top: 0 !important;
+}
+.compact-prose > :last-child {
+  margin-bottom: 0 !important;
 }
 
 .tool-call-info {
@@ -999,4 +1007,8 @@ details[open] .toggle-icon {
   background: var(--btn-primary-bg);
   color: white;
   border-color: var(--btn-primary-bg);
+}
+
+details.tool-call-details > summary::-webkit-details-marker {
+  display: none;
 }

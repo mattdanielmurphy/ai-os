@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '../tauriWrapper'
 import { getRelativeDateStr, getFullDateStr } from '../dateUtils'
 // @ts-ignore
 import styles from './ActionBar.module.css'

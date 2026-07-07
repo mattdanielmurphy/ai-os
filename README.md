@@ -57,13 +57,4 @@ The ai-os workspace is composed of several key components:
 - **Automated Auth Rotation Daemon:** Headless account-swapping component to rotate Google Accounts.
 - **Semantic Thought Layer:** Integrating local vector embeddings and native macOS automation (JXA/AppleScript wrappers).
 
-## Notes: Thought Log
-I'm realizing; I really ought to have a robust task system, and see THAT instead of threads.
-But I'm also realizing: isn't that exactly what that one claude code wrapper does? Has like robust projet management and kanban.
-I think I was turned off by its complexity but honestly I think it'd be better to just learn to use that than to continue to work on this.
-I mean; fuck, I don't know.
-I like the idea of making my specific vision, you know?
-But if it's open source I could fork it.
-But I kind of just learned that I shouldn't rush into working on a fork because it's not likely to work exactly how I want. And there's a lot I've built already, several times... and to start over AGAIN is a HUGE DECISION.
-Fuck, so I can't remember the specific one I had heard about before... but I did find https://github.com/BloopAI/vibe-kanban which looks pretty damn good.
-Oh... it's so alluring
+### Newest Idea

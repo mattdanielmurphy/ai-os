@@ -33,7 +33,16 @@ importers:
         specifier: ^18.0.5
         version: 18.0.5
     devDependencies:
+      '@rollup/rollup-darwin-arm64':
+        specifier: 4.62.2
+        version: 4.62.2
+      '@rollup/rollup-darwin-x64':
+        specifier: ^4.62.2
+        version: 4.62.2
       '@tauri-apps/cli':
+        specifier: ^1.6.3
+        version: 1.6.3
+      '@tauri-apps/cli-darwin-arm64':
         specifier: ^1.6.3
         version: 1.6.3
       typescript:
@@ -625,11 +634,9 @@ snapshots:
   '@rollup/rollup-android-arm64@4.62.2':
     optional: true
 
-  '@rollup/rollup-darwin-arm64@4.62.2':
-    optional: true
+  '@rollup/rollup-darwin-arm64@4.62.2': {}
 
-  '@rollup/rollup-darwin-x64@4.62.2':
-    optional: true
+  '@rollup/rollup-darwin-x64@4.62.2': {}
 
   '@rollup/rollup-freebsd-arm64@4.62.2':
     optional: true
@@ -696,8 +703,7 @@ snapshots:
 
   '@tauri-apps/api@1.6.0': {}
 
-  '@tauri-apps/cli-darwin-arm64@1.6.3':
-    optional: true
+  '@tauri-apps/cli-darwin-arm64@1.6.3': {}
 
   '@tauri-apps/cli-darwin-x64@1.6.3':
     optional: true

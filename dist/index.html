@@ -4,35 +4,31 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>AI OS</title>
-      <script type="module" crossorigin src="/assets/index-ByYWlfw0.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-Ci2wxQGy.css">
+      <script type="module" crossorigin src="/assets/main-OBJuHSKQ.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/tauriWrapper-Dl_8de2P.js">
+      <link rel="stylesheet" crossorigin href="/assets/main-BA4nyLgS.css">
     </head>
-    <body
-        class="ui-element-1" data-ui="ui-element-1"
-    >
+    <body data-ui="body">
         <!-- Left Sidebar for Projects -->
         <div
             id="projects-sidebar"
-            class="projects-sidebar" data-ui="projects-sidebar"
-            style="width: 256px;"
+            class="projects-sidebar"
+            data-ui="projects-sidebar"
         >
-            <div
-                class="ui-element-2" data-ui="ui-element-2"
-            >
-                <span
-                    class="ui-element-3" data-ui="ui-element-3"
-                    >Projects</span
-                >
+            <div class="sidebar-header" data-ui="sidebar-header">
+                <span>Projects</span>
                 <button
                     id="add-project-btn"
-                    class="add-project-btn" data-ui="add-project-btn"
+                    class="add-project-btn"
+                    data-ui="add-project-btn"
                 >
                     +
                 </button>
             </div>
             <div
                 id="projects-list"
-                class="projects-list" data-ui="projects-list"
+                class="projects-list"
+                data-ui="projects-list"
             >
                 <!-- Dynanically populated tabs -->
             </div>
@@ -41,60 +37,57 @@
         <!-- Sidebar Resize Handle -->
         <div
             id="sidebar-splitter"
-            class="sidebar-splitter group" data-ui="sidebar-splitter"
-        >
-            <div class="ui-element-4" data-ui="ui-element-4"></div>
-        </div>
+            class="sidebar-splitter"
+            data-ui="sidebar-splitter"
+        ></div>
 
         <!-- Main Workspace Container -->
-        <div class="ui-element-5" data-ui="ui-element-5">
+        <div class="main-workspace" data-ui="main-workspace">
             <!-- Top Header Bar -->
-            <div
-                class="ui-element-6" data-ui="ui-element-6"
-            >
-                <div class="ui-element-7" data-ui="ui-element-7">
-                    <span
-                        class="ui-element-8" data-ui="ui-element-8"
-                        >ENGINE:</span
-                    >
-                    <label
-                        class="ui-element-9" data-ui="ui-element-9"
-                    >
-                        <input
-                            type="radio"
-                            name="engine"
-                            value="agy"
-                            checked
-                            class="ui-element-10" data-ui="ui-element-10"
-                        />
-                        <span class="ui-element-11" data-ui="ui-element-11">Gemini (agy)</span>
-                    </label>
-                    <label
-                        class="ui-element-12" data-ui="ui-element-12"
-                    >
-                        <input
-                            type="radio"
-                            name="engine"
-                            value="claude"
-                            class="ui-element-13" data-ui="ui-element-13"
-                        />
-                        <span class="ui-element-14" data-ui="ui-element-14"
-                            >Deepseek V4 Flash (Claude Code)</span
-                        >
-                    </label>
+            <div class="top-header" data-ui="top-header">
+                <div class="header-left" data-ui="header-left">
+                    <span class="engine-label">ENGINE:</span>
+                    <div class="radio-group">
+                        <label>
+                            <input
+                                type="radio"
+                                name="engine"
+                                value="agy"
+                                checked
+                            />
+                            <span>Gemini (agy)</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="engine" value="claude" />
+                            <span>Deepseek V4 Flash (Claude Code)</span>
+                        </label>
+                    </div>
                 </div>
                 <!-- Mode status indicator & Pause Button -->
-                <div class="ui-element-15" data-ui="ui-element-15">
-                    <div id="quota-display-container" class="quota-display-container group" data-ui="quota-display-container">
-                        <div id="quota-display" class="quota-display" data-ui="quota-display">
+                <div class="header-right" data-ui="header-right">
+                    <div
+                        id="quota-display-container"
+                        class="quota-display-container"
+                        data-ui="quota-display-container"
+                    >
+                        <div
+                            id="quota-display"
+                            class="quota-display"
+                            data-ui="quota-display"
+                        >
                             <!-- Quota will be rendered here -->
                         </div>
-                        <div id="quota-tooltip" class="quota-tooltip" data-ui="quota-tooltip">
-                        </div>
+                        <div
+                            id="quota-tooltip"
+                            class="quota-tooltip"
+                            data-ui="quota-tooltip"
+                        ></div>
                     </div>
                     <button
                         id="pause-btn"
-                        class="pause-btn" data-ui="pause-btn"
+                        class="pause-btn btn-primary"
+                        data-ui="pause-btn"
+                        style="padding: 6px 12px"
                     >
                         Pause
                     </button>
@@ -102,61 +95,56 @@
             </div>
 
             <!-- Terminal Panes Container -->
-            <div id="panes-container" class="panes-container" data-ui="panes-container">
+            <div
+                id="panes-container"
+                class="panes-container"
+                data-ui="panes-container"
+            >
                 <!-- Top: Custom HTML/Markdown TUI log view -->
                 <div
                     id="preview-wrapper"
-                    class="preview-wrapper" data-ui="preview-wrapper"
+                    class="preview-wrapper"
+                    data-ui="preview-wrapper"
                 >
-                    <div
-                        class="ui-element-16" data-ui="ui-element-16"
-                    >
-                        <h3
-                            class="ui-element-17" data-ui="ui-element-17"
-                        >
-                            <span
-                                class="ui-element-18" data-ui="ui-element-18"
-                            ></span>
-                            Active Session Logs & Responses
-                        </h3>
+                    <div class="preview-header" data-ui="preview-header">
+                        <h3>Active Session Logs & Responses</h3>
                     </div>
                     <div
                         id="markdown-preview-pane"
-                        class="markdown-preview-pane" data-ui="markdown-preview-pane"
+                        class="markdown-preview-pane"
+                        data-ui="markdown-preview-pane"
                     >
-                        <div
-                            class="ui-element-19" data-ui="ui-element-19"
-                        >
-                            Waiting for output...
-                        </div>
+                        <div>Waiting for output...</div>
                     </div>
                 </div>
 
                 <!-- TUI Toggle Bar / Divider -->
                 <div
                     id="tui-toggle-bar"
-                    class="tui-toggle-bar" data-ui="tui-toggle-bar"
+                    class="tui-toggle-bar"
+                    data-ui="tui-toggle-bar"
                 >
-                    <span class="ui-element-20" data-ui="ui-element-20">Engine TUI Session</span>
-                    <button
-                        id="toggle-tui-btn"
-                        class="toggle-tui-btn" data-ui="toggle-tui-btn"
-                    >
-                        <span>Expand Terminal</span>
-                        <svg class="ui-element-21" data-ui="ui-element-21" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
+                    <div id="tui-resize-handle" class="tui-resize-handle"></div>
+                    <span style="pointer-events: none;">Engine TUI Session</span>
+                    
+                    <div class="terminal-presets" data-ui="terminal-presets">
+                        <button class="preset-btn" data-preset="0" title="Preset 1 (Small)">1</button>
+                        <button class="preset-btn" data-preset="1" title="Preset 2 (Medium)">2</button>
+                        <button class="preset-btn" data-preset="2" title="Preset 3 (Large)">3</button>
+                    </div>
                 </div>
 
                 <!-- Bottom: Original agy TUI (Terminal) -->
                 <div
                     id="terminal-container"
-                    class="terminal-container" data-ui="terminal-container"
+                    class="terminal-container"
+                    data-ui="terminal-container"
                 >
                     <!-- xterm container -->
                 </div>
 
                 <!-- Hidden legacy containers to prevent JS reference errors -->
-                <div style="display: none;">
+                <div style="display: none">
                     <div id="terminals-wrapper"></div>
                     <div id="pane-splitter"></div>
                     <div id="mini-terminal-container"></div>
@@ -167,115 +155,106 @@
             <!-- Bottom Input Area -->
             <div
                 id="bottom-input-area"
-                class="bottom-input-area" data-ui="bottom-input-area"
+                class="bottom-input-area"
+                data-ui="bottom-input-area"
             >
                 <!-- Quick directory display / breadcrumbs -->
-                <div
-                    class="ui-element-22" data-ui="ui-element-22"
-                >
-                    <div class="ui-element-23" data-ui="ui-element-23">
-                        <label
-                            id="clear-context-container"
-                            class="clear-context-container" data-ui="clear-context-container"
-                        >
-                            <input
-                                type="checkbox"
-                                id="clear-context-checkbox"
-                                checked
-                                class="clear-context-checkbox" data-ui="clear-context-checkbox"
-                            />
-                            <span id="clear-context-label-text"
-                                >Auto-Clear Context</span
-                            >
-                        </label>
-                        <label
-                            id="pre-triage-container"
-                            class="pre-triage-container" data-ui="pre-triage-container"
-                        >
-                            <input
-                                type="checkbox"
-                                id="pre-triage-checkbox"
-                                class="pre-triage-checkbox" data-ui="pre-triage-checkbox"
-                            />
-                            <span id="pre-triage-label-text"
-                                >Pre-triage Mode</span
-                            >
-                        </label>
-                    </div>
-                    <span id="current-dir-path" class="current-dir-path" data-ui="current-dir-path"
+                <div class="input-meta" data-ui="input-meta">
+                    <span
+                        id="current-dir-path"
+                        class="current-dir-path"
+                        data-ui="current-dir-path"
                         >/Users/matthewmurphy/projects/ai-os</span
                     >
                 </div>
                 <!-- The Text Input -->
                 <textarea
                     id="prompt-input"
-                    class="prompt-input" data-ui="prompt-input"
+                    class="prompt-input"
+                    data-ui="prompt-input"
                     rows="2"
                     placeholder="Type a prompt... (Enter to send, Shift+Enter for newline)"
                 ></textarea>
+                <div class="input-options">
+                    <label
+                        id="clear-context-container"
+                        class="clear-context-container"
+                        data-ui="clear-context-container"
+                    >
+                        <input
+                            type="checkbox"
+                            id="clear-context-checkbox"
+                            checked
+                            class="clear-context-checkbox"
+                            data-ui="clear-context-checkbox"
+                        />
+                        <span id="clear-context-label-text"
+                            >Auto-Clear Context</span
+                        >
+                    </label>
+                    <label
+                        id="pre-triage-container"
+                        class="pre-triage-container"
+                        data-ui="pre-triage-container"
+                    >
+                        <input
+                            type="checkbox"
+                            id="pre-triage-checkbox"
+                            class="pre-triage-checkbox"
+                            data-ui="pre-triage-checkbox"
+                        />
+                        <span id="pre-triage-label-text">Pre-triage Mode</span>
+                    </label>
+                </div>
             </div>
         </div>
 
         <!-- Add Project Modal -->
         <div
             id="add-project-modal"
-            class="add-project-modal" data-ui="add-project-modal"
+            class="add-project-modal"
+            data-ui="add-project-modal"
         >
-            <div
-                class="ui-element-24" data-ui="ui-element-24"
-            >
+            <div class="modal-content" data-ui="modal-content">
                 <!-- Modal Header -->
-                <div
-                    class="ui-element-25" data-ui="ui-element-25"
-                >
-                    <h3
-                        class="ui-element-26" data-ui="ui-element-26"
-                    >
-                        Add Project
-                    </h3>
+                <div class="modal-header" data-ui="modal-header">
+                    <h3>Add Project</h3>
                     <button
                         id="close-modal-btn"
-                        class="close-modal-btn" data-ui="close-modal-btn"
+                        class="close-modal-btn"
+                        data-ui="close-modal-btn"
                     >
                         &times;
                     </button>
                 </div>
 
                 <!-- Modal Body -->
-                <div class="ui-element-27" data-ui="ui-element-27">
+                <div class="modal-body" data-ui="modal-body">
                     <!-- Choice Actions -->
-                    <div class="ui-element-28" data-ui="ui-element-28">
+                    <div style="display: flex; gap: 16px">
                         <button
                             id="btn-choice-existing"
-                            class="btn-choice-existing group" data-ui="btn-choice-existing"
+                            class="modal-choice-btn"
+                            data-ui="btn-choice-existing"
+                            style="flex: 1"
                         >
-                            <span
-                                class="ui-element-29" data-ui="ui-element-29"
-                                >📂</span
-                            >
-                            <span
-                                class="ui-element-30" data-ui="ui-element-30"
+                            <span class="modal-choice-icon">📂</span>
+                            <span class="modal-choice-title"
                                 >Open Existing</span
                             >
-                            <span
-                                class="ui-element-31" data-ui="ui-element-31"
+                            <span class="modal-choice-subtitle"
                                 >Select folder on system</span
                             >
                         </button>
                         <button
                             id="btn-choice-new"
-                            class="btn-choice-new group" data-ui="btn-choice-new"
+                            class="modal-choice-btn"
+                            data-ui="btn-choice-new"
+                            style="flex: 1"
                         >
-                            <span
-                                class="ui-element-32" data-ui="ui-element-32"
-                                >✨</span
-                            >
-                            <span
-                                class="ui-element-33" data-ui="ui-element-33"
-                                >Start New Project</span
-                            >
-                            <span
-                                class="ui-element-34" data-ui="ui-element-34"
+                            <span class="modal-choice-icon">✨</span>
+                            <span class="modal-choice-title">Start New</span>
+                            <span class="modal-choice-subtitle"
                                 >Initialize git & GitHub</span
                             >
                         </button>
@@ -284,37 +263,29 @@
                     <!-- New Project Form (Hidden by default) -->
                     <div
                         id="new-project-form"
-                        class="new-project-form" data-ui="new-project-form"
+                        class="new-project-form"
+                        data-ui="new-project-form"
                     >
-                        <div class="ui-element-35" data-ui="ui-element-35">
-                            <label
-                                for="new-proj-name"
-                                class="ui-element-36" data-ui="ui-element-36"
-                                >Project Name</label
-                            >
+                        <div class="form-group">
+                            <label for="new-proj-name">Project Name</label>
                             <input
                                 type="text"
                                 id="new-proj-name"
                                 placeholder="e.g. My Awesome App"
-                                class="new-proj-name" data-ui="new-proj-name"
                             />
                         </div>
-                        <div class="ui-element-37" data-ui="ui-element-37">
-                            <label
-                                for="new-proj-git"
-                                class="ui-element-38" data-ui="ui-element-38"
-                                >GitHub Repo Name</label
-                            >
+                        <div class="form-group">
+                            <label for="new-proj-git">GitHub Repo Name</label>
                             <input
                                 type="text"
                                 id="new-proj-git"
                                 placeholder="e.g. my-awesome-app"
-                                class="new-proj-git" data-ui="new-proj-git"
                             />
                         </div>
                         <button
                             id="btn-submit-new-project"
-                            class="btn-submit-new-project" data-ui="btn-submit-new-project"
+                            class="btn-primary"
+                            data-ui="btn-submit-new-project"
                         >
                             Create & Initialize Project
                         </button>
