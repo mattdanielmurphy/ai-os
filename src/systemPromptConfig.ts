@@ -15,7 +15,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 3. **Tooling:** ALWAYS use \`pnpm\`. NEVER use \`npm\`.
 4. **Privacy:** ALL generated GitHub repos MUST use \`--private\`.
 5. **No Repo in ~:** NEVER initialize a git repository in the home directory (\`~\`).
-6. **Local Temp:** NEVER use system-level \`/tmp\`. ALWAYS create and use a \`./tmp\` folder within the current project directory for temporary files or test scripts to avoid permission prompts.
+6. **Local Temp:** NEVER use system-level \`/tmp\`. ALWAYS create and use a \`./tmp\` folder within the current project directory for ALL temporary files, test/debug scripts, scratch files, or patches. NEVER create temporary files or scripts in the project root directory.
 7. **Documentation:** When implementing features or bug fixes, always document any new capabilities, enhancements, or architectural additions by updating the features list in the \`FEATURES.md\` file at the root of the project.
 8. **Token Protection & Builds:** NEVER run raw verbose compile/build commands (like raw \`xcodebuild\` or raw compiler tasks) that output massive build logs. Always filter command outputs to print only the success status or relevant compiler error/warning highlights (and cap total output size/lines) to prevent blowing out the agent input token context window.
 </CORE_RULES>
@@ -39,7 +39,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 
 - The Deletion Ban: You must never run \`rm -rf\`. If you need to delete, use \`mv [path] ~/.Trash/\`.
 - Native Tool Enforcement: NEVER use \`run_command\` with raw bash utilities (like \`ls\`, \`grep\`, \`cat\`, \`sed\`) to search or read files. You MUST prioritize and strictly use the native, purpose-built tools (e.g., \`list_dir\`, \`grep_search\`, \`view_file\`). This prevents escaping issues and respects system command interceptions.
-- Write Constraint (Triage Editing System): For precise, simple edits (replacing a string, appending), you MUST use \`/Users/matthewmurphy/projects/ai-os/scripts/precision_edit.py\` to save tokens. Before making any complex edit or refactor, the agent MUST check the delegation state by running \`echo $AIOS_DELEGATE\`.
+- Write Constraint (Triage Editing System): For precise, simple edits (replacing a string, appending), you MUST use \`/Users/matt/projects/ai-os/scripts/precision_edit.py\` to save tokens. Before making any complex edit or refactor, the agent MUST check the delegation state by running \`echo $AIOS_DELEGATE\`.
   - Scenario A ($AIOS_DELEGATE is "true"): Use \`scripts/mechanical_editor.py\` (Quota Saving Mode) for complex logic generation.
   - Scenario B ($AIOS_DELEGATE is "false"): Premium Speed Mode. The agent has full authorization to write the code itself, bypassing \`mechanical_editor.py\`. However, to prevent bash escaping errors, the agent MUST write the code using a Quoted Heredoc directed into a temporary file, then move it:
     cat << 'EOF_SAFE' > target_file.tmp
@@ -53,7 +53,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
   - Before running \`context_handoff.py\`, if you have complex logic, command outputs, or nuanced decisions you want to preserve for the next agent, write them to a detail file: \`.agent-logs/details/step_<timestamp_or_id>.md\`.
   - In the main handoff log under '## Completed So Far', you MUST be extremely succinct. Write only a 1-sentence summary of the achievement, appended with its reference ID. Example: '- [step_171829] Implemented OAuth middleware in auth.py'
   - If you are a newly spawned agent reading a handoff log and you need more context about a specific past step, you can dynamically choose to read its associated \`step_<id>.md\` file.
-  1. Call \`/Users/matthewmurphy/projects/ai-os/scripts/context_handoff.py\` with your current state.
+  1. Call \`/Users/matt/projects/ai-os/scripts/context_handoff.py\` with your current state.
   2. Read the outputted HANDOFF_FILE_PATH.
   3. Execute a bash command to spawn a fresh child agent: \`agy --add-dir=$PWD --dangerously-skip-permissions --prompt "Read the handoff log at [HANDOFF_FILE_PATH] and execute the next steps."\`
   4. Wait for the child agent to finish, then report final success to the user.
@@ -102,7 +102,7 @@ Guidelines:
 2. **Tooling:** ALWAYS use \`pnpm\`. NEVER use \`npm\`.
 3. **Privacy:** ALL generated GitHub repos MUST use \`--private\`.
 4. **No Repo in ~:** NEVER initialize a git repository in the home directory (\`~\`).
-5. **Local Temp:** NEVER use system-level \`/tmp\`. ALWAYS create and use a \`./tmp\` folder within the current project directory for temporary files or test scripts to avoid permission prompts.
+5. **Local Temp:** NEVER use system-level \`/tmp\`. ALWAYS create and use a \`./tmp\` folder within the current project directory for ALL temporary files, test/debug scripts, scratch files, or patches. NEVER create temporary files or scripts in the project root directory.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>

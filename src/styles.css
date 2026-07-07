@@ -793,13 +793,14 @@ textarea {
   display: flex;
   align-items: center;
   padding: 4px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  /* border-bottom: 1px solid rgba(255, 255, 255, 0.05); */
+  background: none;
   transition: background-color 0.2s;
 }
 
-.unified-tool-call-row:last-child {
+/* .unified-tool-call-row:last-child {
   border-bottom: none;
-}
+} */
 
 .unified-tool-call-row:hover {
   background-color: rgba(255, 255, 255, 0.05);
@@ -819,9 +820,13 @@ textarea {
 
 .message-content {
   max-width: 80ch;
+  width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .chat-message.user .message-content {
@@ -842,8 +847,7 @@ textarea {
   opacity: 0.8;
 }
 
-.text-content,
-.message-content.prose {
+.text-content {
   /* Line width constraint */
   max-width: 65ch;
   line-height: 1.5;
@@ -904,6 +908,11 @@ textarea {
 
 .unified-tool-call-row {
   padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+
+.unified-tool-call-row:last-child {
+  border-bottom: none;
 }
 
 .toggle-icon {
@@ -912,14 +921,19 @@ textarea {
   display: inline-block;
 }
 
-details[open] > summary .toggle-icon {
+details #unified-tool-calls-box {
+  align-self: flex-start;
+}
+
+details[open]>summary .toggle-icon {
   transform: rotate(90deg);
 }
 
-.compact-prose > :first-child {
+.compact-prose> :first-child {
   margin-top: 0 !important;
 }
-.compact-prose > :last-child {
+
+.compact-prose> :last-child {
   margin-bottom: 0 !important;
 }
 
@@ -969,6 +983,7 @@ details[open] > summary .toggle-icon {
   color: var(--text-main);
   margin-bottom: 4px;
 }
+
 /* TUI Resize & Presets */
 .tui-resize-handle {
   position: absolute;
@@ -979,13 +994,16 @@ details[open] > summary .toggle-icon {
   cursor: row-resize;
   z-index: 10;
 }
+
 .tui-toggle-bar {
   position: relative;
 }
+
 .terminal-presets {
   display: flex;
   gap: 6px;
 }
+
 .preset-btn {
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
@@ -999,16 +1017,60 @@ details[open] > summary .toggle-icon {
   cursor: pointer;
   font-size: 0.8rem;
 }
+
 .preset-btn:hover {
   color: var(--text-main);
   border-color: var(--text-muted);
 }
+
 .preset-btn.active {
   background: var(--btn-primary-bg);
   color: white;
   border-color: var(--btn-primary-bg);
 }
 
-details.tool-call-details > summary::-webkit-details-marker {
+details.tool-call-details>summary::-webkit-details-marker {
   display: none;
+}
+
+.autocomplete-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: var(--bg-gray-800);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  z-index: 1000;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+}
+
+.autocomplete-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background-color: var(--bg-gray-700);
+}
+
+.autocomplete-text {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.autocomplete-desc {
+  color: #9ca3af;
+  font-size: 0.85em;
 }

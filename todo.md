@@ -1,3 +1,6 @@
+## Testing
+- [ ] `/` commands in the textarea with autocomplete for commands AND for filepaths. include commands like `/model` and `/clear`
+
 - [ ] Repetitive output text appears after tool calls because it's not handling loading spinner correctly
 I am seeing this below the tool calls:
 ```
@@ -7,7 +10,9 @@ Agent is thinking & working...
 
 It's an old problem but remains unfixed. I'm sure you see what's happening here; the interface is refreshing to show the loading spinner, and our interface is NOT refreshing, and it's just appending every new version of the text with the spinner icon to itself creating an unreadable mess.
 
-- [ ] When I submit a new prompt, it's slow and the text hangs in the textarea instead of instantly disappearing, making it clear something is happening, but right now it just sits there until the new terminal opens, which feels super janky 
+## To Do
+
+- [ ] When I submit a new prompt, it's slow and the text hangs in the textarea instead of instantly disappearing, making it clear something is happening, but right now it just sits there until the new terminal opens, which feels super janky
 
 - [x] Sidebar Project Threads: A new sidebar section for each project displaying "Project Threads" (representing a history of past agent logs/conversations).
   - The context of these threads is pruned (omitting code and large file outputs, leaving only high-level steps/discoveries).
@@ -15,7 +20,6 @@ It's an old problem but remains unfixed. I'm sure you see what's happening here;
   - Allows the agent to query detailed transcripts or full step logs via dedicated helper functions (e.g. leveraging `agy` transcripts/detailed logs) when more information is needed.
 - [ ] File browser and VSCode and markdown editors
 - [x] open project in Finder button
-- [ ] `/` commands in the textarea with autocomplete for commands AND for filepaths
 - [ ] when I enter shell mode, I see a bunch of these characters:  `1;2c0;276;0c1;2c0;276;0c1;2c0;276;0c1;2c0;276;` in the terminal input, presumably from using cmd-arrow key and stuff from when it's in prompt mode so it's sending escape sequences for cursor movement is my guess
 - [ ] Queuing of messages
   - The main hurdle to overcome is that if you naively send a /clear along with the prompt, the `/clear` immediately fires, canceling the current task, and the prompt disappears effectively; it's not even run

@@ -1377,11 +1377,6 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
     let mut buffer = Vec::new();
     let _ = file.take(131072).read_to_end(&mut buffer);
     let content = String::from_utf8_lossy(&buffer);
-
-    if content.contains("/Users/matthewmurphy") {
-        return None;
-    }
-
     let project_path = detect_project_path(&content);
     let mut title = latest_thread_id.to_string();
     let mut snippet = String::new();
@@ -2179,6 +2174,8 @@ fn main() {
                 return;
               }
 
+              target.style.setProperty('z-index', '9999999', 'important');
+
               // 1. Traverse and hide structural siblings
               let current = target;
               while (current && current !== document.body && current !== document.documentElement) {
@@ -2213,7 +2210,7 @@ fn main() {
               });
 
               // Robust auto-resizing
-              let lastHeight = 180;
+              let lastHeight = 324;
               let resizeTimeout;
               
               function calculateAndSetSize() {
@@ -2258,8 +2255,10 @@ fn main() {
                       desiredHeight = 800;
                   }
                   
+                  desiredHeight = Math.round(desiredHeight * 1.8);
+                  
                   // Clamp
-                  desiredHeight = Math.max(180, Math.min(800, desiredHeight));
+                  desiredHeight = Math.max(324, Math.min(1440, desiredHeight));
                   
                   if (Math.abs(desiredHeight - lastHeight) > 5) {
                       lastHeight = desiredHeight;
@@ -2299,6 +2298,9 @@ fn main() {
                   chat-app {
                     padding-top: 0px !important;
                   }
+                  .input-area-container {
+                    z-index: 9999999 !important;
+                  }
                 `);
                 // Append the new stylesheet to the document's adopted stylesheets
                 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
@@ -2319,6 +2321,7 @@ fn main() {
                 const chatApp = document.querySelector('chat-app');
                 if (chatApp) {
                   chatApp.style.setProperty('padding-top', '0px', 'important');
+                  chatApp.style.paddingTop = '0px';
                 }
               };
               applyChatAppPadding();
@@ -2350,7 +2353,7 @@ fn main() {
     .unwrap();
     
     // Set initial size
-    let _ = floating_window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 960, height: 180 }));
+    let _ = floating_window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 960, height: 324 }));
             
             let app_handle_clone = app_handle.clone();
             let mut shortcut_manager = app.global_shortcut_manager();
