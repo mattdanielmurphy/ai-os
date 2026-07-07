@@ -1069,6 +1069,17 @@ fn write_to_pty(data: String, project_path: String, terminal_type: String, threa
 }
 
 #[tauri::command]
+fn refresh_tmux_session(project_path: String, engine: String) -> Result<(), String> {
+    trigger_tmux_refresh(&project_path, &engine);
+    if is_tmux_available() {
+        let _ = std::process::Command::new("tmux")
+            .args(&["-u", "refresh-client"])
+            .status();
+    }
+    Ok(())
+}
+
+#[tauri::command]
 fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> {
     let thread_id_str = thread_id.unwrap_or_default();
     let session_key = format!("{}_{}", project_path, thread_id_str);
@@ -2632,6 +2643,7 @@ fn main() {
             "#);
         })
         .invoke_handler(tauri::generate_handler![
+            refresh_tmux_session,
             spawn_fresh_engine,
             initialize_project_session,
             prepare_spare_engine,

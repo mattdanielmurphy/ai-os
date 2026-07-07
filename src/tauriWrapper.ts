@@ -188,6 +188,7 @@ export async function invoke<T>(cmd: string, args?: any): Promise<T> {
     "spawn_fresh_engine",
     "initialize_project_session",
     "copy_tmux_selection",
+    "refresh_tmux_session",
   ]
   if (ptyCmds.includes(cmd)) {
     if (args) {
