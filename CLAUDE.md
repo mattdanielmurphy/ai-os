@@ -1,6 +1,6 @@
 <SYSTEM_INSTRUCTIONS>
 <AUTO_COMMIT_PROTOCOL>
-**Commit:** Generate a technical commit message and run `git add . && git commit -m "[message]"`.
+**Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to delegate the commit process to a cheaper subagent/script.
 </AUTO_COMMIT_PROTOCOL>
 
 <PROJECT_DETECTION>
