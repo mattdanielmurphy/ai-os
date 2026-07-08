@@ -22,7 +22,7 @@
 10. **Telemetry Prohibitions & Task Delegation:**
     - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
     - **Strict Quota Conservation:** You MUST delegate editing and code generation tasks to cheaper subagents or scripts (like `mechanical_editor.py`) rather than reading and modifying files directly. Reading entire source files and performing large edits blows out the parent agent's context window, consuming premium quota.
-    - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file. For all non-trivial changes, define a clear plan and delegate.
+    - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file, and the target file is small or you already know the exact edit point. For all non-trivial changes, define a clear plan and delegate.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>
