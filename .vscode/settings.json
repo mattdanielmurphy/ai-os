@@ -1,9 +1,14 @@
 {
 	"workbench.colorCustomizations": {
-		"activityBar.background": "#183503",
-		"titleBar.activeBackground": "#214A04",
-		"titleBar.activeForeground": "#F1FEE8",
-		"titleBar.inactiveBackground": "#183503",
-		"titleBar.inactiveForeground": "#F1FEE8"
+		"activityBar.background": "#5544c5",
+		"titleBar.activeBackground": "#5544c5",
+		"titleBar.activeForeground": "#e0e0e0",
+		"titleBar.inactiveBackground": "#3d338c",
+		"titleBar.inactiveForeground": "#e0e0e0"
+	},
+	"markdown.extension.completion.enabled": false,
+	"markdown.extension.tableFormatter.enabled": false,
+	"[markdown]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	}
 }

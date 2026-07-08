@@ -1,9 +1,12 @@
 # VSCode Extension Transition Plan
 
 ## The Breakthrough
-During development of the custom Tauri-based desktop GUI for **AI OS**, a fundamental shift in strategy occurred. Building a desktop shell from scratch introduces unnecessary friction with terminal stability, rendering window layouts, input editors, and markdown previews. 
 
-Instead of maintaining a custom Tauri app, the project is pivoting to a **VSCode Extension** architecture. This avoids the need to fork VSCode (which would be an overwhelmingly massive maintenance burden) while unlocking the following native capabilities:
+During development of the custom Tauri-based desktop GUI for **AI OS**, a fundamental shift in strategy occurred. Building a desktop shell from scratch introduces unnecessary friction with terminal stability, rendering window layouts, input editors, and markdown previews.
+
+Instead of maintaining a custom Tauri app, the project is pivoting to a **VSCode Extension** architecture. This avoids the need to fork VSCode (actually it's going to be Theia: [[Architectural Decision Record Selecting Eclipse Theia for Cloud-Offloaded Development.md]]) (which would be an overwhelmingly massive maintenance burden) while unlocking the following native capabilities:
+
+- **Built-In Kanban Board**: I was JUST about to build this myself, hoping to copy the plugin I've been using. Now I don't have to worry about that. I DO have to customize it of course.
 - **Stable Terminal Integrations**: Standard VSCode terminals are robust, well-maintained, and support all keybindings natively.
 - **Markdown & Output Rendering**: Built-in previewing, rich syntax styling, and interactive notebooks or panels.
 - **Full-featured Editor Inputs**: Prompts can be composed using the rich editor environment (autocomplete, dynamic linting, text wrapping, automatic lists, and indent controls).
@@ -12,6 +15,7 @@ Instead of maintaining a custom Tauri app, the project is pivoting to a **VSCode
 ---
 
 ## Workspace Directory Organization
+
 To support this fresh direction without deleting history or legacy work, the workspace has been reorganized:
 
 ```
@@ -45,9 +49,11 @@ ai-os/
 ## Migration Roadmap
 
 ### Phase 1: Exploration of Extension Boundaries
+
 - Investigate VSCode Extension API limits for running/connecting to local terminal shells, wrapping active terminals, and intercepting inputs.
 - Determine whether to implement a **Webview Panel** (React/TS), a **Custom Text Editor** editor flow, or utilize the new **VSCode Chat / Language Model APIs**.
 
 ### Phase 2: Integration of CLI Orchestration
+
 - Bind the existing backend CLI layers (`bin/ai-os`, `scripts/`) to the extension host.
 - Leverage the existing telemetry engine (`scripts/telemetry_db.py`) to show runtime usage and cost tracking in the editor status bar or panel.
