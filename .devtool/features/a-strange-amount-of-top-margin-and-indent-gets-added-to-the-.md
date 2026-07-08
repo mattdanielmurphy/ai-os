@@ -11,7 +11,9 @@ completedAt: null
 labels: []
 order: "a25"
 ---
+
 # A strange amount of top-margin and indent gets added to the first sentence of th...
 
 A strange amount of top-margin and indent gets added to the first sentence of the user prompt after it's sent.
+
 - cmd-click links in tmux TUIs: **not working!**
