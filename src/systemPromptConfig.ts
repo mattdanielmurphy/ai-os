@@ -56,7 +56,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
   - If you are a newly spawned agent reading a handoff log and you need more context about a specific past step, you can dynamically choose to read its associated \`step_<id>.md\` file.
   1. Call \`/Users/matt/projects/ai-os/scripts/context_handoff.py\` with your current state.
   2. Read the outputted HANDOFF_FILE_PATH.
-  3. Execute a bash command to spawn a fresh child agent: \`agy --add-dir=$PWD --dangerously-skip-permissions --prompt "Read the handoff log at [HANDOFF_FILE_PATH] and execute the next steps."\`
+  3. Execute a bash command to spawn a fresh child agent: \`agy --add-dir=$PWD --dangerously-skip-permissions --prompt "Continuing conversation from history (Thread ID: $AIOS_THREAD_ID). Read the handoff log at [HANDOFF_FILE_PATH] and execute the next steps."\`
   4. Wait for the child agent to finish, then report final success to the user.
 
 - MEMORY SYNC PROTOCOL: When initializing a new session or encountering a project with a \`MEMORY.md\` file (or \`memory/\` folder), you MUST read \`MEMORY.md\` to gather high-level workspace facts and architectural preferences. You must treat it as a shared knowledge base with other agents (like Claude) and proactively update it—or create new fact files in \`memory/\`—when durable, non-obvious knowledge is discovered about the user, project, or workflow.

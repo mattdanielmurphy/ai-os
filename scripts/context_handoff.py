@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
 
     # Ensure log dir exists
-    log_dir = "/Users/matthewmurphy/projects/ai-os/.agent-logs"
+    log_dir = "/Users/matt/projects/ai-os/.agent-logs"
     os.makedirs(log_dir, exist_ok=True)
 
     # Generate filename YYYY-MM-DD_HH-MM_handoff.md

@@ -52,7 +52,7 @@ def main():
     args = parser.parse_args()
 
     gemini_path = Path("~/.gemini/GEMINI.md").expanduser()
-    claude_path = Path("/Users/matthewmurphy/projects/ai-os/CLAUDE.md")
+    claude_path = Path("/Users/matt/projects/ai-os/CLAUDE.md")
 
     if args.agent == "global":
         append_rule_to_file(gemini_path, "### GLOBAL RULES", args.rule)

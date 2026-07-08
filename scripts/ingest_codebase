@@ -177,7 +177,7 @@ def skeletonize_curly_braces(content, ext):
 def skeletonize_html(file_path):
     """Use webpage-compressor if available, otherwise do a basic Python-based compression."""
     # Check if webpage-compressor is built
-    compressor_script = Path("/Users/matthewmurphy/projects/webpage-compressor/dist/compress-html.js")
+    compressor_script = Path("/Users/matt/projects/webpage-compressor/dist/compress-html.js")
     if compressor_script.exists():
         try:
             res = subprocess.run(

@@ -12,22 +12,58 @@
             class="projects-sidebar"
             data-ui="projects-sidebar"
         >
-            <div class="sidebar-header" data-ui="sidebar-header">
-                <span>Projects</span>
-                <button
-                    id="add-project-btn"
-                    class="add-project-btn"
-                    data-ui="add-project-btn"
-                >
-                    +
-                </button>
-            </div>
-            <div
-                id="projects-list"
-                class="projects-list"
-                data-ui="projects-list"
+            <button
+                id="sidebar-big-search-btn"
+                class="sidebar-big-search-btn"
+                data-ui="sidebar-big-search-btn"
             >
-                <!-- Dynanically populated tabs -->
+                🔍 Search Threads... (Cmd+F)
+            </button>
+
+            <div class="sidebar-tabs" data-ui="sidebar-tabs">
+                <button id="tab-projects" class="sidebar-tab active" data-ui="tab-projects">Projects</button>
+                <button id="tab-search" class="sidebar-tab" data-ui="tab-search">Search Results</button>
+            </div>
+
+            <div id="tab-content-projects" class="tab-content active" data-ui="tab-content-projects">
+                <div class="sidebar-header" data-ui="sidebar-header">
+                    <span>Projects</span>
+                    <button
+                        id="add-project-btn"
+                        class="add-project-btn"
+                        data-ui="add-project-btn"
+                    >
+                        +
+                    </button>
+                </div>
+                <div
+                    id="projects-list"
+                    class="projects-list"
+                    data-ui="projects-list"
+                >
+                    <!-- Dynanically populated tabs -->
+                </div>
+            </div>
+
+            <div id="tab-content-search" class="tab-content" data-ui="tab-content-search">
+                <div class="sidebar-header" data-ui="sidebar-header">
+                    <span>Search Threads</span>
+                </div>
+                <div class="sidebar-search-container" data-ui="sidebar-search-container">
+                    <input
+                        type="text"
+                        id="sidebar-search-input"
+                        class="sidebar-search-input"
+                        placeholder="Search query..."
+                    />
+                </div>
+                <div
+                    id="sidebar-search-results"
+                    class="sidebar-search-results"
+                    data-ui="sidebar-search-results"
+                >
+                    <!-- Dynamically populated search results -->
+                </div>
             </div>
         </div>
 

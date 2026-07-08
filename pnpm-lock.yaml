@@ -32,6 +32,9 @@ importers:
       marked:
         specifier: ^18.0.5
         version: 18.0.5
+      overlayscrollbars:
+        specifier: ^2.16.0
+        version: 2.16.0
     devDependencies:
       '@rollup/rollup-darwin-arm64':
         specifier: 4.62.2
@@ -583,6 +586,9 @@ packages:
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
 
+  overlayscrollbars@2.16.0:
+    resolution: {integrity: sha512-N03oje/q7j93D0aLZtoCdsDSYLmhheSsv8H7oSLE7HhdV9P/bmCURtLV/KbPye7P/bpfyt/obSfDpGUYoJ0OWg==}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -1016,6 +1022,8 @@ snapshots:
 
   node-addon-api@7.1.1:
     optional: true
+
+  overlayscrollbars@2.16.0: {}
 
   picocolors@1.1.1: {}
 

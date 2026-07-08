@@ -1,4 +1,6 @@
 import { readDir } from '@tauri-apps/api/fs';
+import { OverlayScrollbars } from 'overlayscrollbars';
+import 'overlayscrollbars/overlayscrollbars.css';
 
 interface Suggestion {
     text: string;
@@ -31,6 +33,14 @@ export class Autocompleter {
         this.popup = document.createElement('div');
         this.popup.className = 'autocomplete-popup';
         this.popup.style.display = 'none';
+
+        OverlayScrollbars(this.popup, {
+            scrollbars: {
+                autoHide: 'scroll',
+                autoHideDelay: 800,
+                theme: 'os-theme-macos'
+            }
+        });
         
         // Append to the wrapper so it can be positioned absolutely above textarea
         const parent = this.textarea.parentElement;
@@ -184,7 +194,9 @@ export class Autocompleter {
     }
 
     private render() {
-        this.popup.innerHTML = '';
+        const osInstance = OverlayScrollbars(this.popup);
+        const contentEl = osInstance ? osInstance.elements().content : this.popup;
+        contentEl.innerHTML = '';
         this.suggestions.forEach((s, idx) => {
             const item = document.createElement('div');
             item.className = 'autocomplete-item' + (idx === this.selectedIndex ? ' selected' : '');
@@ -206,7 +218,7 @@ export class Autocompleter {
                 this.selectCurrent();
             };
             
-            this.popup.appendChild(item);
+            contentEl.appendChild(item);
 
             if (idx === this.selectedIndex) {
                 setTimeout(() => {

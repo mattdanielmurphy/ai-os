@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export AI_OS_HOME="/Users/matthewmurphy/projects/ai-os"
+export AI_OS_HOME="/Users/matt/projects/ai-os"
 
 echo "[ai-os] Enforcing absolute context guardrails in ~/"
 ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md

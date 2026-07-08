@@ -1,42 +1,75 @@
-[2026-07-07 16:46] User:
-is there a really lightweight super fast free video editor for macos?
+[2026-07-07 19:41] User:
+In my tauri webview, the scroll bars on stuff look hideous. how to get a nice macos disappearing minimalist scroll bar?
 
 ---
 
-[2026-07-07 16:46] Assistant:
-Depending on what you mean by "lightweight" and "super fast," there are two distinct ways to go.
+[2026-07-07 19:41] Assistant:
+Since Tauri uses the system's native webview (WebKit on macOS, WebView2 on Windows), standard scrollbars default to whatever the operating system dictates. If you want a uniform, minimalist, macOS-style disappearing scrollbar across all platforms, you can achieve this entirely using custom CSS.
 
-If you just need to shave down large files, trim clips, or merge footage without bogging down your Mac, you don't need a heavy, traditional non-linear timeline editor.
+The cleanest approach uses CSS custom scrollbar properties alongside pseudo-elements to handle older webview engines.
 
-1. For Instant Trimming & Splicing: **LosslessCut**
+The Universal CSS Solution
 
-If your goal is to rough-cut footage from a camera, drone, or screen recording without waiting hours for rendering, this is the tool.  
-MacUpdate
+Add this snippet to your global CSS file (e.g., `index.css` or `App.css`):
 
-**How it works:** It uses FFmpeg under the hood to directly cut the video stream without re-encoding or transcoding the file.  
-Wikipedia
+CSS
 
-**The Speed:** Because it skips the rendering process entirely and just copies the raw data streams, it exports a 5GB video in **less than a second**.  
-LosslessCut
+```
+/* 1. Hide the standard scrollbar track by default */
+::-webkit-scrollbar {
+  width: 8px;  /* Vertical scrollbar width */
+  height: 8px; /* Horizontal scrollbar height */
+  background: transparent;
+}
 
-**Specs:** Open-source, under 200 MB in size, completely free, and natively supports Apple Silicon.  
-Wikipedia
+/* 2. Style the draggable handle (the thumb) */
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2); /* Subtle gray */
+  border-radius: 10px;            /* Fully rounded edges */
+  border: 2px solid transparent;  /* Creates padding around the thumb */
+  background-clip: padding-box;   /* Keeps background inside borders */
+}
 
-**Best for:** Trimming, changing container formats (e.g., MKV to MP4), or stripping audio tracks instantly with zero quality loss.  
-SourceForge
+/* 3. Make the thumb slightly darker on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+  background-clip: padding-box;
+}
 
-2. For Snappy Timeline Editing: **VN Video Editor** or **iMovie**
+/* 4. For modern standards compliance (Firefox/Linux compatibility) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
 
-If you need an actual multi-track timeline to layer audio, add text, or apply transitions, a full suite like DaVinci Resolve can feel massive and slow to navigate.
+```
 
-**VN Video Editor:** Originally built as a mobile editor, the desktop macOS native version is incredibly fast, clean, and entirely free with **no watermarks**. It gives you precise frame-accurate timeline editing, keyframe animations, and speed curves without the bloat of a desktop suite.  
-Gizmodo
-+ 1
+Making It "Disappearing" (Fade on Hover)
 
-**iMovie:** Don't sleep on the default Mac app. Because it's deeply integrated into macOS, it leverages Apple Silicon hardware acceleration better than almost any third-party freeware, making timeline scrubbing and 4K rendering exceptionally smooth.  
-XP-Pen
+True macOS scrollbars stay hidden until the container is actively scrolled or hovered. Pure CSS cannot easily detect "on scroll" activity without JavaScript, but you can fake the macOS "fade in on container hover" effect like this:
 
-**Quick Tip:** If you are trying to cut highly compressed codecs (like H.264 or H.265) frame-by-frame in LosslessCut, it has to cut at the nearest keyframe to avoid re-rendering. If you need pixel-perfect cuts down to the individual millisecond across multiple overlapping tracks, opt for **VN** or **iMovie** instead.  
-Wikipedia
+CSS
 
-What kind of video project are you putting together?
+```
+/* Container defaults to hiding the scrollbar thumb */
+.scroll-container::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+/* Thumb reveals itself when the container is hovered */
+.scroll-container:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scroll-container:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+  background-clip: padding-box;
+}
+
+```
+
+A Dark Mode Adjustment
+
+If your application has a dark interface, the dark gray thumb won't show up well. Swap the color values to a light, translucent white instead:

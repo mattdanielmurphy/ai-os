@@ -1,40 +1,22 @@
-import { invoke } from '../tauriWrapper'
-import { getRelativeDateStr, getFullDateStr } from '../dateUtils'
 // @ts-ignore
 import styles from './ActionBar.module.css'
 
-interface ThreadLog {
-    id: string;
-    latest_leaf_id: string;
-    title: string;
-    snippet: string;
-    filepath?: string;
-    mtime: number;
-}
-
-interface ThreadSearchResult {
-    thread: ThreadLog;
-    score: number;
-    preview: string;
+export interface CommandItem {
+    name: string;
+    description: string;
+    action: () => void;
 }
 
 export class ActionBar {
     private overlay: HTMLDivElement;
     private input: HTMLInputElement;
     private resultsContainer: HTMLDivElement;
-    private activeProjectCallback: () => string | null;
-    private onSelectThread: (thread: ThreadLog) => void;
     private selectedIndex: number = -1;
-    private currentResults: ThreadSearchResult[] = [];
+    private commands: CommandItem[] = [];
+    private currentResults: CommandItem[] = [];
     private previousFocus: HTMLElement | null = null;
 
-    constructor(
-        activeProjectCallback: () => string | null,
-        onSelectThread: (thread: ThreadLog) => void
-    ) {
-        this.activeProjectCallback = activeProjectCallback;
-        this.onSelectThread = onSelectThread;
-
+    constructor() {
         this.overlay = document.createElement('div');
         this.overlay.className = styles.actionBarOverlay;
         this.overlay.dataset.ui = 'action-bar';
@@ -44,7 +26,7 @@ export class ActionBar {
 
         this.input = document.createElement('input');
         this.input.className = styles.actionBarInput;
-        this.input.placeholder = 'Search active threads...';
+        this.input.placeholder = 'Search commands...';
         
         this.resultsContainer = document.createElement('div');
         this.resultsContainer.className = styles.actionBarResults;
@@ -55,6 +37,11 @@ export class ActionBar {
         document.body.appendChild(this.overlay);
 
         this.setupListeners();
+    }
+
+    public setCommands(commands: CommandItem[]) {
+        this.commands = commands;
+        this.performSearch();
     }
 
     private setupListeners() {
@@ -75,7 +62,7 @@ export class ActionBar {
         let debounceTimeout: any = null;
         this.input.addEventListener('input', () => {
             clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => this.performSearch(), 300);
+            debounceTimeout = setTimeout(() => this.performSearch(), 100);
         });
 
         this.input.addEventListener('keydown', (e) => {
@@ -88,8 +75,9 @@ export class ActionBar {
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 if (this.selectedIndex >= 0 && this.selectedIndex < this.currentResults.length) {
-                    this.onSelectThread(this.currentResults[this.selectedIndex].thread);
+                    const cmd = this.currentResults[this.selectedIndex];
                     this.close();
+                    cmd.action();
                 }
             } else if (e.key === 'Escape') {
                 e.preventDefault();
@@ -112,34 +100,26 @@ export class ActionBar {
         }
     }
 
-    private async performSearch() {
-        const query = this.input.value.trim();
-        const projectPath = this.activeProjectCallback();
+    private performSearch() {
+        const query = this.input.value.trim().toLowerCase();
         
-        if (!query || !projectPath) {
-            this.currentResults = [];
-            this.renderResults();
-            return;
+        if (!query) {
+            this.currentResults = [...this.commands];
+        } else {
+            this.currentResults = this.commands.filter(cmd => 
+                cmd.name.toLowerCase().includes(query) || 
+                cmd.description.toLowerCase().includes(query)
+            );
         }
 
-        try {
-            const results = await invoke<ThreadSearchResult[]>('search_project_threads', {
-                projectPath,
-                query
-            });
-            this.currentResults = results;
-            this.selectedIndex = results.length > 0 ? 0 : -1;
-            this.renderResults();
-        } catch (err) {
-            console.error('Search failed:', err);
-            this.resultsContainer.innerHTML = `<div class="${styles.emptyState}">Error performing search</div>`;
-        }
+        this.selectedIndex = this.currentResults.length > 0 ? 0 : -1;
+        this.renderResults();
     }
 
     private renderResults() {
         this.resultsContainer.innerHTML = '';
-        if (this.currentResults.length === 0 && this.input.value.trim()) {
-            this.resultsContainer.innerHTML = `<div class="${styles.emptyState}">No results found</div>`;
+        if (this.currentResults.length === 0) {
+            this.resultsContainer.innerHTML = `<div class="${styles.emptyState}">No commands found</div>`;
             return;
         }
 
@@ -155,27 +135,20 @@ export class ActionBar {
 
             const titleEl = document.createElement('div');
             titleEl.className = styles.actionBarResultTitle;
-            titleEl.textContent = result.thread.title || result.thread.id;
-
-            const dateEl = document.createElement('div');
-            dateEl.className = styles.actionBarResultDate;
-            const ts = result.thread.mtime > 0 ? result.thread.mtime * 1000 : Date.now();
-            dateEl.textContent = getRelativeDateStr(ts);
-            dateEl.title = getFullDateStr(ts);
+            titleEl.textContent = result.name;
 
             headerEl.appendChild(titleEl);
-            headerEl.appendChild(dateEl);
             
             const previewEl = document.createElement('div');
             previewEl.className = styles.actionBarResultPreview;
-            previewEl.textContent = result.preview;
+            previewEl.textContent = result.description;
 
             el.appendChild(headerEl);
             el.appendChild(previewEl);
 
             el.addEventListener('click', () => {
-                this.onSelectThread(result.thread);
                 this.close();
+                result.action();
             });
 
             this.resultsContainer.appendChild(el);
@@ -194,6 +167,10 @@ export class ActionBar {
         this.previousFocus = document.activeElement as HTMLElement;
         this.overlay.classList.add(styles.active);
         
+        // Reset query
+        this.input.value = '';
+        this.performSearch();
+
         // Focus immediately
         this.input.focus();
         this.input.select();
@@ -203,8 +180,6 @@ export class ActionBar {
             this.input.focus();
             this.input.select();
         }, 50);
-        
-        this.performSearch();
     }
 
     public close() {

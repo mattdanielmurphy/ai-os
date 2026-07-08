@@ -23,6 +23,10 @@
 	--chat-message-content-width: 70ch;
 	--tool-call-group-padding-y: calc(var(--chat-message-padding-y) * 0.5);
 	--tool-call-group-padding-x: calc(var(--chat-message-padding-x) * 0.5);
+
+	--os-scrollbar-handle-bg: hsla(0, 0%, 100%, 0.25);
+	--os-scrollbar-handle-bg-hover: hsla(0, 0%, 100%, 0.4);
+	--os-scrollbar-handle-bg-active: hsla(0, 0%, 100%, 0.5);
 }
 
 @media (prefers-color-scheme: light) {
@@ -36,6 +40,10 @@
 		--text-main: hsl(249, 49%, 13%);
 		--text-muted: hsl(240, 20%, 37%);
 		--text-x-muted: hsl(240, 20%, 70%);
+
+		--os-scrollbar-handle-bg: hsla(0, 0%, 0%, 0.25);
+		--os-scrollbar-handle-bg-hover: hsla(0, 0%, 0%, 0.4);
+		--os-scrollbar-handle-bg-active: hsla(0, 0%, 0%, 0.5);
 	}
 }
 
@@ -57,27 +65,33 @@ body {
 	display: flex;
 }
 
-/* macOS Style Scrollbars */
-::-webkit-scrollbar {
-	width: 6px;
-	height: 6px;
-	background: transparent;
+/* Custom macOS-style theme for OverlayScrollbars */
+.os-theme-macos.os-scrollbar {
+	--os-size: 7px;
+	--os-padding-perpendicular: 2px;
+	--os-padding-axis: 2px;
+	--os-track-bg: transparent;
+	--os-track-bg-hover: transparent;
+	--os-track-bg-active: transparent;
+	--os-handle-bg: var(--os-scrollbar-handle-bg);
+	--os-handle-bg-hover: var(--os-scrollbar-handle-bg-hover);
+	--os-handle-bg-active: var(--os-scrollbar-handle-bg-active);
+	--os-handle-border-radius: 10px;
+	transition: opacity 0.3s;
+}
 
-	&-track {
-		background: transparent;
-	}
-
-	&-thumb {
-		background: rgba(128, 128, 128, 0.3);
-		border-radius: 10px;
-
-		&:hover {
-			background: rgba(128, 128, 128, 0.6);
-		}
-	}
-
-	&-corner {
-		background: transparent;
+/* Hide native scrollbars on scroll containers to avoid flashes */
+.markdown-preview-pane,
+.projects-list,
+.sidebar-search-results,
+.thread-history-list,
+.autocomplete-popup,
+.unified-tool-calls-list {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none !important;
+		width: 0 !important;
+		height: 0 !important;
 	}
 }
 
@@ -128,6 +142,169 @@ textarea {
 	width: var(--sidebar-width);
 	flex-shrink: 0;
 
+	.sidebar-big-search-btn {
+		margin: 12px;
+		padding: 10px 16px;
+		background: hsla(0, 0%, 100%, 0.08);
+		border: 1px solid var(--border-color);
+		border-radius: 6px;
+		color: var(--text-muted);
+		text-align: left;
+		font-size: 13px;
+		display: flex;
+		align-items: center;
+		transition:
+			background 0.2s,
+			border-color 0.2s,
+			color 0.2s;
+
+		&:hover {
+			background: hsla(0, 0%, 100%, 0.15);
+			border-color: var(--border-color-dark);
+			color: var(--text-main);
+		}
+	}
+
+	.sidebar-tabs {
+		display: flex;
+		border-bottom: 1px solid var(--border-color);
+		background: hsla(0, 0%, 0%, 0.1);
+
+		.sidebar-tab {
+			flex: 1;
+			padding: 10px 0;
+			text-align: center;
+			font-size: 13px;
+			font-weight: 500;
+			color: var(--text-muted);
+			border-bottom: 2px solid transparent;
+			transition:
+				color 0.2s,
+				border-color 0.2s;
+
+			&:hover {
+				color: var(--text-main);
+			}
+
+			&.active {
+				color: var(--text-main);
+				border-bottom-color: var(--primary);
+			}
+		}
+	}
+
+	.tab-content {
+		display: none;
+		flex: 1;
+		flex-direction: column;
+		min-height: 0;
+
+		&.active {
+			display: flex;
+		}
+	}
+
+	.sidebar-search-container {
+		padding: 12px;
+		border-bottom: 1px solid var(--border-color);
+
+		.sidebar-search-input {
+			width: 100%;
+			padding: 8px 12px;
+			background: hsla(0, 0%, 100%, 0.05);
+			border: 1px solid var(--border-color);
+			border-radius: 6px;
+			font-size: 13px;
+			color: var(--text-main);
+			transition: border-color 0.2s;
+
+			&:focus {
+				border-color: var(--primary);
+			}
+		}
+	}
+
+	.sidebar-search-results {
+		flex: 1;
+		overflow: hidden;
+		display: block;
+
+		.os-content {
+			padding: 8px 0 !important;
+			display: flex !important;
+			flex-direction: column !important;
+			gap: 2px !important;
+		}
+	}
+
+	.search-result-thread-item {
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--border-color);
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		transition: background-color 0.2s;
+
+		&:hover {
+			background-color: hsla(0, 0%, 100%, 0.05);
+		}
+
+		&.active {
+			background-color: hsla(0, 0%, 100%, 0.08);
+			border-left: 3px solid var(--primary);
+			padding-left: 13px;
+		}
+
+		.search-result-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: baseline;
+			gap: 8px;
+		}
+
+		.search-result-title {
+			font-weight: 500;
+			font-size: 13px;
+			color: var(--text-main);
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.search-result-date {
+			font-size: 11px;
+			color: var(--text-x-muted);
+			flex-shrink: 0;
+		}
+
+		.search-result-matches {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			margin-top: 4px;
+		}
+
+		.search-result-match-line {
+			font-size: 11.5px;
+			color: var(--text-muted);
+			background: hsla(0, 0%, 100%, 0.03);
+			border-left: 2px solid hsla(0, 0%, 100%, 0.15);
+			padding: 4px 8px;
+			border-radius: 3px;
+			overflow-wrap: break-word;
+			white-space: pre-wrap;
+
+			mark {
+				background: hsla(248, 85%, 64%, 0.35);
+				color: #fff;
+				font-weight: 600;
+				padding: 0 2px;
+				border-radius: 2px;
+			}
+		}
+	}
+
 	.sidebar-header {
 		height: var(--header-height);
 		display: flex;
@@ -150,8 +327,12 @@ textarea {
 
 	.projects-list {
 		flex: 1;
-		overflow-y: auto;
-		padding: 8px 0;
+		overflow: hidden;
+		padding: 0;
+
+		.os-content {
+			padding: 8px 0 !important;
+		}
 	}
 }
 
@@ -254,8 +435,13 @@ textarea {
 	align-items: center;
 	gap: 6px;
 	cursor: pointer;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
-	transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+	box-shadow:
+		0 4px 12px rgba(0, 0, 0, 0.15),
+		0 2px 4px rgba(0, 0, 0, 0.1);
+	transition:
+		opacity 0.2s ease,
+		transform 0.2s ease,
+		background-color 0.2s ease;
 	z-index: 10;
 	opacity: 0;
 	pointer-events: none;
@@ -269,7 +455,9 @@ textarea {
 	&:hover {
 		background: var(--primary-hover);
 		transform: translateX(-50%) translateY(-2px);
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
+		box-shadow:
+			0 6px 16px rgba(0, 0, 0, 0.2),
+			0 2px 6px rgba(0, 0, 0, 0.15);
 	}
 
 	&:active {
@@ -742,11 +930,15 @@ textarea {
 	}
 
 	.thread-history-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0px;
+		display: block;
 		max-height: 50vh;
-		overflow-y: auto;
+		overflow: hidden;
+
+		.os-content {
+			display: flex !important;
+			flex-direction: column !important;
+			gap: 0px !important;
+		}
 	}
 
 	.thread-history-item,
@@ -831,23 +1023,29 @@ textarea {
 
 /* Chat Message Styling */
 .markdown-preview-pane {
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-	padding: 3rem 24px;
+	display: block;
 	flex: 1;
-	overflow-y: auto;
-	padding-bottom: 3rem;
+	overflow: hidden;
+	padding: 0;
+
+	.os-content {
+		display: flex !important;
+		flex-direction: column !important;
+		gap: 16px !important;
+		padding: 3rem 24px !important;
+		padding-bottom: 3rem !important;
+		box-sizing: border-box !important;
+	}
 }
 
 .chat-message {
 	display: flex;
-	width: 100%;
+	min-width: 60ch;
 	box-sizing: border-box;
 	justify-content: center;
 	border-radius: 1rem;
 	position: relative;
-	max-width: 100%;
+	max-width: 80%;
 
 	&.user {
 		align-self: flex-end;
@@ -955,7 +1153,10 @@ textarea {
 	align-items: center;
 	justify-content: center;
 	color: var(--primary-bright, var(--primary));
-	transition: transform 0.1s ease, color 0.2s ease, background-color 0.2s ease;
+	transition:
+		transform 0.1s ease,
+		color 0.2s ease,
+		background-color 0.2s ease;
 
 	&:hover {
 		background-color: rgba(99, 102, 241, 0.15);
@@ -963,7 +1164,7 @@ textarea {
 	}
 
 	&.copied {
-		color: #10B981; // Green checkmark feedback
+		color: #10b981; // Green checkmark feedback
 	}
 }
 
@@ -972,7 +1173,9 @@ textarea {
 	border-radius: 6px;
 	padding: 4px 8px;
 	margin: -4px -8px;
-	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	transition:
+		border-color 0.2s ease,
+		box-shadow 0.2s ease;
 }
 
 .message-sub-block {
@@ -1027,7 +1230,6 @@ textarea {
 	margin: 1.5rem 0;
 	opacity: 0.5;
 }
-
 
 .text-content {
 	line-height: 1.5;
@@ -1192,7 +1394,9 @@ textarea {
 .group {
 	pre {
 		margin: 0;
-		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease;
 	}
 }
 
@@ -1256,6 +1460,7 @@ details {
 
 	#unified-tool-calls-box {
 		align-self: flex-start;
+		max-width: 70ch;
 	}
 
 	&[open] > summary .toggle-icon {

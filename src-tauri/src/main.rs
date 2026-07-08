@@ -10,6 +10,9 @@ use axum::{
     extract::State,
 };
 use tower_http::cors::{CorsLayer, Any};
+use std::sync::atomic::AtomicUsize;
+
+static ACTIVE_TITLE_GENERATIONS: AtomicUsize = AtomicUsize::new(0);
 
 // Project session containing its own PTY channels and shell process details
 #[allow(dead_code)]
@@ -625,6 +628,9 @@ fn spawn_single_pty(
     cmd.env("LANG", "en_US.UTF-8");
     cmd.env("LC_ALL", "en_US.UTF-8");
     cmd.env("TERM", "xterm-256color");
+    if let Some(tid) = thread_id {
+        cmd.env("AIOS_THREAD_ID", tid);
+    }
 
     println!("[DEBUG] Spawning command for project={}, type={}", project_path, terminal_type);
     let _child = pair.slave.spawn_command(cmd).map_err(|e| {
@@ -940,7 +946,7 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
         }
         
         for k in keys_to_evict {
-            if let Some(mut old_session) = sessions.remove(&k) {
+            if let Some(old_session) = sessions.remove(&k) {
                 if let Some(pid) = old_session.claude_pid {
                     let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).status();
                 }
@@ -1489,6 +1495,88 @@ struct CachedThreadInfo {
     project_path: Option<String>,
     title: String,
     snippet: String,
+    parsed_timestamp: u64,
+}
+
+fn is_leap_year(year: u64) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+fn parse_rfc3339_to_unix(s: &str) -> Option<u64> {
+    if s.len() < 19 {
+        return None;
+    }
+    let year: u64 = s[0..4].parse().ok()?;
+    let month: u64 = s[5..7].parse().ok()?;
+    let day: u64 = s[8..10].parse().ok()?;
+    let hour: u64 = s[11..13].parse().ok()?;
+    let minute: u64 = s[14..16].parse().ok()?;
+    let second: u64 = s[17..19].parse().ok()?;
+
+    let month_days = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let mut days = 0;
+    for y in 1970..year {
+        days += if is_leap_year(y) { 366 } else { 365 };
+    }
+    for m in 1..month {
+        if m == 2 && is_leap_year(year) {
+            days += 29;
+        } else {
+            days += month_days[m as usize];
+        }
+    }
+    days += day - 1;
+    let mut total_seconds = days * 86400 + hour * 3600 + minute * 60 + second;
+
+    if s.len() > 19 {
+        let remainder = &s[19..];
+        if let Some(plus_pos) = remainder.find('+') {
+            let offset_part = &remainder[plus_pos + 1..];
+            if offset_part.len() >= 5 {
+                let off_h: u64 = offset_part[0..2].parse().unwrap_or(0);
+                let off_m: u64 = offset_part[3..5].parse().unwrap_or(0);
+                total_seconds = total_seconds.saturating_sub(off_h * 3600 + off_m * 60);
+            }
+        } else if let Some(minus_pos) = remainder.find('-') {
+            let offset_part = &remainder[minus_pos + 1..];
+            if offset_part.len() >= 5 {
+                let off_h: u64 = offset_part[0..2].parse().unwrap_or(0);
+                let off_m: u64 = offset_part[3..5].parse().unwrap_or(0);
+                total_seconds = total_seconds.saturating_add(off_h * 3600 + off_m * 60);
+            }
+        }
+    }
+
+    Some(total_seconds)
+}
+
+fn get_last_message_timestamp(filepath: &std::path::Path) -> Option<u64> {
+    use std::io::{Seek, SeekFrom, Read};
+    let mut file = std::fs::File::open(filepath).ok()?;
+    let metadata = file.metadata().ok()?;
+    let file_len = metadata.len();
+    
+    let read_size = std::cmp::min(file_len, 4096) as usize;
+    if read_size == 0 {
+        return None;
+    }
+    let mut buffer = vec![0; read_size];
+    let seek_pos = file_len.saturating_sub(read_size as u64);
+    
+    file.seek(SeekFrom::Start(seek_pos)).ok()?;
+    file.read_exact(&mut buffer).ok()?;
+    
+    let content = String::from_utf8_lossy(&buffer);
+    for line in content.lines().rev() {
+        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+            if let Some(created_at) = obj.get("created_at").and_then(|v| v.as_str()) {
+                if let Some(ts) = parse_rfc3339_to_unix(created_at) {
+                    return Some(ts);
+                }
+            }
+        }
+    }
+    None
 }
 
 static THREAD_INFO_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, CachedThreadInfo>>> = std::sync::OnceLock::new();
@@ -1657,12 +1745,96 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
         }
     }
 
+    if !found_title {
+        let mut first_prompt = String::new();
+        let mut first_resp = String::new();
+        let mut first_resp_idx: Option<usize> = None;
+        let mut parsed_lines = Vec::new();
+
+        if let Ok(file_content) = std::fs::read_to_string(latest_filepath) {
+            for (idx, line) in file_content.lines().enumerate() {
+                if let Ok(mut obj) = serde_json::from_str::<serde_json::Value>(line) {
+                    let msg_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                    if msg_type == "USER_INPUT" && first_prompt.is_empty() {
+                        if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
+                            first_prompt = extract_user_request(content_str);
+                        }
+                    }
+                    if (msg_type == "PLANNER_RESPONSE" || msg_type == "MODEL") && first_resp.is_empty() {
+                        if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
+                            first_resp = content_str.to_string();
+                            first_resp_idx = Some(idx);
+                        }
+                    }
+                    parsed_lines.push((line.to_string(), Some(obj)));
+                } else {
+                    parsed_lines.push((line.to_string(), None));
+                }
+            }
+        }
+
+        if !first_prompt.is_empty() && !first_resp.is_empty() {
+            if let Some(idx) = first_resp_idx {
+                if ACTIVE_TITLE_GENERATIONS.load(Ordering::SeqCst) < 2 {
+                    ACTIVE_TITLE_GENERATIONS.fetch_add(1, Ordering::SeqCst);
+                    let latest_thread_id_clone = latest_thread_id.to_string();
+                    let latest_filepath_clone = latest_filepath.to_path_buf();
+                    
+                    std::thread::spawn(move || {
+                        let home = std::env::var("HOME").unwrap_or_default();
+                        let gen_script = std::path::Path::new(&home).join("projects").join("ai-os").join("scripts").join("generate_title.py");
+                        let mut cmd = std::process::Command::new(&gen_script);
+                        cmd.arg(&first_prompt);
+                        cmd.arg(&first_resp);
+                        if let Ok(key) = std::env::var("GEMINI_API_KEY") {
+                            cmd.env("GEMINI_API_KEY", key);
+                        }
+                        if let Ok(output) = cmd.output() {
+                            if output.status.success() {
+                                let generated = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                                if !generated.is_empty() && !generated.starts_with("Error") {
+                                    let mut parsed_lines = parsed_lines;
+                                    if let Some(ref mut obj) = parsed_lines[idx].1 {
+                                        if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
+                                            let new_content = format!("<THREAD_NAME>{}</THREAD_NAME>\n{}", generated, content_str);
+                                            if let Some(map) = obj.as_object_mut() {
+                                                map.insert("content".to_string(), serde_json::Value::String(new_content));
+                                            }
+                                        }
+                                    }
+                                    let mut new_file_content = String::new();
+                                    for (original_line, parsed_obj) in parsed_lines {
+                                        if let Some(obj) = parsed_obj {
+                                            if let Ok(serialized) = serde_json::to_string(&obj) {
+                                                new_file_content.push_str(&serialized);
+                                                new_file_content.push('\n');
+                                                continue;
+                                            }
+                                        }
+                                        new_file_content.push_str(&original_line);
+                                        new_file_content.push('\n');
+                                    }
+                                    let _ = std::fs::write(&latest_filepath_clone, new_file_content);
+                                    println!("[DEBUG thread-naming] Generated and wrote title '{}' to {}", generated, latest_thread_id_clone);
+                                }
+                            }
+                        }
+                        ACTIVE_TITLE_GENERATIONS.fetch_sub(1, Ordering::SeqCst);
+                    });
+                }
+            }
+        }
+    }
+
+    let parsed_timestamp = get_last_message_timestamp(latest_filepath).unwrap_or(mtime);
+
     let info = CachedThreadInfo {
         mtime,
         size,
         project_path,
         title,
         snippet,
+        parsed_timestamp,
     };
 
     let mut cache = cache_mutex.lock().unwrap();
@@ -1736,7 +1908,7 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
             None => continue,
         };
 
-        let root_info = match get_cached_thread_info(&root_filepath, root_thread_id) {
+        let _root_info = match get_cached_thread_info(&root_filepath, root_thread_id) {
             Some(i) => i,
             None => continue,
         };
@@ -1761,15 +1933,13 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
         };
 
         if matched {
-            let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
-
             thread_logs.push(ThreadLog {
                 id: root_id,
                 latest_leaf_id: latest_thread_id.clone(),
                 title: info.title,
                 snippet: info.snippet,
                 filepath: root_filepath.to_string_lossy().to_string(),
-                mtime: latest_mtime,
+                mtime: info.parsed_timestamp,
                 detected_project_path: Some(project_path.clone()),
             });
         }
@@ -1786,8 +1956,15 @@ fn detect_project_path(content: &str) -> Option<String> {
     // Normalize content to use current home instead of legacy user matthewmurphy
     let normalized_content = content.replace("/Users/matthewmurphy", &home);
     
-    if let Some(pos) = normalized_content.find(&projects_prefix) {
-        let after_prefix = &normalized_content[pos + projects_prefix.len()..];
+    // Skip system-injected metadata blocks (e.g. user_information) at the start
+    // to avoid matching active workspaces of the current session.
+    let mut search_content = &normalized_content[..];
+    if let Some(user_req_start) = normalized_content.find("<USER_REQUEST>") {
+        search_content = &normalized_content[user_req_start..];
+    }
+    
+    if let Some(pos) = search_content.find(&projects_prefix) {
+        let after_prefix = &search_content[pos + projects_prefix.len()..];
         let end_pos = after_prefix.find(|c: char| {
             c == '/' || c == '"' || c == '\'' || c == '\\' || c == ',' || c == '`' || c == '*' || c == ')' || c == ']' || c == '}' || c == ':' || c == ';' || c == '.' || c.is_whitespace()
         }).unwrap_or(after_prefix.len());
@@ -1852,12 +2029,10 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
             None => continue,
         };
 
-        let root_info = match get_cached_thread_info(&root_filepath, root_thread_id) {
+        let _root_info = match get_cached_thread_info(&root_filepath, root_thread_id) {
             Some(i) => i,
             None => continue,
         };
-
-        let latest_mtime = thread_mtimes.get(latest_thread_id).cloned().unwrap_or(0);
 
         thread_logs.push(ThreadLog {
             id: root_id,
@@ -1865,7 +2040,7 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
             title: info.title,
             snippet: info.snippet,
             filepath: root_filepath.to_string_lossy().to_string(),
-            mtime: latest_mtime,
+            mtime: info.parsed_timestamp,
             detected_project_path: info.project_path,
         });
     }
@@ -2685,6 +2860,27 @@ struct ThreadSearchResult {
     thread: ThreadLog,
     score: u64,
     preview: String,
+    matches: Vec<String>,
+}
+
+fn highlight_query_text(text: &str, query: &str) -> String {
+    let query_lower = query.to_lowercase();
+    let text_lower = text.to_lowercase();
+    let mut result = String::new();
+    let mut last_idx = 0;
+    
+    for (start_idx, _) in text_lower.match_indices(&query_lower) {
+        if start_idx < last_idx {
+            continue;
+        }
+        result.push_str(&text[last_idx..start_idx]);
+        result.push_str("<mark>");
+        result.push_str(&text[start_idx..start_idx + query.len()]);
+        result.push_str("</mark>");
+        last_idx = start_idx + query.len();
+    }
+    result.push_str(&text[last_idx..]);
+    result
 }
 
 #[tauri::command]
@@ -2699,6 +2895,7 @@ fn search_project_threads(project_path: String, query: String) -> Result<Vec<Thr
     for thread in threads {
         let mut score: u64 = 0;
         let mut preview = String::new();
+        let mut matches = Vec::new();
         
         if thread.title.to_lowercase().contains(&query_lower) {
             score += 100_000_000;
@@ -2711,19 +2908,35 @@ fn search_project_threads(project_path: String, query: String) -> Result<Vec<Thr
                     let step_type = parsed.get("type").and_then(|v| v.as_str()).unwrap_or("");
                     let content_str = parsed.get("content").and_then(|v| v.as_str()).unwrap_or("");
                     
-                    if step_type == "USER_INPUT" {
-                        let user_prompt = extract_user_request(content_str);
-                        if user_prompt.to_lowercase().contains(&query_lower) {
-                            score += 50_000_000;
-                            if preview.is_empty() {
-                                preview = truncate_preview(&user_prompt, &query_lower);
-                            }
-                        }
+                    let text_to_scan = if step_type == "USER_INPUT" {
+                        extract_user_request(content_str)
                     } else if step_type == "PLANNER_RESPONSE" || step_type == "MODEL" {
-                        if content_str.to_lowercase().contains(&query_lower) {
-                            score += 10_000_000;
+                        content_str.to_string()
+                    } else {
+                        String::new()
+                    };
+
+                    if !text_to_scan.is_empty() {
+                        let text_to_scan_clean = text_to_scan.replace("<THREAD_NAME>", "").replace("</THREAD_NAME>", "");
+                        if text_to_scan_clean.to_lowercase().contains(&query_lower) {
+                            if step_type == "USER_INPUT" {
+                                score += 50_000_000;
+                            } else {
+                                score += 10_000_000;
+                            }
+
                             if preview.is_empty() {
-                                preview = truncate_preview(content_str, &query_lower);
+                                preview = truncate_preview(&text_to_scan_clean, &query_lower);
+                            }
+
+                            // Collect matching lines
+                            for text_line in text_to_scan_clean.lines() {
+                                if text_line.to_lowercase().contains(&query_lower) {
+                                    let highlighted = highlight_query_text(text_line.trim(), &query);
+                                    if !matches.contains(&highlighted) && matches.len() < 5 {
+                                        matches.push(highlighted);
+                                    }
+                                }
                             }
                         }
                     }
@@ -2737,6 +2950,7 @@ fn search_project_threads(project_path: String, query: String) -> Result<Vec<Thr
                 thread,
                 score,
                 preview: if preview.is_empty() { "Matched in title".to_string() } else { preview },
+                matches,
             });
         }
     }
@@ -2759,10 +2973,22 @@ fn truncate_preview(content: &str, query: &str) -> String {
     if let Some(pos) = lower.find(query) {
         let start = pos.saturating_sub(30);
         let end = (pos + query.len() + 80).min(content.len());
+        
+        // Find nearest char boundaries
+        let mut start_idx = start;
+        while start_idx > 0 && !content.is_char_boundary(start_idx) {
+            start_idx -= 1;
+        }
+        
+        let mut end_idx = end;
+        while end_idx < content.len() && !content.is_char_boundary(end_idx) {
+            end_idx += 1;
+        }
+        
         let mut prev = String::new();
-        if start > 0 { prev.push_str("..."); }
-        prev.push_str(&content[start..end]);
-        if end < content.len() { prev.push_str("..."); }
+        if start_idx > 0 { prev.push_str("..."); }
+        prev.push_str(&content[start_idx..end_idx]);
+        if end_idx < content.len() { prev.push_str("..."); }
         prev.replace('\n', " ")
     } else {
         content.chars().take(100).collect::<String>().replace('\n', " ")

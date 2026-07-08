@@ -1,5 +1,31 @@
 import "@xterm/xterm/css/xterm.css"
+import "overlayscrollbars/overlayscrollbars.css"
 import "./styles.scss"
+import { OverlayScrollbars } from "overlayscrollbars"
+
+function getScrollEl(element: HTMLElement | null): HTMLElement | null {
+	if (!element) return null;
+	const osInstance = OverlayScrollbars(element);
+	return osInstance ? osInstance.elements().viewport : element;
+}
+
+function getContentEl(element: HTMLElement | null): HTMLElement | null {
+	if (!element) return null;
+	const osInstance = OverlayScrollbars(element);
+	return osInstance ? osInstance.elements().content : element;
+}
+
+function initOS(element: HTMLElement | null): any {
+	if (!element) return null;
+	return OverlayScrollbars(element, {
+		scrollbars: {
+			autoHide: "scroll",
+			autoHideDelay: 800,
+			theme: "os-theme-macos"
+		}
+	});
+}
+
 
 import type { ILink, ILinkProvider } from "@xterm/xterm"
 import {
@@ -716,12 +742,16 @@ window.addEventListener("resize", () => {
 // 7. Output Modal & Virtual Terminal Parser
 // ----------------------------------------------------
 const markdownPreviewPane = document.getElementById("markdown-preview-pane")
+if (markdownPreviewPane) {
+	initOS(markdownPreviewPane)
+}
 
 let previewAutoScroll = true
 
 const forceScrollToBottom = (pane: HTMLElement) => {
 	previewAutoScroll = true
-	pane.scrollTop = pane.scrollHeight
+	const scrollEl = getScrollEl(pane) || pane
+	scrollEl.scrollTop = scrollEl.scrollHeight
 	const btn = document.getElementById("scroll-to-bottom-btn")
 	if (btn) {
 		btn.classList.remove("visible")
@@ -730,8 +760,9 @@ const forceScrollToBottom = (pane: HTMLElement) => {
 
 const checkAndScrollToBottom = (pane: HTMLElement) => {
 	const btn = document.getElementById("scroll-to-bottom-btn")
+	const scrollEl = getScrollEl(pane) || pane
 	if (previewAutoScroll) {
-		pane.scrollTop = pane.scrollHeight
+		scrollEl.scrollTop = scrollEl.scrollHeight
 		if (btn) {
 			btn.classList.remove("visible")
 		}
@@ -743,20 +774,23 @@ const checkAndScrollToBottom = (pane: HTMLElement) => {
 }
 
 if (markdownPreviewPane) {
-	markdownPreviewPane.addEventListener("scroll", () => {
-		const isAtBottom =
-			markdownPreviewPane.scrollHeight - markdownPreviewPane.scrollTop <=
-			markdownPreviewPane.clientHeight + 40
-		if (isAtBottom) {
-			previewAutoScroll = true
-			const btn = document.getElementById("scroll-to-bottom-btn")
-			if (btn) {
-				btn.classList.remove("visible")
+	const scrollEl = getScrollEl(markdownPreviewPane)
+	if (scrollEl) {
+		scrollEl.addEventListener("scroll", () => {
+			const isAtBottom =
+				scrollEl.scrollHeight - scrollEl.scrollTop <=
+				scrollEl.clientHeight + 40
+			if (isAtBottom) {
+				previewAutoScroll = true
+				const btn = document.getElementById("scroll-to-bottom-btn")
+				if (btn) {
+					btn.classList.remove("visible")
+				}
+			} else {
+				previewAutoScroll = false
 			}
-		} else {
-			previewAutoScroll = false
-		}
-	})
+		})
+	}
 }
 
 const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn")
@@ -1581,7 +1615,8 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		return `${summaryText}-${counts[summaryText]}`
 	}
 
-	const detailsElements = markdownPreviewPane.querySelectorAll("details")
+	const contentEl = getContentEl(markdownPreviewPane) || markdownPreviewPane
+	const detailsElements = contentEl.querySelectorAll("details")
 	if (!isThreadSwitch) {
 		detailsElements.forEach((el) => {
 			if (
@@ -1594,18 +1629,25 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		})
 	}
 
-	const oldToolCallsList = markdownPreviewPane.querySelector(
+	const oldToolCallsList = contentEl.querySelector(
 		"#unified-tool-calls-list",
-	)
+	) as HTMLElement | null
 	let savedScrollTop = -1
 	if (oldToolCallsList) {
-		savedScrollTop = oldToolCallsList.scrollTop
+		const oldScrollEl = getScrollEl(oldToolCallsList)
+		savedScrollTop = oldScrollEl ? oldScrollEl.scrollTop : oldToolCallsList.scrollTop
+		OverlayScrollbars(oldToolCallsList)?.destroy()
 	}
 
-	markdownPreviewPane.innerHTML = html
+	const previewContentEl = getContentEl(markdownPreviewPane)
+	if (previewContentEl) {
+		previewContentEl.innerHTML = html
+	} else {
+		markdownPreviewPane.innerHTML = html
+	}
 
 	const newDetailsCounts: Record<string, number> = {}
-	const newDetailsElements = markdownPreviewPane.querySelectorAll("details")
+	const newDetailsElements = contentEl.querySelectorAll("details")
 	newDetailsElements.forEach((el) => {
 		const key = getDetailsKey(el, newDetailsCounts)
 		if (detailsState.has(key)) {
@@ -1613,14 +1655,17 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		}
 	})
 
-	const toolCallsList = markdownPreviewPane.querySelector(
+	const toolCallsList = contentEl.querySelector(
 		"#unified-tool-calls-list",
-	)
-	const toolCallsBox = markdownPreviewPane.querySelector(
+	) as HTMLElement | null
+	const toolCallsBox = contentEl.querySelector(
 		"#unified-tool-calls-box",
-	) as HTMLDetailsElement
+	) as HTMLDetailsElement | null
 
 	if (toolCallsList && toolCallsBox) {
+		initOS(toolCallsList)
+		const toolCallsScrollEl = getScrollEl(toolCallsList) || toolCallsList
+
 		if (justStartedThinking) {
 			toolCallsBox.open = true
 		} else if (justFinishedThinking) {
@@ -1628,13 +1673,13 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		}
 
 		if (!toolCallsAutoScroll && savedScrollTop >= 0) {
-			toolCallsList.scrollTop = savedScrollTop
+			toolCallsScrollEl.scrollTop = savedScrollTop
 		}
 
-		toolCallsList.addEventListener("scroll", () => {
+		toolCallsScrollEl.addEventListener("scroll", () => {
 			const isAtBottom =
-				toolCallsList.scrollHeight - toolCallsList.scrollTop <=
-				toolCallsList.clientHeight + 20
+				toolCallsScrollEl.scrollHeight - toolCallsScrollEl.scrollTop <=
+				toolCallsScrollEl.clientHeight + 20
 			toolCallsAutoScroll = isAtBottom
 		})
 
@@ -1644,8 +1689,12 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 			!timelineResult.hasOutputInLastTurn
 		) {
 			setTimeout(() => {
-				if (toolCallsList) {
-					toolCallsList.scrollTop = toolCallsList.scrollHeight
+				const currentToolCallsList = (getContentEl(markdownPreviewPane) || markdownPreviewPane).querySelector(
+					"#unified-tool-calls-list",
+				) as HTMLElement | null
+				const currentToolCallsScrollEl = getScrollEl(currentToolCallsList)
+				if (currentToolCallsScrollEl) {
+					currentToolCallsScrollEl.scrollTop = currentToolCallsScrollEl.scrollHeight
 				}
 			}, 30)
 		}
@@ -2115,13 +2164,17 @@ const applyTerminalModeUI = () => {
 // 6. UI Rendering: Sidebar & Project Swapper
 // ----------------------------------------------------
 const projectsListEl = document.getElementById("projects-list")
+if (projectsListEl) {
+	initOS(projectsListEl)
+}
 const currentDirPathEl = document.getElementById("current-dir-path")
 const textarea = document.getElementById("prompt-input") as HTMLTextAreaElement
 new Autocompleter(textarea, () => activeProject)
 
 const renderProjects = () => {
 	if (!projectsListEl) return
-	projectsListEl.innerHTML = ""
+	const contentEl = getContentEl(projectsListEl) || projectsListEl
+	contentEl.innerHTML = ""
 
 	// Sort by recency
 	const sorted = [...projects].sort((a, b) => b.lastActive - a.lastActive)
@@ -2221,12 +2274,15 @@ const renderProjects = () => {
 			const threadsList = document.createElement("div")
 			threadsList.id = "project-threads-list"
 			threadsList.className = "thread-history-list"
-			threadsList.innerHTML = '<div class="threads-loading">Loading...</div>'
+			initOS(threadsList)
+			const threadsScrollEl = getScrollEl(threadsList) || threadsList
+			const threadsContentEl = getContentEl(threadsList) || threadsList
+			threadsContentEl.innerHTML = '<div class="threads-loading">Loading...</div>'
 
-			threadsList.addEventListener("scroll", () => {
+			threadsScrollEl.addEventListener("scroll", () => {
 				if (
-					threadsList.scrollTop + threadsList.clientHeight >=
-					threadsList.scrollHeight - 20
+					threadsScrollEl.scrollTop + threadsScrollEl.clientHeight >=
+					threadsScrollEl.scrollHeight - 20
 				) {
 					maxVisibleThreads += 15
 					renderProjectThreads(activeProject, false)
@@ -2305,15 +2361,21 @@ const renderProjects = () => {
 
 					const previewPane = document.getElementById("markdown-preview-pane")
 					if (previewPane) {
-						previewPane.innerHTML =
-							'<div class=">Select a thread or log file to view preview...</div>'
+						const contentEl = getContentEl(previewPane)
+						if (contentEl) {
+							contentEl.innerHTML =
+								'<div class="select-prompt">Select a thread or log file to view preview...</div>'
+						}
 					}
 				})
 
 				const previewPane = document.getElementById("markdown-preview-pane")
 				if (previewPane) {
-					previewPane.innerHTML =
-						'<div class=">Select a thread or log file to view preview...</div>'
+					const contentEl = getContentEl(previewPane)
+					if (contentEl) {
+						contentEl.innerHTML =
+							'<div class="select-prompt">Select a thread or log file to view preview...</div>'
+					}
 				}
 
 				await selectAgyEngine()
@@ -2326,7 +2388,8 @@ const renderProjects = () => {
 			})
 		}
 
-		projectsListEl.appendChild(item)
+		const contentEl = getContentEl(projectsListEl) || projectsListEl;
+		contentEl.appendChild(item)
 	})
 }
 
@@ -2436,6 +2499,13 @@ const switchToProject = async (
 
 	// Restore or initialize PTY geometry sync
 	resizePty()
+	// Let's also do a delayed resizePty to make sure the backend registers the dimensions after PTY connection is fully active/negotiated.
+	setTimeout(() => {
+		resizePty()
+	}, 100)
+	setTimeout(() => {
+		resizePty()
+	}, 300)
 	renderProjects()
 	renderProjectThreads(path, autoSelectFirstThread)
 	adjustHeight()
@@ -2633,6 +2703,75 @@ function getCompactifiedContext(jsonlContent: string): string {
 	return slicedSteps.join("\n") + "\n"
 }
 
+const selectAndLoadThread = async (thread: any) => {
+	activeThreadId = thread.id
+	renderThreadNotesSidebar(activeProject, activeThreadId)
+	await selectAgyEngine()
+
+	const previewPane = document.getElementById("markdown-preview-pane")
+	try {
+		const content = await invoke<string>("read_thread_log", {
+			filepath: thread.filepath,
+		})
+		activeThreadContext = getCompactifiedContext(content)
+		updatePlaceholder(true)
+
+		if (previewPane) {
+			renderCustomTuiLog(content)
+		}
+	} catch (err) {
+		if (previewPane) {
+			const contentEl = getContentEl(previewPane)
+			if (contentEl) {
+				contentEl.innerHTML = `<div class="error-msg">Error loading thread log file: ${err}</div>`
+			}
+		}
+	}
+
+	try {
+		const res = await invoke<{
+			shell_pid: number
+			is_new_session: boolean
+		}>("switch_active_project", {
+			projectPath: activeProject,
+			engine: "agy",
+		})
+		if (res.is_new_session) {
+			await new Promise((resolve) => setTimeout(resolve, 800))
+		}
+	} catch (err) {
+		console.error("Failed to toggle engine session on backend:", err)
+	}
+	invoke("write_to_pty", {
+		data: `\x15/resume ${thread.latest_leaf_id}\r`,
+		projectPath: activeProject,
+		terminalType: "agy",
+	})
+
+	// Update active state in UI lists
+	document
+		.querySelectorAll("#project-threads-list > div")
+		.forEach((child) => {
+			child.className = "thread-history-item group"
+		})
+	const activeProjectItem = Array.from(document.querySelectorAll("#project-threads-list > div")).find(
+		(child: any) => child.querySelector(".thread-title")?.getAttribute("title") === thread.title
+	)
+	if (activeProjectItem) {
+		activeProjectItem.className = "thread-history-item active group"
+	}
+
+	document.querySelectorAll(".search-result-thread-item").forEach((child) => {
+		child.classList.remove("active")
+	})
+	const activeSearchItem = Array.from(document.querySelectorAll(".search-result-thread-item")).find(
+		(child: any) => child.querySelector(".search-result-title")?.textContent === thread.title
+	)
+	if (activeSearchItem) {
+		activeSearchItem.classList.add("active")
+	}
+}
+
 const renderProjectThreads = async (
 	projectPath: string,
 	autoSelectFirstThread: boolean = false,
@@ -2647,13 +2786,15 @@ const renderProjectThreads = async (
 			(await invoke<ThreadLog[]>("get_project_threads", {
 				projectPath,
 			}))
-		const prevScrollTop = listEl.scrollTop
-		listEl.innerHTML = ""
+		const scrollEl = getScrollEl(listEl) || listEl
+		const contentEl = getContentEl(listEl) || listEl
+		const prevScrollTop = scrollEl.scrollTop
+		contentEl.innerHTML = ""
 
 		const threadsToShow = threads.slice(0, maxVisibleThreads)
 
 		if (threadsToShow.length === 0) {
-			listEl.innerHTML = '<div class=">No threads found for this project</div>'
+			contentEl.innerHTML = '<div class="no-threads">No threads found for this project</div>'
 			return
 		}
 
@@ -2694,8 +2835,11 @@ const renderProjectThreads = async (
 								"markdown-preview-pane",
 							)
 							if (previewPane) {
-								previewPane.innerHTML =
-									'<div class=">Select a thread or log file to view preview...</div>'
+								const contentEl = getContentEl(previewPane)
+								if (contentEl) {
+									contentEl.innerHTML =
+										'<div class="select-prompt">Select a thread or log file to view preview...</div>'
+								}
 							}
 						}
 						pollThreadsList()
@@ -2705,70 +2849,26 @@ const renderProjectThreads = async (
 				})
 			}
 
-			el.addEventListener("click", async () => {
-				document
-					.querySelectorAll("#project-threads-list > div")
-					.forEach((child) => {
-						child.className = "thread-history-item group"
-					})
-				el.className = "thread-history-item active group"
-
-				activeThreadId = thread.id
-				renderThreadNotesSidebar(activeProject, activeThreadId)
-				await selectAgyEngine()
-
-				const previewPane = document.getElementById("markdown-preview-pane")
-				try {
-					const content = await invoke<string>("read_thread_log", {
-						filepath: thread.filepath,
-					})
-					activeThreadContext = getCompactifiedContext(content)
-					updatePlaceholder(true)
-
-					if (previewPane) {
-						renderCustomTuiLog(content)
-					}
-				} catch (err) {
-					if (previewPane) {
-						previewPane.innerHTML = `<div class=">Error loading thread log file: ${err}</div>`
-					}
-				}
-
-				try {
-					const res = await invoke<{
-						shell_pid: number
-						is_new_session: boolean
-					}>("switch_active_project", {
-						projectPath: activeProject,
-						engine: "agy",
-					})
-					if (res.is_new_session) {
-						await new Promise((resolve) => setTimeout(resolve, 800))
-					}
-				} catch (err) {
-					console.error("Failed to toggle engine session on backend:", err)
-				}
-				invoke("write_to_pty", {
-					data: `\x15/resume ${thread.latest_leaf_id}\r`,
-					projectPath: activeProject,
-					terminalType: "agy",
-				})
+			el.addEventListener("click", () => {
+				selectAndLoadThread(thread)
 			})
 
-			listEl.appendChild(el)
+
+			contentEl.appendChild(el)
 		})
 
 		if (autoSelectFirstThread) {
-			const firstChild = listEl.querySelector(":scope > div") as HTMLElement
+			const firstChild = contentEl.querySelector(":scope > div") as HTMLElement
 			if (firstChild) {
 				firstChild.click()
 			}
 		}
 
-		listEl.scrollTop = prevScrollTop
+		scrollEl.scrollTop = prevScrollTop
 	} catch (err) {
 		console.error("Failed to load project threads:", err)
-		listEl.innerHTML = `<div class=">Error: ${err}</div>`
+		const contentEl = getContentEl(listEl) || listEl
+		contentEl.innerHTML = `<div class="error-msg">Error: ${err}</div>`
 	}
 }
 
@@ -3251,8 +3351,9 @@ textarea?.addEventListener("keydown", async (e) => {
 
 		const previewPane = document.getElementById("markdown-preview-pane")
 		if (previewPane) {
-			if (previewPane.innerHTML.includes("Select a thread")) {
-				previewPane.innerHTML = ""
+			const contentEl = getContentEl(previewPane) || previewPane
+			if (contentEl.innerHTML.includes("Select a thread")) {
+				contentEl.innerHTML = ""
 			}
 			const escapedInput = trimmedInput
 				.replace(/&/g, "&amp;")
@@ -3264,7 +3365,7 @@ textarea?.addEventListener("keydown", async (e) => {
                     <div class="text-content">${escapedInput}</div>
                 </div>
             </div>`
-			previewPane.innerHTML += blockHtml
+			contentEl.innerHTML += blockHtml
 			setTimeout(() => {
 				forceScrollToBottom(previewPane)
 			}, 10)
@@ -3916,43 +4017,202 @@ updateQuotaDisplay()
 setInterval(updateQuotaDisplay, 60000)
 
 import("./ActionBar/ActionBar").then(({ ActionBar }) => {
-	;(window as any).actionBar = new ActionBar(
-		() => activeProject,
-		async (thread: any) => {
-			if (!activeProject) return
-
-			document
-				.querySelectorAll("#project-threads-list > div")
-				.forEach((child) => {
-					child.className = "project-thread-item group"
-				})
-
-			activeThreadId = thread.id
-			renderThreadNotesSidebar(activeProject, activeThreadId)
-			await selectAgyEngine()
-
-			const previewPane = document.getElementById("markdown-preview-pane")
-			try {
-				const content = await invoke<string>("read_thread_log", {
-					filepath: thread.filepath,
-				})
-				activeThreadContext = getCompactifiedContext(content)
-				updatePlaceholder(true)
-
-				if (previewPane) {
-					renderCustomTuiLog(content)
+	const actionBar = new ActionBar()
+	;(window as any).actionBar = actionBar
+	
+	const commands = [
+		{
+			name: "Search active threads...",
+			description: "Search project threads using query (Cmd+F)",
+			action: () => {
+				switchTab("search")
+			}
+		},
+		{
+			name: "New Thread",
+			description: "Start a new conversation thread in active project (Cmd+N)",
+			action: () => {
+				const newThreadBtn = document.querySelector(".new-thread-btn") as HTMLButtonElement | null
+				if (newThreadBtn) {
+					newThreadBtn.click()
 				}
-			} catch (err) {
-				console.error("Failed to read thread log:", err)
+			}
+		},
+		{
+			name: "Add Project",
+			description: "Open an existing project folder or create a new project",
+			action: () => {
+				const addProjectBtn = document.getElementById("add-project-btn") as HTMLButtonElement | null
+				if (addProjectBtn) {
+					addProjectBtn.click()
+				}
+			}
+		},
+		{
+			name: "Refresh / Redraw Terminal",
+			description: "Redraw and fit the active terminal window (Cmd+Shift+R)",
+			action: () => {
+				try {
+					(window as any).refreshActiveTerminal()
+				} catch (err) {}
+			}
+		},
+		{
+			name: "Toggle Staging Area",
+			description: "Pause or resume current background processes",
+			action: () => {
+				const pauseBtn = document.getElementById("pause-btn") as HTMLButtonElement | null
+				if (pauseBtn) {
+					pauseBtn.click()
+				}
+			}
+		},
+		{
+			name: "Toggle Sidebar",
+			description: "Toggle visibility of the sidebar",
+			action: () => {
+				const sidebar = document.getElementById("projects-sidebar")
+				if (sidebar) {
+					sidebar.classList.toggle("hidden")
+				}
+			}
+		},
+		{
+			name: "Open Developer Tools",
+			description: "Open the developer console window (Cmd+Option+I)",
+			action: () => {
+				invoke("open_devtools").catch(console.error)
+			}
+		}
+	];
+	actionBar.setCommands(commands)
+})
+
+// Tab Switching
+const tabProjects = document.getElementById("tab-projects")
+const tabSearch = document.getElementById("tab-search")
+const contentProjects = document.getElementById("tab-content-projects")
+const contentSearch = document.getElementById("tab-content-search")
+
+const switchTab = (tab: "projects" | "search") => {
+	if (tab === "projects") {
+		tabProjects?.classList.add("active")
+		tabSearch?.classList.remove("active")
+		contentProjects?.classList.add("active")
+		contentSearch?.classList.remove("active")
+	} else {
+		tabProjects?.classList.remove("active")
+		tabSearch?.classList.add("active")
+		contentProjects?.classList.remove("active")
+		contentSearch?.classList.add("active")
+		
+		const searchInput = document.getElementById("sidebar-search-input") as HTMLInputElement
+		if (searchInput) {
+			searchInput.focus()
+			searchInput.select()
+		}
+	}
+}
+
+tabProjects?.addEventListener("click", () => switchTab("projects"))
+tabSearch?.addEventListener("click", () => switchTab("search"))
+
+// Big Search Button
+const bigSearchBtn = document.getElementById("sidebar-big-search-btn")
+bigSearchBtn?.addEventListener("click", () => {
+	switchTab("search")
+})
+
+// Cmd+F Keyboard Shortcut
+window.addEventListener("keydown", (e) => {
+	if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+		e.preventDefault()
+		switchTab("search")
+	}
+})
+
+// Search input handler
+const searchInput = document.getElementById("sidebar-search-input") as HTMLInputElement
+const searchResultsContainer = document.getElementById("sidebar-search-results")
+if (searchResultsContainer) {
+	initOS(searchResultsContainer)
+}
+let searchDebounce: any = null
+
+const performSidebarSearch = async () => {
+	if (!searchInput || !searchResultsContainer) return
+	const contentEl = getContentEl(searchResultsContainer) || searchResultsContainer
+	const query = searchInput.value.trim()
+	if (!query) {
+		contentEl.innerHTML = ""
+		return
+	}
+
+	try {
+		interface ThreadSearchResult {
+			thread: any
+			score: number
+			preview: string
+			matches: string[]
+		}
+
+		const results = await invoke<ThreadSearchResult[]>("search_project_threads", {
+			projectPath: activeProject,
+			query,
+		})
+
+		contentEl.innerHTML = ""
+		if (results.length === 0) {
+			contentEl.innerHTML = '<div class="no-threads">No results found</div>'
+			return
+		}
+
+		results.forEach((result) => {
+			const el = document.createElement("div")
+			const isActive = activeThreadId === result.thread.id
+			el.className = `search-result-thread-item${isActive ? " active" : ""}`
+			
+			const ts = result.thread.mtime > 0 ? result.thread.mtime * 1000 : Date.now()
+			const dateStr = getRelativeDateStr(ts)
+
+			let matchesHtml = ""
+			if (result.matches && result.matches.length > 0) {
+				matchesHtml = `
+					<div class="search-result-matches">
+						${result.matches.map(match => `<div class="search-result-match-line">${match}</div>`).join("")}
+					</div>
+				`
+			} else {
+				matchesHtml = `
+					<div class="search-result-matches">
+						<div class="search-result-match-line">${result.preview}</div>
+					</div>
+				`
 			}
 
-			invoke("write_to_pty", {
-				data: `\x15/resume ${thread.latest_leaf_id}\r`,
-				projectPath: activeProject,
-				terminalType: "agy",
+			el.innerHTML = `
+				<div class="search-result-header">
+					<div class="search-result-title">${result.thread.title || result.thread.id}</div>
+					<div class="search-result-date">${dateStr}</div>
+				</div>
+				${matchesHtml}
+			`
+
+			el.addEventListener("click", () => {
+				selectAndLoadThread(result.thread)
 			})
-		},
-	)
+
+			contentEl.appendChild(el)
+		})
+	} catch (err) {
+		console.error("Search failed:", err)
+		contentEl.innerHTML = `<div class="no-threads">Error performing search</div>`
+	}
+}
+
+searchInput?.addEventListener("input", () => {
+	clearTimeout(searchDebounce)
+	searchDebounce = setTimeout(performSidebarSearch, 250)
 })
 
 // Listen for Google account rotation/switch to clear out old tmux PTY sessions and start fresh
