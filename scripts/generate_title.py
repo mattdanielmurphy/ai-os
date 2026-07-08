@@ -142,12 +142,15 @@ def call_openrouter_api(prompt, response):
         return None
 
 def generate_title(prompt, response):
-    # Try Google Cloud Code API first
-    title = call_gemini_api(prompt, response)
-    if title:
-        return title
-    # Fallback to OpenRouter
-    return call_openrouter_api(prompt, response)
+    # API calls disabled to prevent charges and infinite loops.
+    # Generate a local title from the prompt's first few words.
+    words = [w for w in prompt.split() if w.strip()]
+    if not words:
+        return "Chat Thread"
+    title = " ".join(words[:4])
+    for c in ['"', "'", '<', '>', '|', ':', '*', '?', '/', '\\']:
+        title = title.replace(c, '')
+    return title.strip() or "Chat Thread"
 
 def main():
     if len(sys.argv) < 3:
