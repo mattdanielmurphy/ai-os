@@ -1,15 +1,15 @@
 ---
 id: "rules-were-not-transferred-to-the-original-geminim-2026-07-07"
-status: "in-progress"
+status: "review"
 priority: "critical"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-08T02:16:38.466Z"
-modified: "2026-07-08T02:16:49.290Z"
+modified: "2026-07-08T10:24:12.560Z"
 completedAt: null
 labels: []
-order: "a0"
+order: "a4"
 ---
 # rules were NOT transferred to the original GEMINI.md!
 
