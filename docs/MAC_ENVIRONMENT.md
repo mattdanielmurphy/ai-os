@@ -29,6 +29,8 @@ These background services are configured to launch automatically for the user:
 | `com.matthewmurphy.rqbit.plist` | `/usr/local/bin/rqbit server start /Users/matt/Downloads` | Rust-based Bittorrent server. | **KeepAlive: True**. |
 | `com.mattmurphy.userscript-bundler.plist` | `watch-and-bundle.js` | Automatically bundles userscripts upon file changes. | **KeepAlive: True**. Working directory: `/Users/matt/projects/userscript-bundler`. |
 | `com.user.notesync.plist` | `notesync-wrapper` | Syncs Obsidian notes when target paths change. | Watches `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal`. |
+| `com.mattmurphy.ai-os-rules-watcher.plist` | `sync_rules.sh` | Automatically syncs ~/.gemini/GEMINI.md to workspace repository. | **WatchPaths: ~/.gemini/GEMINI.md**. Cwd: `/Users/matt/projects/ai-os`. |
+
 
 ---
 
