@@ -18,7 +18,7 @@ except ImportError:
     pass
 
 
-TOKEN_PATH = Path.home() / ".gemini" / "antigravity-cli" / "antigravity-oauth-token"
+TOKEN_PATH = Path.home() / ".gemini" / "oauth_creds.json"
 CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 CLIENT_SECRET = "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"
 
@@ -31,48 +31,7 @@ def get_antigravity_quota():
     except Exception:
         return None, None, False
 
-    token_info = token_data.get("token", {})
-    refresh_token_val = token_info.get("refresh_token")
-    access_token = token_info.get("access_token")
-    expiry_str = token_info.get("expiry")
-
-    if not refresh_token_val:
-        return None, None, False
-
-    is_expired = True
-    if expiry_str:
-        try:
-            expiry = datetime.datetime.fromisoformat(expiry_str)
-            now = datetime.datetime.now(datetime.timezone.utc) if expiry.tzinfo else datetime.datetime.now()
-            if expiry > now + datetime.timedelta(seconds=60):
-                is_expired = False
-        except Exception:
-            pass
-
-    if is_expired or not access_token:
-        url = "https://oauth2.googleapis.com/token"
-        req_data = {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "refresh_token": refresh_token_val,
-            "grant_type": "refresh_token"
-        }
-        encoded_data = urllib.parse.urlencode(req_data).encode("utf-8")
-        req = urllib.request.Request(url, data=encoded_data, method="POST")
-        try:
-            with urllib.request.urlopen(req) as res:
-                resp_data = json.loads(res.read().decode())
-                access_token = resp_data.get("access_token")
-                expires_in = resp_data.get("expires_in", 3600)
-                if access_token:
-                    token_info["access_token"] = access_token
-                    new_expiry = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=expires_in)
-                    token_info["expiry"] = new_expiry.isoformat()
-                    token_data["token"] = token_info
-                    TOKEN_PATH.write_text(json.dumps(token_data, indent=2))
-        except Exception:
-            pass
-
+    access_token = token_data.get("access_token")
     if not access_token:
         return None, None, False
 
