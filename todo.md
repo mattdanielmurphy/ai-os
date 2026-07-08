@@ -3,15 +3,13 @@
 - [x] When I submit a new prompt, it's slow and the text hangs in the textarea instead of instantly disappearing, making it clear something is happening, but right now it just sits there until the new terminal opens, which feels super janky
 - [ ] Slash commands
 - [ ] When something updates, the page is scrolled down forcibly. I actually WANT it to scroll down by default, but if the user scrolls up, then that auto-scroll behaviour must stop unless the user scrolls back down on their own (or clicks a button that appears when there's new unseen content that scrolls the user down to the bottom)
-- [ ] project has gotten too big; I want to separate things: the code, and the notes about the project. Obviously they're both still part of the project and are in the project folder.
-  I guess I'm thikning  a directory structure like this:
+- [x] project has gotten too big; I want to separate things: the code, and the notes about the project. (Organized legacy-tauri-gui/ and docs/)
 
-  ./src
-  ./notes
-
-  or something. but not quite that because really it's not just notes. I mean, there's a few things: 
-  there's my notes, and then there's gemini web thread history, then there's ai-os thread history...
-  idk, propose a good structure. it's too messy and chaotic right now.
+## VSCode Extension Fresh Start
+- [ ] Initialize fresh VSCode extension project structure
+- [ ] Investigate terminal integration API for VSCode extension
+- [ ] Map orchestration CLI commands into extension shortcuts / command palette
+- [ ] Design custom sidebar webview / notebook UI for subagents and telemetry
 
 ## To Do
 
