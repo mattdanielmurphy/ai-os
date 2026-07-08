@@ -398,6 +398,7 @@ textarea {
 	flex-direction: column;
 	overflow: hidden;
 	position: relative;
+	min-height: 0;
 }
 
 .preview-wrapper {
@@ -406,6 +407,7 @@ textarea {
 	flex-direction: column;
 	overflow: hidden;
 	position: relative;
+	min-height: 0;
 
 	.preview-header {
 		padding: 8px 16px;
@@ -932,7 +934,7 @@ textarea {
 	.thread-history-list {
 		display: block;
 		max-height: 50vh;
-		overflow: hidden;
+		overflow-y: auto !important;
 
 		.os-content {
 			display: flex !important;
@@ -1025,8 +1027,10 @@ textarea {
 .markdown-preview-pane {
 	display: block;
 	flex: 1;
-	overflow: hidden;
-	padding: 0;
+	overflow-y: auto !important;
+	padding: 0 2rem 5rem 2rem;
+	min-height: 0;
+	overflow-anchor: none;
 
 	.os-content {
 		display: flex !important;
@@ -1049,6 +1053,7 @@ textarea {
 
 	&.user {
 		align-self: flex-end;
+		margin-left: auto;
 		background-color: var(--primary);
 		color: #fff;
 		border-bottom-right-radius: 2px;
@@ -1056,10 +1061,62 @@ textarea {
 		.text-content {
 			white-space: pre-wrap;
 		}
+
+		details {
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			border-radius: 8px;
+			margin-bottom: 12px;
+			background: rgba(255, 255, 255, 0.1);
+			width: 100%;
+			box-sizing: border-box;
+			overflow-anchor: none;
+
+			summary {
+				padding: 8px 12px;
+				color: rgba(255, 255, 255, 0.9);
+				font-weight: 500;
+
+				&.historical-summary {
+					color: rgba(255, 255, 255, 0.9);
+				}
+
+				&:hover {
+					background-color: rgba(255, 255, 255, 0.05);
+				}
+			}
+
+			&[open] {
+				summary {
+					border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+					color: #fff;
+
+					.historical-summary {
+						color: #fff;
+					}
+				}
+			}
+
+			.historical-details {
+				padding: 12px;
+				color: rgba(255, 255, 255, 0.95);
+				margin-top: 0;
+
+				pre {
+					background: rgba(0, 0, 0, 0.2);
+					border: 1px solid rgba(255, 255, 255, 0.1);
+					color: #fff;
+				}
+
+				code {
+					color: #fff;
+				}
+			}
+		}
 	}
 
 	&.agent {
 		align-self: flex-start;
+		margin-right: auto;
 		background-color: transparent;
 		border: 1px solid transparent;
 		border-bottom-left-radius: 2px;
@@ -1072,6 +1129,8 @@ textarea {
 		&.historical {
 			background-color: transparent;
 			border: 1px dashed var(--border-color);
+			margin-left: auto;
+			margin-right: 0;
 
 			.message-content {
 				padding: var(--tool-call-group-padding-y)
@@ -1330,6 +1389,14 @@ textarea {
 	.tool-call-details-body {
 		padding: 0 8px 8px 8px;
 		white-space: normal;
+
+		p {
+			margin-top: 0 !important;
+			margin-bottom: 6px !important;
+			&:last-child {
+				margin-bottom: 0 !important;
+			}
+		}
 	}
 }
 
@@ -1352,16 +1419,39 @@ textarea {
 	.tool-call-arg-value {
 		padding: 4px 0;
 		word-break: break-word;
+
+		p {
+			margin-top: 0 !important;
+			margin-bottom: 6px !important;
+			&:last-child {
+				margin-bottom: 0 !important;
+			}
+		}
 	}
 
 	.tool-call-multiline-val {
-		padding: 12px;
+		padding: 8px 12px;
 		background: rgba(0, 0, 0, 0.03);
 		border-radius: 6px;
 		border: 1px solid rgba(0, 0, 0, 0.05);
 		overflow-x: auto;
 		width: 100%;
 		box-sizing: border-box;
+
+		pre {
+			margin: 0 !important;
+			padding: 0 !important;
+			background: transparent !important;
+			border: none !important;
+		}
+
+		p {
+			margin-top: 0 !important;
+			margin-bottom: 6px !important;
+			&:last-child {
+				margin-bottom: 0 !important;
+			}
+		}
 	}
 
 	.tool-call-string-val {
@@ -1382,7 +1472,7 @@ textarea {
 	font-size: 0.7rem;
 	color: var(--text-muted);
 	background: rgba(0, 0, 0, 0.1);
-	padding: 4px;
+	padding: 4px 8px;
 	border-radius: 4px;
 	margin-top: 4px;
 	white-space: pre-wrap;
@@ -1431,7 +1521,7 @@ textarea {
 }
 
 .unified-tool-calls-list {
-	max-height: 50vh;
+	max-height: 40vh;
 	overflow-y: auto;
 }
 
@@ -1450,6 +1540,7 @@ summary {
 }
 
 details {
+	overflow-anchor: none;
 	&[open] {
 		color: var(--text-main);
 

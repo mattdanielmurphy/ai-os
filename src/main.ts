@@ -747,6 +747,7 @@ if (markdownPreviewPane) {
 }
 
 let previewAutoScroll = true
+let isUpdatingPreviewDOM = false
 
 const forceScrollToBottom = (pane: HTMLElement) => {
 	previewAutoScroll = true
@@ -777,6 +778,7 @@ if (markdownPreviewPane) {
 	const scrollEl = getScrollEl(markdownPreviewPane)
 	if (scrollEl) {
 		scrollEl.addEventListener("scroll", () => {
+			if (isUpdatingPreviewDOM) return
 			const isAtBottom =
 				scrollEl.scrollHeight - scrollEl.scrollTop <=
 				scrollEl.clientHeight + 40
@@ -791,6 +793,11 @@ if (markdownPreviewPane) {
 			}
 		})
 	}
+	// Also listen on host element in case overflow-y: auto !important makes it scrollable
+	markdownPreviewPane.addEventListener("scroll", () => {
+		if (isUpdatingPreviewDOM) return
+		console.log('[SCROLL-DEBUG] HOST scroll event fired, scrollTop=', markdownPreviewPane.scrollTop, 'scrollHeight=', markdownPreviewPane.scrollHeight, 'clientHeight=', markdownPreviewPane.clientHeight)
+	})
 }
 
 const scrollToBottomBtn = document.getElementById("scroll-to-bottom-btn")
@@ -1175,7 +1182,7 @@ ${marked.parse(block.historicalContext)}
                         </details>
                 `
 				messageItems.push({
-					sender: "historical",
+					sender: "user",
 					type: "historical",
 					createdAt: block.createdAt,
 					html: historicalHtml
@@ -1451,8 +1458,9 @@ ${marked.parse(block.historicalContext)}
             </div>
             `
 
+			const hasToolCalls = g.items.some((item) => item.type === "tool-call-group");
 			html += `
-            <div class="chat-message agent">
+            <div class="chat-message agent${hasToolCalls ? " tool-call-group" : ""}">
                 ${copyButtonsHtml}
                 <div class="message-content group prose prose-sm prose-headings:text-gray-950 prose-pre:bg-gray-100 prose-pre:border">
                     ${groupContentHtml}
@@ -1639,12 +1647,21 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		OverlayScrollbars(oldToolCallsList)?.destroy()
 	}
 
+	const previewScrollEl = getScrollEl(markdownPreviewPane) || markdownPreviewPane
+	const savedPreviewScrollTop = previewScrollEl.scrollTop
+	const savedHostScrollTop = markdownPreviewPane.scrollTop
+	console.log('[SCROLL-DEBUG] BEFORE innerHTML: viewport.scrollTop=', savedPreviewScrollTop, 'host.scrollTop=', savedHostScrollTop, 'previewAutoScroll=', previewAutoScroll)
+
+	isUpdatingPreviewDOM = true
+
 	const previewContentEl = getContentEl(markdownPreviewPane)
 	if (previewContentEl) {
 		previewContentEl.innerHTML = html
 	} else {
 		markdownPreviewPane.innerHTML = html
 	}
+
+	console.log('[SCROLL-DEBUG] AFTER innerHTML: viewport.scrollTop=', previewScrollEl.scrollTop, 'host.scrollTop=', markdownPreviewPane.scrollTop)
 
 	const newDetailsCounts: Record<string, number> = {}
 	const newDetailsElements = contentEl.querySelectorAll("details")
@@ -1700,10 +1717,25 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		}
 	}
 
+	// Restore scroll position using requestAnimationFrame (after layout)
+	const targetScrollTop = previewAutoScroll ? previewScrollEl.scrollHeight : savedPreviewScrollTop
+	previewScrollEl.scrollTop = targetScrollTop
+	markdownPreviewPane.scrollTop = previewAutoScroll ? markdownPreviewPane.scrollHeight : savedHostScrollTop
+
+	console.log('[SCROLL-DEBUG] SYNC restore: viewport.scrollTop=', previewScrollEl.scrollTop, 'host.scrollTop=', markdownPreviewPane.scrollTop, 'target=', targetScrollTop)
+
+	requestAnimationFrame(() => {
+		const rafTarget = previewAutoScroll ? previewScrollEl.scrollHeight : savedPreviewScrollTop
+		previewScrollEl.scrollTop = rafTarget
+		markdownPreviewPane.scrollTop = previewAutoScroll ? markdownPreviewPane.scrollHeight : savedHostScrollTop
+		console.log('[SCROLL-DEBUG] RAF restore: viewport.scrollTop=', previewScrollEl.scrollTop, 'host.scrollTop=', markdownPreviewPane.scrollTop, 'target=', rafTarget)
+		isUpdatingPreviewDOM = false
+	})
+
 	if (isThinking && !timelineResult.hasOutputInLastTurn) {
 		setTimeout(() => {
 			checkAndScrollToBottom(markdownPreviewPane)
-		}, 30)
+		}, 50)
 	}
 }
 
@@ -2328,11 +2360,11 @@ const renderProjects = () => {
 				}
 				updatePlaceholder(true)
 
-				threadsList.querySelectorAll(":scope > div").forEach((child) => {
+				threadsContentEl.querySelectorAll(":scope > div").forEach((child) => {
 					child.className = "thread-history-item group"
 				})
 
-				const loadingMsg = threadsList.querySelector(".italic")
+				const loadingMsg = threadsContentEl.querySelector(".italic")
 				if (loadingMsg && loadingMsg.textContent?.includes("Loading")) {
 					loadingMsg.remove()
 				}
@@ -2348,13 +2380,13 @@ const renderProjects = () => {
                     <div class="thread-snippet" title="Starting...">Starting...</div>
                 </div>
                 `
-				threadsList.prepend(placeholderEl)
+				threadsContentEl.prepend(placeholderEl)
 
 				placeholderEl.addEventListener("click", (e) => {
 					e.stopPropagation()
 					activeThreadId = null
 					isWaitingForNewThread = true
-					threadsList.querySelectorAll(":scope > div").forEach((child) => {
+					threadsContentEl.querySelectorAll(":scope > div").forEach((child) => {
 						child.className = "thread-history-item-alt group"
 					})
 					placeholderEl.className = "thread-history-item active group"
@@ -2749,16 +2781,18 @@ const selectAndLoadThread = async (thread: any) => {
 	})
 
 	// Update active state in UI lists
-	document
-		.querySelectorAll("#project-threads-list > div")
-		.forEach((child) => {
+	const listEl = document.getElementById("project-threads-list")
+	if (listEl) {
+		const contentEl = getContentEl(listEl) || listEl
+		contentEl.querySelectorAll(":scope > div").forEach((child) => {
 			child.className = "thread-history-item group"
 		})
-	const activeProjectItem = Array.from(document.querySelectorAll("#project-threads-list > div")).find(
-		(child: any) => child.querySelector(".thread-title")?.getAttribute("title") === thread.title
-	)
-	if (activeProjectItem) {
-		activeProjectItem.className = "thread-history-item active group"
+		const activeProjectItem = Array.from(contentEl.querySelectorAll(":scope > div")).find(
+			(child: any) => child.querySelector(".thread-title")?.getAttribute("title") === thread.title
+		)
+		if (activeProjectItem) {
+			activeProjectItem.className = "thread-history-item active group"
+		}
 	}
 
 	document.querySelectorAll(".search-result-thread-item").forEach((child) => {
@@ -3767,9 +3801,44 @@ if (clearCheckbox) {
 	setTimeout(updatePlaceholder, 100)
 }
 
+document.addEventListener("mousedown", (e) => {
+	const target = e.target as HTMLElement
+	if (target.closest("summary")) {
+		e.preventDefault()
+	}
+})
+
 document.addEventListener("click", (e) => {
 	const target = e.target as HTMLElement
 	const selection = window.getSelection()
+
+	// Handle summary clicks to prevent browser default toggle scroll-jumping behavior
+	const summary = target.closest("summary")
+	if (summary) {
+		e.preventDefault()
+		const details = summary.parentElement as HTMLDetailsElement | null
+		if (details) {
+			const pane = document.getElementById("markdown-preview-pane")
+			const osViewport = getScrollEl(pane)
+			const savedHostScroll = pane ? pane.scrollTop : 0
+			const savedOsScroll = osViewport ? osViewport.scrollTop : 0
+
+			details.open = !details.open
+
+			if (pane) pane.scrollTop = savedHostScroll
+			if (osViewport) osViewport.scrollTop = savedOsScroll
+
+			requestAnimationFrame(() => {
+				if (pane) pane.scrollTop = savedHostScroll
+				if (osViewport) osViewport.scrollTop = savedOsScroll
+				setTimeout(() => {
+					if (pane) pane.scrollTop = savedHostScroll
+					if (osViewport) osViewport.scrollTop = savedOsScroll
+				}, 10)
+			})
+		}
+		return
+	}
 
 	// Handle link clicks globally (prevent default and open in system/tauri)
 	const anchor = target.closest("a")
@@ -3813,6 +3882,8 @@ document.addEventListener("click", (e) => {
 	const isMiniTermClick = miniContainer && path.includes(miniContainer)
 	const sidebar = document.getElementById("projects-sidebar")
 	const isSidebarClick = sidebar && path.includes(sidebar)
+	const previewPane = document.getElementById("markdown-preview-pane")
+	const isPreviewClick = previewPane && path.includes(previewPane)
 
 	if (isEngineTermClick) {
 		term.focus()
@@ -3820,6 +3891,7 @@ document.addEventListener("click", (e) => {
 		miniTerm.focus()
 	} else if (
 		!isSidebarClick &&
+		!isPreviewClick &&
 		target.tagName !== "INPUT" &&
 		target.tagName !== "TEXTAREA" &&
 		(!selection || selection.toString() === "")
@@ -3827,7 +3899,7 @@ document.addEventListener("click", (e) => {
 		if (isTerminalMode) {
 			miniTerm.focus()
 		} else {
-			textarea?.focus()
+			textarea?.focus({ preventScroll: true })
 			updatePlaceholder()
 		}
 	}

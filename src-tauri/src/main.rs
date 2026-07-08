@@ -13,6 +13,7 @@ use tower_http::cors::{CorsLayer, Any};
 use std::sync::atomic::AtomicUsize;
 
 static ACTIVE_TITLE_GENERATIONS: AtomicUsize = AtomicUsize::new(0);
+static IN_FLIGHT_TITLE_GENERATIONS: std::sync::OnceLock<Mutex<std::collections::HashSet<String>>> = std::sync::OnceLock::new();
 
 // Project session containing its own PTY channels and shell process details
 #[allow(dead_code)]
@@ -1551,32 +1552,25 @@ fn parse_rfc3339_to_unix(s: &str) -> Option<u64> {
 }
 
 fn get_last_message_timestamp(filepath: &std::path::Path) -> Option<u64> {
-    use std::io::{Seek, SeekFrom, Read};
-    let mut file = std::fs::File::open(filepath).ok()?;
-    let metadata = file.metadata().ok()?;
-    let file_len = metadata.len();
+    use std::fs::File;
+    use std::io::{BufRead, BufReader};
     
-    let read_size = std::cmp::min(file_len, 4096) as usize;
-    if read_size == 0 {
-        return None;
-    }
-    let mut buffer = vec![0; read_size];
-    let seek_pos = file_len.saturating_sub(read_size as u64);
+    let file = File::open(filepath).ok()?;
+    let reader = BufReader::new(file);
+    let mut last_timestamp = None;
     
-    file.seek(SeekFrom::Start(seek_pos)).ok()?;
-    file.read_exact(&mut buffer).ok()?;
-    
-    let content = String::from_utf8_lossy(&buffer);
-    for line in content.lines().rev() {
-        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
-            if let Some(created_at) = obj.get("created_at").and_then(|v| v.as_str()) {
-                if let Some(ts) = parse_rfc3339_to_unix(created_at) {
-                    return Some(ts);
+    for line in reader.lines() {
+        if let Ok(line_str) = line {
+            if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&line_str) {
+                if let Some(created_at) = obj.get("created_at").and_then(|v| v.as_str()) {
+                    if let Some(ts) = parse_rfc3339_to_unix(created_at) {
+                        last_timestamp = Some(ts);
+                    }
                 }
             }
         }
     }
-    None
+    last_timestamp
 }
 
 static THREAD_INFO_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, CachedThreadInfo>>> = std::sync::OnceLock::new();
@@ -1775,7 +1769,10 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
 
         if !first_prompt.is_empty() && !first_resp.is_empty() {
             if let Some(idx) = first_resp_idx {
-                if ACTIVE_TITLE_GENERATIONS.load(Ordering::SeqCst) < 2 {
+                let in_flight = IN_FLIGHT_TITLE_GENERATIONS.get_or_init(|| Mutex::new(std::collections::HashSet::new()));
+                let mut in_flight_set = in_flight.lock().unwrap();
+                if !in_flight_set.contains(latest_thread_id) && ACTIVE_TITLE_GENERATIONS.load(Ordering::SeqCst) < 2 {
+                    in_flight_set.insert(latest_thread_id.to_string());
                     ACTIVE_TITLE_GENERATIONS.fetch_add(1, Ordering::SeqCst);
                     let latest_thread_id_clone = latest_thread_id.to_string();
                     let latest_filepath_clone = latest_filepath.to_path_buf();
@@ -1819,6 +1816,8 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                                 }
                             }
                         }
+                        let in_flight = IN_FLIGHT_TITLE_GENERATIONS.get_or_init(|| Mutex::new(std::collections::HashSet::new()));
+                        in_flight.lock().unwrap().remove(&latest_thread_id_clone);
                         ACTIVE_TITLE_GENERATIONS.fetch_sub(1, Ordering::SeqCst);
                     });
                 }
@@ -1837,8 +1836,10 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
         parsed_timestamp,
     };
 
-    let mut cache = cache_mutex.lock().unwrap();
-    cache.insert(latest_thread_id.to_string(), info.clone());
+    if found_title {
+        let mut cache = cache_mutex.lock().unwrap();
+        cache.insert(latest_thread_id.to_string(), info.clone());
+    }
     Some(info)
 }
 
@@ -1858,7 +1859,7 @@ fn get_thread_chain(
 }
 
 #[tauri::command]
-fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
+async fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
     use std::path::Path;
 
     let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
@@ -1881,15 +1882,23 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
         groups.entry(root_id).or_default().push(thread_id.clone());
     }
 
-    let mut thread_logs = Vec::new();
-
-    for (root_id, mut members) in groups {
+    let mut group_vec: Vec<(String, Vec<String>)> = groups.into_iter().collect();
+    for (_root_id, members) in &mut group_vec {
         members.sort_by(|a, b| {
             thread_mtimes.get(a).cloned().unwrap_or(0)
                 .cmp(&thread_mtimes.get(b).cloned().unwrap_or(0))
                 .then_with(|| a.cmp(b))
         });
-        
+    }
+    group_vec.sort_by(|a, b| {
+        let mtime_a = thread_mtimes.get(a.1.last().unwrap()).cloned().unwrap_or(0);
+        let mtime_b = thread_mtimes.get(b.1.last().unwrap()).cloned().unwrap_or(0);
+        mtime_b.cmp(&mtime_a).then_with(|| a.0.cmp(&b.0))
+    });
+
+    let mut thread_logs = Vec::new();
+
+    for (root_id, members) in group_vec {
         let root_thread_id = &root_id;
         let latest_thread_id = members.last().unwrap();
         
@@ -1950,9 +1959,35 @@ fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>, String> {
 }
 
 fn detect_project_path(content: &str) -> Option<String> {
-    let home = std::env::var("HOME").ok()?;
+    let home = std::env::var("HOME").ok().unwrap_or_else(|| "/Users/matt".to_string());
     let projects_prefix = format!("{}/projects/", home);
     
+    // 1. First try to extract from tool calls arguments (most accurate because it reflects actual actions)
+    for line in content.lines() {
+        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(line) {
+            if let Some(tool_calls) = obj.get("tool_calls").and_then(|v| v.as_array()) {
+                for tc in tool_calls {
+                    if let Some(args) = tc.get("args").and_then(|v| v.as_object()) {
+                        for key in &["Cwd", "AbsolutePath", "SearchPath", "TargetFile", "DirectoryPath"] {
+                            if let Some(val_str) = args.get(*key).and_then(|v| v.as_str()) {
+                                let normalized = val_str.replace("/Users/matthewmurphy/", &format!("{}/", home));
+                                if normalized.starts_with(&projects_prefix) {
+                                    let after = &normalized[projects_prefix.len()..];
+                                    let end_pos = after.find('/').unwrap_or(after.len());
+                                    let project_name = &after[..end_pos];
+                                    if !project_name.is_empty() {
+                                        return Some(format!("{}{}", projects_prefix, project_name));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Fallback to scanning text (original logic)
     // Normalize content to use current home instead of legacy user matthewmurphy
     let normalized_content = content.replace("/Users/matthewmurphy", &home);
     
@@ -1981,7 +2016,7 @@ fn detect_project_path(content: &str) -> Option<String> {
 }
 
 #[tauri::command]
-fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
+async fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
     use std::path::Path;
 
     let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
@@ -2002,15 +2037,23 @@ fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
         groups.entry(root_id).or_default().push(thread_id.clone());
     }
 
-    let mut thread_logs = Vec::new();
-
-    for (root_id, mut members) in groups {
+    let mut group_vec: Vec<(String, Vec<String>)> = groups.into_iter().collect();
+    for (_root_id, members) in &mut group_vec {
         members.sort_by(|a, b| {
             thread_mtimes.get(a).cloned().unwrap_or(0)
                 .cmp(&thread_mtimes.get(b).cloned().unwrap_or(0))
                 .then_with(|| a.cmp(b))
         });
-        
+    }
+    group_vec.sort_by(|a, b| {
+        let mtime_a = thread_mtimes.get(a.1.last().unwrap()).cloned().unwrap_or(0);
+        let mtime_b = thread_mtimes.get(b.1.last().unwrap()).cloned().unwrap_or(0);
+        mtime_b.cmp(&mtime_a).then_with(|| a.0.cmp(&b.0))
+    });
+
+    let mut thread_logs = Vec::new();
+
+    for (root_id, members) in group_vec {
         let root_thread_id = &root_id;
         let latest_thread_id = members.last().unwrap();
         
@@ -2148,7 +2191,7 @@ fn get_thread_id_from_path(filepath: &str) -> Option<String> {
 }
 
 #[tauri::command]
-fn read_thread_log(filepath: String) -> Result<String, String> {
+async fn read_thread_log(filepath: String) -> Result<String, String> {
     use std::fs;
     use std::path::Path;
 
@@ -2336,7 +2379,7 @@ fn open_devtools(window: tauri::Window) {
 }
 
 #[tauri::command]
-fn get_quota(state: tauri::State<AppState>) -> Result<String, String> {
+async fn get_quota(state: tauri::State<'_, AppState>) -> Result<String, String> {
     let mut cmd = std::process::Command::new("ag-quota");
     
     let home = std::env::var("HOME").unwrap_or_default();
@@ -2351,7 +2394,7 @@ fn get_quota(state: tauri::State<AppState>) -> Result<String, String> {
             .collect();
         paths.sort(); // Sorts chronologically since format is cli-YYYYMMDD_HHMMSS.log
         
-        for path in paths.iter().rev() {
+        for path in paths.iter().rev().take(10) {
             if let Ok(content) = std::fs::read_to_string(path) {
                 for line in content.lines().rev() {
                     if let Some(idx) = line.find("authenticated successfully as ") {
@@ -2884,8 +2927,8 @@ fn highlight_query_text(text: &str, query: &str) -> String {
 }
 
 #[tauri::command]
-fn search_project_threads(project_path: String, query: String) -> Result<Vec<ThreadSearchResult>, String> {
-    let threads = get_project_threads(project_path)?;
+async fn search_project_threads(project_path: String, query: String) -> Result<Vec<ThreadSearchResult>, String> {
+    let threads = get_project_threads(project_path).await?;
     let query_lower = query.to_lowercase();
     let mut results = Vec::new();
     

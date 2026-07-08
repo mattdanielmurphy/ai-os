@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 tmp/
 .last_usage
+
+# Build outputs
+dist/
+src-tauri/target/

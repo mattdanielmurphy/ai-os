@@ -79,7 +79,7 @@ def call_gemini_api(prompt, response):
     
     payload = {
         "project": "atlas-calculator",
-        "model": "gemini-1.5-flash-8b",
+        "model": "gemini-2.5-flash",
         "request": {
             "contents": [{
                 "parts": [{"text": f"{instruction}\n\n{user_content}"}]
@@ -114,7 +114,7 @@ def call_openrouter_api(prompt, response):
     user_content = f"User prompt:\n{prompt}\n\nAgent response:\n{response}"
     
     payload = {
-        "model": "google/gemini-1.5-flash-8b",
+        "model": "google/gemini-2.5-flash",
         "messages": [
             {"role": "user", "content": f"{instruction}\n\n{user_content}"}
         ]

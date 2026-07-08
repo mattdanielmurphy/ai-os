@@ -1,15 +1,15 @@
 ---
 id: "threads-list-for-projects-contains-threads-from-ot-2026-07-07"
-status: "in-progress"
+status: "review"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-08T01:46:40.298Z"
-modified: "2026-07-08T01:47:08.210Z"
+modified: "2026-07-08T02:16:47.385Z"
 completedAt: null
 labels: []
-order: "a0"
+order: "a3"
 ---
 # Threads list for projects contains threads from other projects
 
