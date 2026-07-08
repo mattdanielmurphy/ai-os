@@ -43,7 +43,7 @@ def main():
     req_data = json.dumps({
         "model": "claude-haiku*",
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 100,
+        "max_tokens": 400,
         "temperature": 0.2
     }).encode("utf-8")
 
@@ -57,14 +57,22 @@ def main():
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
             res_body = json.loads(response.read().decode("utf-8"))
-            content = res_body["choices"][0]["message"]["content"].strip()
-            # Clean up the output in case it wrapped with quotes
-            if content.startswith('"') and content.endswith('"'):
-                content = content[1:-1].strip()
-            if content.startswith("'") and content.endswith("'"):
-                content = content[1:-1].strip()
+            message = res_body["choices"][0]["message"]
+            content = message.get("content")
             if content:
-                commit_msg = content
+                content = content.strip()
+                # Clean up the output in case it wrapped with quotes
+                if content.startswith('"') and content.endswith('"'):
+                    content = content[1:-1].strip()
+                if content.startswith("'") and content.endswith("'"):
+                    content = content[1:-1].strip()
+                if content:
+                    commit_msg = content
+            else:
+                # Try fallback reasoning_content or other keys if available
+                reasoning = message.get("reasoning_content") or message.get("reasoning")
+                if reasoning:
+                    print(f"Warning: Model returned reasoning but no content: {reasoning[:100]}...", file=sys.stderr)
     except Exception as e:
         print(f"Warning: Failed to generate commit message via LiteLLM ({e}). Using fallback.", file=sys.stderr)
 
