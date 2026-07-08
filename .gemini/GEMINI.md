@@ -19,7 +19,10 @@
 7. **Documentation:** When implementing features or bug fixes, always document any new capabilities, enhancements, or architectural additions by updating the features list in the `FEATURES.md` file at the root of the project.
 8. **Token Protection & Builds:** NEVER run raw verbose compile/build commands (like raw `xcodebuild` or raw compiler tasks) that output massive build logs. Always filter command outputs to print only the success status or relevant compiler error/warning highlights (and cap total output size/lines) to prevent blowing out the agent input token context window.
 9. **Directory Consideration & Target Folders:** When asked to create files, utilities, or projects, NEVER litter them directly in generic parent directories (e.g. `~/projects` or a non-project root directory). First consider the current directory: if it is a generic container directory, you MUST create a dedicated sub-directory, move into it, and place all new files and initialize repositories inside that sub-directory.
-10. **Telemetry Prohibitions:** NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts. If you need to assess costs or execute secondary tasks, query the user or delegate to a subagent via the `invoke_subagent` tool instead.
+10. **Telemetry Prohibitions & Task Delegation:**
+    - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
+    - **Strict Quota Conservation:** You MUST delegate editing and code generation tasks to cheaper subagents or scripts (like `mechanical_editor.py`) rather than reading and modifying files directly. Reading entire source files and performing large edits blows out the parent agent's context window, consuming premium quota.
+    - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file. For all non-trivial changes, define a clear plan and delegate.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>
