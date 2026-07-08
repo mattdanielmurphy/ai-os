@@ -10,12 +10,12 @@ import re
 from pathlib import Path
 
 def call_litellm(prompt, response_format=None):
-    url = "http://localhost:4000/v1/chat/completions"
+    url = "http://localhost:8082/v1/chat/completions"
     headers = {
         "Content-Type": "application/json"
     }
     data = {
-        "model": "deepseek",
+        "model": "claude-3-5-haiku-20241022",
         "messages": [
             {"role": "user", "content": prompt}
         ],
@@ -26,7 +26,7 @@ def call_litellm(prompt, response_format=None):
 
     req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=60) as response:
+        with urllib.request.urlopen(req, timeout=180) as response:
             res_body = response.read().decode("utf-8")
             res_json = json.loads(res_body)
             
@@ -37,7 +37,6 @@ def call_litellm(prompt, response_format=None):
             
             # Log metrics if telemetry available
             try:
-                import sys
                 from pathlib import Path
                 sys.path.append(str(Path(__file__).parent))
                 import telemetry_db

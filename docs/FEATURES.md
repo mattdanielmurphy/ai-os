@@ -141,7 +141,6 @@
 * **Engine Label Update:** Updated `index.html` toggle text to explicitly show `DeepSeek V4 Flash (Claude Code)` and `Agy (Orchestrated)`.
 * **Knowledge Routing Hook:** Added automatic inline prompt injection in `src/main.ts` that enforces Obsidian path constraint (`/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`) whenever the query contains the keyword "notes".
 * **Fixed Engine Routing:** Configured `src/main.ts` to route to Claude Code (`claude -p "[prompt]"`) or Orchestrated Agy (`agy --add-dir=$PWD --prompt "[prompt]" --dangerously-skip-permissions`).
-* **Cost Telemetry Execution:** Chained the `/Users/matthewmurphy/projects/ai-os/scripts/get_last_cost.py` cost tracking script to PTY executions in `src/main.ts` via zsh sequential execution (`;`).
 * **macOS Profiling on Boot:** Updated `bin/ai-os` to automatically generate a static system profile (`memory/macOS_profile.md`) containing SPStorageDataType and active LaunchAgents on app startup.
 
 ### [2026-06-27] UI Refactoring & Visual Clipping Fix
@@ -189,11 +188,8 @@
 ### [2026-06-27] Phase 6: Accurate Telemetry, Quota Tracking, & Sub-Model Costing
 * **Centralized Telemetry Database:** Implemented `scripts/telemetry_db.py` to record sub-model LiteLLM calls (with prompt/completion token details and DeepSeek-based pricing calculations) and track `agy` execution turns in a local database `~/.ai-os-telemetry.json`.
 * **Orchestrator Cost Interception:** Modified `scripts/mechanical_editor.py` to intercept the `usage` block from the LiteLLM API response and log metrics to `telemetry_db.py` on success.
-* **Smart Cost & Quota Reporter:** Rewrote `scripts/get_last_cost.py` to support `--agent claude` and `--agent agy` flags, outputting sub-model metrics for Claude, and logging turns while tracking rolling turn limits (50 turns/5hr and 200 turns/weekly) for Agy.
-* **System Telemetry Rules:** Injected new agent rules using `append_system_rule.py` to require Agy and Claude to run `get_last_cost.py` at the end of every turn.
 
 ### [2026-06-27] Phase 8: Real-Time Quota Telemetry (Source of Truth)
-* **Real-Time Quota API Integration:** Rewrote `scripts/get_last_cost.py` to fetch active Antigravity quotas directly from the internal gRPC endpoint (`https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota`) on `daily-cloudcode-pa.googleapis.com`.
 * **Automated OAuth Token Refresh:** Implemented a robust token refresh mechanism using client ID `1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com` and client secret `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`. When the local token in `~/.gemini/antigravity-cli/antigravity-oauth-token` is expired or close to expiry, the script programmatically requests a refresh and persists the updated token back to disk.
 * **Accurate Percentage Outputs:** Replaced the naive turn-counter approximation with actual server-side quota fractions. Formats remaining 5-hour and weekly quotas as real percentages (e.g. `81% (Real)` and `80% (Real)`) based on `gemini-2.5-pro` and `gemini-2.5-flash` bucket statuses.
 
@@ -209,9 +205,6 @@
 * **Automated Context Handoff (`scripts/context_handoff.py`):** Built state handoff logging to create standardized context files in `.agent-logs/` and updated `GEMINI.md` system rules to allow spawning a fresh child `agy` process to resume work and prevent context window bloat.
 * **Indexed Memory Architecture:** Upgraded context handoff system to separate succinct high-level summaries from granular details using `.agent-logs/details/step_<timestamp_or_id>.md` references, preventing handoff context bloat.
 \n### [2026-06-27] Add Project Flow & Interactive Modal Dialog\n* **Add Project Flow Modal:** Created a beautiful, modern, dark-themed, glassmorphic interactive HTML modal that prompts the user to either open an existing folder or start a new project when clicking the '+' sidebar button.\n* **Open Existing Finder Dialog:** Created `select_directory` command in Rust backend integrating `tauri::api::dialog::blocking::FileDialogBuilder` to prompt macOS native Finder folder selector and import existing codebases.\n* **Start New Git & GitHub Repository:** Implemented `create_new_project` command in Rust backend that automatically structures new projects in `~/projects/<name>`, initializes a local git repository with an initial commit, creates a private GitHub repository using the `gh` CLI tool, and links the local and remote repositories.\n* **Git Repo Name Auto-generation:** Added real-time kebab-case transformation in the frontend project creation form to automatically propose a compliant git repository name based on the entered human-readable project name.\n
-### [2026-06-27] Telemetry Hallucination Prevention
-* **Telemetry Output Enforcement:** Modified `get_last_cost.py` to output the exact telemetry blocks matching `[AGY TELEMETRY]` with three terminating asterisks.
-* **Strict Telemetry Instruction:** Updated global `GEMINI.md` system guidelines to strictly forbid manual hallucination of telemetry or quota numbers, forcing agents to call the script directly.
 
 ### [2026-06-27] Dynamic DeepSeek Delegation Toggle
 * **Dynamic Toggle in `.zshrc_aios`:** Added `AIOS_DELEGATE` environment variable and `delegate_on`/`delegate_off` aliases.

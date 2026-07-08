@@ -1,32 +1,63 @@
-# CLAUDE CODE - SYSTEM INSTRUCTIONS
+<SYSTEM_INSTRUCTIONS>
+<AUTO_COMMIT_PROTOCOL>
+**Commit:** Generate a technical commit message and run `git add . && git commit -m "[message]"`.
+</AUTO_COMMIT_PROTOCOL>
 
-## GLOBAL RULES
-- The Deletion Ban: You must never run `rm -rf`. If you need to delete, use `mv [path] ~/.Trash/`.
-- Memory Constraint: You must not run raw `git log` commands. You MUST use the 2-layer Git pipeline: First call `/Users/matt/projects/ai-os/scripts/memory_search.sh <keyword>`, then call `/Users/matt/projects/ai-os/scripts/memory_diff.sh <ID>`.
-- Write Constraint (Triage Editing System): For precise, simple edits (replacing a string, appending), you MUST use `/Users/matt/projects/ai-os/scripts/precision_edit.py` to save tokens. Before making any complex edit or refactor, the agent MUST check the delegation state by running `echo $AIOS_DELEGATE`.
-  - Scenario A ($AIOS_DELEGATE is "true"): Use `scripts/mechanical_editor.py` (Quota Saving Mode) for complex logic generation.
-  - Scenario B ($AIOS_DELEGATE is "false"): Premium Speed Mode. The agent has full authorization to write the code itself, bypassing `mechanical_editor.py`. However, to prevent bash escaping errors, the agent MUST write the code using a Quoted Heredoc directed into a temporary file, then move it:
-    cat << 'EOF_SAFE' > target_file.tmp
-    [CODE]
-    EOF_SAFE
-    mv target_file.tmp target_file
-    (The single quotes around 'EOF_SAFE' are absolutely mandatory to prevent shell interpolation errors.)
+<PROJECT_DETECTION>
+1. **Root Rule:** A "Project Root" is the nearest ancestor containing a `.git` folder, `package.json`, `Cargo.toml`, `requirements.txt`, or `go.mod`.
+2. **Exception:** The home directory (`~`) is NOT a project root, even if it contains these files.
+3. **Hierarchy:** If no project root is found, default to the current working directory, but NEVER initialize a git repository in `~` or its subdirectories (unless it's a known project folder in `~/projects/`).
+</PROJECT_DETECTION>
 
-## CLAUDE-SPECIFIC RULES
-- Cost & Quota Telemetry: You MUST run `/Users/matt/projects/ai-os/scripts/get_last_cost.py --agent claude` ONLY when you have fully completed a task and are yielding control back to the user. DO NOT run this script during internal tool polling, while waiting for background tasks, or between intermediate steps, as it will cause an infinite loop.
+<CORE_RULES>
+1. **Context:** Read `AG_CONTEXT.md` at the project root before ANY work. If missing, create it at the root. Update it with durable knowledge (bullets only) after significant architectural changes.
+2. **Safety:** NEVER use `rm`. ALWAYS use `mv [path] ~/.Trash/` (Exception: `node_modules`).
+3. **Tooling:** ALWAYS use `pnpm`. NEVER use `npm`.
+4. **Privacy:** ALL generated GitHub repos MUST use `--private`.
+5. **No Repo in ~:** NEVER initialize a git repository in the home directory (`~`).
+6. **Local Temp:** NEVER use system-level `/tmp`. ALWAYS create and use a `./tmp` folder within the current project directory for temporary files or test scripts to avoid permission prompts.
+7. **Documentation:** When implementing features or bug fixes, always document any new capabilities, enhancements, or architectural additions by updating the features list in the `FEATURES.md` file at the root of the project.
+8. **Token Protection & Builds:** NEVER run raw verbose compile/build commands (like raw `xcodebuild` or raw compiler tasks) that output massive build logs. Always filter command outputs to print only the success status or relevant compiler error/warning highlights (and cap total output size/lines) to prevent blowing out the agent input token context window.
+9. **Directory Consideration & Target Folders:** When asked to create files, utilities, or projects, NEVER litter them directly in generic parent directories (e.g. `~/projects` or a non-project root directory). First consider the current directory: if it is a generic container directory, you MUST create a dedicated sub-directory, move into it, and place all new files and initialize repositories inside that sub-directory.
+10. **Telemetry Prohibitions & Task Delegation:**
+    - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
+    - **Strict Quota Conservation:** You MUST delegate editing and code generation tasks to cheaper subagents or scripts (like `mechanical_editor.py`) rather than reading and modifying files directly. Reading entire source files and performing large edits blows out the parent agent's context window, consuming premium quota.
+    - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file, and the target file is small or you already know the exact edit point. For all non-trivial changes, define a clear plan and delegate.
+</CORE_RULES>
 
-# Human-Centric UI Architecture Rules
+<AGENT_WORK_LOGS>
+**Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-## 1. Styling Constraints
-- DO NOT use Tailwind CSS, utility-class frameworks, or inline styles.
-- Use standard, vanilla CSS via CSS Modules (`*.module.css`).
-- Keep presentation layout separate from logic. A human must be able to open the `.css` file and tweak margins, colors, and padding using standard web specifications.
+0. **Fresh Thread Context:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, and the `.agent-logs/` directory. Read the project description, active goals, and the most recent 2-3 agent log files to reconstruct a rich, continuous understanding of the codebase, recent user requests, architectural decisions, and current focus, acting as if you are in the same ongoing thread.
+1. **Log Directory:** ALWAYS look for and maintain an `.agent-logs/` directory at the root of the project.
+2. **Reading Logs:** Before starting a bug fix or feature, scan `.agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
+3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `.agent-logs/`.
+   - **Naming Convention:** `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
+   - **Required Sections:**
+     - `## Goal`: What the user asked for (restate user's instructions and context clearly).
+     - `## User Feedback & Decisions`: Specific user feedback, preferences, and choices made during this session.
+     - `## Changes Made`: Files modified/created, what was changed, and why.
+     - `## What Worked`: Confirmed fixes and completed tasks.
+     - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention (crucial for future agents).
+     - `## Architecture Notes`: Discoveries about how the codebase works that aren't obvious.
+4. **Commit:** Commit the log file alongside your code changes.
+</AGENT_WORK_LOGS>
 
-## 2. File Organization & Discoverability
-- Every UI component must live in its own dedicated directory named after the component (PascalCase).
-- Absolute ban on multi-component files. If a component requires a sub-item (like a list row), spin it out into its own folder.
-- File structure must mirror visual hierarchy where practical.
+<WORKSPACE_RULES>
+## Username & Path Migration Guardrail
+- **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
+- **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:
+  - ALWAYS translate paths containing `/Users/matthewmurphy/` to `/Users/matt/` (or use relative paths or the active home directory reference `~/` / `std::env::var("HOME")` where appropriate).
+  - Pay special attention to symbolic links, environment setups, or hardcoded scripts that may still reference the legacy username and correct them on discovery.
 
-## 3. DOM Tagging for Human Maintenance
-- The top-level element of every component must include a descriptive `data-ui` attribute matching the component or feature name (e.g., `data-ui="midi-track-row"`).
-- This is a strict requirement to allow human operators to use browser developer tools to inspect an element and instantly map it back to the source file via global search.
+## CSS & Styling Guardrails
+- **Constraint**: ALL styles must reside in the central stylesheet (`src/styles.scss`). Never write inline style attributes (`style="..."`) in HTML templates, and never set style properties directly on DOM elements in JavaScript/TypeScript (e.g., `element.style.color = "red"`), unless dynamic layout calculations are absolutely necessary (e.g., dragging window splitters, resizing panel dimensions, or applying dynamic user-selected theme colors). For general UI states, visibility toggles, and formatting, use CSS classes (e.g., `element.classList.toggle('hidden')`) defined in the stylesheet.
+
+## Communication & Interstitial Messages Guardrail
+- **Constraint**: NEVER output interstitial status messages, placeholder updates, or intermediate commentary before running commands, launching background tasks, or awaiting compilation/builds (e.g., "I have initiated the build process...", "I will update you as soon as...", "Running the command..."). Simply execute the necessary tools/commands silently or proceed directly without writing text. Only present the final completed results/output when the overall task or step is fully finished.
+
+## macOS Environment Reference
+- **Context**: The host machine runs custom Launch Agents, Hammerspoon scripting, and specific helper tools.
+- **Constraint**: ALWAYS refer to [MAC_ENVIRONMENT.md](file:///Users/matt/projects/ai-os/docs/MAC_ENVIRONMENT.md) before installing new software, configuring background services/daemons, scripting custom window/system automation, or making system-wide integration decisions.
+</WORKSPACE_RULES>
+</SYSTEM_INSTRUCTIONS>
