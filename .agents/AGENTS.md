@@ -46,9 +46,9 @@
   - To modify files, **ALWAYS** delegate to a subagent script (e.g. `python3 scripts/mechanical_editor.py` or `python3 scripts/precision_edit.py`) via `run_command`.
   - The orchestrator coordinates, analyzes snippets, plans, instructs subagents via detailed prompts, runs build/check commands, and verifies edits, but must never touch file contents directly.
 - **Model Selection Guidelines for mechanical_editor.py**:
-  - Use `claude-haiku-ds-v4-flash-low` by default (for simple edits).
-  - Use `claude-haiku-ds-v4-flash-med` for moderate edits.
-  - Use `claude-haiku-ds-v4-flash-high` or `claude-fable-ds-v4-pro-low/med/high` for complex tasks.
-  - Use `claude-sonnet-gem-2.5-flash` or `claude-opus-gem-2.5-pro` for tasks requiring web search or image-reading.
+  - Use `claude-sonnet-gem-2.5-flash` by default (for simple/lightweight edits to optimize speed/cost).
+  - Use `claude-haiku-ds-v4-flash-low` or `claude-haiku-ds-v4-flash-med` for moderate edits.
+  - Use `claude-haiku-ds-v4-flash-high` or `claude-fable-ds-v4-pro-low/med/high` for complex reasoning tasks.
+  - Use `claude-opus-gem-2.5-pro` for tasks requiring deep context search, web search, or image-reading.
 
 
