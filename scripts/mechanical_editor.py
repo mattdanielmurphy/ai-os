@@ -20,7 +20,7 @@ def list_available_models(config_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Mechanical Editor utilizing Claude Code CLI")
-        parser.add_argument("filepath", nargs="?", help="Path to the file to modify, or a technical spec if --spec is not provided")
+    parser.add_argument("filepath", nargs="?", help="Path to the file to modify, or a technical spec if --spec is not provided")
     parser.add_argument("--spec", help="Technical spec describing the modifications")
     parser.add_argument("--model", default="claude-sonnet-gem-2.5-flash", help="Target LiteLLM mapped model name")
     parser.add_argument("-l", "--list", action="store_true", help="List available models from LiteLLM config")
@@ -63,13 +63,6 @@ def main():
     else:
         prompt = spec_arg
         
-    filepath = Path(args.filepath).resolve()
-    if not filepath.exists():
-        print(f"Error: File {filepath} does not exist.", file=sys.stderr)
-        sys.exit(1)
-        
-    prompt = f"Apply this technical spec: '{args.spec}' to the file: '{filepath}'"
-    
     cmd = [
         "claude",
         "--model",
@@ -79,7 +72,8 @@ def main():
         "--dangerously-skip-permissions"
     ]
     
-    print(f"[Mechanical Editor] Delegating to Claude Code using model profile '{args.model}' for {filepath}...", flush=True)
+    target_desc = filepath_arg if filepath_arg else "workspace"
+    print(f"[Mechanical Editor] Delegating to Claude Code using model profile '{args.model}' for {target_desc}...", flush=True)
     
     try:
         with open("/dev/null", "r") as devnull:

@@ -44,6 +44,8 @@
   - **NEVER** use `view_file`, `write_to_file`, `replace_file_content`, or `multi_replace_file_content` directly from the main orchestrator (Gemini).
   - To inspect files, **ALWAYS** use `grep_search` to find matching query patterns or read small snippets, or delegate file reads to a command-line script/subagent.
   - To modify files, **ALWAYS** delegate to a subagent script (e.g. `python3 scripts/mechanical_editor.py` or `python3 scripts/precision_edit.py`) via `run_command`.
+    - `mechanical_editor.py` can be called without a specified filepath to delegate broader workspace-level or multi-file tasks. Delegate tasks to `mechanical_editor.py` earlier in the process, rather than breaking them down into single-file edits.
+  - To verify a subagent edit, **NEVER** use `cat` or `view_file` to read entire files. Instead, use `git diff <file>` to inspect the exact modifications, or run relevant build/test commands to verify correctness.
   - The orchestrator coordinates, analyzes snippets, plans, instructs subagents via detailed prompts, runs build/check commands, and verifies edits, but must never touch file contents directly.
 - **Model Selection Guidelines for mechanical_editor.py**:
   - Use `claude-sonnet-gem-2.5-flash` by default (for simple/lightweight edits to optimize speed/cost).
