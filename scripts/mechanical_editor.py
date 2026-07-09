@@ -22,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description="Mechanical Editor utilizing Claude Code CLI")
     parser.add_argument("filepath", nargs="?", help="Path to the file to modify")
     parser.add_argument("spec", nargs="?", help="Technical spec describing the modifications")
-    parser.add_argument("--model", default="claude-haiku-ds-v4-flash-med", help="Target LiteLLM mapped model name")
+    parser.add_argument("--model", default="claude-haiku-ds-v4-flash-low", help="Target LiteLLM mapped model name")
     parser.add_argument("-l", "--list", action="store_true", help="List available models from LiteLLM config")
     
     args = parser.parse_args()
