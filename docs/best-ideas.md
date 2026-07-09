@@ -6,6 +6,9 @@ This document synthesizes the core philosophies, architectural breakthroughs, an
 
 ## 1. Core Philosophies
 
+### Clean Workspace & Temporary Scripts
+Single-purpose or one-off scripts should be directed to `/tmp` to prevent codebase pollution. As a future enhancement, we could store these scripts in a persistent global archive outside the workspace for reusability without cluttering project directories.
+
 ### Token Parsimony
 Context windows are sacred resources. Rather than feeding an agent thousands of lines of raw code, `ai-os` prioritizes sending the minimal set of structural definitions (ASTs/Repo Maps) and limits full-file reads strictly to active workspace files.
 
