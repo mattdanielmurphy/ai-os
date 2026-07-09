@@ -1,5 +1,5 @@
 ---
-id: "project-has-gotten-too-big-i-want-to-separate-things-the-cod"
+id: "separate-code-and-notes-context"
 status: "to-do"
 priority: "medium"
 assignee: null
@@ -11,7 +11,7 @@ completedAt: null
 labels: []
 order: "a4"
 ---
-# project has gotten too big; I want to separate things: the code, and the notes a...
+# Separate Code and Notes Context
 
 project has gotten too big; I want to separate things: the code, and the notes about the project. Obviously they're both still part of the project and are in the project folder.
   I guess I'm thikning  a directory structure like this:

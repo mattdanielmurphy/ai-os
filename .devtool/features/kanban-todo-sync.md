@@ -1,5 +1,5 @@
 ---
-id: "add-a-kanban-view-for-todos-with-a-markdown-file-thats-in-sy"
+id: "kanban-todo-sync"
 status: "todo"
 priority: "medium"
 assignee: null
@@ -11,7 +11,7 @@ completedAt: null
 labels: []
 order: "a5"
 ---
-# add a kanban view for todos with a markdown file that's in sync and I can edit e...
+# Kanban Todo Sync
 
 add a kanban view for todos with a markdown file that's in sync and I can edit externally
   - each todo can be assigned to a thread (ai-os thread, a "session" of agy threads is what I'll call it now--update the readme please)

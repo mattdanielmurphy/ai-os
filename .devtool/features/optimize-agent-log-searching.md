@@ -1,5 +1,5 @@
 ---
-id: "i-think-another-menial-task-that-should-be-optimized-signifi"
+id: "optimize-agent-log-searching"
 status: "todo"
 priority: "medium"
 assignee: null
@@ -11,6 +11,6 @@ completedAt: null
 labels: []
 order: "a18"
 ---
-# I think another menial task that should be optimized significantly is agent-log ...
+# Optimize Agent Log Searching
 
 I think another menial task that should be optimized significantly is agent-log searching. We should maybe use a dumb and cheap triage model before sending anything to `agy` that finds relevant context, and maybe rewrites the user's message or formulates it into more of a plan; does basic organization. We'll have to be careful that it doesn't editorialize too much though.

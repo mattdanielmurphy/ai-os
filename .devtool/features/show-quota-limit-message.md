@@ -1,5 +1,5 @@
 ---
-id: "show-a-message-when-we-run-out-of-quota-this-appears-in-the-"
+id: "show-quota-limit-message"
 status: "todo"
 priority: "medium"
 assignee: null
@@ -11,6 +11,6 @@ completedAt: null
 labels: []
 order: "a14"
 ---
-# Show a message when we run out of quota (this appears in the TUI as `⚠ Individua...
+# Show Quota Limit Message
 
 Show a message when we run out of quota (this appears in the TUI as `⚠ Individual quota reached. Please upgrade your subscription to increase your limits. \n Resets in 3h50m27s.`)

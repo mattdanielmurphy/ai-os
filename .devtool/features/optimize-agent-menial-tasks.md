@@ -1,5 +1,5 @@
 ---
-id: "help-the-main-smart-agent-stop-doing-menial-tasks-like-git-c"
+id: "optimize-agent-menial-tasks"
 status: "todo"
 priority: "medium"
 assignee: null
@@ -11,6 +11,6 @@ completedAt: null
 labels: []
 order: "a16"
 ---
-# Help the main smart agent stop doing menial tasks like git commits etc.
+# Optimize Agent Menial Tasks
 
 Help the main smart agent stop doing menial tasks like git commits etc.

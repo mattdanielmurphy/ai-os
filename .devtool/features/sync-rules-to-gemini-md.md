@@ -1,5 +1,5 @@
 ---
-id: "rules-were-not-transferred-to-the-original-geminim-2026-07-07"
+id: "sync-rules-to-gemini-md"
 status: "review"
 priority: "critical"
 assignee: null
@@ -11,6 +11,6 @@ completedAt: null
 labels: []
 order: "a4"
 ---
-# rules were NOT transferred to the original GEMINI.md!
+# Sync Rules to GEMINI.md
 
 Agents aren't following any rules right now!
