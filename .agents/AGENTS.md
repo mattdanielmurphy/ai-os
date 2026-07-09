@@ -35,3 +35,15 @@
   - Check whether the transcript file exists at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` and use the correct absolute path.
 - **Fresh Thread Context & Transcript Loading**: When you start a new task in a fresh thread, immediately scan the `agent-logs/` directory for the most recent 2-3 agent log files. When you find relevant agent logs, read their transcript pointers, and then use `view_file` to load/inspect the relevant parts of those transcripts to gather complete context, trace detailed command executions, and ensure you do not repeat past mistakes.
 
+## Systemic Delegation Settings & Orchestrator-Only Mode
+- **Context**: The orchestrator (Gemini) can operate in one of three delegation modes:
+  1. **Mode 1 (Self-Contained Mode)**: The agent performs all tasks (reads, writes, commands) directly without delegating.
+  2. **Mode 2 (Mixed Delegation Mode)**: The agent delegates significant, repetitive, or simple tasks (like git commits) to subagents, but may read or write files directly for small, targeted edits.
+  3. **Mode 3 (Orchestrator-Only Mode)**: The agent acts strictly as an orchestrator and coordinator.
+- **Constraint (ACTIVE MODE: Mode 3)**:
+  - **NEVER** use `view_file`, `write_to_file`, `replace_file_content`, or `multi_replace_file_content` directly from the main orchestrator (Gemini).
+  - To inspect files, **ALWAYS** use `grep_search` to find matching query patterns or read small snippets, or delegate file reads to a command-line script/subagent.
+  - To modify files, **ALWAYS** delegate to a subagent script (e.g. `python3 scripts/mechanical_editor.py` or `python3 scripts/precision_edit.py`) via `run_command`.
+  - The orchestrator coordinates, analyzes snippets, plans, instructs subagents via detailed prompts, runs build/check commands, and verifies edits, but must never touch file contents directly.
+
+

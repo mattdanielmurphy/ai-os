@@ -1,6 +1,6 @@
 ---
 id: "audit-transcripts-token-waste"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
