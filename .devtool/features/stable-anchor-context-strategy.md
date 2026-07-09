@@ -1,15 +1,15 @@
 ---
 id: "stable-anchor-context-strategy"
-status: "todo"
+status: "review"
 priority: "high"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-08T00:37:00.000Z"
-modified: "2026-07-08T00:37:00.000Z"
+modified: "2026-07-09T20:47:33.633Z"
 completedAt: null
 labels: []
-order: "a1"
+order: "a0"
 ---
 # Stable Anchor Context Strategy
 

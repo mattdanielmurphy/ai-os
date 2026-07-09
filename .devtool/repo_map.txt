@@ -1,0 +1,995 @@
+
+# File: legacy-tauri-gui/vite.config.ts
+  import { ... }
+
+# File: legacy-tauri-gui/scripts/fix_terminal.py
+  import re
+  content = f.read()
+  content = content.replace('const handleLink = (_e: MouseEvent, uri:...
+  custom_key_handler_search = "term.attachCustomKeyEventHandler((e) => {\n    if (e.key...
+  custom_key_handler_replace = "term.attachCustomKeyEventHandler((e) => {\n    if (e.key...
+  content = content.replace(custom_key_handler_search, custom_key_han...
+  mini_key_handler_search = "miniTerm.attachCustomKeyEventHandler((e) => {\n    if (e...
+  mini_key_handler_replace = "miniTerm.attachCustomKeyEventHandler((e) => {\n    if (e...
+  content = content.replace(mini_key_handler_search, mini_key_handler...
+  resize_pty_search = 'const resizePty = () => {\n    fitAddon.fit()\n    miniF...
+  resize_pty_replace = 'const resizePty = () => {\n    try {\n        fitAddon.f...
+  content = content.replace(resize_pty_search, resize_pty_replace)
+
+# File: legacy-tauri-gui/scripts/spare_engine.js
+
+
+# File: legacy-tauri-gui/src-tauri/build.rs
+  fn main() { ... }
+
+# File: legacy-tauri-gui/src-tauri/src/main.rs
+  use portable_pty:: { ... }
+  use std::io:: { ... }
+  use std::sync:: { ... }
+  use std::collections::HashMap;
+  use tauri:: { ... }
+  use axum:: { ... }
+  use tower_http::cors:: { ... }
+  use std::sync::atomic::AtomicUsize;
+  static ACTIVE_TITLE_GENERATIONS: AtomicUsize = AtomicUsize::new(0);
+  static IN_FLIGHT_TITLE_GENERATIONS: std::sync::OnceLock<Mutex<std::collections::HashSet<String>>> = std::sync::OnceLock::new();
+  struct ProjectSession { ... }
+  struct ExecutionPayload { ... }
+  struct AppState { ... }
+  struct Payload { ... }
+  struct CommitPayload { ... }
+  struct RevisionEvent { ... }
+  struct ContextSyncPayload { ... }
+  struct GeminiSyncPayload { ... }
+  struct SkillItem { ... }
+  use axum::extract::ws:: { ... }
+  use futures_util:: { ... }
+  use tokio::sync::mpsc;
+  use std::sync::atomic:: { ... }
+  struct WsState { ... }
+  static WS_STATE: std::sync::OnceLock<std::sync::Mutex<WsState>> = std::sync::OnceLock::new();
+  static CLIENT_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+  fn get_ws_state() -> &'static std::sync::Mutex<WsState> { ... }
+  fn spawn_axum_server(app_handle: tauri::AppHandle) { ... }
+  fn is_tmux_available() -> bool { ... }
+      static AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+  fn has_tmux_session(session_name: &str) -> bool { ... }
+  fn get_tmux_session_name(project_path: &str, terminal_type: &str, thread_id: Option<&str>) -> String { ... }
+  fn get_tmux_pane_pid(session_name: &str) -> Option<u32> { ... }
+  fn is_engine_running_proc(engine: &str, project_path: &str, thread_id: Option<&str>, shell_pid: Option<u32>) -> bool { ... }
+  fn trigger_tmux_refresh(_project_path: &str, _engine: &str) { ... }
+  fn spawn_single_pty(
+  fn is_process_alive(pid: u32) -> bool { ... }
+  fn ensure_engine_pty(
+  fn ensure_mini_pty(
+  struct SwitchResult { ... }
+  fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), String> { ... }
+  fn spawn_fresh_engine(
+  fn initialize_project_session(project_path: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<u32, String> { ... }
+  fn switch_active_project(project_path: String, engine: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<SwitchResult, String> { ... }
+  fn write_to_pty(data: String, project_path: String, terminal_type: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> { ... }
+  fn refresh_tmux_session(project_path: String, engine: String) -> Result<(), String> { ... }
+  fn resize_pty(rows: u16, cols: u16, project_path: String, terminal_type: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> { ... }
+  fn is_engine_running(engine: String, project_path: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<bool, String> { ... }
+  fn find_agent_pid(shell_pid: u32) -> Option<u32> { ... }
+  fn has_open_write_files(pid: u32) -> bool { ... }
+  fn has_active_network_traffic(pid: u32) -> bool { ... }
+  fn has_child_processes(agent_pid: u32) -> bool { ... }
+  struct PauseStatusPayload { ... }
+  fn toggle_process_pause(project_path: String, engine: String, pause: bool, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> { ... }
+  fn close_project_session(project_path: String, state: tauri::State<AppState>) -> Result<(), String> { ... }
+  fn create_new_project(name: String, git_repo_name: String) -> Result<String, String> { ... }
+      use std::fs;
+      use std::process::Command;
+      use std::path::Path;
+  fn copy_tmux_selection(project_path: String, terminal_type: String, thread_id: Option<String>) -> Result<(), String> { ... }
+  fn open_path(path: String) -> Result<(), String> { ... }
+  fn get_initial_project() -> Option<String> { ... }
+  struct ThreadLog { ... }
+  fn get_root_thread_id(thread_id: &str, child_to_parent: &HashMap<String, String>) -> String { ... }
+  static CHILD_TO_PARENT_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, String>>> = std::sync::OnceLock::new();
+  struct CachedThreadInfo { ... }
+  fn is_leap_year(year: u64) -> bool { ... }
+  fn parse_rfc3339_to_unix(s: &str) -> Option<u64> { ... }
+  fn get_last_message_timestamp(filepath: &std::path::Path) -> Option<u64> { ... }
+      use std::fs::File;
+      use std::io:: { ... }
+  static THREAD_INFO_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, CachedThreadInfo>>> = std::sync::OnceLock::new();
+  fn get_child_to_parent_map(brain_dir: &std::path::Path) -> HashMap<String, String> { ... }
+                              use std::io::Read;
+  fn scan_brain_threads(brain_dir: &std::path::Path) -> (HashMap<String, String>, HashMap<String, u64>) { ... }
+  fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &str) -> Option<CachedThreadInfo> { ... }
+      use std::fs;
+      use std::io::Read;
+  fn get_thread_chain(
+      use std::path::Path;
+  fn detect_project_path(content: &str) -> Option<String> { ... }
+      use std::path::Path;
+  fn delete_thread(id: String) -> Result<(), String> { ... }
+      use std::path::Path;
+  fn save_prompt_draft(project_path: String, content: String) -> Result<(), String> { ... }
+      use std::fs;
+      use std::path::Path;
+  fn load_prompt_draft(project_path: String) -> Result<String, String> { ... }
+      use std::fs;
+      use std::path::Path;
+  fn get_thread_id_from_path(filepath: &str) -> Option<String> { ... }
+      use std::fs;
+      use std::path::Path;
+  fn file_exists(filepath: String) -> bool { ... }
+  fn patch_thread_log_with_output(
+      use std::fs;
+      use std::path::Path;
+      use std::io::Read;
+  fn open_devtools(window: tauri::Window) { ... }
+  pub struct BrowserContext { ... }
+  fn dispatch_to_gemini(app_handle: tauri::AppHandle, prompt: String, context: Option<BrowserContext>) -> Result<(), String> { ... }
+              const promptText = event.payload;
+              const checkExist = setInterval(function() { ... }
+                  const inputBox = document.querySelector('rich-textarea') || document.querySelector('div[contenteditable="true"]') || document.querySelector('textarea');
+                          const sendBtns = Array.from(document.querySelectorAll('button')).filter(b => 
+  fn read_thread_notes_file() -> Result<String, String> { ... }
+  fn write_thread_notes_file(content: String) -> Result<(), String> { ... }
+  fn main() { ... }
+                const target = document.querySelector('.input-area-container');
+                  const siblings = current.parentElement.children;
+                    const textboxes = Array.from(document.querySelectorAll('textarea, [contenteditable=\"true\"], rich-textarea'));
+                        const rect = tb.getBoundingClientRect();
+                        const area = rect.width * rect.height;
+                        const rect = mainInput.getBoundingClientRect();
+                const resizeObserver = new ResizeObserver(() => { ... }
+                const mutObserver = new MutationObserver(() => { ... }
+                const chatWindow = document.querySelector('chat-window');
+                  const sheet = new CSSStyleSheet();
+                const applyChatAppPadding = () => { ... }
+                  const chatApp = document.querySelector('chat-app');
+                const chatAppObserver = new MutationObserver(applyChatAppPadding);
+  struct ThreadSearchResult { ... }
+  fn highlight_query_text(text: &str, query: &str) -> String { ... }
+  fn extract_user_request(content: &str) -> String { ... }
+  fn truncate_preview(content: &str, query: &str) -> String { ... }
+  struct WorkspaceItem { ... }
+  struct WorkspacesConfig { ... }
+  fn get_staged_payload(state: tauri::State<AppState>) -> Result<Option<ExecutionPayload>, String> { ... }
+  fn get_recent_workspaces() -> Result<WorkspacesConfig, String> { ... }
+  fn confirm_staged_execution(
+
+# File: legacy-tauri-gui/src/autocomplete.ts
+  import { ... }
+  import { ... }
+  import 'overlayscrollbars/overlayscrollbars.css';
+  interface Suggestion { ... }
+  export class Autocompleter { ... }
+          if (parent) { ... }
+      private attachListeners() { ... }
+          if (match) { ... }
+          if (this.suggestions.length > 0) { ... }
+          if (dirPath === '') dirPath = '/';
+      private onKeyDown(e: KeyboardEvent) { ... }
+          if (!this.isActive) return;
+          if (e.key === 'ArrowDown') { ... }
+      private selectCurrent() { ... }
+          if (!this.isActive || this.suggestions.length === 0) return;
+      private show() { ... }
+      private hide() { ... }
+      private render() { ... }
+              if (idx === this.selectedIndex) { ... }
+
+# File: legacy-tauri-gui/src/dateUtils.ts
+      if (diffSecs < 60) return 'just now';
+      if (diffMins < 60) return `$ { ... }
+      if (diffHours < 24) return `$ { ... }
+      if (diffDays < 30) return `$ { ... }
+      if (diffMonths < 12) return `$ { ... }
+
+# File: legacy-tauri-gui/src/floating.ts
+  import './styles.scss';
+  import { ... }
+      if (attachBtn && contextBadge) { ... }
+      if (promptInput) { ... }
+              if (e.key === 'Enter' && !e.shiftKey) { ... }
+                  if (!prompt && !attachedContext) return;
+                  if (contextBadge) { ... }
+
+# File: legacy-tauri-gui/src/main.ts
+  import "@xterm/xterm/css/xterm.css"
+  import "overlayscrollbars/overlayscrollbars.css"
+  import "./styles.scss"
+  import { ... }
+  function getScrollEl(element: HTMLElement | null): HTMLElement | null { ... }
+  	if (!element) return null;
+  function getContentEl(element: HTMLElement | null): HTMLElement | null { ... }
+  	if (!element) return null;
+  function initOS(element: HTMLElement | null): any { ... }
+  	if (!element) return null;
+  import type { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  		if (newThreadBtn) { ... }
+  		if (e.code === "Digit1") { ... }
+  			if (e.altKey) e.preventDefault() //? otherwise will insert a special character into text input
+  			if (e.altKey) e.preventDefault() //? otherwise will insert a special character into text input
+  			if (e.altKey) e.preventDefault() //? otherwise will insert a special character into text input
+  async function restoreWindowState() { ... }
+  		if (sizeStr) { ... }
+  		if (posStr) { ... }
+  interface Project { ... }
+  	if (!path) return ""
+  	if (!path) return ""
+  	if (saveProjectsTimeout) clearTimeout(saveProjectsTimeout)
+  	if (!activeProject) return
+  	if (currentProj) { ... }
+  	if (saveDraftTimeout) { ... }
+  	if (isWordCompleted) { ... }
+  	if (pauseBtnEl) { ... }
+  		if (status === "Pending") { ... }
+  		if (project_path === activeProject) { ... }
+  	if (saved) { ... }
+  	for (const p of loadedList) { ... }
+  		if (!cleanPath) continue
+  		if (!existing || mapped.lastActive > existing.lastActive) { ... }
+  	if (saved && cleaned.length !== loadedList.length) { ... }
+  	if (e.metaKey) { ... }
+  class LocalPathLinkProvider implements ILinkProvider { ... }
+  		if (!line) { ... }
+  	if (cols > 0 && rows > 0) { ... }
+  	if (e.key === "v" && e.metaKey && e.type === "keydown") { ... }
+  	if (e.key === "Enter" && e.shiftKey && e.type === "keydown") { ... }
+  		if (currentEngine === "claude" && activeProject) { ... }
+  	if (data === "\x1b") { ... }
+  	for (let i = 0; i < data.length; i++) { ... }
+  		if (char === "\r" || char === "\n") { ... }
+  	if (cols > 0 && rows > 0) { ... }
+  	if (e.key === "v" && e.metaKey && e.type === "keydown") { ... }
+  	if (e.key === "Enter" && e.shiftKey && e.type === "keydown") { ... }
+  	if (currentProj) { ... }
+  	if (resizePtyTimeout) clearTimeout(resizePtyTimeout)
+  if (container) { ... }
+  if (miniContainer) { ... }
+  if (markdownPreviewPane) { ... }
+  	if (btn) { ... }
+  	if (previewAutoScroll) { ... }
+  		if (btn) { ... }
+  		if (btn) { ... }
+  if (markdownPreviewPane) { ... }
+  	if (scrollEl) { ... }
+  			if (isUpdatingPreviewDOM) return
+  			if (isAtBottom) { ... }
+  				if (btn) { ... }
+  		if (isUpdatingPreviewDOM) return
+  if (scrollToBottomBtn && markdownPreviewPane) { ... }
+  interface Step { ... }
+  	type: string
+  interface ToolCallItem { ... }
+  interface RenderBlock { ... }
+  	type: "user_input" | "planner_response" | "tool_call" | "thought"
+  	code(token: any) { ... }
+  		if (step.type === "USER_INPUT" && step.content) { ... }
+  			if (convHistoryIdx !== -1) { ... }
+  			if (startIdx !== -1 && endIdx !== -1) { ... }
+  				if (threadIdMatch) { ... }
+  				if (histIdx !== -1 && userReqIdx !== -1 && userReqIdx > histIdx) { ... }
+  				type: "user_input",
+  				if (thoughtMatch) { ... }
+  			if (thoughtProcess) { ... }
+  			if (step.tool_calls && step.tool_calls.length > 0) { ... }
+  					if (call.args && typeof call.args.toolSummary === "string") { ... }
+  					if (!actionSummary) { ... }
+  					if (call.args) { ... }
+  						type: "tool_call",
+  			if (cleanedContent) { ... }
+  		if (call.targetPath) { ... }
+  		if (call.args) { ... }
+  				if (typeof call.args === "object" && call.args !== null) { ... }
+  						if (typeof displayValue === "string") { ... }
+  						if (isMultiline) { ... }
+  	interface Turn { ... }
+  		if (block.type === "user_input") { ... }
+  			if (currentTurn.userInput || currentTurn.agentBlocks.length > 0) { ... }
+  	if (currentTurn.userInput || currentTurn.agentBlocks.length > 0) { ... }
+  	interface MessageItem { ... }
+  		type: "historical" | "user" | "tool-call-group" | "agent-text"
+  		if (!createdAt) return ""
+  		if (turn.userInput && turn.userInput.content) { ... }
+  			if (block.historicalContext) { ... }
+  					type: "historical",
+  				type: "user",
+  			if (b.type === "tool_call" && b.call) { ... }
+  				if (!toolCallCreatedAt) { ... }
+  				if (!toolCallCreatedAt) { ... }
+  				if (followedByToolCall) { ... }
+  					if (!toolCallCreatedAt) { ... }
+  					if (isLastTurn) { ... }
+  		if (intertwineHtml.length > 0) { ... }
+  				if (b.type === "tool_call" && b.call) { ... }
+  					if (b.call.targetPath) { ... }
+  					if (b.call.args) { ... }
+  					if (followedByToolCall2) { ... }
+  				type: "tool-call-group",
+  			if (cleanedContent) { ... }
+  					type: "agent-text",
+  	interface GroupedMessage { ... }
+  		if (item.sender === "historical") { ... }
+  			if (currentGroup) { ... }
+  			if (currentGroup && currentGroup.sender === item.sender) { ... }
+  				if (currentGroup) { ... }
+  	if (currentGroup) { ... }
+  		if (g.sender === "historical") { ... }
+  				if (idx < g.items.length - 1) { ... }
+  				if (item.copyContent) { ... }
+  					if (copyUserText) copyUserText += "\n\n"
+  				if (idx < g.items.length - 1) { ... }
+  				if (item.type === "tool-call-group" && item.copyContent) { ... }
+  					if (copyToolsText) copyToolsText += "\n\n"
+  					if (copyMessagesText) copyMessagesText += "\n\n"
+  	if (!markdownPreviewPane) return
+  	for (const line of lines) { ... }
+  			if (step.tool_calls) { ... }
+  				for (const call of step.tool_calls) { ... }
+  						if (call.args && typeof call.args.TargetFile === "string") { ... }
+  	if (steps.length === 0) { ... }
+  	if (editedFilesSet.size > 0) { ... }
+  	if (steps.length > 0) { ... }
+  		for (let i = steps.length - 1; i >= 0; i--) { ... }
+  			if (step.status !== "DONE" && step.status !== "ERROR") { ... }
+  			if (step.type === "PLANNER_RESPONSE") { ... }
+  				if (step.tool_calls && step.tool_calls.length > 0) { ... }
+  			if (step.type === "USER_INPUT") { ... }
+  		if (!foundIndicator) { ... }
+  	if (isThreadSwitch) { ... }
+  		if (btn) { ... }
+  	if (isThinking && !timelineResult.hasOutputInLastTurn) { ... }
+  		if (timelineResult.latestThought) { ... }
+  			if (lines.length > 0) { ... }
+  				if (statusText.length > 80) { ... }
+  		if (el.id === "unified-tool-calls-box") return el.id
+  	if (!isThreadSwitch) { ... }
+  	if (oldToolCallsList) { ... }
+  	if (previewContentEl) { ... }
+  	if (toolCallsList && toolCallsBox) { ... }
+  		if (justStartedThinking) { ... }
+  		if (!toolCallsAutoScroll && savedScrollTop >= 0) { ... }
+  				if (currentToolCallsScrollEl) { ... }
+  	if (isThinking && !timelineResult.hasOutputInLastTurn) { ... }
+  	if (!activeThreadId) return
+  	if (!filepath) return
+  		if (fileExists) { ... }
+  				if (isThreadSwitch) { ... }
+  		if (terminal_type === "agy") { ... }
+  		if (terminal_type === "claude") { ... }
+  		if (!buffers[project_path]) { ... }
+  		if (buffers[project_path].length > 100000) { ... }
+  		if (project_path === activeProject) { ... }
+  			if (terminal_type === "agy") { ... }
+  				for (let i = 0; i < stripped.length; i++) { ... }
+  					if (stripped[i] === "\r") { ... }
+  				if (liveAgyStream.length > 20000) { ... }
+  				if (streamPane) { ... }
+  					if (previewPane) { ... }
+  			if (terminal_type === "mini") { ... }
+  					for (let i = startLine; i <= baseY + cursorY; i++) { ... }
+  						if (line) { ... }
+  					if (isInteractive && tuiContainer && activeTerminalPreset === 0) { ... }
+  	if (savedPresets) terminalPresets = JSON.parse(savedPresets)
+  function applyTerminalPreset(index: number) { ... }
+  	if (activeBtn) activeBtn.classList.add("active")
+  	if (tuiContainer && previewWrapper) { ... }
+  if (presetBtns.length > 0) { ... }
+  if (tuiResizeHandle && tuiContainer && previewWrapper) { ... }
+  		if (!isResizingTui) return
+  		if (newHeight >= minHeight && newHeight <= maxHeight) { ... }
+  		if (isResizingTui) { ... }
+  	if (!activeProject) return
+  	if (activeBuffers[activeProject]) { ... }
+  if (refreshBtn) { ... }
+  if (tuiContainer) { ... }
+  if (splitter && miniContainer && panesContainer) { ... }
+  		if (!isDragging) return
+  		if (newMiniHeight >= minHeight && newMiniHeight <= maxHeight) { ... }
+  		if (isDragging) { ... }
+  if (sidebarSplitter && sidebar) { ... }
+  	if (savedSidebarWidth) { ... }
+  		if (!isDragging) return
+  		if (newWidth >= minWidth && newWidth <= maxWidth) { ... }
+  		if (isDragging) { ... }
+  if (mainSplitter && terminalsWrapper && panesContainer) { ... }
+  		if (!isDragging) return
+  		if (leftPercent >= minPercent && leftPercent <= maxPercent) { ... }
+  		if (isDragging) { ... }
+  	if (isTerminalMode) { ... }
+  		if (splitter) splitter.style.display = "block"
+  		if (miniContainer) miniContainer.style.display = "block"
+  		if (bottomArea) bottomArea.style.display = "none"
+  		if (splitter) splitter.style.display = "none"
+  		if (miniContainer) miniContainer.style.display = "none"
+  		if (bottomArea) bottomArea.style.display = "flex"
+  if (projectsListEl) { ... }
+  	if (!projectsListEl) return
+  				if (activeProject === project.path && projects.length > 0) { ... }
+  			if (btns) { ... }
+  				if (delBtn && project.path === "/Users/matt/projects/ai-os") { ... }
+  			if (btns) btns.style.opacity = "0"
+  		if (isActive) { ... }
+  				if (existingPlaceholder) { ... }
+  					if (previewPane) { ... }
+  						if (contentEl) { ... }
+  				if (previewPane) { ... }
+  					if (contentEl) { ... }
+  	if (currentProj) { ... }
+  	if (nextProj) { ... }
+  		if (textarea) { ... }
+  			if (savedDraft !== null) { ... }
+  					if (diskDraft && diskDraft !== textarea.value) { ... }
+  		if (nextProj.engine) { ... }
+  			if (radio) { ... }
+  	if (activeBuffers[path]) { ... }
+  	if (miniTermBuffers[path]) { ... }
+  	if (currentDirPathEl) { ... }
+  interface ThreadLog { ... }
+  		for (const thread of allThreads) { ... }
+  			if (!targetPath) { ... }
+  			if (!exists) { ... }
+  				if (targetPath === "/Users/matt/projects/Misc") { ... }
+  		if (projectsModified) { ... }
+  	if (currentEngine !== "agy") { ... }
+  		if (currentProj) { ... }
+  		if (agyRadio) agyRadio.checked = true
+  		if (agyBuffers[activeProject]) { ... }
+  function getCompactifiedContext(jsonlContent: string): string { ... }
+  	for (const line of lines) { ... }
+  			if (type === "USER_INPUT" && content) { ... }
+  				if (convHistoryIdx !== -1) { ... }
+  				if (startIdx !== -1 && endIdx !== -1) { ... }
+  				if (markerIdx !== -1) { ... }
+  				if (prompt.length > 2500) { ... }
+  				if (reply.length > 2500) { ... }
+  		if (previewPane) { ... }
+  		if (previewPane) { ... }
+  			if (contentEl) { ... }
+  		if (res.is_new_session) { ... }
+  	if (listEl) { ... }
+  		if (activeProjectItem) { ... }
+  	if (activeSearchItem) { ... }
+  	if (!listEl) return
+  		if (threadsToShow.length === 0) { ... }
+  			if (delBtn) { ... }
+  						if (activeThreadId === thread.id) { ... }
+  							if (previewPane) { ... }
+  								if (contentEl) { ... }
+  		if (autoSelectFirstThread) { ... }
+  			if (firstChild) { ... }
+  	if (!activeProject) return
+  		if (isWaitingForNewThread && threads.length > 0) { ... }
+  				if (filepath) { ... }
+  		if (threadsJson !== lastThreadsJson) { ... }
+  	if (!addProjectModal) return
+  	if (modalContent) { ... }
+  	if (newProjectForm) newProjectForm.classList.add("hidden")
+  	if (newProjNameInput) newProjNameInput.value = ""
+  	if (newProjGitInput) newProjGitInput.value = ""
+  	if (!addProjectModal) return
+  	if (modalContent) { ... }
+  	if (e.target === addProjectModal) { ... }
+  		if (!selectedDir) return // User canceled the dialog
+  		if (existing) { ... }
+  	if (newProjectForm) { ... }
+  	if (newProjGitInput) { ... }
+  	if (!name) { ... }
+  	if (!gitRepoName) { ... }
+  		if (currentProj) { ... }
+  		if (activeBuffers[activeProject]) { ... }
+  	if (textarea) { ... }
+  		if (newHeight !== lastTextareaHeight) { ... }
+  	if (textarea.value === "!") { ... }
+  		if (currentProj) { ... }
+  		if (historyJson) { ... }
+  	if (!arrowUpOverlay) { ... }
+  		if (bottomArea) { ... }
+  	if (arrowUpOverlay) { ... }
+  			if (arrowUpOverlay && arrowUpOverlay.style.opacity === "0") { ... }
+  	if (e.key === "ArrowUp") { ... }
+  		if (textarea.selectionStart === 0 || historyIndex !== -1) { ... }
+  				if (arrowUpTimeout) clearTimeout(arrowUpTimeout)
+  			if (arrowUpTimeout) clearTimeout(arrowUpTimeout)
+  			if (historyIndex === -1) { ... }
+  			if (historyIndex < commandHistory.length - 1) { ... }
+  		if (arrowUpTimeout) clearTimeout(arrowUpTimeout)
+  		if (historyIndex !== -1) { ... }
+  			if (historyIndex > 0) { ... }
+  		if (e.shiftKey) { ... }
+  		if (!trimmedInput) return
+  		if (!activeThreadId) { ... }
+  		if (previewPane) { ... }
+  			if (!isRunning && currentEngine === "agy") { ... }
+  			if (clearCheckbox) { ... }
+  		if (!isBypass && currentEngine === "agy") { ... }
+  		if (activeThreadId && currentEngine === "agy") { ... }
+  			if (filepath) { ... }
+  		if (isRunning) { ... }
+  			if (activeThreadId && currentContext && !isBypass) { ... }
+  				if (isBypass) { ... }
+  			if (currentEngine === "agy") { ... }
+  				if (activeThreadId && currentContext) { ... }
+  					if (isBypass) { ... }
+  				if (currentEngine === "claude") { ... }
+  		if (clearCheckbox) { ... }
+  	if (!textarea) return
+  	if (paths && paths.length > 0) { ... }
+  		if (textarea.value) { ... }
+  		if (textToCopy) { ... }
+  	if (document.activeElement === textarea) { ... }
+  	if (pastedText) { ... }
+  		if (isEngineFocus) { ... }
+  			if (isRunning) { ... }
+  if (savedAutoClear !== null) { ... }
+  	if (textarea) { ... }
+  		if (!isRunning) { ... }
+  			if (contextContainer) { ... }
+  			if (contextContainer) { ... }
+  			if (clearCheckbox && clearCheckbox.checked) { ... }
+  				if (contextContainer) { ... }
+  				if (labelText) labelText.textContent = "Auto-Clear: ACTIVE"
+  				if (contextContainer) { ... }
+  				if (labelText) labelText.textContent = "Auto-Clear: OFF"
+  if (clearCheckbox) { ... }
+  	if (summary) { ... }
+  		if (details) { ... }
+  			if (pane) pane.scrollTop = savedHostScroll
+  			if (osViewport) osViewport.scrollTop = savedOsScroll
+  				if (pane) pane.scrollTop = savedHostScroll
+  				if (osViewport) osViewport.scrollTop = savedOsScroll
+  					if (pane) pane.scrollTop = savedHostScroll
+  					if (osViewport) osViewport.scrollTop = savedOsScroll
+  	if (anchor) { ... }
+  		if (href && href !== "#") { ... }
+  					if (activeProject) { ... }
+  	if (isEngineTermClick) { ... }
+  		if (isTerminalMode) { ... }
+  		if (initialProject) { ... }
+  			if (existing) { ... }
+  			if (sorted.length > 0) { ... }
+  		if (sorted.length > 0) { ... }
+  	if (!activeProject || isTerminalMode) return
+  		if (!arrowUpPressedOnce) { ... }
+  async function updateQuotaDisplay() { ... }
+  		if (googleModels.length > 0) { ... }
+  		if (anthropicModels.length > 0) { ... }
+  		if (display) { ... }
+  		if (tooltip) { ... }
+  				if (!col) return
+  					if (models.length === 0) return
+  					if (diffMs > 0) { ... }
+  				if (newThreadBtn) { ... }
+  				if (addProjectBtn) { ... }
+  				if (pauseBtn) { ... }
+  				if (sidebar) { ... }
+  	if (tab === "projects") { ... }
+  		if (searchInput) { ... }
+  if (searchResultsContainer) { ... }
+  	if (!searchInput || !searchResultsContainer) return
+  	if (!query) { ... }
+  		interface ThreadSearchResult { ... }
+  		if (results.length === 0) { ... }
+  			if (result.matches && result.matches.length > 0) { ... }
+  	if (activeProject) { ... }
+
+# File: legacy-tauri-gui/src/staging.ts
+  import { ... }
+  interface StagedPayload { ... }
+  interface WorkspaceItem { ... }
+  interface WorkspacesConfig { ... }
+          if (!payload) return;
+          if (threadTitleBadge) { ... }
+          if (previewText) { ... }
+          if (staged) { ... }
+          if (!workspaceList) return;
+              if (config && config.recent && config.recent.length > 0) { ... }
+      if (btnBrowseDir) { ... }
+                  if (selectedDir) { ... }
+      if (btnModeWorker && btnModeTriage) { ... }
+      if (btnEngineAgy && btnEngineClaude) { ... }
+      if (btnCancel) { ... }
+      if (btnConfirm) { ... }
+              if (!activePayload) { ... }
+              if (targetPath === 'scratchpad') { ... }
+
+# File: legacy-tauri-gui/src/systemPromptConfig.ts
+
+
+# File: legacy-tauri-gui/src/tauriWrapper.ts
+  import { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import type { ... }
+  function connectWebSocket() { ... }
+    if (typeof window === 'undefined') return;
+    if (ws) { ... }
+          if (data.type === 'invoke_result') { ... }
+            if (pending) { ... }
+              if (data.success) { ... }
+            if (handlers) { ... }
+              for (const handler of handlers) { ... }
+          if (data.type === 'invoke') { ... }
+                type: 'invoke_result',
+                type: 'invoke_result',
+                type: 'invoke_result',
+                type: 'invoke_result',
+                  if (socket.readyState === WebSocket.OPEN) { ... }
+                      type: 'event',
+  if (typeof window !== 'undefined') { ... }
+  function sendWsMessage(message: any): Promise<void> { ... }
+      if (!ws || ws.readyState !== WebSocket.OPEN) { ... }
+          if (ws && ws.readyState === WebSocket.OPEN) { ... }
+  export async function invoke<T>(cmd: string, args?: any): Promise<T> { ... }
+      if (args) { ... }
+        if (args.threadId === undefined) { ... }
+          if (args.terminalType === "mini") { ... }
+  export async function listen<T>(event: string, handler: EventCallback<T>): Promise<UnlistenFn> { ... }
+      if (!handlers) { ... }
+        if (currentHandlers) { ... }
+          if (currentHandlers.size === 0) { ... }
+    get(target, prop) { ... }
+  export async function open(path: string, withApp?: string): Promise<void> { ... }
+  async function mockInvoke<T>(cmd: string, _args?: any): Promise<T> { ... }
+    switch (cmd) { ... }
+
+# File: legacy-tauri-gui/src/threadNotes.ts
+  import { ... }
+  export interface TodoItem { ... }
+  export class ThreadNotesManager { ... }
+          if (lineIndex >= 0 && lineIndex < lines.length) { ... }
+          if (projectIndex === -1) { ... }
+          if (threadIndex === -1) { ... }
+          for (let i = 0; i < lines.length; i++) { ... }
+              if (inTargetThread) { ... }
+                  if (matchUnchecked) { ... }
+  export async function renderThreadNotesSidebar(projectPath: string | null, threadId: string | null) { ... }
+      if (!sidebar || !content) return;
+      if (!projectPath || !threadId) { ... }
+      if (todos.length === 0) { ... }
+      for (const todo of todos) { ... }
+          if (todo.completed) { ... }
+
+# File: legacy-tauri-gui/src/ActionBar/ActionBar.ts
+  import styles from './ActionBar.module.css'
+  export interface CommandItem { ... }
+  export class ActionBar { ... }
+      constructor() { ... }
+      public setCommands(commands: CommandItem[]) { ... }
+      private setupListeners() { ... }
+              if (e.target === this.overlay) { ... }
+              if (e.key === 'ArrowDown') { ... }
+                  if (this.selectedIndex >= 0 && this.selectedIndex < this.currentResults.length) { ... }
+      private setSelectedIndex(index: number) { ... }
+          if (this.currentResults.length === 0) return;
+          for (let i = 0; i < children.length; i++) { ... }
+              if (i === index) { ... }
+      private performSearch() { ... }
+          if (!query) { ... }
+      private renderResults() { ... }
+          if (this.currentResults.length === 0) { ... }
+              if (index === this.selectedIndex) { ... }
+      public toggle() { ... }
+      public open() { ... }
+      public close() { ... }
+          if (this.previousFocus) { ... }
+
+# File: scripts/append_system_rule.py
+  import os
+  import argparse
+  import re
+  from pathlib import Path
+  def append_rule_to_file(file_path, header, rule):
+    ...
+  def main():
+    ...
+
+# File: scripts/auto_commit.py
+  import subprocess
+  import sys
+  import json
+  import urllib.request
+  import urllib.error
+  def run_cmd(args, check=True):
+    ...
+  def main():
+    ...
+
+# File: scripts/context_handoff.py
+  import argparse
+  import sys
+  import os
+  import datetime
+  def main():
+    ...
+
+# File: scripts/generate_repo_map.py
+  import os
+  import sys
+  import re
+  from pathlib import Path
+  scripts_dir = Path(__file__).resolve().parent
+  from importlib.machinery import SourceFileLoader
+  ingest_codebase = SourceFileLoader('ingest_codebase', str(scripts_dir / 'in...
+  ingest_codebase = None
+  EXCLUDE_DIRS = {'node_modules', '.git', 'dist', 'target', 'tmp', '.agent...
+  CODE_EXTENSIONS = {'.py', '.ts', '.js', '.tsx', '.jsx', '.rs', '.go'}
+  def extract_signatures_js_ts(content):
+    """
+  Extract structural signatures (imports, classes, interfaces, types, functions, methods) from JS/TS.
+  """
+    ...
+  def extract_signatures_rust(content):
+    """
+  Extract structural signatures (use, pub, fn, struct, enum, impl, trait) from Rust.
+  """
+    ...
+  def extract_signatures_go(content):
+    """
+  Extract structural signatures (package, import, type, func) from Go.
+  """
+    ...
+  def process_file_repo_map(file_path):
+    ...
+  def generate_map(workspace_path):
+    ...
+  def main():
+    ...
+
+# File: scripts/generate_title.py
+  import json
+  import os
+  import sys
+  import datetime
+  import urllib.request
+  import urllib.parse
+  from pathlib import Path
+  OPENROUTER_KEY = 'sk-or-v1-a6534b2b2afcbe66b21de6e8461de13cfe5c64b47268052...
+  def get_access_token():
+    ...
+  def call_gemini_api(prompt, response):
+    ...
+  def call_openrouter_api(prompt, response):
+    ...
+  def generate_title(prompt, response):
+    ...
+  def main():
+    ...
+
+# File: scripts/get_last_cost.py
+  import json
+  import os
+  import sys
+  import time
+  import datetime
+  import argparse
+  import urllib.request
+  import urllib.parse
+  import urllib.error
+  from pathlib import Path
+  import telemetry_db
+  TOKEN_PATH = Path.home() / '.gemini' / 'oauth_creds.json'
+  CLIENT_ID = '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.goog...
+  CLIENT_SECRET = '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'
+  def get_antigravity_quota():
+    ...
+  def get_stats():
+    ...
+  def main():
+    ...
+
+# File: scripts/mechanical_editor.py
+  import sys
+  import argparse
+  import subprocess
+  from pathlib import Path
+  def parse_config_yaml(config_path):
+    ...
+  def resolve_model(requested_model, mappings):
+    ...
+  def main():
+    ...
+
+# File: scripts/precision_edit.py
+
+
+# File: scripts/telemetry_db.py
+  import json
+  import os
+  import time
+  from pathlib import Path
+  import argparse
+  DB_PATH = Path.home() / '.ai-os-telemetry.json'
+  def load_db():
+    ...
+  def save_db(data):
+    ...
+  def log_sub_model_cost(model: str, prompt_tokens: int, completion_tokens: int):
+    ...
+  def log_agy_turn():
+    ...
+  def main():
+    ...
+
+# File: scripts/view_thread.py
+  import sys
+  import os
+  import json
+  import argparse
+  def main():
+    ...
+
+# File: userscripts/gemini.js
+      function getMenuText(key) { ... }
+      function refreshMenu() { ... }
+          if (isMenuExpanded) { ... }
+      function ensureTooltip() { ... }
+          if (tooltipEl || !document.body) return
+      function showTooltip(e, text) { ... }
+          if (!tooltipEl) return
+      function hideTooltip() { ... }
+          if (tooltipEl) tooltipEl.style.display = 'none'
+      function positionTooltip(e) { ... }
+          if (!tooltipEl) return
+      function attachTooltip(el, getFullText) { ... }
+      function getLocalTzAbbr() { ... }
+      function getLocalTzOffsetHours() { ... }
+      function formatTime(date) { ... }
+      function formatFullDateTime(date) { ... }
+      function getRelativeDateLabel(unix, forSidebar = false) { ... }
+          if (diffDays <= 0) return forSidebar ? 'Today' : null
+          if (diffDays === 1) return 'Yesterday'
+          if (diffDays === 2) return '2 days ago'
+          if (diffDays < 7) return `$ { ... }
+      function buildMessageDisplay(unix, isEstimate) { ... }
+      function injectTimestamp(container, unix, isEstimate) { ... }
+      function isSidebarUrl(url) { ... }
+      function syncToAiOs(url, payload) { ... }
+          if (!payload || payload.length < 10) return
+                  if (this.responseType === '' || this.responseType === 'text') { ... }
+              if (!res) return
+                  if (this.readyState === 4) { ... }
+                  if (this.readyState === 4) { ... }
+      function extractMessageTimestamps(res) { ... }
+              if (!hexIds.length || !timestamps.length) return
+              if (added > 0) { ... }
+      function injectHeuristicTimes() { ... }
+      function parseEmbeddedUnix(dateStr, timeStr, offsetHours) { ... }
+      function processEmbeddedTimestamps() { ... }
+          if (nodes.length === 0) return
+              if (!match) return
+              if (!userQuery) { ... }
+              if (!container) { ... }
+      function extractSidebarTimestamps(text) { ... }
+          if (!text) return
+          for (let i = 1; i < blocks.length; i++) { ... }
+              if (!idMatch) continue
+          if (found) { ... }
+      function formatAbsoluteTime(d) { ... }
+          if (dateFormat === 'mm/dd/yyyy') { ... }
+      function clearAndReRenderSidebar() { ... }
+                  if (title) title.style.paddingRight = ''
+      function updateSidebarDOM() { ... }
+          if (!document.body) return
+                  if (!href) return
+                  if (currentLayout === 'classic') { ... }
+                      if (titleContainer) titleContainer.appendChild(wrapper)
+                      if (showAbsolute) { ... }
+                      if (trailingIcon) item.insertBefore(wrapper, trailingIcon)
+      function getNowTimestamp() { ... }
+      function getSendButton(target) { ... }
+          if (!target) return null
+          if (!btn) return null
+      function fetchSkills() { ... }
+      function replaceEditorContent(editor, newText) { ... }
+      function processCommandReplacement(editor) { ... }
+          if (replaced) { ... }
+          function (e) { ... }
+              if (!btn) return
+              if (!editor) return
+                  if (freshBtn) freshBtn.click()
+          function (e) { ... }
+              if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+              if (!editor) return
+              if (autocompleteMenu && autocompleteMenu.style.display === 'block') { ... }
+      function updateTabTitle() { ... }
+          if (titleEl) { ... }
+              if (newTitle && document.title !== newTitle) { ... }
+      function removeAdvUpsell(warnIfMissing = false) { ... }
+          if (upsellContainer) { ... }
+      function startObservers() { ... }
+          if (!document.body) { ... }
+              for (const m of mutations) { ... }
+                  if (!target) continue
+                  if (target.nodeType === Node.ELEMENT_NODE) { ... }
+              if (isOnlyTypingOrTemp) return
+              for (const mutation of mutations) { ... }
+                  if (mutation.addedNodes) { ... }
+                      for (const node of mutation.addedNodes) { ... }
+                          if (node.nodeType === Node.ELEMENT_NODE) { ... }
+                      if (shouldExport) break
+              if (shouldExport && autoThreadSync) { ... }
+                  if (syncTimeout) clearTimeout(syncTimeout)
+              if (url !== lastUrl) { ... }
+              if (autoThreadSync) { ... }
+      if (window[OPTIMIZER_SCRIPT_ID]) { ... }
+      function getModelDetails(item) { ... }
+          if (!name) { ... }
+              if (lines.length >= 2) { ... }
+      function isModelMatch(modelName, labelText) { ... }
+          if (!cleanModel || !cleanLabel) return false
+      async function performSelection(modelName, targetThinking) { ... }
+          if (!originalModelBtn) return
+              if (overlayContainer) overlayContainer.style.opacity = '0'
+              if (overlayContainer) overlayContainer.style.opacity = '1'
+          if (targetThinking === 'extended') { ... }
+              if (isTargetModelSelected && isCurrentlyExtended) { ... }
+                  if (newTrigger) newTrigger.click()
+                  if (header) { ... }
+                      if (opt) opt.click()
+              if (isTargetModelSelected && isCurrentlyExtended) { ... }
+                  if (header) { ... }
+                      if (opt) opt.click()
+      function modifyMenu() { ... }
+              if (menuItems.length === 0) return
+              if (header) { ... }
+                  if (!modelName) return
+                  if (description) { ... }
+                  if (isStandardActive) { ... }
+                      if (descDiv) descDiv.style.color = '#c4c7c5'
+                      if (descDiv) descDiv.style.color = '#a8c7fa'
+                      if (descDiv) descDiv.style.color = '#8e918f'
+                      if (!isStandardActive && !isThinkingActive) { ... }
+                          if (descDiv) descDiv.style.color = '#c4c7c5'
+                      if (!isStandardActive && !isThinkingActive) { ... }
+                          if (descDiv) descDiv.style.color = '#8e918f'
+                      if (!isThinkingActive) { ... }
+                      if (!isStandardActive && !isThinkingActive) { ... }
+                          if (descDiv) descDiv.style.color = '#c4c7c5'
+                      if (!isThinkingActive) { ... }
+                      if (!isStandardActive && !isThinkingActive) { ... }
+                          if (descDiv) descDiv.style.color = '#8e918f'
+      function startOptimizer() { ... }
+          if (!document.body) { ... }
+      function isDarkTheme() { ... }
+      function getThreadId() { ... }
+      function createAutocompleteMenu() { ... }
+          if (autocompleteMenu) return;
+      function renderAutocomplete(inputEl, query) { ... }
+          if (filtered.length === 0) { ... }
+      function applySkill(inputEl, skillName) { ... }
+          if (queryStart !== -1) { ... }
+          if (autocompleteMenu) autocompleteMenu.style.display = 'none';
+      function injectPhaseDropdown(promptContainer) { ... }
+          if (switchBtn) { ... }
+      function togglePhaseDropdown(container, btn) { ... }
+          if (phaseDropdownMenu && phaseDropdownMenu.style.display === 'block') { ... }
+          if (!phaseDropdownMenu) { ... }
+                  if (editor) { ... }
+      function injectUI() { ... }
+          if (!promptContainer) return;
+          if (inputEl && !inputEl.dataset.aiosHooked) { ... }
+                  if (slashIdx !== -1 && slashIdx === text.length - 1) { ... }
+                          if (autocompleteMenu) autocompleteMenu.style.display = 'none';
+                      if (autocompleteMenu) autocompleteMenu.style.display = 'none';
+                  if (autocompleteMenu && autocompleteMenu.style.display === 'block') { ... }
+                      if (e.key === 'ArrowDown') { ... }
+                          if (activeItem) { ... }
+      function scanExecutionPayloads() { ... }
+              if (block.dataset.aiosHooked) return;
+              if (isInstructionBlock) { ... }
+                  if (match) { ... }
+      function showSyncedIcon() { ... }
+          if (!icon) { ... }
+          if (window._syncIconTimeout) clearTimeout(window._syncIconTimeout)
+      function exportThreadWithTimestamps() { ... }
+          if (!autoThreadSync) return;
+          if (messages.length === 0) return;
+          if (window._lastSentContextSync === formattedText) return;

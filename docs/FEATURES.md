@@ -2,6 +2,10 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+### [2026-07-09] Stable Anchor Context Strategy
+* **Stable Anchor + Volatile Append:** Designed and implemented a lightweight signature-only repository map generator (`scripts/generate_repo_map.py`) that extracts file structures, classes, functions, and interfaces from JS/TS, Python, Rust, and Go files while discarding implementation bodies to keep prompt context highly efficient (~90% compression).
+* **Startup CLI Wrapper Integration:** Configured the `ai-os` wrapper script (`bin/ai-os`) to automatically compile/update the repository map on launch to guarantee a fresh stable anchor is available before executing any agent prompts.
+
 ### [2026-07-08] Architectural Concepts & Best Ideas Ledger
 * **Best Ideas Compilation:** Created a unified architectural blueprint document ([best-ideas.md](file:///Users/matt/projects/ai-os/docs/best-ideas.md)) detailing the core methodologies of `ai-os` including the Stable Anchor strategy, 2D Document Canvas, Quota Arbitrage, and browser userscript synchronization.
 

@@ -22,6 +22,10 @@ system_profiler SPDisplaysDataType >> "$PROFILE_PATH" 2>/dev/null
 echo "## Hammerspoon Config" >> "$PROFILE_PATH"
 [ -f ~/.hammerspoon/init.lua ] && cat ~/.hammerspoon/init.lua | head -n 50 >> "$PROFILE_PATH" 2>/dev/null
 
+# Generate the Stable Anchor Repo Map
+echo "[ai-os] Updating Stable Anchor Repo Map..."
+python3 "$AI_OS_HOME/scripts/generate_repo_map.py" "$AI_OS_HOME"
+
 ORIGINAL_PWD="$PWD"
 cd "$AI_OS_HOME" || exit
 

@@ -4,14 +4,14 @@ Storage:
 
     Macintosh HD:
 
-      Free: 42.54 GB (42 543 247 360 bytes)
+      Free: 16.53 GB (16 533 975 040 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Update/mnt1
       File System: APFS
       Writable: Yes
       Ignore Ownership: No
       BSD Name: disk3s1
-      Volume UUID: C7E79875-98EF-4E2E-9ECB-47C841C75850
+      Volume UUID: DECCCDF9-E88C-4D9C-A074-84D186C59DA3
       Physical Drive:
           Device Name: APPLE SSD AP0512Z
           Media Name: AppleAPFSMedia
@@ -23,7 +23,7 @@ Storage:
 
     Data:
 
-      Free: 42.54 GB (42 543 181 824 bytes)
+      Free: 16.53 GB (16 533 975 040 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Data
       File System: APFS
@@ -42,14 +42,14 @@ Storage:
 
     Macintosh HD:
 
-      Free: 42.54 GB (42 543 181 824 bytes)
+      Free: 16.53 GB (16 533 975 040 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /
       File System: APFS
       Writable: No
       Ignore Ownership: No
       BSD Name: disk3s1s1
-      Volume UUID: 55BFE8E0-6A29-4620-8512-65737149058E
+      Volume UUID: 3C6A96EA-501E-42AB-8DC1-D29B58438B55
       Physical Drive:
           Device Name: APPLE SSD AP0512Z
           Media Name: AppleAPFSMedia
@@ -60,27 +60,28 @@ Storage:
           S.M.A.R.T. Status: Verified
 
 ## Active LaunchAgents
-total 208
-drwxr-xr-x@  20 matthewmurphy  staff    640 Jun 27 02:46 .
-drwx------@ 129 matthewmurphy  staff   4128 May 21 13:43 ..
--rw-r--r--@   1 matthewmurphy  staff   6148 Jun 24 00:47 .DS_Store
--rw-------@   1 matthewmurphy  staff   1437 Jun 13 00:40 ai.openclaw.gateway.plist
--rw-r--r--@   1 matthewmurphy  staff    880 Feb 19 13:37 com.google.GoogleUpdater.wake.plist
--rw-r--r--@   1 matthewmurphy  staff    594 Jun 27 02:46 com.lwouis.alt-tab-macos.plist
--rw-r--r--@   1 matthewmurphy  staff   1336 Jun  7 15:52 com.matthewmurphy.backup-launch-agents.plist
--rw-r--r--    1 matthewmurphy  staff    494 May 19 23:39 com.matthewmurphy.energy_monitor.plist
--rw-r--r--@   1 matthewmurphy  staff    711 Mar 22 14:39 com.matthewmurphy.irig-watcher.plist
--rw-r--r--@   1 matthewmurphy  staff    720 Mar 16 13:12 com.matthewmurphy.personal-sync.plist
--rw-r--r--@   1 matthewmurphy  staff    686 Feb 28 21:01 com.matthewmurphy.rqbit.plist
--rw-r--r--@   1 matthewmurphy  staff   1537 Dec 11  2025 com.mattmurphy.userscript-bundler.plist
--rw-r--r--@   1 matthewmurphy  staff    427 Jun  1 13:15 com.pieces.os.launch.plist
--rw-r--r--@   1 matthewmurphy  staff    747 Oct 11  2024 com.samschott.maestral.maestral.plist
-lrwxr-xr-x    1 matthewmurphy  staff    132 Jun 22 22:42 com.user.notesync.plist -> /Users/matthewmurphy/Library/CloudStorage/CloudMounter-MatthewMurphy/My Documents/Scripts/macOS/LaunchAgents/com.user.notesync.plist
--rw-r--r--@   1 matthewmurphy  staff    890 Jan  1 17:23 com.valvesoftware.steamclean.plist
--rwxr-xr-x@   1 matthewmurphy  staff    385 Jun 22 23:35 git-sync.sh
--rw-r--r--@   1 matthewmurphy  staff    685 Jan  5  2025 homebrew.mxcl.nginx.plist
--rw-r--r--@   1 matthewmurphy  staff    386 Dec 19  2025 Messauto.plist
--rwxr-xr-x@   1 matthewmurphy  staff  33472 Jun 22 23:36 notesync-wrapper
+total 216
+drwxr-xr-x@ 21 matt  staff    672 Jul  8 05:44 .
+drwx------@ 92 matt  staff   2944 Jul  8 01:39 ..
+-rw-------@  1 matt  staff   1392 Jul  4 23:32 ai.openclaw.gateway.plist
+-rw-r--r--@  1 matt  staff    650 Jul  8 00:15 com.chrome.debug.plist
+-rw-r--r--@  1 matt  staff    871 Jul  5 00:08 com.google.GoogleUpdater.wake.plist
+-rw-r--r--@  1 matt  staff    181 Jul  5 00:08 com.google.keystone.agent.plist
+-rw-r--r--@  1 matt  staff    181 Jul  5 00:08 com.google.keystone.xpcservice.plist
+-rw-r--r--@  1 matt  staff    594 Jul  4 23:44 com.lwouis.alt-tab-macos.plist
+-rw-r--r--@  1 matt  staff   1273 Jul  4 23:32 com.matthewmurphy.backup-launch-agents.plist
+-rw-r--r--@  1 matt  staff    476 Jul  4 23:32 com.matthewmurphy.energy_monitor.plist
+-rw-r--r--@  1 matt  staff    693 Jul  4 23:32 com.matthewmurphy.irig-watcher.plist
+-rw-r--r--@  1 matt  staff    666 Jul  4 23:32 com.matthewmurphy.personal-sync.plist
+-rw-r--r--@  1 matt  staff    668 Jul  4 23:32 com.matthewmurphy.rqbit.plist
+-rw-r--r--@  1 matt  staff    786 Jul  8 05:44 com.mattmurphy.ai-os-rules-watcher.plist
+-rw-r--r--@  1 matt  staff   1449 Jul  6 23:07 com.mattmurphy.userscript-bundler.plist
+-rw-r--r--@  1 matt  staff    427 Jul  4 23:32 com.pieces.os.launch.plist
+-rw-r--r--@  1 matt  staff    747 Jul  4 23:32 com.samschott.maestral.maestral.plist
+-rwx------@  1 matt  staff    856 Jul  4 23:32 com.user.notesync.plist
+-rwxr-xr-x@  1 matt  staff    385 Jul  4 23:32 git-sync.sh
+-rw-r--r--@  1 matt  staff    685 Jul  4 23:32 homebrew.mxcl.nginx.plist
+-rwxr-xr-x@  1 matt  staff  33472 Jul  4 23:32 notesync-wrapper
 ## Connected Displays
 Graphics/Displays:
 
@@ -130,6 +131,7 @@ _configWatcher:start()
 -- ── Modules ─────────────────────────────────────────────────────────────────────
 
 require("modules.clipboard")
+require("modules.keybindings")
 
 -- ── Startup confirmation ─────────────────────────────────────────────────────────
 
