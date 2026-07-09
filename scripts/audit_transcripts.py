@@ -4,7 +4,6 @@ import json
 import sys
 import argparse
 from pathlib import Path
-from pathlib import Path
 
 def estimate_tokens(text):
     if not text:
@@ -179,8 +178,8 @@ def find_most_recent_transcript():
     transcript_files = []
     for sp in search_paths:
         if sp.exists() and sp.is_dir():
-            transcript_files.extend(sp.glob('transcript.jsonl'))
-            transcript_files.extend(sp.glob('transcript_full.jsonl'))
+            transcript_files.extend(sp.rglob('transcript.jsonl'))
+            transcript_files.extend(sp.rglob('transcript_full.jsonl'))
 
     if not transcript_files:
         return None
