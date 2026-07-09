@@ -28,10 +28,10 @@
 
 ## Agent Work Logs & Transcript Tracking
 - **Log Directory**: ALWAYS look for and maintain a non-hidden `agent-logs/` directory at the root of the project (instead of `.agent-logs/`).
-- **Log Writing Pointer**: At the end of every session, you MUST write a log file inside `agent-logs/` (Naming: `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`). In addition to the standard sections (`## Goal`, `## Changes Made`, `## What Worked`, `## What Didn't Work / Known Issues`, `## Architecture Notes`), you MUST include a line pointing to the full transcript of the conversation:
-  `To see the full transcript for this: <path-to-transcript>`
+- **Log Writing Pointer**: At the end of every session, you MUST write a log file inside `agent-logs/` (Naming: `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`). In addition to the standard sections (`## Goal`, `## Changes Made`, `## What Worked`, `## What Didn't Work / Known Issues`, `## Architecture Notes`), you MUST include a line pointing to the full transcript of the conversation as a markdown link:
+  `[Full Transcript for this conversation](file://<path-to-transcript>)`
   To dynamically locate the transcript path:
   - Read `ANTIGRAVITY_SOURCE_METADATA` from the environment to parse `conversationId` (which is the `<thread-uuid>`).
-  - Check whether the transcript file exists at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` and print the correct absolute path.
+  - Check whether the transcript file exists at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` and use the correct absolute path.
 - **Fresh Thread Context & Transcript Loading**: When you start a new task in a fresh thread, immediately scan the `agent-logs/` directory for the most recent 2-3 agent log files. When you find relevant agent logs, read their transcript pointers, and then use `view_file` to load/inspect the relevant parts of those transcripts to gather complete context, trace detailed command executions, and ensure you do not repeat past mistakes.
 

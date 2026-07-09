@@ -36,7 +36,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
      - `## What Worked`: Confirmed fixes and completed tasks.
      - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention.
      - `## Architecture Notes`: Discoveries about how the codebase works.
-     - `To see the full transcript for this: <path-to-transcript>`: Print the absolute path to the transcript of the current session by reading `conversationId` (which is the `<thread-uuid>`) from `ANTIGRAVITY_SOURCE_METADATA` and checking if it is at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl`.
+     - `[Full Transcript for this conversation](file://<path-to-transcript>)`: Print the absolute path to the transcript of the current session as a markdown link by reading `conversationId` (which is the `<thread-uuid>`) from `ANTIGRAVITY_SOURCE_METADATA` and checking if it is at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl`.
 4. **Commit:** Commit the log file alongside your code changes.
 </AGENT_WORK_LOGS>
 

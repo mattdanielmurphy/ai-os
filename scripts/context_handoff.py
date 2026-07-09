@@ -37,7 +37,7 @@ def main():
                 ]
                 for p in paths_to_check:
                     if os.path.exists(p):
-                        transcript_pointer = f"\nTo see the full transcript for this: {p}\n"
+                        transcript_pointer = f"\n[Full Transcript for this conversation](file://{p})\n"
                         break
         except Exception:
             pass
