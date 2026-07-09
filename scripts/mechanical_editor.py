@@ -24,14 +24,14 @@ def main():
     parser.add_argument("--spec", help="Technical spec describing the modifications")
     parser.add_argument("--model", default="claude-sonnet-gem-2.5-flash", help="Target LiteLLM mapped model name")
     parser.add_argument("-l", "--list", action="store_true", help="List available models from LiteLLM config")
-    
+
     args = parser.parse_args()
     config_path = Path("/Users/matt/litellm/config.yaml")
-    
+
     if args.list:
         list_available_models(config_path)
         sys.exit(0)
-        
+
     filepath_arg = None
     spec_arg = None
 
@@ -62,7 +62,7 @@ def main():
         prompt = f"Apply this technical spec: '{spec_arg}' to the file: '{filepath}'"
     else:
         prompt = spec_arg
-        
+
     cmd = [
         "claude",
         "--model",
@@ -71,11 +71,28 @@ def main():
         prompt,
         "--dangerously-skip-permissions"
     ]
-    
+
     target_desc = filepath_arg if filepath_arg else "workspace"
     print(f"[Mechanical Editor] Delegating to Claude Code using model profile '{args.model}' for {target_desc}...", flush=True)
-    
+
+    # Define paths for rules files
+    gemini_md = Path.home() / ".gemini" / "GEMINI.md"
+    claude_md = Path.home() / ".claude" / "CLAUDE.md"
+
+    # Store renamed paths
+    renamed_files = []
+
     try:
+        # Rename existing rules files to .bak
+        if gemini_md.exists():
+            gemini_md.rename(gemini_md.with_suffix(".bak"))
+            renamed_files.append(gemini_md)
+            print(f"[Mechanical Editor] Renamed {gemini_md} to {gemini_md.with_suffix(".bak")}", flush=True)
+        if claude_md.exists():
+            claude_md.rename(claude_md.with_suffix(".bak"))
+            renamed_files.append(claude_md)
+            print(f"[Mechanical Editor] Renamed {claude_md} to {claude_md.with_suffix(".bak")}", flush=True)
+
         with open("/dev/null", "r") as devnull:
             result = subprocess.run(cmd, stdin=devnull, capture_output=True, text=True, check=True)
             print(result.stdout)
@@ -84,6 +101,13 @@ def main():
     except subprocess.CalledProcessError as e:
         print(f"Error executing Claude Code delegation:\nExit Code: {e.returncode}\nStderr:\n{e.stderr}\nStdout:\n{e.stdout}", file=sys.stderr)
         sys.exit(1)
+    finally:
+        # Restore renamed files
+        for original_path in renamed_files:
+            bak_path = original_path.with_suffix(".bak")
+            if bak_path.exists():
+                bak_path.rename(original_path)
+                print(f"[Mechanical Editor] Restored {bak_path} to {original_path}", flush=True)
 
 if __name__ == "__main__":
     main()
