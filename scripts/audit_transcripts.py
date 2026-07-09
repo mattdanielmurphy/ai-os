@@ -4,6 +4,7 @@ import json
 import sys
 import argparse
 from pathlib import Path
+from pathlib import Path
 
 def estimate_tokens(text):
     if not text:
@@ -169,12 +170,41 @@ def print_markdown_report(audit):
         for d in audit["delegated_calls"]:
             print(f"| {d['step']} | {d['tool']} | `{d['cmd']}` |")
 
+def find_most_recent_transcript():
+    search_paths = [
+        Path('/Users/matt/.gemini/antigravity-ide/brain'),
+        Path('/Users/matt/.gemini/antigravity-cli/brain')
+    ]
+
+    transcript_files = []
+    for sp in search_paths:
+        if sp.exists() and sp.is_dir():
+            transcript_files.extend(sp.glob('transcript.jsonl'))
+            transcript_files.extend(sp.glob('transcript_full.jsonl'))
+
+    if not transcript_files:
+        return None
+
+    # Sort by modification time, most recent first
+    transcript_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+    return transcript_files[0]
+
 def main():
     parser = argparse.ArgumentParser(description="Audit transcript for token waste.")
-    parser.add_argument("transcript_path", help="Path to transcript.jsonl or transcript_full.jsonl")
+    parser.add_argument("transcript_path", nargs='?', help="Path to transcript.jsonl or transcript_full.jsonl (optional)")
     args = parser.parse_args()
 
-    audit = audit_transcript(args.transcript_path)
+    transcript_to_audit = args.transcript_path
+    if not transcript_to_audit:
+        most_recent_transcript = find_most_recent_transcript()
+        if most_recent_transcript:
+            print(f"Auditing most recent transcript: {most_recent_transcript}")
+            transcript_to_audit = str(most_recent_transcript)
+        else:
+            print("Error: No transcript_path provided and no recent transcripts found.", file=sys.stderr)
+            sys.exit(1)
+
+    audit = audit_transcript(transcript_to_audit)
     if audit:
         print_markdown_report(audit)
 
