@@ -4,13 +4,13 @@ export AI_OS_HOME="/Users/matt/projects/ai-os"
 
 echo "[ai-os] Enforcing absolute context guardrails in ~/"
 ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md
-ln -sf "$AI_OS_HOME/MEMORY.md" ~/MEMORY.md
+ln -sf "$AI_OS_HOME/docs/MEMORY.md" ~/MEMORY.md
 export ZDOTDIR="$AI_OS_HOME"
-ln -sfn "$AI_OS_HOME/memory" ~/memory
+ln -sfn "$AI_OS_HOME/docs/memory" ~/memory
 
 # PHASE 4: macOS Profiling
 # Generate a static state document of the environment on boot
-PROFILE_PATH="$AI_OS_HOME/memory/macOS_profile.md"
+PROFILE_PATH="$AI_OS_HOME/docs/memory/macOS_profile.md"
 echo "[ai-os] Generating macOS system profile..."
 echo "# macOS System Profile (Auto-Generated)" > "$PROFILE_PATH"
 echo "## Storage & Volumes" >> "$PROFILE_PATH"
