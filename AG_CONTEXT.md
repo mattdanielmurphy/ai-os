@@ -7,7 +7,7 @@
 - `/bin`: Wrapper scripts and orchestrator binaries (e.g. `ai-os`, `agy`).
 - `/docs`: Architecture, vision, memory, and strategy documentation.
 - `/scripts`: Tool helper scripts (`mechanical_editor.py`, `get_last_cost.py`, `context_handoff.py`, `precision_edit.py`, `get-active-task.sh`, etc.).
-- `/.agent-logs`: Session engineering logs tracking goals, changes, and architecture discoveries.
+- `/agent-logs`: Session engineering logs tracking goals, changes, and architecture discoveries.
 - `/.devtool/features`: Features and user task specifications.
 
 ## Key Architecture & Domain Rules

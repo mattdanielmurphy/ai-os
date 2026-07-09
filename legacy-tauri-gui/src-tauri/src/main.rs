@@ -122,7 +122,7 @@ async fn handle_commit(
         .unwrap_or_else(|_| std::env::current_dir().unwrap().to_string_lossy().to_string());
     
     let log_dir = std::path::Path::new(&project_root)
-        .join(".agent-logs")
+        .join("agent-logs")
         .join("git")
         .join(&payload.thread_uuid);
         
@@ -3083,7 +3083,7 @@ fn confirm_staged_execution(
     payload: String,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
-    let agent_logs_dir = std::path::Path::new(&project_path).join(".agent-logs");
+    let agent_logs_dir = std::path::Path::new(&project_path).join("agent-logs");
     std::fs::create_dir_all(&agent_logs_dir).map_err(|e| e.to_string())?;
     let payload_path = agent_logs_dir.join("current_task_payload.md");
     std::fs::write(&payload_path, &payload).map_err(|e| e.to_string())?;
@@ -3132,7 +3132,7 @@ fn confirm_staged_execution(
     let switch_res = switch_active_project(project_path.clone(), engine.clone(), thread_id.clone(), state.clone())?;
 
     let prompt_text = format!(
-        "Please read the instructions inside `.agent-logs/current_task_payload.md` and complete the task in {} mode.\n",
+        "Please read the instructions inside `agent-logs/current_task_payload.md` and complete the task in {} mode.\n",
         if mode == "triage" { "Triage" } else { "Worker Bee" }
     );
     

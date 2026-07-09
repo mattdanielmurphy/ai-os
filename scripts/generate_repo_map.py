@@ -16,7 +16,7 @@ except Exception as e:
     ingest_codebase = None
 
 EXCLUDE_DIRS = {
-    "node_modules", ".git", "dist", "target", "tmp", ".agent-logs", 
+    "node_modules", ".git", "dist", "target", "tmp", "agent-logs", 
     "build", "__pycache__", ".vscode", ".idea", ".tauri", "out",
     "gemini-history", ".gemini", "legacy-tauri-gui/node_modules"
 }

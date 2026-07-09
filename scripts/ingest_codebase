@@ -27,7 +27,7 @@ except ImportError:
 
 # Exclusion list for directory scanning
 EXCLUDE_DIRS = {
-    "node_modules", ".git", "dist", "target", "tmp", ".agent-logs", 
+    "node_modules", ".git", "dist", "target", "tmp", "agent-logs", 
     "build", "__pycache__", ".vscode", ".idea", ".tauri", "out"
 }
 

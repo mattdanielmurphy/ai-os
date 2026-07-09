@@ -24,17 +24,19 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-0. **MANDATORY INITIALIZATION (Fresh Thread Context):** When you receive a message in a fresh thread, if there is insufficient context about the specific feature or codebase elements being discussed, ALWAYS check the most recent 2 agent log files in \`.agent-logs/\`. Use this history to piece together the context needed to understand the prompt's references and execute it correctly.
-1. **Log Directory:** ALWAYS look for and maintain an \`.agent-logs/\` directory at the root of the project.
-2. **Reading Logs:** Before starting a bug fix or feature, scan \`.agent-logs/\` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
-3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in \`.agent-logs/\`.
-   - **Naming Convention:** \`YYYY-MM-DD_HH-MM_<short-kebab-description>.md\`
+0. **Fresh Thread Context & Transcript Loading:** When starting a new task in a fresh thread, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, and the `agent-logs/` directory. Find relevant agent logs, read their transcript pointers, and then load the transcripts (at the pointer path) using `view_file` to reconstruct a rich, continuous understanding of the codebase and avoid repeating past mistakes.
+1. **Log Directory:** ALWAYS look for and maintain a non-hidden `agent-logs/` directory at the root of the project.
+2. **Reading Logs:** Before starting a bug fix or feature, scan `agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context.
+3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `agent-logs/`.
+   - **Naming Convention:** `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
    - **Required Sections:**
-     - \`## Goal\`: What the user asked for.
-     - \`## Changes Made\`: Files modified, what was changed, and why.
-     - \`## What Worked\`: Confirmed fixes.
-     - \`## What Didn't Work / Known Issues\`: Failed approaches and things that still need attention (crucial for future agents).
-     - \`## Architecture Notes\`: Discoveries about how the codebase works that aren't obvious.
+     - `## Goal`: What the user asked for (restate user's instructions and context clearly).
+     - `## User Feedback & Decisions`: Specific user feedback, preferences, and choices.
+     - `## Changes Made`: Files modified/created, what was changed, and why.
+     - `## What Worked`: Confirmed fixes and completed tasks.
+     - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention.
+     - `## Architecture Notes`: Discoveries about how the codebase works.
+     - `To see the full transcript for this: <path-to-transcript>`: Print the absolute path to the transcript of the current session by reading `conversationId` (which is the `<thread-uuid>`) from `ANTIGRAVITY_SOURCE_METADATA` and checking if it is at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl`.
 4. **Commit:** Commit the log file alongside your code changes.
 </AGENT_WORK_LOGS>
 
@@ -51,7 +53,7 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 
 - Context Self-Healing (Automated Subtasking): If a task requires many steps or your context window is bloated, reset your context natively. 
   INDEXED HANDOFF PROTOCOL: To keep the handoff context window small without losing historical data, you must separate summaries from granular details. 
-  - Before running \`context_handoff.py\`, if you have complex logic, command outputs, or nuanced decisions you want to preserve for the next agent, write them to a detail file: \`.agent-logs/details/step_<timestamp_or_id>.md\`.
+  - Before running \`context_handoff.py\`, if you have complex logic, command outputs, or nuanced decisions you want to preserve for the next agent, write them to a detail file: \`agent-logs/details/step_<timestamp_or_id>.md\`.
   - In the main handoff log under '## Completed So Far', you MUST be extremely succinct. Write only a 1-sentence summary of the achievement, appended with its reference ID. Example: '- [step_171829] Implemented OAuth middleware in auth.py'
   - If you are a newly spawned agent reading a handoff log and you need more context about a specific past step, you can dynamically choose to read its associated \`step_<id>.md\` file.
   1. Call \`/Users/matt/projects/ai-os/scripts/context_handoff.py\` with your current state.
