@@ -2,6 +2,10 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+### [2026-07-09] Asynchronous Housekeeping & Immediate Output
+* **Asynchronous Housekeeping Script (`scripts/housekeep.py`):** Created a Python utility that accepts log content via stdin, dynamically detects conversation ID to append transcript links, writes logs to `agent-logs/`, updates task status, and executes `auto_commit.py` in the background.
+* **Orchestrator Rule Update:** Updated `.agents/AGENTS.md` rules to instruct the orchestrator to run `housekeep.py` asynchronously as its final tool call, allowing it to present task outputs immediately without blocking.
+
 ### [2026-07-09] Systemic Delegation Settings & Orchestrator-Only Mode (Mode 3)
 * **Delegation Settings Enforced:** Added a ruleset in .agents/AGENTS.md defining three delegation levels (Mode 1: Self-Contained, Mode 2: Hybrid, Mode 3: Orchestrator-Only) and activated Mode 3 as the active constraint. Under Mode 3, the orchestrator model (Gemini) acts strictly as a coordinator, never reading or writing files directly, instead delegating all edits/reads to subagent scripts (mechanical_editor.py / precision_edit.py) or using grep_search.
 
