@@ -2,6 +2,9 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+### [2026-07-09] Conversation Transcript Auditing for Token Waste
+* **Transcript Audit Script (`scripts/audit_transcripts.py`):** Created a Python utility that scans and parses `transcript_full.jsonl` files in the Antigravity CLI and IDE brain directories. It detects direct file reads/writes by the main orchestrator (Gemini 3.5 Flash) and calculates the estimated cumulative token waste caused by keeping large files in the prompt context over subsequent steps.
+
 ### [2026-07-09] Stable Anchor Context Strategy
 * **Stable Anchor + Volatile Append:** Designed and implemented a lightweight signature-only repository map generator (`scripts/generate_repo_map.py`) that extracts file structures, classes, functions, and interfaces from JS/TS, Python, Rust, and Go files while discarding implementation bodies to keep prompt context highly efficient (~90% compression).
 * **Startup CLI Wrapper Integration:** Configured the `ai-os` wrapper script (`bin/ai-os`) to automatically compile/update the repository map on launch to guarantee a fresh stable anchor is available before executing any agent prompts.
