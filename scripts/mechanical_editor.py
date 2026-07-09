@@ -20,8 +20,8 @@ def list_available_models(config_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Mechanical Editor utilizing Claude Code CLI")
-    parser.add_argument("filepath", nargs="?", help="Path to the file to modify")
-    parser.add_argument("spec", nargs="?", help="Technical spec describing the modifications")
+        parser.add_argument("filepath", nargs="?", help="Path to the file to modify, or a technical spec if --spec is not provided")
+    parser.add_argument("--spec", help="Technical spec describing the modifications")
     parser.add_argument("--model", default="claude-sonnet-gem-2.5-flash", help="Target LiteLLM mapped model name")
     parser.add_argument("-l", "--list", action="store_true", help="List available models from LiteLLM config")
     
@@ -32,8 +32,36 @@ def main():
         list_available_models(config_path)
         sys.exit(0)
         
-    if not args.filepath or not args.spec:
-        parser.error("filepath and spec are required unless using --list")
+    filepath_arg = None
+    spec_arg = None
+
+    if args.filepath and not args.spec:
+        # Case 1: filepath provided, spec not provided
+        potential_path = Path(args.filepath)
+        if potential_path.exists():
+            parser.error('A technical spec is required when editing an existing file.')
+        else:
+            spec_arg = args.filepath
+            filepath_arg = None # Ensure filepath_arg is None if it's treated as a spec
+    elif args.filepath and args.spec:
+        # Case 2: both provided
+        filepath_arg = args.filepath
+        spec_arg = args.spec
+    elif not args.filepath and args.spec:
+        # Case 2.5: only spec provided without filepath (handled by filepath_arg = None and spec_arg = args.spec)
+        spec_arg = args.spec
+    elif not args.filepath and not args.spec:
+        # Case 3: neither provided
+        parser.error('A technical spec or task description is required.')
+
+    if filepath_arg:
+        filepath = Path(filepath_arg).resolve()
+        if not filepath.exists():
+            print(f"Error: File {filepath} does not exist.", file=sys.stderr)
+            sys.exit(1)
+        prompt = f"Apply this technical spec: '{spec_arg}' to the file: '{filepath}'"
+    else:
+        prompt = spec_arg
         
     filepath = Path(args.filepath).resolve()
     if not filepath.exists():
