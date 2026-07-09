@@ -1,0 +1,8 @@
+{
+  "name": "ai-os-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "gather-context": "code2prompt --include \"*.md,*.py,*.sh,bin/*\" --exclude \"legacy-tauri-gui/*,agent-logs/*,gemini-history/*,tmp/*,.git/*,node_modules/*\" -O ./tmp/codebase.txt && pbcopy < ./tmp/codebase.txt && echo \"Codebase context gathered to ./tmp/codebase.txt and copied to clipboard.\""
+  }
+}
