@@ -6,10 +6,10 @@ assignee: null
 epic: null
 dueDate: null
 created: "2026-07-09T15:26:00.000Z"
-modified: "2026-07-09T15:26:00.000Z"
-completedAt: null
+modified: "2026-07-09T23:54:50.577Z"
+completedAt: "2026-07-09T23:50:34.396Z"
 labels: []
-order: "a17"
+order: "a5"
 ---
 # Audit Transcripts for Token Waste
 

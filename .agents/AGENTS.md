@@ -22,9 +22,12 @@
   - **Match Found**: If a matching feature is found, the agent MUST update that file's frontmatter to set `status: "in-progress"`.
   - **No Match Found**: If no matching feature exists, the agent MUST automatically create a new feature file under `.devtool/features/` with:
     - A clean, kebab-case filename (e.g., `some-feature.md`).
-    - Frontmatter with `status: "in-progress"`, a unique `id`, `priority: "medium"`, and other metadata fields.
-    - A clear, concise title. If it is a bug fix, prefix the title with "Bug: ". For other features, use a regular descriptive title.
-    - An improved description of what the user requested in their prompt. Keep it objective and do not editorialize too much.
+    - Frontmatter containing ONLY standard keys (`id`, `status: "in-progress"`, `priority: "medium"`, `assignee: null`, `epic: null`, `dueDate: null`, `created`, `modified`, `completedAt: null`, `labels: []`, `order`). Do NOT put `title` or `description` inside the frontmatter.
+    - In the markdown body, start with a clear, concise `# Title` (if a bug fix, prefix with "Bug: ") and then provide the description below it.
+    - **No Approval Step**: When creating a feature task/file, do NOT ask the user for approval or say "please approve it". Just create it and proceed silently without requiring approval (which is only for Implementation Plans).
+
+## Task Completion & Review Rule
+- **Constraint**: When the agent finishes a task, it MUST NOT set `status: "done"` or move the feature file to `.devtool/features/done/`. Instead, it must transition the task to `status: "review"` in the frontmatter, and leave the feature file directly under `.devtool/features/` (not in `done/`), because only the user can confirm if the task was completed to their satisfaction.
 
 ## Agent Work Logs & Transcript Tracking
 - **Log Directory**: ALWAYS look for and maintain a non-hidden `agent-logs/` directory at the root of the project (instead of `.agent-logs/`).
