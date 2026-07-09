@@ -59,5 +59,15 @@
 ## macOS Environment Reference
 - **Context**: The host machine runs custom Launch Agents, Hammerspoon scripting, and specific helper tools.
 - **Constraint**: ALWAYS refer to [MAC_ENVIRONMENT.md](file:///Users/matt/projects/ai-os/docs/MAC_ENVIRONMENT.md) before installing new software, configuring background services/daemons, scripting custom window/system automation, or making system-wide integration decisions.
+
+## Blank Thread / Task Selection Rule
+- **Context**: When starting a fresh thread/session (i.e. a "blank thread" where there is no active task with `status: "in-progress"` in `.devtool/features/`):
+- **Constraint**: The agent MUST check the existing files in `.devtool/features/*.md` to see if one matches the current user request.
+  - **Match Found**: If a matching feature is found, the agent MUST update that file's frontmatter to set `status: "in-progress"`.
+  - **No Match Found**: If no matching feature exists, the agent MUST automatically create a new feature file under `.devtool/features/` with:
+    - A clean, kebab-case filename (e.g., `some-feature.md`).
+    - Frontmatter with `status: "in-progress"`, a unique `id`, `priority: "medium"`, and other metadata fields.
+    - A clear, concise title. If it is a bug fix, prefix the title with "Bug: ". For other features, use a regular descriptive title.
+    - An improved description of what the user requested in their prompt. Keep it objective and do not editorialize too much.
 </WORKSPACE_RULES>
 </SYSTEM_INSTRUCTIONS>
