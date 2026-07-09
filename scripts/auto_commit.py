@@ -16,6 +16,22 @@ def run_cmd(args, check=True):
         return "", e.returncode
 
 def main():
+    # 0. Check and update any active task in-progress to review status
+    import glob
+    import re
+    features = glob.glob(".devtool/features/*.md")
+    for feat_path in features:
+        try:
+            with open(feat_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if re.search(r'status:\s*["\']?in-progress["\']?', content):
+                new_content = re.sub(r'status:\s*["\']?in-progress["\']?', 'status: "review"', content)
+                with open(feat_path, "w", encoding="utf-8") as f:
+                    f.write(new_content)
+                print(f"Moved active task {feat_path} to 'review' status.")
+        except Exception as e:
+            print(f"Warning: Failed to read/update task file {feat_path}: {e}", file=sys.stderr)
+
     # 1. Stage all changes
     print("Staging changes...")
     run_cmd(["git", "add", "."])
