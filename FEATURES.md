@@ -1,3 +1,5 @@
 # Features
 
 - **Transcript Auditing Enhancements**: The `audit_transcripts.py` script now supports an optional `transcript_path` argument. If not provided, it automatically discovers and audits the most recent transcript from predefined paths (`/Users/matt/.gemini/antigravity-ide/brain` and `/Users/matt/.gemini/antigravity-cli/brain`). This streamlines the process of auditing recent agent interactions for token waste and delegation adherence.
+
+- **Model Roster Cheat Sheet**: Integrated a comprehensive cheat sheet detailing Tier 1 to 4 active models, explaining why they are in the configuration, when they should be deployed, and linking them across key architectural documentation like [model-roster.md](file:///Users/matt/projects/ai-os/docs/model-roster.md) and [VISION.md](file:///Users/matt/projects/ai-os/docs/VISION.md).

@@ -35,3 +35,4 @@ DO NOT execute this command during internal tool polling or intermediate steps, 
 * **2026-06-30:** Implemented resizable layout pane splitters: sidebar width resizer, project list vs project threads height resizer, and terminal vs preview horizontal pane split resizer, optimizing screen allocation.
 * **2026-06-30:** Replaced two-pane TUI/Preview layout with a vertical split layout: top custom HTML log parser (polling transcript.jsonl to show tools, files, thinking state, and markdown responses) and bottom expandable Engine TUI Terminal (64px collapsed, full screen expanded).
 
+* **2026-07-10:** Integrated active `model_list` roster cheat sheet mapping models (Tier 1-4) to their orchestration/execution criteria in [model-roster.md](file:///Users/matt/projects/ai-os/docs/model-roster.md).

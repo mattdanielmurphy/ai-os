@@ -38,6 +38,7 @@ Instead of a rigid binary split, `ai-os` uses a **Multi-Tier Resource Triage Str
 
 - **Orchestration Layer:** High-reasoning models manage sub-tasking, spec generation, and architectural design.
 - **Execution Layer:** Commodity models handle code construction, boilerplate generation, and telemetry compilation.
+- **Active Roster:** See the [Active Model List Roster Cheat Sheet](file:///Users/matt/projects/ai-os/docs/model-roster.md) for details on active models and their deployment criteria.
 - **Context Multipliers:** When multi-file context drops efficiency, the environment leverages the complex dual-rail web/subscription pipelines detailed in Section 8.
 
 ---

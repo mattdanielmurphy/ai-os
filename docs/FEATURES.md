@@ -5,6 +5,9 @@
 ### [2026-07-10] Tmux-based LiteLLM Launch Agent
 * **LiteLLM Launch Agent & Tmux Monitor:** Implemented a macOS Launch Agent (`com.mattmurphy.litellm.plist`) and a wrapper script (`run_litellm.sh`) to run LiteLLM within a persistent, detached `tmux` session (`litellm`) on port 8082. This permits real-time console monitoring via `tmux attach -t litellm` and seamless daemon restarts (e.g. via `Ctrl+C` inside tmux or `tmux kill-session -t litellm`), while sourcing the user's login shell profile to preserve environment API keys (e.g. `OPENROUTER_API_KEY`).
 
+### [2026-07-10] Active Model Roster Cheat Sheet
+* **Model Roster documentation:** Created [model-roster.md](file:///Users/matt/projects/ai-os/docs/model-roster.md) containing the active model roster cheat sheet detailing Tier 1 to Tier 4 models, explaining their orchestration vs execution roles, and integrating it with links in [VISION.md](file:///Users/matt/projects/ai-os/docs/VISION.md) and [AG_CONTEXT.md](file:///Users/matt/projects/ai-os/docs/AG_CONTEXT.md).
+
 ### [2026-07-09] Asynchronous Housekeeping & Immediate Output
 * **Asynchronous Housekeeping Script (`scripts/housekeep.py`):** Created a Python utility that accepts log content via stdin, dynamically detects conversation ID to append transcript links, writes logs to `agent-logs/`, updates task status, and executes `auto_commit.py` in the background.
 * **Orchestrator Rule Update:** Updated `.agents/AGENTS.md` rules to instruct the orchestrator to run `housekeep.py` asynchronously as its final tool call, allowing it to present task outputs immediately without blocking.
