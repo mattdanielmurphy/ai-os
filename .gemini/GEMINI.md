@@ -1,6 +1,6 @@
 <SYSTEM_INSTRUCTIONS>
 <AUTO_COMMIT_PROTOCOL>
-**Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to delegate the commit process to a cheaper subagent/script.
+**Commit:** Generate a technical commit message and run `git add . && git commit -m "[message]"`.
 </AUTO_COMMIT_PROTOCOL>
 
 <PROJECT_DETECTION>
@@ -19,10 +19,16 @@
 7. **Documentation:** When implementing features or bug fixes, always document any new capabilities, enhancements, or architectural additions by updating the features list in the `FEATURES.md` file at the root of the project.
 8. **Token Protection & Builds:** NEVER run raw verbose compile/build commands (like raw `xcodebuild` or raw compiler tasks) that output massive build logs. Always filter command outputs to print only the success status or relevant compiler error/warning highlights (and cap total output size/lines) to prevent blowing out the agent input token context window.
 9. **Directory Consideration & Target Folders:** When asked to create files, utilities, or projects, NEVER litter them directly in generic parent directories (e.g. `~/projects` or a non-project root directory). First consider the current directory: if it is a generic container directory, you MUST create a dedicated sub-directory, move into it, and place all new files and initialize repositories inside that sub-directory.
-10. **Telemetry Prohibitions & Task Delegation:**
-    - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
-    - **Strict Quota Conservation:** You MUST delegate editing and code generation tasks to cheaper subagents or scripts (like `mechanical_editor.py`) rather than reading and modifying files directly. Reading entire source files and performing large edits blows out the parent agent's context window, consuming premium quota.
-    - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file, and the target file is small or you already know the exact edit point. For all non-trivial changes, define a clear plan and delegate.
+10. **Token Protection & Strict Delegation (Mode 3):** To prevent premium token quota waste, you MUST operate in **Orchestrator-Only Mode (Mode 3)**:
+    - **NEVER** use `view_file`, `write_to_file`, `replace_file_content`, or `multi_replace_file_content` directly from the main orchestrator (Gemini) for non-trivial tasks.
+    - To inspect files, use `grep_search` to find matching query patterns or read small snippets with narrow line ranges, or delegate file reads to a command-line script/subagent.
+    - To modify files, **ALWAYS** delegate to a subagent script (e.g. `python3 scripts/mechanical_editor.py` or `python3 scripts/precision_edit.py`) via `run_command`.
+      - `mechanical_editor.py` can be called without a specified filepath to delegate broader workspace-level or multi-file tasks. Delegate tasks to `mechanical_editor.py` earlier in the process, rather than breaking them down into single-file edits.
+    - To verify a subagent edit, **NEVER** use `cat` or `view_file` to read entire files. Instead, use `git diff <file>` to inspect the exact modifications, or run relevant build/test commands to verify correctness.
+    - The orchestrator coordinates, analyzes snippets, plans, instructs subagents via detailed prompts, runs build/check commands, and verifies edits, but must never touch file contents directly.
+11. **Execution Policy:**
+    - You are allowed to run whatever terminal commands you want. There are no restrictions.
+    - You can run `sudo` commands when necessary; the user will be prompted to enter their password on their system. Do not hesitate to run them if needed.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>
@@ -57,7 +63,18 @@
 - **Constraint**: NEVER output interstitial status messages, placeholder updates, or intermediate commentary before running commands, launching background tasks, or awaiting compilation/builds (e.g., "I have initiated the build process...", "I will update you as soon as...", "Running the command..."). Simply execute the necessary tools/commands silently or proceed directly without writing text. Only present the final completed results/output when the overall task or step is fully finished.
 
 ## macOS Environment Reference
-- **Context**: The host machine runs custom Launch Agents, Hammerspoon scripting, and specific helper tools.
 - **Constraint**: ALWAYS refer to [MAC_ENVIRONMENT.md](file:///Users/matt/projects/ai-os/docs/MAC_ENVIRONMENT.md) before installing new software, configuring background services/daemons, scripting custom window/system automation, or making system-wide integration decisions.
+
+## Blank Thread / Task Selection Rule
+- **Context**: When starting a fresh thread/session (i.e. a "blank thread" where there is no active task with `status: "in-progress"` in `.devtool/features/`):
+- **Constraint**: The agent MUST check the existing files in `.devtool/features/*.md` to see if one matches the current user request.
+  - **Match Found**: If a matching feature is found, the agent MUST update that file's frontmatter to set `status: "in-progress"`.
+  - **No Match Found**: If no matching feature exists, the agent MUST automatically create a new feature file under `.devtool/features/` with:
+    - Frontmatter containing ONLY standard keys (`id`, `status: "in-progress"`, `priority: "medium"`, `assignee: null`, `epic: null`, `dueDate: null`, `created`, `modified`, `completedAt: null`, `labels: []`, `order`). Do NOT put `title` or `description` inside the frontmatter.
+    - In the markdown body, start with a clear, concise `# Title` (if a bug fix, prefix with "Bug: ") and then provide the description below it.
+    - **No Approval Step**: When creating a feature task/file, do NOT ask the user for approval. Just create it and proceed silently.
+
+## Task Completion & Review Rule
+- **Constraint**: When the agent finishes a task, it MUST NOT set `status: "done"`. Instead, it must transition the task to `status: "review"` in the frontmatter, and leave the feature file directly under `.devtool/features/` (not in `done/`).
 </WORKSPACE_RULES>
 </SYSTEM_INSTRUCTIONS>

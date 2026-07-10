@@ -28,6 +28,7 @@ These background services are configured to launch automatically for the user:
 | `com.matthewmurphy.personal-sync.plist` | `watch-personal-sync.sh` | Personal sync utility. | **KeepAlive: True**. Logs to standard logs directory. |
 | `com.matthewmurphy.rqbit.plist` | `/usr/local/bin/rqbit server start /Users/matt/Downloads` | Rust-based Bittorrent server. | **KeepAlive: True**. |
 | `com.mattmurphy.userscript-bundler.plist` | `watch-and-bundle.js` | Automatically bundles userscripts upon file changes. | **KeepAlive: True**. Working directory: `/Users/matt/projects/userscript-bundler`. |
+| `com.mattmurphy.litellm.plist` | `/Users/matt/litellm/run_litellm.sh` | LiteLLM proxy server. | Runs LiteLLM inside a detached tmux session (`litellm`) on port 8082, loading `.zshrc` to export environment keys. **KeepAlive: True**. |
 | `com.user.notesync.plist` | `notesync-wrapper` | Syncs Obsidian notes when target paths change. | Watches `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal`. |
 | `com.mattmurphy.ai-os-rules-watcher.plist` | `sync_rules.sh` | Automatically syncs ~/.gemini/GEMINI.md to workspace repository. | **WatchPaths: ~/.gemini/GEMINI.md**. Cwd: `/Users/matt/projects/ai-os`. |
 
