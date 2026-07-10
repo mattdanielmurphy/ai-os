@@ -15,6 +15,8 @@ Add detailed info to docs and implement the Universal Agent Framework to keep An
 - Updated /Users/matt/projects/ai-os/CLAUDE.md to reference absolute workflow paths.
 - Removed legacy rules file at .gemini/GEMINI.md to prevent race conditions.
 - Created task file .devtool/features/universal-agent-framework.md with status set to review.
+- Created `~/.gemini/antigravity-cli/skills/{audit,fast,start}/SKILL.md` symlinked back to `~/.ai-workflows/{audit,fast,start}.md` to expose them as global skills to `agy-cli`.
+- Created  symlinked back to  to expose them as global skills to .
 
 ## What Worked
 - Claude 3.5 Haiku successfully executed the updates to both settings.json files, created AGENTS.md, updated CLAUDE.md, and cleaned up legacy GEMINI.md files.
