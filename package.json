@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "gather-context": "code2prompt --include \"*.md,*.py,*.sh,bin/*\" --exclude \"legacy-tauri-gui/*,agent-logs/*,gemini-history/*,tmp/*,.git/*,node_modules/*\" -O ./tmp/codebase.txt && osascript -e 'set the clipboard to POSIX file \"'\"$(pwd)/tmp/codebase.txt\"'\"' && echo \"Codebase context gathered to ./tmp/codebase.txt and codebase.txt file reference copied to clipboard.\"",
+    "gather-context": "code2prompt --include \"*.md,*.py,*.sh,bin/*\" --exclude \"legacy-tauri-gui/*,agent-logs/*,gemini-history/*,tmp/*,.git/*,node_modules/*\" -O ./tmp/codebase.txt && ./bin/copy-file-ref ./tmp/codebase.txt && echo \"Codebase context gathered to ./tmp/codebase.txt and file reference copied to clipboard.\"",
     "audit": "python3 ./scripts/audit_transcripts.py"
   }
 }

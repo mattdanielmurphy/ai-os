@@ -1,0 +1,12 @@
+#!/bin/bash
+# Copy a file reference (not contents) to the macOS clipboard
+FILE="$1"
+[ -z "$FILE" ] && { echo "Usage: $0 <filepath>"; exit 1; }
+FILE="$(cd "$(dirname "$FILE")" && pwd)/$(basename "$FILE")"
+swift -e "
+import AppKit
+let pb = NSPasteboard.general
+pb.clearContents()
+let url = NSURL(fileURLWithPath: \"$FILE\")
+pb.writeObjects([url])
+" 2>/dev/null

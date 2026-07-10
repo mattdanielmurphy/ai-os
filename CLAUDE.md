@@ -23,15 +23,20 @@
     - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
     - **Strict Quota Conservation:** You MUST delegate editing and code generation tasks to cheaper subagents or scripts (like `mechanical_editor.py`) rather than reading and modifying files directly. Reading entire source files and performing large edits blows out the parent agent's context window, consuming premium quota.
     - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file, and the target file is small or you already know the exact edit point. For all non-trivial changes, define a clear plan and delegate.
+11. **Research Delegation:** NEVER use `grep`, `rg`, or `grep_search` to blindly hunt for code logic or variable definitions. You MUST use the MCP tool `delegate_research` to have a subagent scan the workspace and return a token-efficient summary.
+12. **Synchronous Subagents:** When executing `mechanical_editor.py` or `housekeep.py` via `run_command`, NEVER set them as background or async tasks. You must run them synchronously and wait for the blocking process to return the final success/failure stdout. Do not use `manage_task` or `schedule` to poll these scripts.
+13. **No Heredocs:** NEVER use Quoted Heredocs (`cat << 'EOF'`) to write or modify files. All code and markdown modifications MUST route through `mechanical_editor.py` or `precision_edit.py`.
+14. **No Transient Artifacts:** DO NOT generate temporary planning files on disk (e.g., `task.md`, `walkthrough.md`, `implementation_plan.md`). Keep all task checklists and architectural planning strictly internal to your thought process.
+15. **Strict File Reading:** NEVER use `python3 -c`, `awk`, `sed`, `head`, or `tail` via `run_command` to print file contents to the terminal. Use the `read_lines` MCP tool for surgical inspections.
 </CORE_RULES>
 
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-0. **Fresh Thread Context:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, and the `.agent-logs/` directory. Read the project description, active goals, and the most recent 2-3 agent log files to reconstruct a rich, continuous understanding of the codebase, recent user requests, architectural decisions, and current focus, acting as if you are in the same ongoing thread.
-1. **Log Directory:** ALWAYS look for and maintain an `.agent-logs/` directory at the root of the project.
-2. **Reading Logs:** Before starting a bug fix or feature, scan `.agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
-3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `.agent-logs/`.
+0. **Fresh Thread Context:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, and the `agent-logs/` directory. Read the project description, active goals, and the most recent 2-3 agent log files to reconstruct a rich, continuous understanding of the codebase, recent user requests, architectural decisions, and current focus, acting as if you are in the same ongoing thread.
+1. **Log Directory:** ALWAYS look for and maintain an `agent-logs/` directory at the root of the project.
+2. **Reading Logs:** Before starting a bug fix or feature, scan `agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
+3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `agent-logs/`.
    - **Naming Convention:** `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
    - **Required Sections:**
      - `## Goal`: What the user asked for (restate user's instructions and context clearly).

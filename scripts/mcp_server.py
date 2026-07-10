@@ -56,6 +56,18 @@ def handle_request(request):
                                     "description": "The query string for research."
                                 }
                             }
+                        },
+                        "read_lines": {
+                            "description": "Reads a specific line range from a file to save context tokens.",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "file_path": {"type": "string", "description": "The absolute path to the file to read."},
+                                    "start_line": {"type": "integer", "description": "The 1-based start line (inclusive). Default is 1."},
+                                    "end_line": {"type": "integer", "description": "The 1-based end line (inclusive). Default is start_line + 50."}
+                                },
+                                "required": ["file_path"]
+                            }
                         }
                     }
                 }
@@ -132,6 +144,23 @@ def handle_request(request):
                 send_error(id, 1, f"Error running research_agent: {e.stderr}", data=str(e))
             except Exception as e:
                 send_error(id, -32000, f"Unexpected error: {str(e)}")
+
+        elif tool_name == 'read_lines':
+            file_path = tool_args.get('file_path')
+            start = tool_args.get('start_line', 1)
+            end = tool_args.get('end_line', start + 50)
+
+            if not os.path.exists(file_path):
+                send_error(id, -32602, f'File not found: {file_path}')
+                return
+
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    chunk = ''.join(f'{i+1}: {line}' for i, line in enumerate(lines) if start <= i+1 <= end)
+                send_response({'jsonrpc': '2.0', 'id': id, 'result': {'content': [{'type': 'text', 'text': chunk}]}})
+            except Exception as e:
+                send_error(id, -32000, f'Error reading file: {str(e)}')
 
         else:
             send_error(id, -32601, f"Method not found: {tool_name}")
