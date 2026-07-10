@@ -9,7 +9,7 @@ created: "2026-07-09T15:26:00.000Z"
 modified: "2026-07-09T23:54:50.577Z"
 completedAt: "2026-07-09T23:50:34.396Z"
 labels: []
-order: "a5"
+order: "a0"
 ---
 # Audit Transcripts for Token Waste
 

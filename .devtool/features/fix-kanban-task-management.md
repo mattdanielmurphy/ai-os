@@ -9,7 +9,7 @@ created: "2026-07-09T17:55:00.000Z"
 modified: "2026-07-09T17:55:00.000Z"
 completedAt: null
 labels: []
-order: "a6"
+order: "a1"
 ---
 # Bug: Fix Kanban Feature Task Management
 

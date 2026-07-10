@@ -61,4 +61,16 @@
   - Use `claude-haiku-ds-v4-flash-high` or `claude-fable-ds-v4-pro-low/med/high` for complex reasoning tasks.
   - Use `claude-opus-gem-2.5-pro` for tasks requiring deep context search, web search, or image-reading.
 
-
+## Userscripts & Gemini Web Integration
+- **Location**: The project's browser userscripts reside in `userscripts/` (e.g., `userscripts/gemini.js`).
+  - Note: `userscripts/gemini.js` is a symbolic link pointing to `/Users/matt/projects/userscript-bundler/userscripts/gemini.js`.
+- **Automatic Bundling**: There is an active watcher agent/daemon (`userscript-bundler`) that automatically compiles and bundles the userscripts upon any file changes. Therefore, there is NO need to trigger manual builds. You only need to edit/create the files in `/Users/matt/projects/userscript-bundler/userscripts/` and the bundling will happen automatically.
+- **Context Sync Protocol**: The userscript interacts with a local loopback server at `127.0.0.1:3031`. It connects the live Gemini web interface back to the AI-OS backend via:
+  - `/api/context/sync` (for thread syncing)
+  - `/api/payload/execute` (for local action triggers)
+  - `/api/skills/list` (for fetching active skills)
+- **Performance Guidelines**:
+  - The userscript runs a MutationObserver over the entire `document.body` to capture thread context changes.
+  - To prevent performance lag and CPU spiking in long conversation threads, ALWAYS avoid querying the entire document (e.g., `document.querySelectorAll`) on every mutation block.
+  - Process only newly added elements from `mutation.addedNodes` for dynamic injections and payload scanning.
+  - Deduplicate and cache message formats on the DOM elements using a `WeakMap` or a custom data attribute (`data-aios-parsed-text`) rather than re-cloning and re-parsing the entire conversation history on every event loop turn.
