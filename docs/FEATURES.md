@@ -5,6 +5,9 @@
 ### [2026-07-10] Tmux-based LiteLLM Launch Agent
 * **LiteLLM Launch Agent & Tmux Monitor:** Implemented a macOS Launch Agent (`com.mattmurphy.litellm.plist`) and a wrapper script (`run_litellm.sh`) to run LiteLLM within a persistent, detached `tmux` session (`litellm`) on port 8082. This permits real-time console monitoring via `tmux attach -t litellm` and seamless daemon restarts (e.g. via `Ctrl+C` inside tmux or `tmux kill-session -t litellm`), while sourcing the user's login shell profile to preserve environment API keys (e.g. `OPENROUTER_API_KEY`).
 
+### [2026-07-10] Three-Turn Delegation Protocol
+* **Three-Turn Delegation Protocol:** Enforced a structured 3-turn delegation protocol (Turn 1: Recon/Retrieval, Turn 2: Plan & Execute, Turn 3: Verify & Correct) in both `.agents/AGENTS.md` and root `AGENTS.md` to prevent context bloat and token waste in Orchestrator-Only Mode (Mode 3).
+
 ### [2026-07-10] Active Model Roster Cheat Sheet
 * **Model Roster documentation:** Created [model-roster.md](file:///Users/matt/projects/ai-os/docs/model-roster.md) containing the active model roster cheat sheet detailing Tier 1 to Tier 4 models, explaining their orchestration vs execution roles, and integrating it with links in [VISION.md](file:///Users/matt/projects/ai-os/docs/VISION.md) and [AG_CONTEXT.md](file:///Users/matt/projects/ai-os/docs/AG_CONTEXT.md).
 

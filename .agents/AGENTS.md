@@ -55,6 +55,10 @@
     - `mechanical_editor.py` can be called without a specified filepath to delegate broader workspace-level or multi-file tasks. Delegate tasks to `mechanical_editor.py` earlier in the process, rather than breaking them down into single-file edits.
   - To verify a subagent edit, **NEVER** use `cat` or `view_file` to read entire files. Instead, use `git diff <file>` to inspect the exact modifications, or run relevant build/test commands to verify correctness.
   - The orchestrator coordinates, analyzes snippets, plans, instructs subagents via detailed prompts, runs build/check commands, and verifies edits, but must never touch file contents directly.
+  - **Three-Turn Delegation Protocol**:
+    - **Turn 1 (Recon/Retrieval)**: The orchestrator processes the user's prompt, determines what files, grep patterns, or logs are needed, and immediately delegates the retrieval and code recon phase to a subagent (using Claude Code/`mechanical_editor.py` or another lightweight tool/subagent). The subagent gathers the specific lines or files and returns a token-efficient summary.
+    - **Turn 2 (Decision, Planning & Execution)**: The orchestrator reviews the recon summary, makes high-level architectural decisions, writes a targeted implementation plan, and delegates the edit execution tasks to subagent scripts (e.g. `mechanical_editor.py` or `precision_edit.py`).
+    - **Turn 3 (Verification & Correction)**: The orchestrator runs `git diff <file>` or build/test validation commands to analyze the edits. Any required corrections are immediately delegated back to the subagents, keeping the main orchestrator's context completely clean of raw file outputs.
 - **Model Selection Guidelines for mechanical_editor.py**:
   - Use `claude-sonnet-gem-2.5-flash` by default (for simple/lightweight edits to optimize speed/cost).
   - Use `claude-haiku-ds-v4-flash-low` or `claude-haiku-ds-v4-flash-med` for moderate edits.

@@ -15,3 +15,4 @@
 - **Triage Editing System ($AIOS_DELEGATE):** Toggled to delegate complex code editing tasks to LiteLLM/mechanical_editor or execute directly using Quoted Heredocs when speed is preferred.
 - **Dual-Rail Google Grid:** Seamlessly rotates Google accounts/authentication to double task quotas and VM limits.
 - **Context Sync Protocol:** Userscript (`gemini.js`) integrated into browser/Tauri webview connects live Google web interface turns back to the Rust loopback daemon (`/api/context/sync`, `/api/notes/save`, `/api/revision/commit`) to serialize and version active text revisions in Git.
+- **Three-Turn Delegation Protocol:** Enforces a structured 3-turn delegation protocol (Turn 1: Recon/Retrieval, Turn 2: Plan & Execute, Turn 3: Verify & Correct) in Orchestrator-Only Mode (Mode 3) to keep orchestrator context completely clean of raw file content.

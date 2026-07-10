@@ -22,6 +22,10 @@
     - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
     - **Strict Quota Conservation:** You MUST delegate editing and code generation tasks to cheaper subagents or scripts (like `mechanical_editor.py`) rather than reading and modifying files directly. Reading entire source files and performing large edits blows out the parent agent's context window, consuming premium quota.
     - **Exception:** You may only perform edits yourself if it is a truly trivial, single contiguous edit to a single file, and the target file is small or you already know the exact edit point. For all non-trivial changes, define a clear plan and delegate.
+    - **Three-Turn Delegation Protocol**: For non-trivial tasks, enforce a structured 3-turn delegation loop:
+      - *Turn 1 (Recon/Retrieval)*: Delegate context-gathering (grep, log inspections, file reading) to a cheap subagent (Claude Code/`mechanical_editor.py`) to return a token-efficient summary.
+      - *Turn 2 (Decision & Action)*: Orchestrator analyzes the summary, details the plan, and delegates edits to subagent scripts (`mechanical_editor.py` or `precision_edit.py`).
+      - *Turn 3 (Verification)*: Verify edits using `git diff` and build commands. Delegate required corrections back to subagents.
 11. **Research Delegation:** NEVER use `grep`, `rg`, or `grep_search` to blindly hunt for code logic or variable definitions. You MUST use the MCP tool `delegate_research` to have a subagent scan the workspace and return a token-efficient summary.
 12. **Synchronous Subagents:** When executing `mechanical_editor.py` or `housekeep.py` via `run_command`, NEVER set them as background or async tasks. You must run them synchronously and wait for the blocking process to return the final success/failure stdout. Do not use `manage_task` or `schedule` to poll these scripts.
 13. **No Heredocs:** NEVER use Quoted Heredocs (`cat << 'EOF'`) to write or modify files. All code and markdown modifications MUST route through `mechanical_editor.py` or `precision_edit.py`.

@@ -1,4 +1,5 @@
 # Features
+- **Three-Turn Delegation Protocol**: Introduced a structured 3-turn delegation loop in Orchestrator-Only Mode (Mode 3). Turn 1 delegates context/recon retrieval to a cheap subagent (Claude Code); Turn 2 reviews the summary and delegates edits; Turn 3 verifies edits using `git diff` and build commands, delegating corrections back to subagents.
 
 - **Transcript Auditing Enhancements**: The `audit_transcripts.py` script now supports an optional `transcript_path` argument. If not provided, it automatically discovers and audits the most recent transcript from predefined paths (`/Users/matt/.gemini/antigravity-ide/brain` and `/Users/matt/.gemini/antigravity-cli/brain`). This streamlines the process of auditing recent agent interactions for token waste and delegation adherence.
 
