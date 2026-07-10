@@ -64,6 +64,7 @@
   - Use `claude-haiku-ds-v4-flash-low` or `claude-haiku-ds-v4-flash-med` for moderate edits.
   - Use `claude-haiku-ds-v4-flash-high` or `claude-fable-ds-v4-pro-low/med/high` for complex reasoning tasks.
   - Use `claude-opus-gem-2.5-pro` for tasks requiring deep context search, web search, or image-reading.
+  - **Early Thread Branching**: If a conversation exceeds 15-20 steps, the orchestrator MUST branch to a fresh thread or delegate remaining work to a subagent conversation rather than continuing to accumulate context history in a single thread.
 
 ## Userscripts & Gemini Web Integration
 - **Location**: The project's browser userscripts reside in `userscripts/` (e.g., `userscripts/gemini.js`).

@@ -26,11 +26,12 @@
       - *Turn 1 (Recon/Retrieval)*: Delegate context-gathering (grep, log inspections, file reading) to a cheap subagent (Claude Code/`mechanical_editor.py`) to return a token-efficient summary.
       - *Turn 2 (Decision & Action)*: Orchestrator analyzes the summary, details the plan, and delegates edits to subagent scripts (`mechanical_editor.py` or `precision_edit.py`).
       - *Turn 3 (Verification)*: Verify edits using `git diff` and build commands. Delegate required corrections back to subagents.
-11. **Research Delegation:** NEVER use `grep`, `rg`, or `grep_search` to blindly hunt for code logic or variable definitions. You MUST use the MCP tool `delegate_research` to have a subagent scan the workspace and return a token-efficient summary.
+11. **Research Delegation & Optimized Grep:** NEVER use `grep`, `rg`, or `grep_search` to blindly hunt for code logic or variable definitions. You MUST use the MCP tool `delegate_research` to have a subagent scan the workspace and return a token-efficient summary. When performing searches, you must optimize grep patterns by specifying narrow directory searches (e.g., specifying file extensions or subdirectory paths) to prevent massive result lists.
 12. **Synchronous Subagents:** When executing `mechanical_editor.py` or `housekeep.py` via `run_command`, NEVER set them as background or async tasks. You must run them synchronously and wait for the blocking process to return the final success/failure stdout. Do not use `manage_task` or `schedule` to poll these scripts.
 13. **No Heredocs:** NEVER use Quoted Heredocs (`cat << 'EOF'`) to write or modify files. All code and markdown modifications MUST route through `mechanical_editor.py` or `precision_edit.py`.
 14. **No Transient Artifacts:** DO NOT generate temporary planning files on disk (e.g., `task.md`, `walkthrough.md`, `implementation_plan.md`). Keep all task checklists and architectural planning strictly internal to your thought process.
 15. **Strict File Reading:** NEVER use `python3 -c`, `awk`, `sed`, `head`, or `tail` via `run_command` to print file contents to the terminal. Use the `read_lines` MCP tool for surgical inspections.
+16. **Strict Output Truncation:** You MUST cap `grep_search` and `run_command` outputs returned to the orchestrator to a maximum of 1,000 tokens (or ~4,000 characters) unless explicitly requested by the user, to prevent context bloat.
 
 ## Agent Work Logs
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
