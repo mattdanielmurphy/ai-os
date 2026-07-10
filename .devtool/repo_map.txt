@@ -691,6 +691,25 @@
   def main():
     ...
 
+# File: scripts/audit_transcripts.py
+  import os
+  import json
+  import sys
+  import argparse
+  from pathlib import Path
+  def estimate_tokens(text):
+    ...
+  def get_step_text(step):
+    ...
+  def audit_transcript(filepath):
+    ...
+  def print_markdown_report(audit):
+    ...
+  def find_most_recent_transcript():
+    ...
+  def main():
+    ...
+
 # File: scripts/auto_commit.py
   import subprocess
   import sys
@@ -719,7 +738,7 @@
   from importlib.machinery import SourceFileLoader
   ingest_codebase = SourceFileLoader('ingest_codebase', str(scripts_dir / 'in...
   ingest_codebase = None
-  EXCLUDE_DIRS = {'node_modules', '.git', 'dist', 'target', 'tmp', '.agent...
+  EXCLUDE_DIRS = {'node_modules', '.git', 'dist', 'target', 'tmp', 'agent-...
   CODE_EXTENSIONS = {'.py', '.ts', '.js', '.tsx', '.jsx', '.rs', '.go'}
   def extract_signatures_js_ts(content):
     """
@@ -785,20 +804,62 @@
   def main():
     ...
 
+# File: scripts/housekeep.py
+  import os
+  import sys
+  import json
+  import datetime
+  import subprocess
+  def run_cmd(args, check=True):
+    ...
+  def main():
+    ...
+
+# File: scripts/mcp_server.py
+  import sys
+  import json
+  import subprocess
+  import os
+  def send_response(response):
+    ...
+  def send_error(id, code, message, data=None):
+    ...
+  def handle_request(request):
+    ...
+  def main():
+    ...
+
 # File: scripts/mechanical_editor.py
   import sys
   import argparse
   import subprocess
   from pathlib import Path
-  def parse_config_yaml(config_path):
-    ...
-  def resolve_model(requested_model, mappings):
+  def list_available_models(config_path):
     ...
   def main():
     ...
 
 # File: scripts/precision_edit.py
+  import argparse
+  def main():
+    ...
 
+# File: scripts/research_agent.py
+  import argparse
+  import subprocess
+  import json
+  import os
+  def main():
+    ...
+
+# File: scripts/search_all_agent_logs.py
+  import argparse
+  import subprocess
+  import os
+  def search_agent_logs(query, projects_root='~/projects'):
+    ...
+  parser = argparse.ArgumentParser(description='Search for a query i...
+  args = parser.parse_args()
 
 # File: scripts/telemetry_db.py
   import json
@@ -827,169 +888,220 @@
     ...
 
 # File: userscripts/gemini.js
-      function getMenuText(key) { ... }
-      function refreshMenu() { ... }
-          if (isMenuExpanded) { ... }
-      function ensureTooltip() { ... }
-          if (tooltipEl || !document.body) return
-      function showTooltip(e, text) { ... }
-          if (!tooltipEl) return
-      function hideTooltip() { ... }
-          if (tooltipEl) tooltipEl.style.display = 'none'
-      function positionTooltip(e) { ... }
-          if (!tooltipEl) return
-      function attachTooltip(el, getFullText) { ... }
-      function getLocalTzAbbr() { ... }
-      function getLocalTzOffsetHours() { ... }
-      function formatTime(date) { ... }
-      function formatFullDateTime(date) { ... }
-      function getRelativeDateLabel(unix, forSidebar = false) { ... }
-          if (diffDays <= 0) return forSidebar ? 'Today' : null
-          if (diffDays === 1) return 'Yesterday'
-          if (diffDays === 2) return '2 days ago'
-          if (diffDays < 7) return `$ { ... }
-      function buildMessageDisplay(unix, isEstimate) { ... }
-      function injectTimestamp(container, unix, isEstimate) { ... }
-      function isSidebarUrl(url) { ... }
-      function syncToAiOs(url, payload) { ... }
-          if (!payload || payload.length < 10) return
-                  if (this.responseType === '' || this.responseType === 'text') { ... }
-              if (!res) return
-                  if (this.readyState === 4) { ... }
-                  if (this.readyState === 4) { ... }
-      function extractMessageTimestamps(res) { ... }
-              if (!hexIds.length || !timestamps.length) return
-              if (added > 0) { ... }
-      function injectHeuristicTimes() { ... }
-      function parseEmbeddedUnix(dateStr, timeStr, offsetHours) { ... }
-      function processEmbeddedTimestamps() { ... }
-          if (nodes.length === 0) return
-              if (!match) return
-              if (!userQuery) { ... }
-              if (!container) { ... }
-      function extractSidebarTimestamps(text) { ... }
-          if (!text) return
-          for (let i = 1; i < blocks.length; i++) { ... }
-              if (!idMatch) continue
-          if (found) { ... }
-      function formatAbsoluteTime(d) { ... }
-          if (dateFormat === 'mm/dd/yyyy') { ... }
-      function clearAndReRenderSidebar() { ... }
-                  if (title) title.style.paddingRight = ''
-      function updateSidebarDOM() { ... }
-          if (!document.body) return
-                  if (!href) return
-                  if (currentLayout === 'classic') { ... }
-                      if (titleContainer) titleContainer.appendChild(wrapper)
-                      if (showAbsolute) { ... }
-                      if (trailingIcon) item.insertBefore(wrapper, trailingIcon)
-      function getNowTimestamp() { ... }
-      function getSendButton(target) { ... }
-          if (!target) return null
-          if (!btn) return null
-      function fetchSkills() { ... }
-      function replaceEditorContent(editor, newText) { ... }
-      function processCommandReplacement(editor) { ... }
-          if (replaced) { ... }
-          function (e) { ... }
-              if (!btn) return
-              if (!editor) return
-                  if (freshBtn) freshBtn.click()
-          function (e) { ... }
-              if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
-              if (!editor) return
-              if (autocompleteMenu && autocompleteMenu.style.display === 'block') { ... }
-      function updateTabTitle() { ... }
-          if (titleEl) { ... }
-              if (newTitle && document.title !== newTitle) { ... }
-      function removeAdvUpsell(warnIfMissing = false) { ... }
-          if (upsellContainer) { ... }
-      function startObservers() { ... }
-          if (!document.body) { ... }
-              for (const m of mutations) { ... }
-                  if (!target) continue
-                  if (target.nodeType === Node.ELEMENT_NODE) { ... }
-              if (isOnlyTypingOrTemp) return
-              for (const mutation of mutations) { ... }
-                  if (mutation.addedNodes) { ... }
-                      for (const node of mutation.addedNodes) { ... }
-                          if (node.nodeType === Node.ELEMENT_NODE) { ... }
-                      if (shouldExport) break
-              if (shouldExport && autoThreadSync) { ... }
-                  if (syncTimeout) clearTimeout(syncTimeout)
-              if (url !== lastUrl) { ... }
-              if (autoThreadSync) { ... }
-      if (window[OPTIMIZER_SCRIPT_ID]) { ... }
-      function getModelDetails(item) { ... }
-          if (!name) { ... }
-              if (lines.length >= 2) { ... }
-      function isModelMatch(modelName, labelText) { ... }
-          if (!cleanModel || !cleanLabel) return false
-      async function performSelection(modelName, targetThinking) { ... }
-          if (!originalModelBtn) return
-              if (overlayContainer) overlayContainer.style.opacity = '0'
-              if (overlayContainer) overlayContainer.style.opacity = '1'
-          if (targetThinking === 'extended') { ... }
-              if (isTargetModelSelected && isCurrentlyExtended) { ... }
-                  if (newTrigger) newTrigger.click()
-                  if (header) { ... }
-                      if (opt) opt.click()
-              if (isTargetModelSelected && isCurrentlyExtended) { ... }
-                  if (header) { ... }
-                      if (opt) opt.click()
-      function modifyMenu() { ... }
-              if (menuItems.length === 0) return
-              if (header) { ... }
-                  if (!modelName) return
-                  if (description) { ... }
-                  if (isStandardActive) { ... }
-                      if (descDiv) descDiv.style.color = '#c4c7c5'
-                      if (descDiv) descDiv.style.color = '#a8c7fa'
-                      if (descDiv) descDiv.style.color = '#8e918f'
-                      if (!isStandardActive && !isThinkingActive) { ... }
-                          if (descDiv) descDiv.style.color = '#c4c7c5'
-                      if (!isStandardActive && !isThinkingActive) { ... }
-                          if (descDiv) descDiv.style.color = '#8e918f'
-                      if (!isThinkingActive) { ... }
-                      if (!isStandardActive && !isThinkingActive) { ... }
-                          if (descDiv) descDiv.style.color = '#c4c7c5'
-                      if (!isThinkingActive) { ... }
-                      if (!isStandardActive && !isThinkingActive) { ... }
-                          if (descDiv) descDiv.style.color = '#8e918f'
-      function startOptimizer() { ... }
-          if (!document.body) { ... }
-      function isDarkTheme() { ... }
-      function getThreadId() { ... }
-      function createAutocompleteMenu() { ... }
-          if (autocompleteMenu) return;
-      function renderAutocomplete(inputEl, query) { ... }
-          if (filtered.length === 0) { ... }
-      function applySkill(inputEl, skillName) { ... }
-          if (queryStart !== -1) { ... }
-          if (autocompleteMenu) autocompleteMenu.style.display = 'none';
-      function injectPhaseDropdown(promptContainer) { ... }
-          if (switchBtn) { ... }
-      function togglePhaseDropdown(container, btn) { ... }
-          if (phaseDropdownMenu && phaseDropdownMenu.style.display === 'block') { ... }
-          if (!phaseDropdownMenu) { ... }
-                  if (editor) { ... }
-      function injectUI() { ... }
-          if (!promptContainer) return;
-          if (inputEl && !inputEl.dataset.aiosHooked) { ... }
-                  if (slashIdx !== -1 && slashIdx === text.length - 1) { ... }
-                          if (autocompleteMenu) autocompleteMenu.style.display = 'none';
-                      if (autocompleteMenu) autocompleteMenu.style.display = 'none';
-                  if (autocompleteMenu && autocompleteMenu.style.display === 'block') { ... }
-                      if (e.key === 'ArrowDown') { ... }
-                          if (activeItem) { ... }
-      function scanExecutionPayloads() { ... }
-              if (block.dataset.aiosHooked) return;
-              if (isInstructionBlock) { ... }
-                  if (match) { ... }
-      function showSyncedIcon() { ... }
-          if (!icon) { ... }
-          if (window._syncIconTimeout) clearTimeout(window._syncIconTimeout)
-      function exportThreadWithTimestamps() { ... }
-          if (!autoThreadSync) return;
-          if (messages.length === 0) return;
-          if (window._lastSentContextSync === formattedText) return;
+  	if (!text) return 0
+  	if (!chunks) return 0
+  	for (let chunk of chunks) { ... }
+  		if (len <= 3) { ... }
+  	function getScrollContainer() { ... }
+  		if (!firstQuery) return null
+  		while (parent && parent !== document.body) { ... }
+  			if (overflowY === "auto" || overflowY === "scroll") { ... }
+  	function getThreadMessages() { ... }
+  	function calculateThreadTokens() { ... }
+  		if (messages.length === 0) { ... }
+  		if (currentId !== lastConversationId) { ... }
+  		if (!beginningLoaded) { ... }
+  			if (scrollContainer && scrollContainer.scrollTop <= 5) { ... }
+  		for (let i = messages.length - 1; i >= 0; i--) { ... }
+  			if (msg.role === "user") { ... }
+  				if (match) { ... }
+  					if (val !== "*") { ... }
+  		if (!hasAnchor && currentId) { ... }
+  				if (cached) { ... }
+  						for (let i = messages.length - 1; i >= 0; i--) { ... }
+  							if (messages[i].text === cachedData.lastMessageText) { ... }
+  		if (hasAnchor) { ... }
+  			for (let i = anchorIndex + 1; i < messages.length; i++) { ... }
+  				if (messages[i].role === "user") { ... }
+  			for (let i = 0; i < messages.length; i++) { ... }
+  				if (messages[i].role === "user") { ... }
+  		if (isPrecise && currentId && messages.length > 0) { ... }
+  			if (lastMsg && lastMsg.text) { ... }
+  	function checkThreadUsage() { ... }
+  		if (total === 0) { ... }
+  			if (existingBadge) { ... }
+  			if (existingTooltip) { ... }
+  		if (!badge) { ... }
+  			for (let i = 0; i < 5; i++) { ... }
+  		if (total > 20000) { ... }
+  		if (tooltip) { ... }
+  			if (inVal) inVal.textContent = prefix + input.toLocaleString() + suffix
+  			if (outVal) outVal.textContent = prefix + output.toLocaleString() + suffix
+  			if (totalVal) totalVal.textContent = total.toLocaleString() + suffix
+  			if (!statusRow) { ... }
+  			if (!isPrecise) { ... }
+  			if (index < stage) { ... }
+  	function getMenuText(key) { ... }
+  	function refreshMenu() { ... }
+  		if (isMenuExpanded) { ... }
+  	function ensureTooltip() { ... }
+  		if (tooltipEl || !document.body) return
+  	function showTooltip(e, text) { ... }
+  		if (!tooltipEl) return
+  	function hideTooltip() { ... }
+  		if (tooltipEl) tooltipEl.style.display = "none"
+  	function positionTooltip(e) { ... }
+  		if (!tooltipEl) return
+  	function attachTooltip(el, getFullText) { ... }
+  	function getLocalTzAbbr() { ... }
+  	function getLocalTzOffsetHours() { ... }
+  	function formatTime(date) { ... }
+  	function formatFullDateTime(date) { ... }
+  	function getRelativeDateLabel(unix, forSidebar = false) { ... }
+  		if (diffDays <= 0) return forSidebar ? "Today" : null
+  		if (diffDays === 1) return "Yesterday"
+  		if (diffDays === 2) return "2 days ago"
+  		if (diffDays < 7) return `$ { ... }
+  		if (diffDays < 30) return weeks === 1 ? "1 week ago" : `$ { ... }
+  	function buildMessageDisplay(unix, isEstimate) { ... }
+  	function injectTimestamp(container, unix, isEstimate) { ... }
+  	function isSidebarUrl(url) { ... }
+  	function syncToAiOs(url, payload) { ... }
+  				if (this.responseType === "" || this.responseType === "text") { ... }
+  			if (!res) return
+  				if (this.readyState === 4) { ... }
+  				if (this.readyState === 4) { ... }
+  	function extractMessageTimestamps(res) { ... }
+  			if (!hexIds.length || !timestamps.length) return
+  			if (added > 0) { ... }
+  	function injectHeuristicTimes() { ... }
+  	function parseEmbeddedUnix(dateStr, timeStr, offsetHours) { ... }
+  	function processEmbeddedTimestamps() { ... }
+  		if (nodes.length === 0) return
+  			if (!match) return
+  			if (!userQuery) { ... }
+  			if (!container) { ... }
+  	function extractSidebarTimestamps(text) { ... }
+  		if (!text) return
+  		for (let i = 1; i < blocks.length; i++) { ... }
+  			if (!idMatch) continue
+  		if (found) { ... }
+  	function formatAbsoluteTime(d) { ... }
+  		if (dateFormat === "mm/dd/yyyy") { ... }
+  	function clearAndReRenderSidebar() { ... }
+  				if (title) title.style.paddingRight = ""
+  	function updateSidebarDOM() { ... }
+  		if (!document.body) return
+  				if (!href) return
+  				if (currentLayout === "classic") { ... }
+  					if (titleContainer) titleContainer.appendChild(wrapper)
+  					if (showAbsolute) { ... }
+  					if (trailingIcon) item.insertBefore(wrapper, trailingIcon)
+  	function getNowTimestamp() { ... }
+  	function getSendButton(target) { ... }
+  		if (!target) return null
+  		if (!btn) return null
+  	function fetchSkills() { ... }
+  	function replaceEditorContent(editor, newText) { ... }
+  	function processCommandReplacement(editor) { ... }
+  		if (replaced) { ... }
+  		function (e) { ... }
+  			if (!btn) return
+  			if (!editor) return
+  				if (freshBtn) freshBtn.click()
+  		function (e) { ... }
+  			if (!editor) return
+  			if (autocompleteMenu && autocompleteMenu.style.display === "block") { ... }
+  	function updateTabTitle() { ... }
+  		if (titleEl) { ... }
+  			if (newTitle && document.title !== newTitle) { ... }
+  	function removeAdvUpsell(warnIfMissing = false) { ... }
+  		if (upsellContainer) { ... }
+  	function startObservers() { ... }
+  		if (!document.body) { ... }
+  			for (const m of mutations) { ... }
+  				if (!target) continue
+  				if (target.nodeType === Node.ELEMENT_NODE) { ... }
+  			if (isOnlyTypingOrTemp) return
+  			if (observerTimeout) clearTimeout(observerTimeout)
+  				if (url !== lastUrl) { ... }
+  			for (const mutation of mutations) { ... }
+  				if (mutation.addedNodes) { ... }
+  					for (const node of mutation.addedNodes) { ... }
+  						if (node.nodeType === Node.ELEMENT_NODE) { ... }
+  					if (shouldExport) break
+  			if (shouldExport && autoThreadSync) { ... }
+  				if (syncTimeout) clearTimeout(syncTimeout)
+  					if (stopButton) { ... }
+  					if (msgElements.length > 0) { ... }
+  			if (autoThreadSync) { ... }
+  	if (window[OPTIMIZER_SCRIPT_ID]) { ... }
+  	function getModelDetails(item) { ... }
+  		if (!name) { ... }
+  			if (lines.length >= 2) { ... }
+  	function isModelMatch(modelName, labelText) { ... }
+  		if (!cleanModel || !cleanLabel) return false
+  	async function performSelection(modelName, targetThinking) { ... }
+  		if (!originalModelBtn) return
+  			if (overlayContainer) overlayContainer.style.opacity = "0"
+  			if (overlayContainer) overlayContainer.style.opacity = "1"
+  		if (targetThinking === "extended") { ... }
+  			if (isTargetModelSelected && isCurrentlyExtended) { ... }
+  				if (newTrigger) newTrigger.click()
+  				if (header) { ... }
+  					if (opt) opt.click()
+  			if (isTargetModelSelected && isCurrentlyExtended) { ... }
+  				if (header) { ... }
+  					if (opt) opt.click()
+  	function modifyMenu() { ... }
+  			if (menuItems.length === 0) return
+  			if (header) { ... }
+  				if (!modelName) return
+  				if (description) { ... }
+  				if (isStandardActive) { ... }
+  					if (descDiv) descDiv.style.color = "#c4c7c5"
+  					if (descDiv) descDiv.style.color = "#a8c7fa"
+  					if (descDiv) descDiv.style.color = "#8e918f"
+  					if (!isStandardActive && !isThinkingActive) { ... }
+  						if (descDiv) descDiv.style.color = "#c4c7c5"
+  					if (!isStandardActive && !isThinkingActive) { ... }
+  						if (descDiv) descDiv.style.color = "#8e918f"
+  					if (!isThinkingActive) { ... }
+  					if (!isStandardActive && !isThinkingActive) { ... }
+  						if (descDiv) descDiv.style.color = "#c4c7c5"
+  					if (!isThinkingActive) { ... }
+  					if (!isStandardActive && !isThinkingActive) { ... }
+  						if (descDiv) descDiv.style.color = "#8e918f"
+  	function startOptimizer() { ... }
+  		if (!document.body) { ... }
+  	function isDarkTheme() { ... }
+  	function getThreadId() { ... }
+  	function createAutocompleteMenu() { ... }
+  		if (autocompleteMenu) return
+  	function renderAutocomplete(inputEl, query) { ... }
+  		if (filtered.length === 0) { ... }
+  	function applySkill(inputEl, skillName) { ... }
+  		if (queryStart !== -1) { ... }
+  		if (autocompleteMenu) autocompleteMenu.style.display = "none"
+  	function injectPhaseDropdown(promptContainer) { ... }
+  		if (switchBtn) { ... }
+  	function togglePhaseDropdown(container, btn) { ... }
+  		if (phaseDropdownMenu && phaseDropdownMenu.style.display === "block") { ... }
+  		if (!phaseDropdownMenu) { ... }
+  				if (editor) { ... }
+  	function injectUI() { ... }
+  		if (!promptContainer) return
+  		if (inputEl && !inputEl.dataset.aiosHooked) { ... }
+  				if (slashIdx !== -1 && slashIdx === text.length - 1) { ... }
+  						if (autocompleteMenu) autocompleteMenu.style.display = "none"
+  					if (autocompleteMenu) autocompleteMenu.style.display = "none"
+  				if (autocompleteMenu && autocompleteMenu.style.display === "block") { ... }
+  					if (e.key === "ArrowDown") { ... }
+  						if (activeItem) { ... }
+  	function scanExecutionPayloads() { ... }
+  	function showArchiveNotice(text, isError = false) { ... }
+  		if (!document.body) return
+  		if (!notice) { ... }
+  	function getArchiveConversationId() { ... }
+  	function getArchiveTitle() { ... }
+  	function showSyncedIcon() { ... }
+  		if (!icon) { ... }
+  		if (window._syncIconTimeout) clearTimeout(window._syncIconTimeout)
+  	async function exportThreadWithTimestamps(force = false) { ... }
+  		if (!autoThreadSync && !force) return
+  		if (archiveWriteInFlight) return
+  		if (!conversationId || messages.length === 0) return
+  			if (msg.dataset.aiosParsedText && msg !== messages[messages.length - 1]) { ... }
+  		if (!force && window._lastLocalThreadArchive === signature) return
+  		if (!key) { ... }
+  			if (force) showArchiveNotice("Set local archive key first", true)

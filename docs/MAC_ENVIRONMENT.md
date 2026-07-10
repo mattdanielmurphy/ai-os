@@ -16,21 +16,26 @@ This document details the non-native software, custom automations, Launch Agents
 
 ## Active Custom Launch Agents (`~/Library/LaunchAgents`)
 
-These background services are configured to launch automatically for the user:
+All agent scripts now run inside **named tmux sessions** via `~/Library/Scripts/tmux-agent-wrapper.sh`.
 
-| Label / Plist Filename | Executable / Command | Purpose | Notes |
-| :--- | :--- | :--- | :--- |
-| `com.chrome.debug.plist` | `/Applications/Google Chrome.app ... --remote-debugging-port=9223 --user-data-dir=/Users/matt/.chrome-debug-profile` | Dedicated Chrome debug instance. | **KeepAlive: True**, **ThrottleInterval: 2s**. Will auto-relaunch with a window after 2 seconds if quit (prevents profile lock collision). |
-| `ai.openclaw.gateway.plist` | `openclaw/dist/index.js gateway --port 18789` | OpenClaw Gateway Service. | Uses node v26.3.0 under NVM. |
-| `com.matthewmurphy.backup-launch-agents.plist` | `/usr/bin/rsync -av` | Backs up custom plist files. | Backs up to CloudMounter directory. Run calendar: daily at 11:30. |
-| `com.matthewmurphy.energy_monitor.plist` | `energy_monitor.sh` | Bash script monitoring system energy/battery. | Runs every 300 seconds (5 minutes). |
-| `com.matthewmurphy.irig-watcher.plist` | `irig_watcher.sh` | Bash script watching for iRig connection/disconnection. | **KeepAlive: True**. |
-| `com.matthewmurphy.personal-sync.plist` | `watch-personal-sync.sh` | Personal sync utility. | **KeepAlive: True**. Logs to standard logs directory. |
-| `com.matthewmurphy.rqbit.plist` | `/usr/local/bin/rqbit server start /Users/matt/Downloads` | Rust-based Bittorrent server. | **KeepAlive: True**. |
-| `com.mattmurphy.userscript-bundler.plist` | `watch-and-bundle.js` | Automatically bundles userscripts upon file changes. | **KeepAlive: True**. Working directory: `/Users/matt/projects/userscript-bundler`. |
-| `com.mattmurphy.litellm.plist` | `/Users/matt/litellm/run_litellm.sh` | LiteLLM proxy server. | Runs LiteLLM inside a detached tmux session (`litellm`) on port 8082, loading `.zshrc` to export environment keys. **KeepAlive: True**. |
-| `com.user.notesync.plist` | `notesync-wrapper` | Syncs Obsidian notes when target paths change. | Watches `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal`. |
-| `com.mattmurphy.ai-os-rules-watcher.plist` | `sync_rules.sh` | Automatically syncs ~/.gemini/GEMINI.md to workspace repository. | **WatchPaths: ~/.gemini/GEMINI.md**. Cwd: `/Users/matt/projects/ai-os`. |
+**Key features:**
+- **tmux-accessible**: Attach with `tmux attach -t agent-<name>` to see real-time logs
+- **Auto-restart on script modification**: Editing the script file triggers a restart + macOS notification
+- **Two modes**: `keepalive` (long-running daemons, watched by fswatch) or `oneshot` (event/schedule-driven, watched by launchd WatchPaths)
+- **Logs**: Consolidated to `~/Library/Logs/launch-agents/`
+- **Helper**: Run `~/Library/Scripts/tmux-agents.sh` for a status overview
+
+| Label / Plist | tmux Session | Script / Command | Mode | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| `com.matt.agent.irig-watcher` | `agent-irig-watcher` | `irig_watcher.sh` | keepalive | 🎸 iRig audio device — switches audio output on connect/disconnect |
+| `com.matt.agent.litellm` | `agent-litellm` | `run_litellm.sh` → litellm | keepalive | 🤖 LiteLLM proxy on `localhost:8082` |
+| `com.matt.agent.userscript-bundler` | `agent-userscript-bundler` | `watch-and-bundle.js` | keepalive | 📦 Auto-bundles userscripts on file changes |
+| `com.matt.agent.chrome-debug` | `agent-chrome-debug` | Chrome (binary, no-watch) | keepalive | 🌐 Chrome debug instance on port 9223 |
+| `com.matt.agent.hermes-gateway` | `agent-hermes-gateway` | Hermes gateway (`python -m hermes_cli.main`) | keepalive | 🔮 Hermes Agent gateway |
+| `com.matt.agent.rules-watcher` | `agent-rules-watcher` | `sync_rules.sh` | oneshot | 📋 Syncs `~/.gemini/GEMINI.md` → workspace (WatchPaths) |
+| `com.matt.agent.energy-monitor` | `agent-energy-monitor` | `energy_monitor.sh` | oneshot | 🔋 Battery/energy alert — every 300s (StartInterval) |
+| `com.matt.agent.notesync` | `agent-notesync` | `notesync-wrapper` (binary) | oneshot | 📝 Syncs Obsidian notes (WatchPaths) |
+| `com.matt.agent.backup-agents` | `agent-backup-agents` | `cp` plists to backup dir | oneshot | 💾 Daily backup at 11:30 |
 
 
 ---
