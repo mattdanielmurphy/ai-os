@@ -78,3 +78,22 @@ Preferred CLI tools available on the path:
 * **Python**: `python@3.14` and `uv` package manager.
 * **Deno** & **Go** & **Rust** (via `rqbit` etc).
 * **CLI Utilities**: `ripgrep` (`rg`), `fzf`, `fd`, `ffmpeg`, `yt-dlp`, `tmux`.
+
+
+## Troubleshooting & Post-Migration Fixes
+
+### Raycast Database Exception (SQLCipher Key Mismatch)
+* **Symptom**: Raycast fails to open its SQLite databases on launch, reporting: `Could not open database - wrong database key` / `SQLite error 26: file is not a database`.
+* **Root Cause**: Post-migration, the keychain item (`database_key` under service `Raycast` in the login keychain) is either recreated with an incorrect key, or its Access Control Lists (ACLs) prevent access due to username differences (`matthewmurphy` -> `matt`).
+* **Fix**:
+  1. Kill all active Raycast processes: `killall Raycast`
+  2. Retrieve the correct database encryption key from the old login keychain backup (if available, e.g. using `security find-generic-password -s Raycast -a database_key -w`).
+  3. Recreate the keychain password item in the current active login keychain:
+     ```bash
+     security add-generic-password -a database_key -s Raycast -l Raycast -w <correct_key> -T /Applications/Raycast.app
+     ```
+  4. Correct owner permissions of `/Applications/Raycast.app`:
+     ```bash
+     sudo chown -R matt:staff /Applications/Raycast.app
+     ```
+  5. Restore a clean backup database if journal/wal lock files were corrupted during failed launch attempts.
