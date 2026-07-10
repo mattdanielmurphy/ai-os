@@ -79,3 +79,9 @@
 - **Constraint**: When the agent finishes a task, it MUST NOT set `status: "done"` or move the feature file to `.devtool/features/done/`. Instead, it must transition the task to `status: "review"` in the frontmatter, and leave the feature file directly under `.devtool/features/` (not in `done/`), because only the user can confirm if the task was completed to their satisfaction.
 </WORKSPACE_RULES>
 </SYSTEM_INSTRUCTIONS>
+
+# Critical Workflows
+Before acting on a workflow request (like 'audit', 'fast', or 'start'), you MUST read the exact instructions defined in the following absolute paths:
+- ~/.ai-workflows/audit.md
+- ~/.ai-workflows/fast.md
+- ~/.ai-workflows/start.md
