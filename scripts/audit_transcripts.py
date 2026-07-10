@@ -12,12 +12,48 @@ def estimate_tokens(text):
         import tiktoken
         try:
             encoding = tiktoken.get_encoding("cl100k_base")
-            return len(encoding.encode(text))
+            return int(len(encoding.encode(text)))
         except Exception:
             pass
     except ImportError:
         pass
-    return max(1, len(text) // 3.5)
+    return int(max(1, len(text) // 3.5))
+
+def get_step_text(step):
+    source = step.get("source")
+    step_type = step.get("type")
+    content = step.get("content") or ""
+    thinking = step.get("thinking") or ""
+    tool_calls = step.get("tool_calls") or []
+    
+    parts = []
+    if step_type == "USER_INPUT":
+        parts.append(f"=== USER INPUT ===\n{content}")
+    elif step_type == "CONVERSATION_HISTORY":
+        parts.append(f"=== SYSTEM CONVERSATION HISTORY ===\n{content}")
+    elif step_type == "SYSTEM_MESSAGE":
+        parts.append(f"=== SYSTEM MESSAGE ===\n{content}")
+    elif step_type == "KNOWLEDGE_ARTIFACTS":
+        parts.append(f"=== SYSTEM KNOWLEDGE ARTIFACTS ===\n{content}")
+    elif step_type == "PLANNER_RESPONSE":
+        if thinking:
+            parts.append(f"=== MODEL THOUGHTS ===\n{thinking}")
+        if tool_calls:
+            for tc in tool_calls:
+                name = tc.get("name")
+                args = tc.get("arguments") or tc.get("args") or {}
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except Exception:
+                        pass
+                parts.append(f"=== MODEL TOOL CALL: {name} ===\n{json.dumps(args, indent=2)}")
+        if content:
+            parts.append(f"=== MODEL RESPONSE ===\n{content}")
+    elif content:
+        parts.append(f"=== TOOL OUTPUT ({step_type}) ===\n{content}")
+        
+    return "\n\n".join(parts)
 
 def audit_transcript(filepath):
     if not os.path.exists(filepath):
@@ -39,17 +75,91 @@ def audit_transcript(filepath):
     direct_writes = []
     delegated_calls = []
     other_calls = []
-
+    
     cumulative_waste_tokens = 0
+    step_tokens_list = []
+    compressed_transcript_parts = []
+    step_breakdowns = []
+    
+    cumulative_input_tokens = 0
+    cumulative_output_tokens = 0
+    
+    # Pre-calculate token size of each step
+    for step in steps:
+        step_text = get_step_text(step)
+        step_tokens_list.append(estimate_tokens(step_text))
 
     for i, step in enumerate(steps):
         step_idx = step.get("step_index", i)
         source = step.get("source")
         step_type = step.get("type")
         content = step.get("content") or ""
+        thinking = step.get("thinking") or ""
         tool_calls = step.get("tool_calls") or []
+        
+        step_tokens = int(step_tokens_list[i])
+        
+        # Build human-readable formatted representation for the compressed transcript
+        formatted_parts = []
+        if step_type == "USER_INPUT":
+            formatted_parts.append(f"### Step {step_idx} (USER)\n{content}")
+        elif step_type == "CONVERSATION_HISTORY":
+            formatted_parts.append(f"### Step {step_idx} (SYSTEM - CONVERSATION HISTORY)\n```markdown\n{content[:1000] + '...' if len(content) > 1000 else content}\n```")
+        elif step_type == "SYSTEM_MESSAGE":
+            formatted_parts.append(f"### Step {step_idx} (SYSTEM MESSAGE)\n{content}")
+        elif step_type == "KNOWLEDGE_ARTIFACTS":
+            formatted_parts.append(f"### Step {step_idx} (SYSTEM - KNOWLEDGE ARTIFACTS)\n{content or '*Empty*'}")
+        elif step_type == "PLANNER_RESPONSE":
+            formatted_parts.append(f"### Step {step_idx} (GEMINI)")
+            if thinking:
+                formatted_parts.append(f"**Thinking:**\n> " + thinking.replace("\n", "\n> "))
+            if tool_calls:
+                for tc in tool_calls:
+                    name = tc.get("name")
+                    args = tc.get("arguments") or tc.get("args") or {}
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except Exception:
+                            pass
+                    formatted_parts.append(f"**Tool Call:** \n- Name: `{name}`\n- Args:\n```json\n{json.dumps(args, indent=2)}\n```")
+            if content:
+                formatted_parts.append(f"**Response:**\n{content}")
+        elif content:
+            formatted_parts.append(f"### Step {step_idx} (TOOL OUTPUT - {step_type})\n```\n{content[:2000] + '...' if len(content) > 2000 else content}\n```")
+            
+        if formatted_parts:
+            compressed_transcript_parts.append("\n\n".join(formatted_parts))
+            
+        # Context calculation: prompt at this step is the concatenation of all previous steps
+        context_tokens = int(sum(step_tokens_list[:i])) if step_type == "PLANNER_RESPONSE" else 0
+        
+        if step_type == "PLANNER_RESPONSE":
+            cumulative_input_tokens += context_tokens
+            cumulative_output_tokens += step_tokens
+            
+        # Get brief content summary
+        summary = ""
+        if step_type == "USER_INPUT":
+            summary = content.strip().replace("\n", " ")[:60]
+        elif step_type == "PLANNER_RESPONSE":
+            if tool_calls:
+                summary = f"Tool Calls: " + ", ".join([tc.get("name") for tc in tool_calls])
+            else:
+                summary = content.strip().replace("\n", " ")[:60]
+        elif content:
+            summary = content.strip().replace("\n", " ")[:60]
+            
+        step_breakdowns.append({
+            "step": step_idx,
+            "source": source,
+            "type": step_type,
+            "tokens": int(step_tokens),
+            "context_tokens": int(context_tokens),
+            "summary": summary
+        })
 
-        # Analyze tool calls
+        # Analyze tool calls for direct read/write/delegate reporting
         for tc in tool_calls:
             name = tc.get("name")
             args = tc.get("arguments") or tc.get("args") or {}
@@ -80,7 +190,6 @@ def audit_transcript(filepath):
                 })
             elif name in ["run_command"]:
                 cmd = args.get("CommandLine") or ""
-                # Check if it ran a delegator script
                 if "mechanical_editor" in cmd or "auto_commit" in cmd:
                     delegated_calls.append({
                         "step": step_idx,
@@ -100,25 +209,22 @@ def audit_transcript(filepath):
                     "args": args
                 })
 
-        # Calculate token cost of this step's output/content
-        # If it was a tool output (like a file read), that content is loaded into the prompt context for ALL subsequent steps.
-        step_tokens = estimate_tokens(content)
-        
+        # Keep legacy token waste calculations
         is_direct_read_result = False
         if step_type in ["VIEW_FILE", "READ_FILE"] or (source == "MODEL" and step_type == "VIEW_FILE"):
             is_direct_read_result = True
 
         if is_direct_read_result and step_tokens > 0:
-            # Remaining steps in the conversation that will carry this context
             remaining_steps = total_steps - 1 - i
             waste = step_tokens * remaining_steps
             cumulative_waste_tokens += waste
             if direct_reads:
-                direct_reads[-1]["tokens"] = step_tokens
-                direct_reads[-1]["remaining_steps"] = remaining_steps
-                direct_reads[-1]["cumulative_waste"] = waste
+                direct_reads[-1]["tokens"] = int(step_tokens)
+                direct_reads[-1]["remaining_steps"] = int(remaining_steps)
+                direct_reads[-1]["cumulative_waste"] = int(waste)
 
-    # Format the audit results
+    plain_text_size = sum(step_tokens_list)
+
     return {
         "file": filepath,
         "total_steps": total_steps,
@@ -126,7 +232,13 @@ def audit_transcript(filepath):
         "direct_writes": direct_writes,
         "delegated_calls": delegated_calls,
         "other_calls": other_calls,
-        "cumulative_waste_tokens": cumulative_waste_tokens
+        "cumulative_waste_tokens": int(cumulative_waste_tokens),
+        "cumulative_input_tokens": int(cumulative_input_tokens),
+        "cumulative_output_tokens": int(cumulative_output_tokens),
+        "total_gemini_tokens": int(cumulative_input_tokens + cumulative_output_tokens),
+        "plain_text_size": int(plain_text_size),
+        "step_breakdowns": step_breakdowns,
+        "compressed_transcript": "\n\n---\n\n".join(compressed_transcript_parts)
     }
 
 def print_markdown_report(audit):
@@ -138,7 +250,19 @@ def print_markdown_report(audit):
     print(f"- **Direct File Reads (view_file)**: {len(audit['direct_reads'])}")
     print(f"- **Direct File Writes/Edits**: {len(audit['direct_writes'])}")
     print(f"- **Delegated Tasks (mechanical_editor, etc.)**: {len(audit['delegated_calls'])}")
-    print(f"- **Estimated Cumulative Token Waste (from direct reads)**: {audit['cumulative_waste_tokens']:,} tokens")
+    print(f"- **Estimated Cumulative Token Waste (from direct reads)**: {int(audit['cumulative_waste_tokens']):,} tokens")
+    print(f"- **Total Gemini Tokens Consumed (API Cost)**: {int(audit['total_gemini_tokens']):,} tokens")
+    print(f"  - **Input Context (Cumulative)**: {int(audit['cumulative_input_tokens']):,} tokens")
+    print(f"  - **Output Generation (Thoughts/Tools)**: {int(audit['cumulative_output_tokens']):,} tokens")
+    print(f"- **Plain Text Conversation Size**: {int(audit['plain_text_size']):,} tokens")
+    print("\n---")
+
+    print("\n## Step-by-Step Token Breakdown")
+    print("| Step | Source | Type / Action | Size (Tokens) | Context Size (Tokens) | Summary |")
+    print("|------|--------|---------------|---------------|-----------------------|---------|")
+    for s in audit["step_breakdowns"]:
+        print(f"| {s['step']} | {s['source']} | {s['type']} | {int(s['tokens']):,} | {int(s['context_tokens']):,} | `{s['summary']}` |")
+
     print("\n---")
 
     if audit["direct_reads"]:
@@ -149,7 +273,7 @@ def print_markdown_report(audit):
             tokens = r.get("tokens", 0)
             rem = r.get("remaining_steps", 0)
             waste = r.get("cumulative_waste", 0)
-            print(f"| {r['step']} | {r['tool']} | `{r['path']}` | {tokens:,} | {rem} | {waste:,} |")
+            print(f"| {r['step']} | {r['tool']} | `{r['path']}` | {int(tokens):,} | {int(rem):,} | {int(waste):,} |")
     else:
         print("\n## Direct File Reads\n*None! Great job adhering to the delegation rules.*")
 
@@ -168,6 +292,13 @@ def print_markdown_report(audit):
         print("|------|------|---------|")
         for d in audit["delegated_calls"]:
             print(f"| {d['step']} | {d['tool']} | `{d['cmd']}` |")
+
+    print("\n---")
+    print("\n## Compressed Conversation Transcript")
+    print("\n<details>")
+    print(f"<summary>Expand to view plain text transcript ({int(audit['plain_text_size']):,} tokens)</summary>\n")
+    print(audit['compressed_transcript'])
+    print("\n</details>")
 
 def find_most_recent_transcript():
     search_paths = [
