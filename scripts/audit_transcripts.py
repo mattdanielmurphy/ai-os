@@ -190,7 +190,33 @@ def audit_transcript(filepath):
                 })
             elif name in ["run_command"]:
                 cmd = args.get("CommandLine") or ""
-                if "mechanical_editor" in cmd or "auto_commit" in cmd:
+                # Detect shell redirects for direct_writes
+                if ">" in cmd or ">>" in cmd or "<<" in cmd:
+                    try:
+                        # Attempt to find the target path, handling different redirect types
+                        parts = cmd.split('>')
+                        if len(parts) > 1:
+                            path_str = parts[-1].strip()
+                            path_parts = path_str.split(' ')
+                            # Take the first part if there are multiple elements after the redirect
+                            target_path = path_parts[0] if path_parts else ''
+                        else: # Handle << for heredocs, etc., though less common for direct writes from shell
+                            parts = cmd.split('<<')
+                            target_path = parts[-1].strip().split(' ')[0] if len(parts) > 1 else ''
+
+                        if target_path:
+                            direct_writes.append({
+                                "step": step_idx,
+                                "tool": "run_command (Shell Redirect)",
+                                "path": target_path,
+                                "args": {"CommandLine": cmd}
+                            })
+                            continue # Skip further processing for this run_command as it's a direct write
+                    except (IndexError, AttributeError):
+                        # Gracefully handle cases where parsing fails
+                        pass
+
+                if "mechanical_editor" in cmd or "auto_commit" in cmd or "housekeep" in cmd:
                     delegated_calls.append({
                         "step": step_idx,
                         "tool": name,
