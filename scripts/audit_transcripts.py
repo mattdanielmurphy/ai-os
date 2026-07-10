@@ -199,9 +199,34 @@ def audit_transcript(filepath):
                             path_str = parts[-1].strip()
                             path_parts = path_str.split(' ')
                             # Take the first part if there are multiple elements after the redirect
-                            target_path = path_parts[0] if path_parts else ''
+                            # More robust check for actual command followed by redirect
+                            # This is a heuristic to prevent false positives from generic '>' in commands.
+                            # We look for common patterns like 'echo ... > file', 'cat ... >> file', etc.
+                            command_prefix = parts[0].strip()
+                            if command_prefix.startswith(("echo ", "cat ", "python -c", "sh -c")):
+                                target_path = path_parts[0] if path_parts else ''
+                            else:
+                                target_path = '' # Not a recognized direct write command
+
                         else: # Handle << for heredocs, etc., though less common for direct writes from shell
-                            parts = cmd.split('<<')
+                            # Handle << for heredocs, etc. This is more complex as the redirect is often at the end.
+                            # Look for patterns like 'cmd << EOF > file' or 'cmd > file << EOF'
+                            if '<<' in cmd and '>' in cmd:
+                                # Check for command leveraging heredoc then redirect
+                                cmd_parts = cmd.split('>')
+                                if len(cmd_parts) > 1:
+                                    # Assume redirect target is the last part if it looks like a file path
+                                    potential_path = cmd_parts[-1].strip()
+                                    # Basic check: if it doesn't contain spaces and looks like a path
+                                    if ' ' not in potential_path and potential_path not in ('&1', '&2', '/dev/null'):
+                                        target_path = potential_path
+                                    else:
+                                        target_path = ''
+                                else:
+                                    target_path = ''
+                            else:
+                                target_path = '' # No clear heredoc-based redirect to a file
+
                             target_path = parts[-1].strip().split(' ')[0] if len(parts) > 1 else ''
 
                         if target_path:

@@ -97,6 +97,14 @@ def handle_request(request):
                                 "description": "The query string for research."
                             }
                         }
+                    },
+                    "read_lines": {
+                        "description": "Reads a specific line range from a file to save context tokens.",
+                        "arguments": {
+                            "file_path": {"type": "string", "description": "The absolute path to the file to read."},
+                            "start_line": {"type": "integer", "description": "The 1-based start line (inclusive). Default is 1."},
+                            "end_line": {"type": "integer", "description": "The 1-based end line (inclusive). Default is start_line + 50."}
+                        }
                     }
                 }
             }
