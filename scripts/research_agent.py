@@ -6,6 +6,7 @@ import os
 def main():
     parser = argparse.ArgumentParser(description="Research agent that queries workspace and summarizes content.")
     parser.add_argument("query", help="The query string for research.")
+    parser.add_argument("--brief", action="store_true", help="Caps response to ~500 tokens, truncating with ... [truncated to 500 tokens] if needed.")
 
     args = parser.parse_args()
 
@@ -40,7 +41,7 @@ def main():
     litellm_url = "http://localhost:8082/v1/chat/completions"
     headers = {"Content-Type": "application/json"}
     payload = {
-        "model": "claude-haiku*",
+        "model": "deepseek-v4-flash-low",
         "messages": [
             {
                 "role": "system",
@@ -68,6 +69,10 @@ def main():
         response_json = json.loads(litellm_response.stdout)
 
         summary = response_json["choices"][0]["message"]["content"]
+
+        if args.brief and len(summary) > 2000:
+            summary = summary[:2000] + "... [truncated to 500 tokens]"
+
         print(summary)
 
     except subprocess.CalledProcessError as e:
