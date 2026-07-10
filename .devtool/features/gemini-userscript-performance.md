@@ -9,7 +9,7 @@ created: "2026-07-10T00:14:07.293258Z"
 modified: "2026-07-10T00:14:07.293258Z"
 completedAt: null
 labels: []
-order: "a0"
+order: "a3"
 ---
 # Optimize Gemini Userscript Performance
 

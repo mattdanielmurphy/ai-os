@@ -1,6 +1,6 @@
 ---
 id: "fix-raycast-migration-permissions"
-status: "in-progress"
+status: "review"
 priority: "medium"
 assignee: null
 epic: null
@@ -9,7 +9,7 @@ created: "2026-07-10T11:06:00.000Z"
 modified: "2026-07-10T11:06:00.000Z"
 completedAt: null
 labels: []
-order: "a3"
+order: "a0"
 ---
 # Bug: Raycast Database Exception after migration
 

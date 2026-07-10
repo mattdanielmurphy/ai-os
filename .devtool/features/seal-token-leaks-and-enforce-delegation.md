@@ -9,9 +9,8 @@ created: "2026-07-10T03:28:00Z"
 modified: "2026-07-10T03:28:00Z"
 completedAt: null
 labels: []
-order: 100
+order: "a9"
 ---
-
 # Seal Token Leaks and Enforce Delegation
 
 Implement three architectural updates to seal token leaks and enforce strict delegation:

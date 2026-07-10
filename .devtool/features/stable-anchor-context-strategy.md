@@ -9,7 +9,7 @@ created: "2026-07-08T00:37:00.000Z"
 modified: "2026-07-09T20:47:33.633Z"
 completedAt: null
 labels: []
-order: "a4"
+order: "aA"
 ---
 # Stable Anchor Context Strategy
 
