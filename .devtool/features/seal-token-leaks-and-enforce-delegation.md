@@ -9,7 +9,7 @@ created: "2026-07-10T03:28:00Z"
 modified: "2026-07-10T03:28:00Z"
 completedAt: null
 labels: []
-order: "a9"
+order: "aA"
 ---
 # Seal Token Leaks and Enforce Delegation
 

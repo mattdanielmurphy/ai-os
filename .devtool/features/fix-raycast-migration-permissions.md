@@ -9,7 +9,7 @@ created: "2026-07-10T11:06:00.000Z"
 modified: "2026-07-10T11:06:00.000Z"
 completedAt: null
 labels: []
-order: "a0"
+order: "a3"
 ---
 # Bug: Raycast Database Exception after migration
 

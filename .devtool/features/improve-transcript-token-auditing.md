@@ -9,7 +9,7 @@ created: "2026-07-10T00:30:00Z"
 modified: "2026-07-10T00:31:00Z"
 completedAt: null
 labels: []
-order: "a6"
+order: "a7"
 ---
 # Improve Transcript Token Auditing
 
