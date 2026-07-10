@@ -191,7 +191,17 @@ def audit_transcript(filepath):
             elif name in ["run_command"]:
                 cmd = args.get("CommandLine") or ""
                 # Detect shell redirects for direct_writes
-                if ">" in cmd or ">>" in cmd or "<<" in cmd:
+                # Check if it's a delegated script before checking for redirects
+                if any(script in cmd for script in ['mechanical_editor', 'auto_commit', 'housekeep', 'precision_edit']):
+                    delegated_calls.append({
+                        "step": step_idx,
+                        "tool": name,
+                        "cmd": cmd
+                    })
+                    continue # Skip further processing for this run_command as it's delegated
+
+                # Detect shell redirects for direct_writes, ignoring `<<`
+                if ">" in cmd or ">>" in cmd:
                     try:
                         # Attempt to find the target path, handling different redirect types
                         parts = cmd.split('>')
@@ -207,27 +217,8 @@ def audit_transcript(filepath):
                                 target_path = path_parts[0] if path_parts else ''
                             else:
                                 target_path = '' # Not a recognized direct write command
-
-                        else: # Handle << for heredocs, etc., though less common for direct writes from shell
-                            # Handle << for heredocs, etc. This is more complex as the redirect is often at the end.
-                            # Look for patterns like 'cmd << EOF > file' or 'cmd > file << EOF'
-                            if '<<' in cmd and '>' in cmd:
-                                # Check for command leveraging heredoc then redirect
-                                cmd_parts = cmd.split('>')
-                                if len(cmd_parts) > 1:
-                                    # Assume redirect target is the last part if it looks like a file path
-                                    potential_path = cmd_parts[-1].strip()
-                                    # Basic check: if it doesn't contain spaces and looks like a path
-                                    if ' ' not in potential_path and potential_path not in ('&1', '&2', '/dev/null'):
-                                        target_path = potential_path
-                                    else:
-                                        target_path = ''
-                                else:
-                                    target_path = ''
-                            else:
-                                target_path = '' # No clear heredoc-based redirect to a file
-
-                            target_path = parts[-1].strip().split(' ')[0] if len(parts) > 1 else ''
+                        else:
+                            target_path = ''
 
                         if target_path:
                             direct_writes.append({
@@ -241,7 +232,7 @@ def audit_transcript(filepath):
                         # Gracefully handle cases where parsing fails
                         pass
 
-                if "mechanical_editor" in cmd or "auto_commit" in cmd or "housekeep" in cmd:
+                if any(script in cmd for script in ['mechanical_editor', 'auto_commit', 'housekeep', 'precision_edit']):
                     delegated_calls.append({
                         "step": step_idx,
                         "tool": name,
