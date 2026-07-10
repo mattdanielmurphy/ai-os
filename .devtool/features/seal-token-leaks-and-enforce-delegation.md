@@ -1,6 +1,6 @@
 ---
 id: "seal-token-leaks-and-enforce-delegation"
-status: "in-progress"
+status: "review"
 priority: "high"
 assignee: null
 epic: null
