@@ -10,13 +10,13 @@ Add detailed info to docs and implement the Universal Agent Framework to keep An
 
 ## Changes Made
 - Centralized the global workflows (audit.md, fast.md, start.md) into ~/.ai-workflows/ and created symlinks back to ~/.gemini/config/global_workflows/.
-- Modified ~/.gemini/settings.json and ~/.gemini/antigravity-cli/settings.json to include "context": ["AGENT[.md"].
+- Modified ~/.gemini/settings.json and ~/.gemini/antigravity-cli/settings.json to include "context": ["AGENTS.md"].
 - Created /Users/matt/projects/ai-os/AGENTS.md with core rules and global workflow imports.
 - Updated /Users/matt/projects/ai-os/CLAUDE.md to reference absolute workflow paths.
 - Removed legacy rules file at .gemini/GEMINI.md to prevent race conditions.
 - Created task file .devtool/features/universal-agent-framework.md with status set to review.
 - Created `~/.gemini/antigravity-cli/skills/{audit,fast,start}/SKILL.md` symlinked back to `~/.ai-workflows/{audit,fast,start}.md` to expose them as global skills to `agy-cli`.
-- Created  symlinked back to  to expose them as global skills to .
+- Created `~/.gemini/antigravity2/antigravity-cli/skills/{audit,fast,start}/SKILL.md` symlinked back to `~/.ai-workflows/{audit,fast,start}.md` to expose them as global skills to `agy-cli`. Added the `name`` key in the frontmatter of each workflow file (`~/.ai-workflows/{audit,fast,start}.md`) so that they are loaded correctly under their specific skill names instead of "SKILL".
 
 ## What Worked
 - Claude 3.5 Haiku successfully executed the updates to both settings.json files, created AGENTS.md, updated CLAUDE.md, and cleaned up legacy GEMINI.md files.
@@ -26,5 +26,5 @@ Add detailed info to docs and implement the Universal Agent Framework to keep An
 - None.
 
 ## Architecture Notes
-- Standalone GEMINI.md / AGENT[.md files do not support frontmatter and are always active for their directory scope.
-- Both engines can be pointed to the shared workflows (AGENT[.md) and direct file reading rules (CLAUDE.md).
+- Standalone GEMINI.md / AGENTS.md files do not support frontmatter and are always active for their directory scope.
+- Both engines can be pointed to the shared workflows (AGENTS.md) and direct file reading rules (CLAUDE.md).
