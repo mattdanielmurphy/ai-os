@@ -26,6 +26,10 @@ echo "## Hammerspoon Config" >> "$PROFILE_PATH"
 echo "[ai-os] Updating Stable Anchor Repo Map..."
 python3 "$AI_OS_HOME/scripts/generate_repo_map.py" "$AI_OS_HOME"
 
+# Oneshot Hermes thread sync
+echo "[ai-os] Running oneshot thread sync..."
+python3 "$AI_OS_HOME/scripts/sync_threads.py" --oneshot
+
 ORIGINAL_PWD="$PWD"
 cd "$AI_OS_HOME" || exit
 
@@ -82,6 +86,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Spawn background Hermes thread watcher
+echo "[ai-os] Starting background thread sync watcher..."
+python3 "$AI_OS_HOME/scripts/sync_threads.py" --watch &
+SYNC_PID=$!
+trap 'kill $SYNC_PID 2>/dev/null' EXIT
 
 if [ "$LAUNCH_GUI" = true ]; then
     echo "[ai-os] Launching GUI interface..."

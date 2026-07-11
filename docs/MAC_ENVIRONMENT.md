@@ -33,7 +33,8 @@ All agent scripts now run inside **named tmux sessions** via `~/Library/Scripts/
 | `com.matt.agent.chrome-debug` | `agent-chrome-debug` | Chrome (binary, no-watch) | keepalive | 🌐 Chrome debug instance on port 9223 |
 | `com.matt.agent.hermes-gateway` | `agent-hermes-gateway` | Hermes gateway (`python -m hermes_cli.main`) | keepalive | 🔮 Hermes Agent gateway |
 | `com.matt.agent.rules-watcher` | `agent-rules-watcher` | `sync_rules.sh` | oneshot | 📋 Syncs `~/.gemini/GEMINI.md` → workspace (WatchPaths) |
-| `com.matt.agent.energy-monitor` | `agent-energy-monitor` | `energy_monitor.sh` | oneshot | 🔋 Battery/energy alert — every 300s (StartInterval) |
+|| `com.matt.agent.energy-monitor` | `agent-energy-monitor` | `energy_monitor.sh` | oneshot | 🔋 Battery/energy alert — every 300s (StartInterval) |
+|| `com.matt.agent.gemini-ingest` | `agent-gemini-ingest` | `gemini-ingest-watch.sh` | keepalive | 📥 Auto-ingests Gemini chat archives into Hermes FTS5 search (fswatch) |
 | `com.matt.agent.notesync` | `agent-notesync` | `notesync-wrapper` (binary) | oneshot | 📝 Syncs Obsidian notes (WatchPaths) |
 | `com.matt.agent.backup-agents` | `agent-backup-agents` | `cp` plists to backup dir | oneshot | 💾 Daily backup at 11:30 |
 
