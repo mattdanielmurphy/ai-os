@@ -9,6 +9,6 @@ if [ -f "$HOME/.zshrc" ]; then
 fi
 
 # Source our AI-OS custom environment settings
-if [ -f "/Users/matthewmurphy/projects/ai-os/.zshrc_aios" ]; then
-    source "/Users/matthewmurphy/projects/ai-os/.zshrc_aios"
+if [ -f "/Users/matt/projects/ai-os/.zshrc_aios" ]; then
+    source "/Users/matt/projects/ai-os/.zshrc_aios"
 fi

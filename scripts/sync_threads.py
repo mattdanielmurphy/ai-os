@@ -19,7 +19,10 @@ from pathlib import Path
 
 # ── paths ──────────────────────────────────────────────────────────────────
 HERMES_DB = Path.home() / ".hermes" / "state.db"
-BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
+BRAIN_DIRS = [
+    Path.home() / ".gemini" / "antigravity-cli" / "brain",
+    Path.home() / ".gemini" / "antigravity-ide" / "brain",
+]
 
 # Message-type mapping
 ROLE_TO_TYPE = {
@@ -128,36 +131,40 @@ def sync_session(session_row: tuple, verbose_flag: bool) -> bool:
         entries.append(entry)
         step_index += 1
 
-    # ── target directory ────────────────────────────────────────────────
-    log_dir = BRAIN_DIR / session_id / ".system_generated" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    # ── target directories ───────────────────────────────────────────────
+    written_any = False
+    for brain_dir in BRAIN_DIRS:
+        if not brain_dir.parent.exists():
+            continue
 
-    transcript_path = log_dir / "transcript.jsonl"
-    transcript_full_path = log_dir / "transcript_full.jsonl"
+        log_dir = brain_dir / session_id / ".system_generated" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── read existing lines to detect changes ──────────────────────────
-    existing_lines: list[str] = []
-    if transcript_path.exists():
-        existing_lines = transcript_path.read_text().splitlines(keepends=False)
+        transcript_path = log_dir / "transcript.jsonl"
+        transcript_full_path = log_dir / "transcript_full.jsonl"
 
-    new_lines = [json.dumps(e, ensure_ascii=False) for e in entries]
+        # ── read existing lines to detect changes ────────────────────────
+        existing_lines: list[str] = []
+        if transcript_path.exists():
+            existing_lines = transcript_path.read_text().splitlines(keepends=False)
 
-    if new_lines == existing_lines:
-        verbose(f"{session_id}: no changes", verbose_flag)
-        return False
+        new_lines = [json.dumps(e, ensure_ascii=False) for e in entries]
 
-    # ── write both files ────────────────────────────────────────────────
-    # transcript.jsonl — standard format (same as existing)
-    transcript_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        if new_lines == existing_lines:
+            verbose(f"{session_id}: no changes at {brain_dir}", verbose_flag)
+            continue
 
-    # transcript_full.jsonl — may include extra fields; for now identical
-    transcript_full_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        # ── write both files ─────────────────────────────────────────────
+        transcript_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        transcript_full_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
-    verbose(
-        f"Wrote {len(new_lines)} entries to {log_dir} (was {len(existing_lines)} lines)",
-        verbose_flag,
-    )
-    return True
+        verbose(
+            f"Wrote {len(new_lines)} entries to {log_dir} (was {len(existing_lines)} lines)",
+            verbose_flag,
+        )
+        written_any = True
+
+    return written_any
 
 
 def get_db_mtime() -> float:
