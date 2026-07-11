@@ -7,3 +7,4 @@
 
 - **Model Roster Cheat Sheet**: Integrated a comprehensive cheat sheet detailing Tier 1 to 4 active models, explaining why they are in the configuration, when they should be deployed, and linking them across key architectural documentation like [model-roster.md](file:///Users/matt/projects/ai-os/docs/model-roster.md) and [VISION.md](file:///Users/matt/projects/ai-os/docs/VISION.md).
 - **Token Waste Reduction Rules**: Added 3 new rules (Single Verification, Batch Delegation, Concise Subagent Responses) plus stricter Synchronous Subagent enforcement to eliminate redundant git calls, serial subagent trips, and async polling overhead.
+- **Hermes agy-mcp Integration**: Registered the `agy-mcp` server inside Hermes and configured a resilient tmux launch agent wrapper daemon to keep it active.
