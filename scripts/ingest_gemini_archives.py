@@ -43,7 +43,7 @@ SOURCE_NAME = "gemini-archive"
 
 # Regex for gemini-message HTML comments
 MSG_START_RE = re.compile(
-    r'<!--\s*gemini-message\s+index=(\d+)\s+role=(user|assistant|model)\s+timestamp="([^"]*)"\s*-->'
+    r'<!--\s*gemini-message\s+index=(\d+)\s+role="?(user|assistant|model)"?\s+timestamp="([^"]*)"\s*-->'
 )
 MSG_END_RE = re.compile(r'<!--\s*/gemini-message\s*-->')
 
