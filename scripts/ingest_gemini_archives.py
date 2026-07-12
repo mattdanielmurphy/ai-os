@@ -124,9 +124,15 @@ def parse_messages(text: str):
         ts_str = start_m.group(3)
         end_m = MSG_END_RE.search(body, start_m.end())
         if not end_m:
-            # Unclosed message — read to end
-            content = body[start_m.end() :].strip()
-            pos = len(body)
+            # No closing tag — look for the next start tag, or end of file
+            next_start = MSG_START_RE.search(body, start_m.end())
+            if next_start:
+                content = body[start_m.end() : next_start.start()].strip()
+                pos = next_start.start()
+            else:
+                # Last message and no closing tag — read to end
+                content = body[start_m.end() :].strip()
+                pos = len(body)
         else:
             content = body[start_m.end() : end_m.start()].strip()
             pos = end_m.end()
