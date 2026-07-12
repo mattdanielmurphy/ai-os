@@ -9,3 +9,7 @@ tmp/
 # Build outputs
 dist/
 src-tauri/target/
+
+# Sensitive Agent Logs
+.agent-logs/
+agent-logs/
