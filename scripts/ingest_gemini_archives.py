@@ -249,8 +249,8 @@ def process_archive(dry_run: bool = True, verbose: bool = False):
         print(f"✗ Archive directory not found: {ARCHIVE_DIR}")
         sys.exit(1)
 
-    # Gather all .md files (top-level only, skip the "older" subdir)
-    md_files = sorted(f for f in ARCHIVE_DIR.iterdir() if f.suffix == ".md" and f.is_file())
+    # Gather all .md files recursively
+    md_files = sorted(f for f in ARCHIVE_DIR.rglob("*.md") if f.is_file())
 
     if not md_files:
         print(f"⚠ No .md files found in {ARCHIVE_DIR}")

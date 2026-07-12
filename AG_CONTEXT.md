@@ -12,8 +12,8 @@
 
 ## Key Architecture & Domain Rules
 - **Stable Anchor + Volatile Append Context Strategy:** Uses a structural map (repo map generated via AST parser/tree-sitter) as the stable front of the prompt context, and appends only active files and user requests at the end to maximize cache hits.
-- **Triage Editing System ($AIOS_DELEGATE):** Toggled to delegate complex code editing tasks to LiteLLM/mechanical_editor or execute directly using Quoted Heredocs when speed is preferred.
+- **Delegation Philosophy:** agy handles work directly by default, using its native tools. When delegation makes sense (large context savings), agy prefers self-delegation (`agy -p`) over external tools like Claude Code to avoid per-call costs. Extreme delegation mode (always delegate to Claude Code) is preserved as a skill for when it's needed.
 - **Dual-Rail Google Grid:** Seamlessly rotates Google accounts/authentication to double task quotas and VM limits.
 - **Context Sync Protocol:** Userscript (`gemini.js`) integrated into browser/Tauri webview connects live Google web interface turns back to the Rust loopback daemon (`/api/context/sync`, `/api/notes/save`, `/api/revision/commit`) to serialize and version active text revisions in Git.
-- **Three-Turn Delegation Protocol:** Enforces a structured 3-turn delegation protocol (Turn 1: Recon/Retrieval, Turn 2: Plan & Execute, Turn 3: Verify & Correct) in Orchestrator-Only Mode (Mode 3) to keep orchestrator context completely clean of raw file content.
+- **Three-Turn Delegation Protocol (Extreme Mode Only):** Available as the `agy-extreme-delegation` skill. Not the default — agy handles work directly with pragmatic self-delegation.
 - **Hermes Thread Sync Daemon:** Integrates and synchronizes CLI/GUI NDJSON execution logs (`~/.gemini/antigravity-cli/brain/`) with Hermes' FTS5-enabled SQLite database (`~/.hermes/state.db`) bidirectionally. It launches as a background subprocess via the `bin/ai-os` execution wrapper, maintaining a unified search history across both platforms.
