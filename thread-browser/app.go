@@ -296,14 +296,47 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 		return results, nil
 	}
 
-	// Dynamic scoring query using the trigram index
-	stmt, err := db.Prepare(`
+	// Decide if query consists of whole alphanumeric tokens
+	// If query matches only words/tokens, we use standard fts.
+	// We check if it is alphanumeric (or spaces). If so, we use messages_fts.
+	// If it has wildcards (*, ?) or non-alphanumeric chars (punctuation), or is very short (e.g. <3 chars),
+	// we use trigram FTS.
+	useTrigram := false
+	trimmed := strings.Trim(query, "*? ")
+	if len(trimmed) < 3 {
+		useTrigram = true
+	} else {
+		for _, r := range trimmed {
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == ' ' || r == '_') {
+				useTrigram = true
+				break
+			}
+		}
+	}
+
+	var matchSQL string
+	if useTrigram {
+		matchSQL = `
 		WITH matched_messages AS (
-			SELECT m.session_id, m.role, m.content
+			SELECT m.session_id, m.role
 			FROM messages_fts_trigram f
 			JOIN messages m ON f.rowid = m.id
 			WHERE f.content MATCH ?
-		)
+		)`
+	} else {
+		// Escape query to search exactly as a token prefix or token match
+		// FTS5 MATCH '"term"' finds exact tokens
+		matchSQL = `
+		WITH matched_messages AS (
+			SELECT m.session_id, m.role
+			FROM messages_fts f
+			JOIN messages m ON f.rowid = m.id
+			WHERE f.content MATCH ?
+		)`
+	}
+
+	// Calculate score only for the matching sessions subset
+	fullSQL := matchSQL + `
 		SELECT 
 			s.id, 
 			s.source,
@@ -326,16 +359,24 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 			) as relevance_score
 		FROM sessions s
 		WHERE s.title LIKE ? OR s.id IN (SELECT session_id FROM matched_messages)
-		ORDER BY (relevance_score + CAST(s.started_at AS INTEGER)) DESC
+		ORDER BY relevance_score DESC, s.started_at DESC
 		LIMIT 1000
-	`)
+	`
+
+	stmt, err := db.Prepare(fullSQL)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
 	likePattern := "%" + query + "%"
-	rows, err := stmt.Query(query, likePattern, likePattern)
+	// For standard FTS, wrap query in quotes to search exact phrase/tokens if it contains spaces
+	searchParam := query
+	if !useTrigram && strings.Contains(query, " ") {
+		searchParam = `"` + strings.ReplaceAll(query, `"`, `""`) + `"`
+	}
+
+	rows, err := stmt.Query(searchParam, likePattern, likePattern)
 	if err != nil {
 		return nil, err
 	}
