@@ -1,15 +1,15 @@
 ---
 id: "optimize-agent-log-searching"
-status: "todo"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-08T01:22:03.696Z"
-modified: "2026-07-08T01:22:03.696Z"
-completedAt: null
+modified: "2026-07-12T05:32:38.609Z"
+completedAt: "2026-07-12T05:32:38.609Z"
 labels: []
-order: "a0"
+order: "a4V"
 ---
 # Optimize Agent Log Searching
 

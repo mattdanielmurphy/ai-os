@@ -1,15 +1,15 @@
 ---
 id: "code2prompt-context"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-09T22:14:00.000Z"
-modified: "2026-07-09T22:14:00.000Z"
-completedAt: null
+modified: "2026-07-12T05:32:25.791Z"
+completedAt: "2026-07-12T05:32:25.791Z"
 labels: []
-order: "a0"
+order: "a5"
 ---
 # Code2prompt Context Extraction
 

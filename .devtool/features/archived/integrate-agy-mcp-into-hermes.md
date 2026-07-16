@@ -1,17 +1,16 @@
 ---
-id: integrate-agy-mcp-into-hermes
-status: review
-priority: medium
+id: "integrate-agy-mcp-into-hermes"
+status: "done"
+priority: "medium"
 assignee: null
 epic: null
 dueDate: null
-created: 2026-07-11T16:21:00-06:00
-modified: 2026-07-11T17:29:00-06:00
-completedAt: null
+created: "2026-07-11T16:21:00-06:00"
+modified: "2026-07-12T05:32:25.958Z"
+completedAt: "2026-07-12T05:32:25.958Z"
 labels: []
-order: 0
+order: "aD"
 ---
-
 # Integrate agy-mcp into Hermes
 
 Integrate the `agy-mcp` server into Hermes by:

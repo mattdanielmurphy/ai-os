@@ -1,17 +1,16 @@
 ---
 id: "reduce-token-waste-patterns"
-status: "review"
+status: "done"
 priority: "high"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-10T08:00:00Z"
-modified: "2026-07-10T08:00:00Z"
-completedAt: null
+modified: "2026-07-12T05:32:26.016Z"
+completedAt: "2026-07-12T05:32:26.016Z"
 labels: []
-order: "aB"
+order: "aH"
 ---
-
 # Reduce Token Waste Patterns
 
 Implement fixes for four token waste patterns identified in the audit:

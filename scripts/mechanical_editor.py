@@ -79,19 +79,26 @@ def main():
     gemini_md = Path.home() / ".gemini" / "GEMINI.md"
     claude_md = Path.home() / ".claude" / "CLAUDE.md"
 
+    # Pre-check: auto-recover from hard crashes where .bak exists but original doesn't
+    for md_path in [gemini_md, claude_md]:
+        bak_path = md_path.with_name(md_path.name + ".bak")
+        if bak_path.exists() and not md_path.exists():
+            bak_path.rename(md_path)
+            print(f"[Mechanical Editor] Recovered {bak_path} → {md_path}", flush=True)
+
     # Store renamed paths
     renamed_files = []
 
     try:
-        # Rename existing rules files to .bak
+        # Rename existing rules files to .bak (using with_name to preserve suffix)
         if gemini_md.exists():
-            gemini_md.rename(gemini_md.with_suffix(".bak"))
+            gemini_md.rename(gemini_md.with_name(gemini_md.name + ".bak"))
             renamed_files.append(gemini_md)
-            print(f"[Mechanical Editor] Renamed {gemini_md} to {gemini_md.with_suffix(".bak")}", flush=True)
+            print(f"[Mechanical Editor] Renamed {gemini_md} to {gemini_md.with_name(gemini_md.name + '.bak')}", flush=True)
         if claude_md.exists():
-            claude_md.rename(claude_md.with_suffix(".bak"))
+            claude_md.rename(claude_md.with_name(claude_md.name + ".bak"))
             renamed_files.append(claude_md)
-            print(f"[Mechanical Editor] Renamed {claude_md} to {claude_md.with_suffix(".bak")}", flush=True)
+            print(f"[Mechanical Editor] Renamed {claude_md} to {claude_md.with_name(claude_md.name + '.bak')}", flush=True)
 
         with open("/dev/null", "r") as devnull:
             result = subprocess.run(cmd, stdin=devnull, capture_output=True, text=True, check=True)
@@ -104,7 +111,7 @@ def main():
     finally:
         # Restore renamed files
         for original_path in renamed_files:
-            bak_path = original_path.with_suffix(".bak")
+            bak_path = original_path.with_name(original_path.name + ".bak")
             if bak_path.exists():
                 bak_path.rename(original_path)
                 print(f"[Mechanical Editor] Restored {bak_path} to {original_path}", flush=True)

@@ -1,15 +1,15 @@
 ---
 id: "limit-context-bloat-rules"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-10T18:05:50.000Z"
-modified: "2026-07-10T18:05:50.000Z"
-completedAt: null
+modified: "2026-07-12T05:32:25.976Z"
+completedAt: "2026-07-12T05:32:25.976Z"
 labels: []
-order: "aC"
+order: "aE"
 ---
 # Limit Context Bloat Rules
 

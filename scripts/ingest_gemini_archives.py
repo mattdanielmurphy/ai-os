@@ -55,7 +55,7 @@ def parse_timestamp(ts_str: str) -> float:
     """Parse a timestamp string to Unix epoch float. Supports ISO and custom formats."""
     # Try ISO format
     try:
-        dt = datetime.fromisoformat(ts_str)
+        dt = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
         return dt.timestamp()
     except ValueError:
         pass
@@ -137,6 +137,11 @@ def parse_messages(text: str):
             content = body[start_m.end() : end_m.start()].strip()
             pos = end_m.end()
 
+        # Strip injected timestamp prefixes e.g. "[2026-07-11 16:17 MDT-6] "
+        content = re.sub(r"^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?:\s+[A-Z]{3,4}[+-]?\d*)?\]\s*", "", content, flags=re.IGNORECASE)
+        # Strip injected context tracker e.g. "[context to this point is 5300] "
+        content = re.sub(r"^\[context to this point is \d+\]\s*", "", content, flags=re.IGNORECASE)
+
         # Strip markdown headers like "## User — 2026-07-08 19:43"
         content = re.sub(r"^##\s+(User|Gemini|Assistant|Model)\s+[—\-].*$", "", content, flags=re.MULTILINE)
         content = content.strip()
@@ -174,6 +179,8 @@ def get_or_create_session(conn: sqlite3.Connection, meta: dict, messages: list) 
 
     started_at = messages[0]["ts"] if messages else time.time()
     title = meta.get("title", None)  # use None so it's stored as NULL (avoids unique-constraint coll)
+    if title:
+        title = re.sub(r"^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?:\s+[A-Z]{3,4}[+-]?\d*)?\]\s*", "", title)
 
     conn.execute(
         """INSERT OR IGNORE INTO sessions
@@ -216,6 +223,11 @@ def insert_messages(
         ts = msg["ts"]
 
         if content in existing:
+            # Update the timestamp just in case it was wrong previously
+            conn.execute(
+                "UPDATE messages SET timestamp = ? WHERE session_id = ? AND content = ?",
+                (ts, session_id, content)
+            )
             continue
 
         conn.execute(
@@ -250,7 +262,7 @@ def process_archive(dry_run: bool = True, verbose: bool = False):
         sys.exit(1)
 
     # Gather all .md files recursively
-    md_files = sorted(f for f in ARCHIVE_DIR.rglob("*.md") if f.is_file())
+    md_files = sorted(f for f in ARCHIVE_DIR.iterdir() if f.is_file() and f.suffix == ".md")
 
     if not md_files:
         print(f"⚠ No .md files found in {ARCHIVE_DIR}")

@@ -1,15 +1,15 @@
 ---
 id: "seal-token-leaks-and-enforce-delegation"
-status: "review"
+status: "done"
 priority: "high"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-10T03:28:00Z"
-modified: "2026-07-10T03:28:00Z"
-completedAt: null
+modified: "2026-07-12T05:32:26.028Z"
+completedAt: "2026-07-12T05:32:26.028Z"
 labels: []
-order: "aA"
+order: "aI"
 ---
 # Seal Token Leaks and Enforce Delegation
 

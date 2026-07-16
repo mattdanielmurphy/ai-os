@@ -38,6 +38,9 @@ All agent scripts now run inside **named tmux sessions** via `~/Library/Scripts/
 | `com.matt.agent.notesync` | `agent-notesync` | `notesync-wrapper` (binary) | oneshot | 📝 Syncs Obsidian notes (WatchPaths) |
 | `com.matt.agent.backup-agents` | `agent-backup-agents` | `cp` plists to backup dir | oneshot | 💾 Daily backup at 11:30 |
 
+## Crontab Automations
+* **ping_agy.py**: Runs via cron at 10:00, 15:00, 20:00, and 01:00. Checks `ag-quota --all --json`. If the 5-hour quota is fully replenished (100%) and weekly quota > 0%, it sends a `say hi` prompt to `tmux` sessions `agy_matt` (iammattmurphy) and `agy_darryl` (darryl.l.murphy) to keep the 5hr window distributed. (Script: `~/.local/bin/ping_agy.py`)
+
 
 ---
 

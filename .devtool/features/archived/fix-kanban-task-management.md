@@ -1,15 +1,15 @@
 ---
 id: "fix-kanban-task-management"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-09T17:55:00.000Z"
-modified: "2026-07-09T17:55:00.000Z"
-completedAt: null
+modified: "2026-07-12T05:32:25.854Z"
+completedAt: "2026-07-12T05:32:25.854Z"
 labels: []
-order: "a2"
+order: "a7"
 ---
 # Bug: Fix Kanban Feature Task Management
 

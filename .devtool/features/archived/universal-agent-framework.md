@@ -1,15 +1,15 @@
 ---
 id: "universal-agent-framework"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-10"
-modified: "2026-07-10"
-completedAt: null
+modified: "2026-07-12T05:32:26.073Z"
+completedAt: "2026-07-12T05:32:26.073Z"
 labels: []
-order: "aC"
+order: "aM"
 ---
 # Universal Agent Framework
 

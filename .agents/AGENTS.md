@@ -48,17 +48,10 @@
   1. **Mode 1 (Self-Contained Mode)**: The agent performs all tasks (reads, writes, commands) directly without delegating.
   2. **Mode 2 (Mixed Delegation Mode)**: The agent delegates significant, repetitive, or simple tasks (like git commits) to subagents, but may read or write files directly for small, targeted edits.
   3. **Mode 3 (Orchestrator-Only Mode)**: The agent acts strictly as an orchestrator and coordinator.
-- **Constraint (ACTIVE MODE: Mode 3)**:
-  - **NEVER** use `view_file`, `write_to_file`, `replace_file_content`, or `multi_replace_file_content` directly from the main orchestrator (Gemini).
-  - To inspect files, **ALWAYS** use `grep_search` to find matching query patterns or read small snippets, or delegate file reads to a command-line script/subagent.
-  - To modify files, **ALWAYS** delegate to a subagent script (e.g. `python3 scripts/mechanical_editor.py` or `python3 scripts/precision_edit.py`) via `run_command`.
-    - `mechanical_editor.py` can be called without a specified filepath to delegate broader workspace-level or multi-file tasks. Delegate tasks to `mechanical_editor.py` earlier in the process, rather than breaking them down into single-file edits.
-  - To verify a subagent edit, **NEVER** use `cat` or `view_file` to read entire files. Instead, use `git diff <file>` to inspect the exact modifications, or run relevant build/test commands to verify correctness.
-  - The orchestrator coordinates, analyzes snippets, plans, instructs subagents via detailed prompts, runs build/check commands, and verifies edits, but must never touch file contents directly.
-  - **Three-Turn Delegation Protocol**:
-    - **Turn 1 (Recon/Retrieval)**: The orchestrator processes the user's prompt, determines what files, grep patterns, or logs are needed, and immediately delegates the retrieval and code recon phase to a subagent (using Claude Code/`mechanical_editor.py` or another lightweight tool/subagent). The subagent gathers the specific lines or files and returns a token-efficient summary.
-    - **Turn 2 (Decision, Planning & Execution)**: The orchestrator reviews the recon summary, makes high-level architectural decisions, writes a targeted implementation plan, and delegates the edit execution tasks to subagent scripts (e.g. `mechanical_editor.py` or `precision_edit.py`).
-    - **Turn 3 (Verification & Correction)**: The orchestrator runs `git diff <file>` or build/test validation commands to analyze the edits. Any required corrections are immediately delegated back to the subagents, keeping the main orchestrator's context completely clean of raw file outputs.
+- **Constraint (ACTIVE MODE: Mode 2 - Mixed Delegation)**:
+  - **Strategic Delegation:** You are empowered to make direct edits and read files yourself when it is simpler and faster.
+  - **When to Delegate:** You should actively choose to delegate tasks to subagents when it makes sense. Weigh factors like thread length, token caching benefits, task complexity, and context handoff size. If a task is tedious, repetitive, or requires very different context than what's already loaded, spin up an `agy` subagent (or use `mechanical_editor.py`/Claude Code for specific model capabilities).
+  - **Housekeeping:** Always continue to delegate the commit process at the end of a session to `housekeep.py` to keep responses fast.
 - **Model Selection Guidelines for mechanical_editor.py**:
   - Use `claude-sonnet-gem-2.5-flash` by default (for simple/lightweight edits to optimize speed/cost).
   - Use `claude-haiku-ds-v4-flash-low` or `claude-haiku-ds-v4-flash-med` for moderate edits.

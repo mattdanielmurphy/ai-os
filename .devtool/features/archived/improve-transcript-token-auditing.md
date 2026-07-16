@@ -1,15 +1,15 @@
 ---
 id: "improve-transcript-token-auditing"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-10T00:30:00Z"
-modified: "2026-07-10T00:31:00Z"
-completedAt: null
+modified: "2026-07-12T05:32:25.943Z"
+completedAt: "2026-07-12T05:32:25.943Z"
 labels: []
-order: "a7"
+order: "aC"
 ---
 # Improve Transcript Token Auditing
 

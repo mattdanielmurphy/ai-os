@@ -1,15 +1,15 @@
 ---
 id: "three-turn-delegation-protocol"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-10T12:01:00Z"
-modified: "2026-07-10T12:01:00Z"
-completedAt: null
+modified: "2026-07-12T05:32:26.064Z"
+completedAt: "2026-07-12T05:32:26.064Z"
 labels: []
-order: "aB"
+order: "aL"
 ---
 # Three-Turn Delegation Protocol
 

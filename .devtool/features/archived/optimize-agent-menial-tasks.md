@@ -1,15 +1,15 @@
 ---
 id: "optimize-agent-menial-tasks"
-status: "review"
+status: "done"
 priority: "medium"
 assignee: null
 epic: null
 dueDate: null
 created: "2026-07-08T01:22:03.696Z"
-modified: "2026-07-09T22:28:52.165Z"
-completedAt: null
+modified: "2026-07-12T05:32:26.005Z"
+completedAt: "2026-07-12T05:32:26.005Z"
 labels: []
-order: "a9"
+order: "aG"
 ---
 # Optimize Agent Menial Tasks
 
