@@ -266,7 +266,7 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 			SELECT id, source, COALESCE(title, '') as title, started_at, COALESCE(cwd, '') as cwd 
 			FROM sessions 
 			ORDER BY started_at DESC 
-			LIMIT 150`)
+			LIMIT 5000`)
 		if err != nil {
 			return nil, err
 		}
@@ -327,7 +327,7 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 		FROM sessions s
 		WHERE s.title LIKE ? OR s.id IN (SELECT session_id FROM matched_messages)
 		ORDER BY (relevance_score + CAST(s.started_at AS INTEGER)) DESC
-		LIMIT 100
+		LIMIT 1000
 	`)
 	if err != nil {
 		return nil, err
@@ -455,7 +455,7 @@ func (a *App) searchFSThreads(query string) ([]ThreadResult, error) {
 			return list[i].MTime > list[j].MTime
 		})
 		
-		limit := 150
+		limit := 5000
 		if len(list) < limit {
 			limit = len(list)
 		}
@@ -525,7 +525,7 @@ func (a *App) searchFSThreads(query string) ([]ThreadResult, error) {
 		return results[i].Score > results[j].Score
 	})
 
-	limit := 100
+	limit := 1000
 	if len(results) < limit {
 		limit = len(results)
 	}
