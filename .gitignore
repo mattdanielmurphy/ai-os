@@ -12,4 +12,4 @@ src-tauri/target/
 
 # Sensitive Agent Logs
 .agent-logs/
-agent-logs/
+# agent-logs/
