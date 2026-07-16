@@ -263,7 +263,7 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 
 	if query == "" {
 		rows, err := db.Query(`
-			SELECT id, source, title, started_at, cwd 
+			SELECT id, source, COALESCE(title, '') as title, started_at, COALESCE(cwd, '') as cwd 
 			FROM sessions 
 			ORDER BY started_at DESC 
 			LIMIT 150`)
@@ -275,21 +275,23 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 		for rows.Next() {
 			var id, source, title, cwd string
 			var startedAt float64
-			if err := rows.Scan(&id, &source, &title, &startedAt, &cwd); err == nil {
-				filePath := a.findLocalThreadFolder(id)
-				webURL := ""
-				if source == "gemini-archive" {
-					webURL = "https://gemini.google.com/app/" + id
-				}
-				results = append(results, ThreadResult{
-					ID:        id,
-					Title:     title,
-					StartedAt: startedAt,
-					Source:    source,
-					FilePath:  filePath,
-					WebURL:    webURL,
-				})
+			if err := rows.Scan(&id, &source, &title, &startedAt, &cwd); err != nil {
+				fmt.Printf("Scan error in query == '': %v\n", err)
+				continue
 			}
+			filePath := a.findLocalThreadFolder(id)
+			webURL := ""
+			if source == "gemini-archive" {
+				webURL = "https://gemini.google.com/app/" + id
+			}
+			results = append(results, ThreadResult{
+				ID:        id,
+				Title:     title,
+				StartedAt: startedAt,
+				Source:    source,
+				FilePath:  filePath,
+				WebURL:    webURL,
+			})
 		}
 		return results, nil
 	}
@@ -305,9 +307,9 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 		SELECT 
 			s.id, 
 			s.source,
-			s.title, 
+			COALESCE(s.title, '') as title, 
 			s.started_at,
-			s.cwd,
+			COALESCE(s.cwd, '') as cwd,
 			(
 				CASE WHEN s.title LIKE ? THEN 100000000 ELSE 0 END +
 				COALESCE((
@@ -343,28 +345,30 @@ func (a *App) searchDBThreads(query string) ([]ThreadResult, error) {
 		var id, source, title, cwd string
 		var startedAt float64
 		var score int64
-		if err := rows.Scan(&id, &source, &title, &startedAt, &cwd, &score); err == nil {
-			filePath := a.findLocalThreadFolder(id)
-			webURL := ""
-			if source == "gemini-archive" {
-				webURL = "https://gemini.google.com/app/" + id
-			}
-
-			// Get matching messages snippet/highlights
-			snippet, matches := a.getDBThreadSnippetAndMatches(db, id, query)
-
-			results = append(results, ThreadResult{
-				ID:        id,
-				Title:     title,
-				StartedAt: startedAt,
-				Source:    source,
-				Score:     score,
-				Snippet:   snippet,
-				Matches:   matches,
-				FilePath:  filePath,
-				WebURL:    webURL,
-			})
+		if err := rows.Scan(&id, &source, &title, &startedAt, &cwd, &score); err != nil {
+			fmt.Printf("Scan error in query != '': %v\n", err)
+			continue
 		}
+		filePath := a.findLocalThreadFolder(id)
+		webURL := ""
+		if source == "gemini-archive" {
+			webURL = "https://gemini.google.com/app/" + id
+		}
+
+		// Get matching messages snippet/highlights
+		snippet, matches := a.getDBThreadSnippetAndMatches(db, id, query)
+
+		results = append(results, ThreadResult{
+			ID:        id,
+			Title:     title,
+			StartedAt: startedAt,
+			Source:    source,
+			Score:     score,
+			Snippet:   snippet,
+			Matches:   matches,
+			FilePath:  filePath,
+			WebURL:    webURL,
+		})
 	}
 
 	return results, nil
@@ -384,7 +388,7 @@ func (a *App) findLocalThreadFolder(id string) string {
 // getDBThreadSnippetAndMatches retrieves and highlights matches from the database
 func (a *App) getDBThreadSnippetAndMatches(db *sql.DB, sessionID string, query string) (string, []string) {
 	rows, err := db.Query(`
-		SELECT content 
+		SELECT COALESCE(content, '') as content 
 		FROM messages 
 		WHERE session_id = ? AND content LIKE ? 
 		LIMIT 5`, sessionID, "%"+query+"%")
@@ -399,7 +403,10 @@ func (a *App) getDBThreadSnippetAndMatches(db *sql.DB, sessionID string, query s
 
 	for rows.Next() {
 		var content string
-		if err := rows.Scan(&content); err == nil {
+		if err := rows.Scan(&content); err != nil {
+			fmt.Printf("Scan error in snippet: %v\n", err)
+			continue
+		}
 			cleanContent := strings.ReplaceAll(content, "<THREAD_NAME>", "")
 			cleanContent = strings.ReplaceAll(cleanContent, "</THREAD_NAME>", "")
 			cleanContent = strings.ReplaceAll(cleanContent, "<USER_REQUEST>", "")
@@ -417,7 +424,6 @@ func (a *App) getDBThreadSnippetAndMatches(db *sql.DB, sessionID string, query s
 					}
 				}
 			}
-		}
 	}
 
 	if snippet == "" {
@@ -537,7 +543,7 @@ func (a *App) GetThreadMessages(sessionID string) ([]Message, error) {
 		defer db.Close()
 
 		rows, err := db.Query(`
-			SELECT role, content, COALESCE(tool_name, '') as tool_name, COALESCE(tool_calls, '') as tool_calls, timestamp 
+			SELECT role, COALESCE(content, '') as content, COALESCE(tool_name, '') as tool_name, COALESCE(tool_calls, '') as tool_calls, timestamp 
 			FROM messages 
 			WHERE session_id = ? 
 			ORDER BY timestamp ASC`, sessionID)
@@ -549,9 +555,11 @@ func (a *App) GetThreadMessages(sessionID string) ([]Message, error) {
 		var msgs []Message
 		for rows.Next() {
 			var msg Message
-			if err := rows.Scan(&msg.Role, &msg.Content, &msg.ToolName, &msg.ToolCalls, &msg.Timestamp); err == nil {
-				msgs = append(msgs, msg)
+			if err := rows.Scan(&msg.Role, &msg.Content, &msg.ToolName, &msg.ToolCalls, &msg.Timestamp); err != nil {
+				fmt.Printf("Scan error in messages: %v\n", err)
+				continue
 			}
+			msgs = append(msgs, msg)
 		}
 		return msgs, nil
 	}
