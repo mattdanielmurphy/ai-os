@@ -50,6 +50,7 @@ show_help() {
     echo "  --no-gui        Run the Agy orchestrator agent in the current terminal"
     echo "  --agy           Run the Agy orchestrator agent in the current terminal"
     echo "  --claude        Run the native Claude Code agent in the current terminal"
+    echo "  --handover      Compile thread context and spawn a fresh thread with process replacement"
     echo "  -h, --help      Show this help message"
     echo ""
     echo "All other arguments and flags are forwarded to the selected agent."
@@ -75,6 +76,9 @@ while [[ $# -gt 0 ]]; do
             ENGINE="agy"
             LAUNCH_GUI=false
             shift
+            ;;
+        --handover)
+            exec python3 "$AI_OS_HOME/scripts/handover.py"
             ;;
         --cli|--no-gui|--terminal)
             LAUNCH_GUI=false
