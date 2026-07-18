@@ -94,9 +94,10 @@
 ### Model Triage and Handoff Rules
 - **Triage Role**: When running under `claude-haiku-ds-v4-flash-low` (Fast/Cheap Model), you are in triage mode. Assess if the user request requires deep reasoning, multi-file edits, complex refactoring, or multi-step execution.
 - **Execution Limit**: If the task is trivially simple (e.g., viewing a file, explaining a simple concept, making a minor 1-line tweak), complete it directly.
-- **Handoff Action**: If the task is complex, you MUST immediately hand off to a pro model. Execute the handoff by running:
-  `python3 /Users/matt/projects/ai-os/scripts/handover.py --non-interactive --to-model claude-fable-ds-v4-pro-med --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
-  This will replace your process with a more powerful model to execute the core implementation. Do not write extensive code before handing off.
+- **Handoff Action**: If the task is complex, you MUST immediately hand off to a pro model. Under active high-quota settings, always use Google Gemini pro models (specifically targeting `pro` via `--to-model pro` or `gemini-2.5-pro`) as the target instead of other external models.
+- **Interactive Handoff & Spawn**: Never run agents blind (do not use `--non-interactive`, `--print`, or background execution without attachment). Handoffs must be run interactively to allow the user to review the plan and steering instructions. When spawning subagents (via `agy` or `claude code`), run them inside a visible tmux session or attach the current terminal directly so the user can monitor their execution in real-time. Execute the handoff by running:
+  `python3 /Users/matt/projects/ai-os/scripts/handover.py --to-model pro --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
+- **Exclusively Use agy for Subagents**: When agy quota is high/abundant, use agy exclusively. If a prompt goes to Hermes (default), use the MCP tool to spawn a tmux-bound agy instance as a subagent, or if already in agy, have agy spin up its own subagent natively. Do not spawn external API agents or run subagents without attaching/steering capabilities.
 
 # Global Workflows
 @~/.ai-workflows/audit.md

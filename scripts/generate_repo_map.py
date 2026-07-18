@@ -18,7 +18,7 @@ except Exception as e:
 EXCLUDE_DIRS = {
     "node_modules", ".git", "dist", "target", "tmp", "agent-logs", 
     "build", "__pycache__", ".vscode", ".idea", ".tauri", "out",
-    "gemini-history", ".gemini", "legacy-tauri-gui/node_modules"
+    "gemini-history", ".gemini", "tauri-gui/node_modules"
 }
 
 CODE_EXTENSIONS = {".py", ".ts", ".js", ".tsx", ".jsx", ".rs", ".go"}
