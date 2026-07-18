@@ -1,6 +1,6 @@
 ---
 id: "ai-os-strategy-and-cleanup"
-status: "in-progress"
+status: "review"
 priority: "medium"
 assignee: null
 epic: null
