@@ -68,27 +68,48 @@ def get_multiline_input(prompt_text):
     return "\n".join(lines).strip()
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Compile context and handover task execution to another agent instance.")
+    parser.add_argument("--non-interactive", action="store_true", help="Run without prompting the user.")
+    parser.add_argument("--to-model", default="claude-fable-ds-v4-pro-med", help="Target model to spin up.")
+    parser.add_argument("--completed", help="Details of what has been completed so far.")
+    parser.add_argument("--next-steps", help="Details of what needs to be done next.")
+    parser.add_argument("--discoveries", help="Any key discoveries or architecture notes.")
+    parser.add_argument("--title", help="Optional title/goal override for this handoff.")
+    args = parser.parse_args()
+
     # 1. Identify active task
     task_filepath, task_title = get_in_progress_task()
-    if task_title:
-        print(f"Detected Active Task: {task_title}")
+    
+    if args.non_interactive:
+        if args.title:
+            task_title = args.title
+        elif not task_title:
+            task_title = "Automated Triage Handoff"
+        is_completed = False
+        completed = args.completed if args.completed else "N/A"
+        next_steps = args.next_steps if args.next_steps else "N/A"
+        discoveries = args.discoveries if args.discoveries else "N/A"
     else:
-        print("No active 'in-progress' task detected.")
-        task_title = input("Enter a goal or title for this handoff: ").strip()
-        if not task_title:
-            task_title = "General Context Handoff"
+        if task_title:
+            print(f"Detected Active Task: {task_title}")
+        else:
+            print("No active 'in-progress' task detected.")
+            task_title = input("Enter a goal or title for this handoff: ").strip()
+            if not task_title:
+                task_title = "General Context Handoff"
 
-    # 2. Ask if task is completed
-    is_completed = False
-    if task_filepath:
-        complete_input = input("Has this task been fully completed? (y/N): ").strip().lower()
-        if complete_input in ('y', 'yes'):
-            is_completed = True
+        # 2. Ask if task is completed
+        is_completed = False
+        if task_filepath:
+            complete_input = input("Has this task been fully completed? (y/N): ").strip().lower()
+            if complete_input in ('y', 'yes'):
+                is_completed = True
 
-    # 3. Gather handoff details interactively
-    completed = get_multiline_input("What has been completed so far?")
-    next_steps = get_multiline_input("What are the next steps?")
-    discoveries = get_multiline_input("Any key discoveries or architecture notes?")
+        # 3. Gather handoff details interactively
+        completed = get_multiline_input("What has been completed so far?")
+        next_steps = get_multiline_input("What are the next steps?")
+        discoveries = get_multiline_input("Any key discoveries or architecture notes?")
 
     # 4. Generate the handoff markdown file
     log_dir = "/Users/matt/projects/ai-os/agent-logs"
@@ -140,10 +161,10 @@ def main():
 
     # 6. Execute process replacement with a fresh agy thread
     prompt_msg = f"Continuing task: {task_title}. Read the handoff log at file://{filepath} and execute the next steps."
-    print(f"\nReplacing process with a fresh agy thread...\nPrompt: {prompt_msg}\n")
+    print(f"\nReplacing process with a fresh agy thread using model {args.to_model}...\nPrompt: {prompt_msg}\n")
     
     # Run execvp to replace the current shell/python process with agy
-    os.execvp("agy", ["agy", "--prompt-interactive", prompt_msg])
+    os.execvp("agy", ["agy", "--model", args.to_model, "--prompt-interactive", prompt_msg])
 
 if __name__ == "__main__":
     main()

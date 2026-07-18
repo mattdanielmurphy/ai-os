@@ -97,3 +97,19 @@ for cmd in "${NOISY_COMMANDS[@]}"; do
     fi
 done
 
+# Intercept agy to inject the default fast model if not specified
+agy() {
+    local has_model=false
+    for arg in "$@"; do
+        if [[ "$arg" == "--model" ]]; then
+            has_model=true
+            break
+        fi
+    done
+    if [ "$has_model" = false ]; then
+        command agy "$@" --model claude-haiku-ds-v4-flash-low
+    else
+        command agy "$@"
+    fi
+}
+

@@ -681,6 +681,235 @@
       public close() { ... }
           if (this.previousFocus) { ... }
 
+# File: thread-browser/app.go
+  package main
+  import (
+  type App struct { ... }
+  type cachedThread struct { ... }
+  type cachedMessage struct { ... }
+  type ThreadResult struct { ... }
+  type Message struct { ... }
+  func NewApp() *App { ... }
+  func (a *App) startup(ctx context.Context) { ... }
+  func (a *App) isDBAvailable() bool { ... }
+  func (a *App) loadFSThreadsCache() { ... }
+  func (a *App) SearchThreads(query string) ([]ThreadResult, error) { ... }
+  func (a *App) searchDBThreads(query string) ([]ThreadResult, error) { ... }
+  func (a *App) findLocalThreadFolder(id string) string { ... }
+  func (a *App) getDBThreadSnippetAndMatches(db *sql.DB, sessionID string, query string) (string, []string) { ... }
+  func (a *App) searchFSThreads(query string) ([]ThreadResult, error) { ... }
+  func (a *App) GetThreadMessages(sessionID string) ([]Message, error) { ... }
+  func (a *App) OpenPath(path string) error { ... }
+  func (a *App) OpenURL(url string) error { ... }
+  func extractSnippet(content string, query string) string { ... }
+  func highlightQueryText(text string, query string) string { ... }
+
+# File: thread-browser/main.go
+  package main
+  import (
+  func main() { ... }
+
+# File: thread-browser/frontend/vite.config.ts
+  import { ... }
+  import react from '@vitejs/plugin-react'
+
+# File: thread-browser/frontend/wailsjs/go/models.ts
+  	export class Message { ... }
+  	    static createFrom(source: any = { ... }
+  	    constructor(source: any = { ... }
+  	        if ('string' === typeof source) source = JSON.parse(source);
+  	export class ThreadResult { ... }
+  	    static createFrom(source: any = { ... }
+  	    constructor(source: any = { ... }
+  	        if ('string' === typeof source) source = JSON.parse(source);
+
+# File: thread-browser/frontend/wailsjs/go/main/App.d.ts
+  import { ... }
+  export function GetThreadMessages(arg1:string):Promise<Array<main.Message>>;
+  export function OpenPath(arg1:string):Promise<void>;
+  export function OpenURL(arg1:string):Promise<void>;
+  export function SearchThreads(arg1:string):Promise<Array<main.ThreadResult>>;
+
+# File: thread-browser/frontend/wailsjs/go/main/App.js
+  export function GetThreadMessages(arg1) { ... }
+  export function OpenPath(arg1) { ... }
+  export function OpenURL(arg1) { ... }
+  export function SearchThreads(arg1) { ... }
+
+# File: thread-browser/frontend/wailsjs/runtime/runtime.d.ts
+  export interface Position { ... }
+  export interface Size { ... }
+  export interface Screen { ... }
+  export interface EnvironmentInfo { ... }
+  export function EventsEmit(eventName: string, ...data: any): void;
+  export function EventsOn(eventName: string, callback: (...data: any) => void): () => void;
+  export function EventsOnMultiple(eventName: string, callback: (...data: any) => void, maxCallbacks: number): () => void;
+  export function EventsOnce(eventName: string, callback: (...data: any) => void): () => void;
+  export function EventsOff(eventName: string, ...additionalEventNames: string[]): void;
+  export function EventsOffAll(): void;
+  export function LogPrint(message: string): void;
+  export function LogTrace(message: string): void;
+  export function LogDebug(message: string): void;
+  export function LogError(message: string): void;
+  export function LogFatal(message: string): void;
+  export function LogInfo(message: string): void;
+  export function LogWarning(message: string): void;
+  export function WindowReload(): void;
+  export function WindowReloadApp(): void;
+  export function WindowSetAlwaysOnTop(b: boolean): void;
+  export function WindowSetSystemDefaultTheme(): void;
+  export function WindowSetLightTheme(): void;
+  export function WindowSetDarkTheme(): void;
+  export function WindowCenter(): void;
+  export function WindowSetTitle(title: string): void;
+  export function WindowFullscreen(): void;
+  export function WindowUnfullscreen(): void;
+  export function WindowIsFullscreen(): Promise<boolean>;
+  export function WindowSetSize(width: number, height: number): void;
+  export function WindowGetSize(): Promise<Size>;
+  export function WindowSetMaxSize(width: number, height: number): void;
+  export function WindowSetMinSize(width: number, height: number): void;
+  export function WindowSetPosition(x: number, y: number): void;
+  export function WindowGetPosition(): Promise<Position>;
+  export function WindowHide(): void;
+  export function WindowShow(): void;
+  export function WindowMaximise(): void;
+  export function WindowToggleMaximise(): void;
+  export function WindowUnmaximise(): void;
+  export function WindowIsMaximised(): Promise<boolean>;
+  export function WindowMinimise(): void;
+  export function WindowUnminimise(): void;
+  export function WindowIsMinimised(): Promise<boolean>;
+  export function WindowIsNormal(): Promise<boolean>;
+  export function WindowSetBackgroundColour(R: number, G: number, B: number, A: number): void;
+  export function ScreenGetAll(): Promise<Screen[]>;
+  export function BrowserOpenURL(url: string): void;
+  export function Environment(): Promise<EnvironmentInfo>;
+  export function Quit(): void;
+  export function Hide(): void;
+  export function Show(): void;
+  export function ClipboardGetText(): Promise<string>;
+  export function ClipboardSetText(text: string): Promise<boolean>;
+  export function OnFileDrop(callback: (x: number, y: number ,paths: string[]) => void, useDropTarget: boolean) :void
+  export function OnFileDropOff() :void
+  export function CanResolveFilePaths(): boolean;
+  export function ResolveFilePaths(files: File[]): void
+  export interface NotificationOptions { ... }
+  export interface NotificationAction { ... }
+  export interface NotificationCategory { ... }
+  export function InitializeNotifications(): Promise<void>;
+  export function CleanupNotifications(): Promise<void>;
+  export function IsNotificationAvailable(): Promise<boolean>;
+  export function RequestNotificationAuthorization(): Promise<boolean>;
+  export function CheckNotificationAuthorization(): Promise<boolean>;
+  export function SendNotification(options: NotificationOptions): Promise<void>;
+  export function SendNotificationWithActions(options: NotificationOptions): Promise<void>;
+  export function RegisterNotificationCategory(category: NotificationCategory): Promise<void>;
+  export function RemoveNotificationCategory(categoryId: string): Promise<void>;
+  export function RemoveAllPendingNotifications(): Promise<void>;
+  export function RemovePendingNotification(identifier: string): Promise<void>;
+  export function RemoveAllDeliveredNotifications(): Promise<void>;
+  export function RemoveDeliveredNotification(identifier: string): Promise<void>;
+  export function RemoveNotification(identifier: string): Promise<void>;
+
+# File: thread-browser/frontend/wailsjs/runtime/runtime.js
+  export function LogPrint(message) { ... }
+  export function LogTrace(message) { ... }
+  export function LogDebug(message) { ... }
+  export function LogInfo(message) { ... }
+  export function LogWarning(message) { ... }
+  export function LogError(message) { ... }
+  export function LogFatal(message) { ... }
+  export function EventsOnMultiple(eventName, callback, maxCallbacks) { ... }
+  export function EventsOn(eventName, callback) { ... }
+  export function EventsOff(eventName, ...additionalEventNames) { ... }
+  export function EventsOffAll() { ... }
+  export function EventsOnce(eventName, callback) { ... }
+  export function EventsEmit(eventName) { ... }
+  export function WindowReload() { ... }
+  export function WindowReloadApp() { ... }
+  export function WindowSetAlwaysOnTop(b) { ... }
+  export function WindowSetSystemDefaultTheme() { ... }
+  export function WindowSetLightTheme() { ... }
+  export function WindowSetDarkTheme() { ... }
+  export function WindowCenter() { ... }
+  export function WindowSetTitle(title) { ... }
+  export function WindowFullscreen() { ... }
+  export function WindowUnfullscreen() { ... }
+  export function WindowIsFullscreen() { ... }
+  export function WindowGetSize() { ... }
+  export function WindowSetSize(width, height) { ... }
+  export function WindowSetMaxSize(width, height) { ... }
+  export function WindowSetMinSize(width, height) { ... }
+  export function WindowSetPosition(x, y) { ... }
+  export function WindowGetPosition() { ... }
+  export function WindowHide() { ... }
+  export function WindowShow() { ... }
+  export function WindowMaximise() { ... }
+  export function WindowToggleMaximise() { ... }
+  export function WindowUnmaximise() { ... }
+  export function WindowIsMaximised() { ... }
+  export function WindowMinimise() { ... }
+  export function WindowUnminimise() { ... }
+  export function WindowSetBackgroundColour(R, G, B, A) { ... }
+  export function ScreenGetAll() { ... }
+  export function WindowIsMinimised() { ... }
+  export function WindowIsNormal() { ... }
+  export function BrowserOpenURL(url) { ... }
+  export function Environment() { ... }
+  export function Quit() { ... }
+  export function Hide() { ... }
+  export function Show() { ... }
+  export function ClipboardGetText() { ... }
+  export function ClipboardSetText(text) { ... }
+  export function OnFileDrop(callback, useDropTarget) { ... }
+  export function OnFileDropOff() { ... }
+  export function CanResolveFilePaths() { ... }
+  export function ResolveFilePaths(files) { ... }
+  export function InitializeNotifications() { ... }
+  export function CleanupNotifications() { ... }
+  export function IsNotificationAvailable() { ... }
+  export function RequestNotificationAuthorization() { ... }
+  export function CheckNotificationAuthorization() { ... }
+  export function SendNotification(options) { ... }
+  export function SendNotificationWithActions(options) { ... }
+  export function RegisterNotificationCategory(category) { ... }
+  export function RemoveNotificationCategory(categoryId) { ... }
+  export function RemoveAllPendingNotifications() { ... }
+  export function RemovePendingNotification(identifier) { ... }
+  export function RemoveAllDeliveredNotifications() { ... }
+  export function RemoveDeliveredNotification(identifier) { ... }
+  export function RemoveNotification(identifier) { ... }
+
+# File: thread-browser/frontend/src/App.tsx
+  import React, { ... }
+  import { ... }
+  import { ... }
+  import { ... }
+  import ReactMarkdown from 'react-markdown'
+  import { ... }
+  interface ThreadResult { ... }
+  interface Message { ... }
+  export default function App() { ... }
+      if (thread.webUrl) { ... }
+      if (thread.filePath) { ... }
+      if (!timestamp) return ''
+      if (timestamp > 1e11) { ... }
+                      if (isUser) bubbleClass = 'message-bubble user'
+                      if (isTool) bubbleClass = 'message-bubble tool'
+                      if (msg.toolCalls) { ... }
+
+# File: thread-browser/frontend/src/main.tsx
+  import React from 'react'
+  import { ... }
+  import { ... }
+  import '@mantine/core/styles.css'
+  import './styles.scss'
+  import App from './App'
+
+# File: thread-browser/frontend/src/vite-env.d.ts
+
+
 # File: scripts/append_system_rule.py
   import os
   import argparse
@@ -804,6 +1033,37 @@
   def main():
     ...
 
+# File: scripts/habit_tracker.py
+  import os
+  import sys
+  import argparse
+  import re
+  import datetime
+  from collections import defaultdict
+  def parse_frontmatter(content):
+    ...
+  def scan_logs(logs_dir):
+    ...
+  def generate_svg_heatmap(habit_name, completed_dates, days_to_show=365):
+    ...
+  def main():
+    ...
+
+# File: scripts/handover.py
+  import os
+  import sys
+  import datetime
+  import json
+  import re
+  def get_in_progress_task():
+    ...
+  def update_task_status(filepath, new_status):
+    ...
+  def get_multiline_input(prompt_text):
+    ...
+  def main():
+    ...
+
 # File: scripts/housekeep.py
   import os
   import sys
@@ -811,6 +1071,97 @@
   import datetime
   import subprocess
   def run_cmd(args, check=True):
+    ...
+  def main():
+    ...
+
+# File: scripts/ingest_gemini_archives.py
+  """
+  Ingest Gemini Chat Archives into Hermes Agent's FTS5 Search Database.
+  
+  Scans ~/Documents/gemini-archive/threads for markdown files with YAML frontmatter
+  (structured by gemini-archive-browser) and inserts them into Hermes' state.db
+  so they become searchable via Hermes' session/history search.
+  
+  Usage:
+      python3 scripts/ingest_gemini_archives.py              # dry-run (no writes)
+      python3 scripts/ingest_gemini_archives.py --write       # actually write
+  
+  Undo:
+      cp ~/.hermes/state.db.bak.gemini-ingest ~/.hermes/state.db
+  """
+  
+  import argparse
+  import copy
+  import hashlib
+  import json
+  import os
+  import re
+  import sqlite3
+  import shutil
+  import sys
+  import time
+  from datetime import datetime, timezone
+  from pathlib import Path
+  ARCHIVE_DIR = Path.home() / 'Documents' / 'gemini-archive' / 'threads'
+  HERMES_DB = Path.home() / '.hermes' / 'state.db'
+  BACKUP_PATH = HERMES_DB.with_suffix('.db.bak.gemini-ingest')
+  SOURCE_NAME = 'gemini-archive'
+  MSG_START_RE = re.compile('<!--\\s*gemini-message\\s+index=(\\d+)\\s+rol...
+  MSG_END_RE = re.compile('<!--\\s*/gemini-message\\s*-->')
+  FRONTMATTER_RE = re.compile('^---\\s*\\n(.*?)\\n---', re.DOTALL)
+  def parse_timestamp(ts_str: str) -> float:
+    """
+  Parse a timestamp string to Unix epoch float. Supports ISO and custom formats.
+  """
+    ...
+  def parse_yaml_frontmatter(text: str) -> dict:
+    """
+  Parse YAML-like frontmatter.  We keep it simple: YAML is close enough
+  to JSON for our frontmatter format.  Use a lightweight line-based parser
+  to avoid a dependency.
+  """
+    ...
+  def parse_messages(text: str):
+    """
+  Yield (index, role, timestamp_str, content) tuples from gemini-message blocks.
+  Ignores the YAML frontmatter.
+  """
+    ...
+  def backup_db(conn: sqlite3.Connection) -> Path:
+    """
+  Create a backup of the Hermes database.  Returns the backup path.
+  """
+    ...
+  def session_exists(conn: sqlite3.Connection, session_id: str) -> bool:
+    """
+  Check if a session with this ID already exists.
+  """
+    ...
+  def get_or_create_session(conn: sqlite3.Connection, meta: dict, messages: list) -> str:
+    """
+  Upsert a session row.  Returns the session_id.
+  We use INSERT OR IGNORE for the primary key, then update metadata.
+  """
+    ...
+  def insert_messages(conn: sqlite3.Connection, session_id: str, messages: list) -> int:
+    """
+  Insert message rows for a session.  Skips messages whose content hasn't
+  changed (by comparing content hash of existing rows).
+  Returns the count of inserted messages.
+  """
+    ...
+  def process_archive(dry_run: bool=True, verbose: bool=False):
+    """
+  Main processing loop: scan archive dir, parse files, insert into DB.
+  
+  Returns a summary dict.
+  """
+    ...
+  def print_report(stats: dict, dry_run: bool):
+    """
+  Print a formatted summary report.
+  """
     ...
   def main():
     ...
@@ -861,6 +1212,64 @@
   parser = argparse.ArgumentParser(description='Search for a query i...
   args = parser.parse_args()
 
+# File: scripts/sync_threads.py
+  """
+  sync_threads.py — Read Hermes SQLite sessions and sync them to the Gemini
+  antigravity-cli brain transcript format.
+  
+  Usage:
+      python3 scripts/sync_threads.py --oneshot
+      python3 scripts/sync_threads.py --watch
+      python3 scripts/sync_threads.py --oneshot --verbose
+  """
+  
+  import argparse
+  import json
+  import os
+  import sqlite3
+  import time
+  from datetime import datetime, timezone
+  from pathlib import Path
+  HERMES_DB = Path.home() / '.hermes' / 'state.db'
+  BRAIN_DIRS = [Path.home() / '.gemini' / 'antigravity-cli' / 'brain', P...
+  ROLE_TO_TYPE = {'user': 'USER_INPUT', 'assistant': 'PLANNER_RESPONSE', '...
+  ROLE_TO_SOURCE = {'user': 'USER_EXPLICIT', 'assistant': 'MODEL', 'tool': '...
+  def verbose(msg: str, flag: bool) -> None:
+    ...
+  def format_timestamp(ts: float) -> str:
+    """
+  Convert a unix-epoch float to RFC 3339 string.
+  """
+    ...
+  def build_transcript_entry(step_index: int, role: str, content: str | None, timestamp: float, session_title: str | None, is_first_assistant: bool) -> dict:
+    """
+  Build a transcript JSONL entry for a single message.
+  """
+    ...
+  def sync_session(session_row: tuple, verbose_flag: bool) -> bool:
+    """
+  Sync one Hermes session to the Gemini brain transcript files.
+  Returns True if any new content was written.
+  """
+    ...
+  def get_db_mtime() -> float:
+    """
+  Return the modification time of the Hermes database.
+  """
+    ...
+  def run_oneshot(verbose_flag: bool) -> int:
+    """
+  Sync all sessions. Returns count of sessions updated.
+  """
+    ...
+  def run_watch(verbose_flag: bool) -> None:
+    """
+  Watch the Hermes database for changes and sync continuously.
+  """
+    ...
+  def main() -> None:
+    ...
+
 # File: scripts/telemetry_db.py
   import json
   import os
@@ -887,221 +1296,19 @@
   def main():
     ...
 
+# File: scripts/yt-channel-videos.py
+  import urllib.request
+  import urllib.parse
+  import json
+  import argparse
+  import sys
+  API_KEY = 'AIzaSyBB3I_M7knApTmO6rVrzrV0cumPbSHFBbs'
+  def get_channel_uploads_playlist(handle):
+    ...
+  def get_playlist_videos(playlist_id):
+    ...
+  def main():
+    ...
+
 # File: userscripts/gemini.js
-  	if (!text) return 0
-  	if (!chunks) return 0
-  	for (let chunk of chunks) { ... }
-  		if (len <= 3) { ... }
-  	function getScrollContainer() { ... }
-  		if (!firstQuery) return null
-  		while (parent && parent !== document.body) { ... }
-  			if (overflowY === "auto" || overflowY === "scroll") { ... }
-  	function getThreadMessages() { ... }
-  	function calculateThreadTokens() { ... }
-  		if (messages.length === 0) { ... }
-  		if (currentId !== lastConversationId) { ... }
-  		if (!beginningLoaded) { ... }
-  			if (scrollContainer && scrollContainer.scrollTop <= 5) { ... }
-  		for (let i = messages.length - 1; i >= 0; i--) { ... }
-  			if (msg.role === "user") { ... }
-  				if (match) { ... }
-  					if (val !== "*") { ... }
-  		if (!hasAnchor && currentId) { ... }
-  				if (cached) { ... }
-  						for (let i = messages.length - 1; i >= 0; i--) { ... }
-  							if (messages[i].text === cachedData.lastMessageText) { ... }
-  		if (hasAnchor) { ... }
-  			for (let i = anchorIndex + 1; i < messages.length; i++) { ... }
-  				if (messages[i].role === "user") { ... }
-  			for (let i = 0; i < messages.length; i++) { ... }
-  				if (messages[i].role === "user") { ... }
-  		if (isPrecise && currentId && messages.length > 0) { ... }
-  			if (lastMsg && lastMsg.text) { ... }
-  	function checkThreadUsage() { ... }
-  		if (total === 0) { ... }
-  			if (existingBadge) { ... }
-  			if (existingTooltip) { ... }
-  		if (!badge) { ... }
-  			for (let i = 0; i < 5; i++) { ... }
-  		if (total > 20000) { ... }
-  		if (tooltip) { ... }
-  			if (inVal) inVal.textContent = prefix + input.toLocaleString() + suffix
-  			if (outVal) outVal.textContent = prefix + output.toLocaleString() + suffix
-  			if (totalVal) totalVal.textContent = total.toLocaleString() + suffix
-  			if (!statusRow) { ... }
-  			if (!isPrecise) { ... }
-  			if (index < stage) { ... }
-  	function getMenuText(key) { ... }
-  	function refreshMenu() { ... }
-  		if (isMenuExpanded) { ... }
-  	function ensureTooltip() { ... }
-  		if (tooltipEl || !document.body) return
-  	function showTooltip(e, text) { ... }
-  		if (!tooltipEl) return
-  	function hideTooltip() { ... }
-  		if (tooltipEl) tooltipEl.style.display = "none"
-  	function positionTooltip(e) { ... }
-  		if (!tooltipEl) return
-  	function attachTooltip(el, getFullText) { ... }
-  	function getLocalTzAbbr() { ... }
-  	function getLocalTzOffsetHours() { ... }
-  	function formatTime(date) { ... }
-  	function formatFullDateTime(date) { ... }
-  	function getRelativeDateLabel(unix, forSidebar = false) { ... }
-  		if (diffDays <= 0) return forSidebar ? "Today" : null
-  		if (diffDays === 1) return "Yesterday"
-  		if (diffDays === 2) return "2 days ago"
-  		if (diffDays < 7) return `$ { ... }
-  		if (diffDays < 30) return weeks === 1 ? "1 week ago" : `$ { ... }
-  	function buildMessageDisplay(unix, isEstimate) { ... }
-  	function injectTimestamp(container, unix, isEstimate) { ... }
-  	function isSidebarUrl(url) { ... }
-  	function syncToAiOs(url, payload) { ... }
-  				if (this.responseType === "" || this.responseType === "text") { ... }
-  			if (!res) return
-  				if (this.readyState === 4) { ... }
-  				if (this.readyState === 4) { ... }
-  	function extractMessageTimestamps(res) { ... }
-  			if (!hexIds.length || !timestamps.length) return
-  			if (added > 0) { ... }
-  	function injectHeuristicTimes() { ... }
-  	function parseEmbeddedUnix(dateStr, timeStr, offsetHours) { ... }
-  	function processEmbeddedTimestamps() { ... }
-  		if (nodes.length === 0) return
-  			if (!match) return
-  			if (!userQuery) { ... }
-  			if (!container) { ... }
-  	function extractSidebarTimestamps(text) { ... }
-  		if (!text) return
-  		for (let i = 1; i < blocks.length; i++) { ... }
-  			if (!idMatch) continue
-  		if (found) { ... }
-  	function formatAbsoluteTime(d) { ... }
-  		if (dateFormat === "mm/dd/yyyy") { ... }
-  	function clearAndReRenderSidebar() { ... }
-  				if (title) title.style.paddingRight = ""
-  	function updateSidebarDOM() { ... }
-  		if (!document.body) return
-  				if (!href) return
-  				if (currentLayout === "classic") { ... }
-  					if (titleContainer) titleContainer.appendChild(wrapper)
-  					if (showAbsolute) { ... }
-  					if (trailingIcon) item.insertBefore(wrapper, trailingIcon)
-  	function getNowTimestamp() { ... }
-  	function getSendButton(target) { ... }
-  		if (!target) return null
-  		if (!btn) return null
-  	function fetchSkills() { ... }
-  	function replaceEditorContent(editor, newText) { ... }
-  	function processCommandReplacement(editor) { ... }
-  		if (replaced) { ... }
-  		function (e) { ... }
-  			if (!btn) return
-  			if (!editor) return
-  				if (freshBtn) freshBtn.click()
-  		function (e) { ... }
-  			if (!editor) return
-  			if (autocompleteMenu && autocompleteMenu.style.display === "block") { ... }
-  	function updateTabTitle() { ... }
-  		if (titleEl) { ... }
-  			if (newTitle && document.title !== newTitle) { ... }
-  	function removeAdvUpsell(warnIfMissing = false) { ... }
-  		if (upsellContainer) { ... }
-  	function startObservers() { ... }
-  		if (!document.body) { ... }
-  			for (const m of mutations) { ... }
-  				if (!target) continue
-  				if (target.nodeType === Node.ELEMENT_NODE) { ... }
-  			if (isOnlyTypingOrTemp) return
-  			if (observerTimeout) clearTimeout(observerTimeout)
-  				if (url !== lastUrl) { ... }
-  			for (const mutation of mutations) { ... }
-  				if (mutation.addedNodes) { ... }
-  					for (const node of mutation.addedNodes) { ... }
-  						if (node.nodeType === Node.ELEMENT_NODE) { ... }
-  					if (shouldExport) break
-  			if (shouldExport && autoThreadSync) { ... }
-  				if (syncTimeout) clearTimeout(syncTimeout)
-  					if (stopButton) { ... }
-  					if (msgElements.length > 0) { ... }
-  			if (autoThreadSync) { ... }
-  	if (window[OPTIMIZER_SCRIPT_ID]) { ... }
-  	function getModelDetails(item) { ... }
-  		if (!name) { ... }
-  			if (lines.length >= 2) { ... }
-  	function isModelMatch(modelName, labelText) { ... }
-  		if (!cleanModel || !cleanLabel) return false
-  	async function performSelection(modelName, targetThinking) { ... }
-  		if (!originalModelBtn) return
-  			if (overlayContainer) overlayContainer.style.opacity = "0"
-  			if (overlayContainer) overlayContainer.style.opacity = "1"
-  		if (targetThinking === "extended") { ... }
-  			if (isTargetModelSelected && isCurrentlyExtended) { ... }
-  				if (newTrigger) newTrigger.click()
-  				if (header) { ... }
-  					if (opt) opt.click()
-  			if (isTargetModelSelected && isCurrentlyExtended) { ... }
-  				if (header) { ... }
-  					if (opt) opt.click()
-  	function modifyMenu() { ... }
-  			if (menuItems.length === 0) return
-  			if (header) { ... }
-  				if (!modelName) return
-  				if (description) { ... }
-  				if (isStandardActive) { ... }
-  					if (descDiv) descDiv.style.color = "#c4c7c5"
-  					if (descDiv) descDiv.style.color = "#a8c7fa"
-  					if (descDiv) descDiv.style.color = "#8e918f"
-  					if (!isStandardActive && !isThinkingActive) { ... }
-  						if (descDiv) descDiv.style.color = "#c4c7c5"
-  					if (!isStandardActive && !isThinkingActive) { ... }
-  						if (descDiv) descDiv.style.color = "#8e918f"
-  					if (!isThinkingActive) { ... }
-  					if (!isStandardActive && !isThinkingActive) { ... }
-  						if (descDiv) descDiv.style.color = "#c4c7c5"
-  					if (!isThinkingActive) { ... }
-  					if (!isStandardActive && !isThinkingActive) { ... }
-  						if (descDiv) descDiv.style.color = "#8e918f"
-  	function startOptimizer() { ... }
-  		if (!document.body) { ... }
-  	function isDarkTheme() { ... }
-  	function getThreadId() { ... }
-  	function createAutocompleteMenu() { ... }
-  		if (autocompleteMenu) return
-  	function renderAutocomplete(inputEl, query) { ... }
-  		if (filtered.length === 0) { ... }
-  	function applySkill(inputEl, skillName) { ... }
-  		if (queryStart !== -1) { ... }
-  		if (autocompleteMenu) autocompleteMenu.style.display = "none"
-  	function injectPhaseDropdown(promptContainer) { ... }
-  		if (switchBtn) { ... }
-  	function togglePhaseDropdown(container, btn) { ... }
-  		if (phaseDropdownMenu && phaseDropdownMenu.style.display === "block") { ... }
-  		if (!phaseDropdownMenu) { ... }
-  				if (editor) { ... }
-  	function injectUI() { ... }
-  		if (!promptContainer) return
-  		if (inputEl && !inputEl.dataset.aiosHooked) { ... }
-  				if (slashIdx !== -1 && slashIdx === text.length - 1) { ... }
-  						if (autocompleteMenu) autocompleteMenu.style.display = "none"
-  					if (autocompleteMenu) autocompleteMenu.style.display = "none"
-  				if (autocompleteMenu && autocompleteMenu.style.display === "block") { ... }
-  					if (e.key === "ArrowDown") { ... }
-  						if (activeItem) { ... }
-  	function scanExecutionPayloads() { ... }
-  	function showArchiveNotice(text, isError = false) { ... }
-  		if (!document.body) return
-  		if (!notice) { ... }
-  	function getArchiveConversationId() { ... }
-  	function getArchiveTitle() { ... }
-  	function showSyncedIcon() { ... }
-  		if (!icon) { ... }
-  		if (window._syncIconTimeout) clearTimeout(window._syncIconTimeout)
-  	async function exportThreadWithTimestamps(force = false) { ... }
-  		if (!autoThreadSync && !force) return
-  		if (archiveWriteInFlight) return
-  		if (!conversationId || messages.length === 0) return
-  			if (msg.dataset.aiosParsedText && msg !== messages[messages.length - 1]) { ... }
-  		if (!force && window._lastLocalThreadArchive === signature) return
-  		if (!key) { ... }
-  			if (force) showArchiveNotice("Set local archive key first", true)
+  [Error: [Errno 1] Operation not permitted: '/Users/matt/projects/ai-os/userscripts/gemini.js']

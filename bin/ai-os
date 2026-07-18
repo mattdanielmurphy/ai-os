@@ -108,5 +108,16 @@ elif [ "$ENGINE" = "claude" ]; then
 else
     echo "[ai-os] Launching Agy orchestrator agent in terminal at $ORIGINAL_PWD..."
     cd "$ORIGINAL_PWD" || exit
-    exec agy "$@" --dangerously-skip-permissions
+    HAS_MODEL=false
+    for arg in "$@"; do
+        if [[ "$arg" == "--model" ]]; then
+            HAS_MODEL=true
+            break
+        fi
+    done
+    if [ "$HAS_MODEL" = false ]; then
+        exec agy "$@" --model claude-haiku-ds-v4-flash-low --dangerously-skip-permissions
+    else
+        exec agy "$@" --dangerously-skip-permissions
+    fi
 fi

@@ -91,6 +91,13 @@
 ### Task Completion & Review Rule
 - **Constraint**: When the agent finishes a task, it MUST NOT set `status: "done"` or move the feature file to `.devtool/features/done/`. Instead, it must transition the task to `status: "review"` in the frontmatter, and leave the feature file directly under `.devtool/features/` (not in `done/`), because only the user can confirm if the task was completed to their satisfaction.
 
+### Model Triage and Handoff Rules
+- **Triage Role**: When running under `claude-haiku-ds-v4-flash-low` (Fast/Cheap Model), you are in triage mode. Assess if the user request requires deep reasoning, multi-file edits, complex refactoring, or multi-step execution.
+- **Execution Limit**: If the task is trivially simple (e.g., viewing a file, explaining a simple concept, making a minor 1-line tweak), complete it directly.
+- **Handoff Action**: If the task is complex, you MUST immediately hand off to a pro model. Execute the handoff by running:
+  `python3 /Users/matt/projects/ai-os/scripts/handover.py --non-interactive --to-model claude-fable-ds-v4-pro-med --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
+  This will replace your process with a more powerful model to execute the core implementation. Do not write extensive code before handing off.
+
 # Global Workflows
 @~/.ai-workflows/audit.md
 @~/.ai-workflows/fast.md
