@@ -100,7 +100,7 @@ trap 'kill $SYNC_PID 2>/dev/null' EXIT
 if [ "$LAUNCH_GUI" = true ]; then
     echo "[ai-os] Launching GUI interface..."
     export AIOS_INITIAL_PROJECT="$ORIGINAL_PWD"
-    pnpm tauri dev
+    cd tauri-gui && bun run tauri dev
 elif [ "$ENGINE" = "claude" ]; then
     echo "[ai-os] Launching Claude Code agent in terminal at $ORIGINAL_PWD..."
     cd "$ORIGINAL_PWD" || exit

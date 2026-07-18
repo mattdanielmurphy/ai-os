@@ -1,9 +1,15 @@
 {
-  "name": "ai-os-root",
+  "name": "ai-os",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "tauri-gui"
+  ],
   "scripts": {
     "gather-context": "code2prompt --include \"*.md,*.py,*.sh,bin/*\" --exclude \"tauri-gui/*,agent-logs/*,gemini-history/*,tmp/*,.git/*,node_modules/*\" -O ./tmp/codebase.txt && ./bin/copy-file-ref ./tmp/codebase.txt && echo \"Codebase context gathered to ./tmp/codebase.txt and file reference copied to clipboard.\"",
     "audit": "python3 ./scripts/audit_transcripts.py"
+  },
+  "devDependencies": {
+    "@rollup/rollup-darwin-x64": "^4.62.2"
   }
 }

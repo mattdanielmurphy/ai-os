@@ -24,19 +24,19 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-0. **Fresh Thread Context & Transcript Loading:** When starting a new task in a fresh thread, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, and the `agent-logs/` directory. Find relevant agent logs, read their transcript pointers, and then load the transcripts (at the pointer path) using `view_file` to reconstruct a rich, continuous understanding of the codebase and avoid repeating past mistakes.
-1. **Log Directory:** ALWAYS look for and maintain a non-hidden `agent-logs/` directory at the root of the project.
-2. **Reading Logs:** Before starting a bug fix or feature, scan `agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context.
-3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `agent-logs/`.
-   - **Naming Convention:** `YYYY-MM-DD_HH-MM_<short-kebab-description>.md`
+0. **Fresh Thread Context & Transcript Loading:** When starting a new task in a fresh thread, you MUST immediately scan the project root for \`AG_CONTEXT.md\`, \`FEATURES.md\`, and the \`agent-logs/\` directory. Find relevant agent logs, read their transcript pointers, and then load the transcripts (at the pointer path) using \`view_file\` to reconstruct a rich, continuous understanding of the codebase and avoid repeating past mistakes.
+1. **Log Directory:** ALWAYS look for and maintain a non-hidden \`agent-logs/\` directory at the root of the project.
+2. **Reading Logs:** Before starting a bug fix or feature, scan \`agent-logs/\` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context.
+3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in \`agent-logs/\`.
+   - **Naming Convention:** \`YYYY-MM-DD_HH-MM_<short-kebab-description>.md\`
    - **Required Sections:**
-     - `## Goal`: What the user asked for (restate user's instructions and context clearly).
-     - `## User Feedback & Decisions`: Specific user feedback, preferences, and choices.
-     - `## Changes Made`: Files modified/created, what was changed, and why.
-     - `## What Worked`: Confirmed fixes and completed tasks.
-     - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention.
-     - `## Architecture Notes`: Discoveries about how the codebase works.
-     - `[Full Transcript for this conversation](file://<path-to-transcript>)`: Print the absolute path to the transcript of the current session as a markdown link by reading `conversationId` (which is the `<thread-uuid>`) from `ANTIGRAVITY_SOURCE_METADATA` and checking if it is at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl`.
+     - \`## Goal\`: What the user asked for (restate user's instructions and context clearly).
+     - \`## User Feedback & Decisions\`: Specific user feedback, preferences, and choices.
+     - \`## Changes Made\`: Files modified/created, what was changed, and why.
+     - \`## What Worked\`: Confirmed fixes and completed tasks.
+     - \`## What Didn't Work / Known Issues\`: Failed approaches and things that still need attention.
+     - \`## Architecture Notes\`: Discoveries about how the codebase works.
+     - \`[Full Transcript for this conversation](file://<path-to-transcript>)\`: Print the absolute path to the transcript of the current session as a markdown link by reading \`conversationId\` (which is the \`<thread-uuid>\`) from \`ANTIGRAVITY_SOURCE_METADATA\` and checking if it is at \`/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl\` or \`/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl\`.
 4. **Commit:** Commit the log file alongside your code changes.
 </AGENT_WORK_LOGS>
 

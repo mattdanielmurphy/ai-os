@@ -22,7 +22,7 @@ interface WorkspacesConfig {
 let activePayload: StagedPayload | null = null;
 let selectedWorkspacePath: string = 'scratchpad';
 let selectedMode: 'worker' | 'triage' = 'worker';
-let selectedEngine: 'agy' | 'claude' = 'agy';
+let selectedEngine: 'agy' | 'claude' | 'hermes' = 'agy';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const threadTitleBadge = document.getElementById('thread-title-badge');
@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnModeTriage = document.getElementById('btn-mode-triage');
     const btnEngineAgy = document.getElementById('btn-engine-agy');
     const btnEngineClaude = document.getElementById('btn-engine-claude');
+    const btnEngineHermes = document.getElementById('btn-engine-hermes');
     const btnCancel = document.getElementById('btn-cancel-execution');
     const btnConfirm = document.getElementById('btn-confirm-execution');
 
@@ -156,19 +157,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Engine Buttons
-    if (btnEngineAgy && btnEngineClaude) {
-        btnEngineAgy.addEventListener('click', () => {
-            btnEngineAgy.classList.add('selected');
-            btnEngineClaude.classList.remove('selected');
-            selectedEngine = 'agy';
-        });
-
-        btnEngineClaude.addEventListener('click', () => {
-            btnEngineClaude.classList.add('selected');
-            btnEngineAgy.classList.remove('selected');
-            selectedEngine = 'claude';
-        });
-    }
+    const engineBtns = [
+        { el: btnEngineAgy, value: 'agy' as const },
+        { el: btnEngineClaude, value: 'claude' as const },
+        { el: btnEngineHermes, value: 'hermes' as const },
+    ];
+    engineBtns.forEach(({ el, value }) => {
+        if (el) {
+            el.addEventListener('click', () => {
+                engineBtns.forEach(btn => btn.el?.classList.remove('selected'));
+                el.classList.add('selected');
+                selectedEngine = value;
+            });
+        }
+    });
 
     // Actions
     if (btnCancel) {

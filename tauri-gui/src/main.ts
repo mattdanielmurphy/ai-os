@@ -122,7 +122,7 @@ interface Project {
 	name: string
 	color: string
 	lastActive: number // timestamp
-	engine: "claude" | "agy"
+	engine: "claude" | "agy" | "hermes"
 	promptDraft?: string
 	isTerminalMode?: boolean
 }
@@ -208,6 +208,7 @@ const savePromptDraft = (content: string) => {
 // In-memory cache for terminal history of each project, so we can restore screen instantly when switching
 const claudeBuffers: Record<string, string> = {}
 const agyBuffers: Record<string, string> = {}
+const hermesBuffers: Record<string, string> = {}
 const miniTermBuffers: Record<string, string> = {}
 
 let pauseStatus: "Running" | "Pending" | "Paused" = "Running"
@@ -1792,6 +1793,8 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
 			buffers = claudeBuffers
 		} else if (terminal_type === "agy") {
 			buffers = agyBuffers
+		} else if (terminal_type === "hermes") {
+			buffers = hermesBuffers
 		}
 
 		// Append to cache buffer
@@ -1984,7 +1987,12 @@ const refreshActiveTerminal = async () => {
 
 	// Reset xterm.js UI buffers
 	term.reset()
-	const activeBuffers = currentEngine === "claude" ? claudeBuffers : agyBuffers
+	const activeBuffers =
+		currentEngine === "claude"
+			? claudeBuffers
+			: currentEngine === "hermes"
+				? hermesBuffers
+				: agyBuffers
 	if (activeBuffers[activeProject]) {
 		term.write(activeBuffers[activeProject])
 	} else {
@@ -2488,7 +2496,12 @@ const switchToProject = async (
 
 	// Clear terminal screens and dump cached history
 	term.reset()
-	const activeBuffers = currentEngine === "claude" ? claudeBuffers : agyBuffers
+	const activeBuffers =
+		currentEngine === "claude"
+			? claudeBuffers
+			: currentEngine === "hermes"
+				? hermesBuffers
+				: agyBuffers
 	if (activeBuffers[path]) {
 		term.write(activeBuffers[path])
 	} else {
@@ -3138,14 +3151,14 @@ btnSubmitNewProject?.addEventListener("click", async () => {
 // ----------------------------------------------------
 // 7. Engine Toggle & Routing
 // ----------------------------------------------------
-let currentEngine: "claude" | "agy" = "agy"
+let currentEngine: "claude" | "agy" | "hermes" = "agy"
 const engineRadios = document.querySelectorAll<HTMLInputElement>(
 	'input[name="engine"]',
 )
 
 engineRadios.forEach((radio) => {
 	radio.addEventListener("change", async (e) => {
-		currentEngine = (e.target as HTMLInputElement).value as "claude" | "agy"
+		currentEngine = (e.target as HTMLInputElement).value as "claude" | "agy" | "hermes"
 		// Persist setting on the active project
 		const currentProj = projects.find((p) => p.path === activeProject)
 		if (currentProj) {
@@ -3156,7 +3169,11 @@ engineRadios.forEach((radio) => {
 		// Reset terminal screen and show matching engine buffer
 		term.reset()
 		const activeBuffers =
-			currentEngine === "claude" ? claudeBuffers : agyBuffers
+			currentEngine === "claude"
+				? claudeBuffers
+				: currentEngine === "hermes"
+					? hermesBuffers
+					: agyBuffers
 		if (activeBuffers[activeProject]) {
 			term.write(activeBuffers[activeProject])
 		} else {
@@ -4293,6 +4310,7 @@ listen<string>("account-changed", async (event) => {
 	// Clear cached terminal history buffers
 	for (const key of Object.keys(claudeBuffers)) delete claudeBuffers[key]
 	for (const key of Object.keys(agyBuffers)) delete agyBuffers[key]
+	for (const key of Object.keys(hermesBuffers)) delete hermesBuffers[key]
 	for (const key of Object.keys(miniTermBuffers)) delete miniTermBuffers[key]
 
 	// Reset standard terminal windows

@@ -24,6 +24,9 @@ struct ProjectSession {
     agy_writer: Option<Box<dyn Write + Send>>,
     agy_master: Option<Box<dyn MasterPty + Send>>,
     agy_pid: Option<u32>,
+    hermes_writer: Option<Box<dyn Write + Send>>,
+    hermes_master: Option<Box<dyn MasterPty + Send>>,
+    hermes_pid: Option<u32>,
     mini_writer: Box<dyn Write + Send>,
     mini_master: Box<dyn MasterPty + Send>,
     mini_pid: u32,
@@ -536,6 +539,10 @@ fn is_engine_running_proc(engine: &str, project_path: &str, thread_id: Option<&s
                 if args_lower.contains("agy") {
                     return true;
                 }
+            } else if engine == "hermes" {
+                if args_lower.contains("hermes") {
+                    return true;
+                }
             }
         }
         if let Some(children) = parent_to_children.get(&current_pid) {
@@ -590,6 +597,8 @@ fn spawn_single_pty(
             args.push("claude --dangerously-skip-permissions".to_string());
         } else if terminal_type == "agy" {
             args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path));
+        } else if terminal_type == "hermes" {
+            args.push("hermes".to_string());
         }
         println!("[DEBUG] tmux args: {:?}", args);
         c.args(&args);
@@ -617,6 +626,10 @@ fn spawn_single_pty(
         } else if terminal_type == "agy" {
             let mut c = CommandBuilder::new("agy");
             c.args(&["--add-dir", project_path, "--dangerously-skip-permissions"]);
+            c.cwd(project_path);
+            c
+        } else if terminal_type == "hermes" {
+            let mut c = CommandBuilder::new("hermes");
             c.cwd(project_path);
             c
         } else {
@@ -765,6 +778,30 @@ fn ensure_engine_pty(
         } else {
             Ok((session.agy_pid.unwrap(), false))
         }
+    } else if engine == "hermes" {
+        let mut hermes_alive = false;
+        let mut client_alive = false;
+        if let Some(pid) = session.hermes_pid {
+            hermes_alive = is_engine_running_proc("hermes", project_path, thread_id_opt, session.hermes_pid);
+            client_alive = is_process_alive(pid);
+        }
+        if !hermes_alive || !client_alive {
+            if is_tmux_available() && !hermes_alive {
+                let session_name = get_tmux_session_name(project_path, "hermes", thread_id_opt);
+                if has_tmux_session(&session_name) {
+                    let _ = std::process::Command::new("tmux")
+                        .args(&["kill-session", "-t", &session_name])
+                        .status();
+                }
+            }
+            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "hermes", app_handle, thread_id_opt)?;
+            session.hermes_writer = Some(writer);
+            session.hermes_master = Some(master);
+            session.hermes_pid = Some(pid);
+            Ok((pid, is_new))
+        } else {
+            Ok((session.hermes_pid.unwrap(), false))
+        }
     } else {
         Err(format!("Unknown engine: {}", engine))
     }
@@ -816,6 +853,8 @@ fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), Stri
             args.push("claude --dangerously-skip-permissions".to_string());
         } else if engine_clone == "agy" {
             args.push(format!("agy --add-dir={} --dangerously-skip-permissions", project_path_clone));
+        } else if engine_clone == "hermes" {
+            args.push("hermes".to_string());
         }
 
         let _ = std::process::Command::new("tmux")
@@ -881,6 +920,10 @@ fn spawn_fresh_engine(
         session.agy_writer = Some(writer);
         session.agy_master = Some(master);
         session.agy_pid = Some(pid);
+    } else if engine == "hermes" {
+        session.hermes_writer = Some(writer);
+        session.hermes_master = Some(master);
+        session.hermes_pid = Some(pid);
     }
 
     trigger_tmux_refresh(&project_path, &engine);
@@ -912,6 +955,9 @@ fn initialize_project_session(project_path: String, thread_id: Option<String>, s
                 agy_writer: None,
                 agy_master: None,
                 agy_pid: None,
+                hermes_writer: None,
+                hermes_master: None,
+                hermes_pid: None,
                 mini_writer,
                 mini_master,
                 mini_pid,
@@ -954,16 +1000,21 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
                 if let Some(pid) = old_session.agy_pid {
                     let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).status();
                 }
+                if let Some(pid) = old_session.hermes_pid {
+                    let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).status();
+                }
                 let _ = std::process::Command::new("kill").arg("-9").arg(old_session.mini_pid.to_string()).status();
                 
                 if is_tmux_available() {
                     let thread_id_opt = if old_session.thread_id.is_empty() { None } else { Some(old_session.thread_id.as_str()) };
                     let cl_session = get_tmux_session_name(&old_session.project_path, "claude", thread_id_opt);
                     let ag_session = get_tmux_session_name(&old_session.project_path, "agy", thread_id_opt);
+                    let he_session = get_tmux_session_name(&old_session.project_path, "hermes", thread_id_opt);
                     let mi_session = get_tmux_session_name(&old_session.project_path, "mini", None);
                     
                     let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &cl_session]).status();
                     let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &ag_session]).status();
+                    let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &he_session]).status();
                     let _ = std::process::Command::new("tmux").args(&["-u", "kill-session", "-t", &mi_session]).status();
                 }
             }
@@ -1000,6 +1051,9 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
             agy_writer: None,
             agy_master: None,
             agy_pid: None,
+            hermes_writer: None,
+            hermes_master: None,
+            hermes_pid: None,
             mini_writer,
             mini_master,
             mini_pid,
@@ -1016,6 +1070,10 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
             session.agy_writer = Some(engine_writer);
             session.agy_master = Some(engine_master);
             session.agy_pid = Some(engine_pid);
+        } else if engine == "hermes" {
+            session.hermes_writer = Some(engine_writer);
+            session.hermes_master = Some(engine_master);
+            session.hermes_pid = Some(engine_pid);
         }
 
         sessions.insert(session_key.clone(), session);
@@ -1060,6 +1118,8 @@ fn write_to_pty(data: String, project_path: String, terminal_type: String, threa
             session.claude_writer.as_mut()
         } else if terminal_type == "agy" {
             session.agy_writer.as_mut()
+        } else if terminal_type == "hermes" {
+            session.hermes_writer.as_mut()
         } else {
             None
         };
@@ -1125,6 +1185,8 @@ fn is_engine_running(engine: String, project_path: String, thread_id: Option<Str
         Some(s) => {
             if engine == "claude" {
                 s.claude_pid
+            } else if engine == "hermes" {
+                s.hermes_pid
             } else {
                 s.agy_pid
             }
@@ -1255,6 +1317,8 @@ fn toggle_process_pause(project_path: String, engine: String, pause: bool, threa
         .ok_or_else(|| format!("No active session for key: {}", session_key))?;
     let shell_pid = if engine == "claude" {
         session.claude_pid
+    } else if engine == "hermes" {
+        session.hermes_pid
     } else {
         session.agy_pid
     };
