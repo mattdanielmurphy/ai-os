@@ -2,7 +2,7 @@
 // Replaces xterm.js/PTY for the Hermes engine only
 
 const HERMES_WS_PORT = 9119
-const WS_URL = `ws://127.0.0.1:${HERMES_WS_PORT}/api/ws`
+const WS_URL = `ws://127.0.0.1:${HERMES_WS_PORT}/api/ws?token=ai_os_secret_token_123456`
 const REQUEST_TIMEOUT = 120_000
 
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'

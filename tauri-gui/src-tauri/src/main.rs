@@ -483,6 +483,10 @@ fn get_tmux_pane_pid(session_name: &str) -> Option<u32> {
 }
 
 fn is_engine_running_proc(engine: &str, project_path: &str, thread_id: Option<&str>, shell_pid: Option<u32>) -> bool {
+    if engine == "hermes" {
+        return std::net::TcpStream::connect("127.0.0.1:9119").is_ok();
+    }
+
     let root_pid = if is_tmux_available() {
         let session_name = get_tmux_session_name(project_path, engine, thread_id);
         if !has_tmux_session(&session_name) {
@@ -722,15 +726,27 @@ fn is_process_alive(pid: u32) -> bool {
         .unwrap_or(false)
 }
 
+static HERMES_INIT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 fn ensure_hermes_serve_running() {
+    let initialized = HERMES_INIT.load(std::sync::atomic::Ordering::Relaxed);
     let is_running = std::net::TcpStream::connect("127.0.0.1:9119").is_ok();
-    if !is_running {
-        let _ = std::process::Command::new("/Users/matt/.local/bin/hermes")
-            .args(&["serve", "--port", "9119"])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn();
+    if !initialized || !is_running {
+        // Kill any existing hermes serve process listening on 9119 to guarantee it starts with our session token
+        let _ = std::process::Command::new("pkill")
+            .args(&["-f", "hermes serve --port 9119"])
+            .status();
+        std::thread::sleep(std::time::Duration::from_millis(200));
+
+        let mut cmd = std::process::Command::new("/Users/matt/.local/bin/hermes");
+        cmd.args(&["serve", "--port", "9119"])
+           .env("HERMES_DASHBOARD_SESSION_TOKEN", "ai_os_secret_token_123456")
+           .stdout(std::process::Stdio::null())
+           .stderr(std::process::Stdio::null());
+        let _ = cmd.spawn();
         std::thread::sleep(std::time::Duration::from_millis(800));
+        
+        HERMES_INIT.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
