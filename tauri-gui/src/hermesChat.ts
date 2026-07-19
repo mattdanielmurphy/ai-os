@@ -10,6 +10,7 @@ type ConnectionState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'e
 export class HermesChatClient {
 	private ws: WebSocket | null = null
 	private _sessionId: string | null = null
+	private _cwd: string | null = null
 	private _state: ConnectionState = 'idle'
 	private nextId = 1
 	private pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>()
@@ -27,6 +28,7 @@ export class HermesChatClient {
 
 	get connectionState() { return this._state }
 	get sessionId() { return this._sessionId }
+	get cwd() { return this._cwd }
 
 	setStateChangeHandler(handler: (state: ConnectionState) => void) {
 		this.onStateChange = handler
@@ -98,12 +100,18 @@ export class HermesChatClient {
 			this.ws = null
 		}
 		this._sessionId = null
+		this._cwd = null
 		this.setState('disconnected')
 	}
 
-	async createSession(): Promise<void> {
-		const result = await this.request('session.create', { cols: 96, source: 'ai-os' }) as any
+	async createSession(cwd?: string): Promise<void> {
+		const params: Record<string, unknown> = { cols: 96, source: 'ai-os' }
+		if (cwd) {
+			params.cwd = cwd
+		}
+		const result = await this.request('session.create', params) as any
 		this._sessionId = result.session_id as string
+		this._cwd = cwd || null
 	}
 
 	async submitPrompt(text: string): Promise<void> {
@@ -120,6 +128,7 @@ export class HermesChatClient {
 			await this.request('session.close', { session_id: this._sessionId })
 		} catch {}
 		this._sessionId = null
+		this._cwd = null
 	}
 
 	async interrupt(): Promise<void> {

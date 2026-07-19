@@ -3189,13 +3189,17 @@ let currentEngine: "claude" | "agy" | "hermes" = "agy"
 const hermesChat = new HermesChatClient()
 let hermesCurrentMessageId: string | null = null
 
-function initHermesChat(): Promise<void> {
-	if (hermesChat.connectionState === "connected" && hermesChat.sessionId) {
+function initHermesChat(cwd?: string): Promise<void> {
+	if (hermesChat.connectionState === "connected" && hermesChat.sessionId && hermesChat.cwd === cwd) {
 		return Promise.resolve()
 	}
-	return hermesChat.connect().then(() => {
+	let prep = Promise.resolve()
+	if (hermesChat.sessionId && hermesChat.cwd !== cwd) {
+		prep = hermesChat.closeSession().catch(() => {})
+	}
+	return prep.then(() => hermesChat.connect()).then(() => {
 		if (!hermesChat.sessionId) {
-			return hermesChat.createSession()
+			return hermesChat.createSession(cwd)
 		}
 	})
 }
@@ -3304,7 +3308,7 @@ function escapeHtml(text: string): string {
 function syncEngineUI(prevEngine?: string) {
 	if (currentEngine === "hermes") {
 		showHermesChatUI(true)
-		initHermesChat().catch(err => {
+		initHermesChat(activeProject).catch(err => {
 			console.error("Failed to auto-init Hermes chat:", err)
 		})
 		hermesChat.onMessageStart = (msgId) => {
@@ -3635,7 +3639,7 @@ textarea?.addEventListener("keydown", async (e) => {
 				hermesChat.submitPrompt(trimmedInput).catch(console.error)
 			} else {
 				console.warn("Hermes chat not connected, trying to connect...")
-				initHermesChat().then(() => {
+				initHermesChat(activeProject).then(() => {
 					appendHermesUserMessage(trimmedInput)
 					hermesChat.submitPrompt(trimmedInput).catch(console.error)
 				}).catch(err => {
