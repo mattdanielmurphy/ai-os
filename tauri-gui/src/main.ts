@@ -2378,13 +2378,9 @@ const renderProjects = () => {
 				}
 
 				waitingExistingThreadIds = existingIds
-				activeThreadId = null
-				renderThreadNotesSidebar(activeProject, activeThreadId)
-				activeThreadContext = null
 				isWaitingForNewThread = true
-				lastRenderedThreadId = ""
-				lastRenderedThreadLog = ""
-				lastRenderedThinking = false
+				setupNewThreadUI()
+				renderThreadNotesSidebar(activeProject, activeThreadId)
 				updatePlaceholder(true)
 
 				threadsContentEl.querySelectorAll(":scope > div").forEach((child) => {
@@ -2411,21 +2407,12 @@ const renderProjects = () => {
 
 				placeholderEl.addEventListener("click", (e) => {
 					e.stopPropagation()
-					activeThreadId = null
 					isWaitingForNewThread = true
 					threadsContentEl.querySelectorAll(":scope > div").forEach((child) => {
 						child.className = "thread-history-item-alt group"
 					})
 					placeholderEl.className = "thread-history-item active group"
-
-					const previewPane = document.getElementById("markdown-preview-pane")
-					if (previewPane) {
-						const contentEl = getContentEl(previewPane)
-						if (contentEl) {
-							contentEl.innerHTML =
-								'<div class="select-prompt">Select a thread or log file to view preview...</div>'
-						}
-					}
+					setupNewThreadUI()
 				})
 
 				const previewPane = document.getElementById("markdown-preview-pane")
@@ -3205,6 +3192,45 @@ function initHermesChat(cwd?: string): Promise<void> {
 				return hermesChat.createSession(cwd)
 			}
 		})
+}
+
+function setupNewThreadUI() {
+	activeThreadId = null
+	activeThreadContext = null
+	lastRenderedThreadId = ""
+	lastRenderedThreadLog = ""
+	lastRenderedThinking = false
+
+	// 1. Clear terminal PTY screen
+	term.reset()
+	term.write("\r\n\x1b[1;32m[ai-os] Ready for new thread. Type a prompt to begin...\x1b[0m\r\n")
+
+	// 2. Clear Markdown preview pane if present
+	const previewPane = document.getElementById("markdown-preview-pane")
+	if (previewPane) {
+		const contentEl = getContentEl(previewPane)
+		if (contentEl) {
+			contentEl.innerHTML = '<div class="select-prompt">Select a thread or log file to view preview...</div>'
+		}
+	}
+
+	// 3. Clear Hermes messages container
+	const msgsEl = document.getElementById("hermes-messages")
+	if (msgsEl) {
+		msgsEl.innerHTML = `<div class="hermes-welcome">
+			<h3>Welcome to Hermes Chat</h3>
+			<p>Type a prompt below to begin your conversation.</p>
+		</div>`
+	}
+
+	// 4. Close and re-init Hermes session if current engine is hermes
+	if (currentEngine === "hermes") {
+		hermesChat.closeSession().catch(() => {}).then(() => {
+			return initHermesChat(activeProject)
+		}).catch(err => {
+			console.error("Failed to start fresh Hermes session for new thread:", err)
+		})
+	}
 }
 
 function showHermesChatUI(show: boolean) {
