@@ -1477,11 +1477,12 @@ ${marked.parse(block.historicalContext)}
 
 let lastRenderedThreadLog = ""
 let lastRenderedThreadId = ""
+let lastRenderedThinking = false
 let liveAgyStream = ""
 let toolCallsAutoScroll = true
 let previousIsThinking = false
 
-const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
+const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false, forceEngineRunning?: boolean) => {
 	if (!markdownPreviewPane) return
 
 	const lines = jsonlContent.trim().split("\n")
@@ -1565,6 +1566,10 @@ const renderCustomTuiLog = (jsonlContent: string, isThreadSwitch = false) => {
 		if (!foundIndicator) {
 			isThinking = true
 		}
+	}
+
+	if (forceEngineRunning === false) {
+		isThinking = false
 	}
 
 	if (isThreadSwitch) {
@@ -1753,9 +1758,15 @@ setInterval(async () => {
 			const content = await invoke<string>("read_thread_log", {
 				filepath,
 			})
+			const isRunning = await invoke<boolean>("is_engine_running", {
+				engine: currentEngine,
+				projectPath: activeProject,
+				threadId: activeThreadId,
+			})
 			if (
 				content !== lastRenderedThreadLog ||
-				activeThreadId !== lastRenderedThreadId
+				activeThreadId !== lastRenderedThreadId ||
+				isRunning !== lastRenderedThinking
 			) {
 				const isThreadSwitch = activeThreadId !== lastRenderedThreadId
 				if (isThreadSwitch) {
@@ -1763,7 +1774,8 @@ setInterval(async () => {
 				}
 				lastRenderedThreadLog = content
 				lastRenderedThreadId = activeThreadId
-				renderCustomTuiLog(content, isThreadSwitch)
+				lastRenderedThinking = isRunning
+				renderCustomTuiLog(content, isThreadSwitch, isRunning)
 			}
 		}
 	} catch (e) {
@@ -2350,23 +2362,29 @@ const renderProjects = () => {
 					return
 				}
 
-				activeThreadId = null
-				renderThreadNotesSidebar(activeProject, activeThreadId)
-				activeThreadContext = null
-				isWaitingForNewThread = true
+				let existingIds = new Set<string>()
 				try {
 					const currentThreads = await invoke<ThreadLog[]>(
 						"get_project_threads",
 						{ projectPath: activeProject },
 					)
-					waitingExistingThreadIds = new Set(currentThreads.map((t) => t.id))
+					existingIds = new Set(currentThreads.map((t) => t.id))
 				} catch (err) {
 					console.error(
 						"Failed to get current threads on new thread click:",
 						err,
 					)
-					waitingExistingThreadIds = new Set(Array.from(threadFilepaths.keys()))
+					existingIds = new Set(Array.from(threadFilepaths.keys()))
 				}
+
+				waitingExistingThreadIds = existingIds
+				activeThreadId = null
+				renderThreadNotesSidebar(activeProject, activeThreadId)
+				activeThreadContext = null
+				isWaitingForNewThread = true
+				lastRenderedThreadId = ""
+				lastRenderedThreadLog = ""
+				lastRenderedThinking = false
 				updatePlaceholder(true)
 
 				threadsContentEl.querySelectorAll(":scope > div").forEach((child) => {
@@ -2454,6 +2472,9 @@ const switchToProject = async (
 	isWaitingForNewThread = false
 	waitingExistingThreadIds.clear()
 	lastThreadsJson = ""
+	lastRenderedThreadId = ""
+	lastRenderedThreadLog = ""
+	lastRenderedThinking = false
 
 	// Update lastActive timestamp & restore state
 	const nextProj = projects.find((p) => p.path === path)
@@ -2762,8 +2783,15 @@ const selectAndLoadThread = async (thread: any) => {
 		activeThreadContext = getCompactifiedContext(content)
 		updatePlaceholder(true)
 
+		const isRunning = await invoke<boolean>("is_engine_running", {
+			engine: "agy",
+			projectPath: activeProject,
+			threadId: thread.id,
+		})
+		lastRenderedThinking = isRunning
+
 		if (previewPane) {
-			renderCustomTuiLog(content)
+			renderCustomTuiLog(content, true, isRunning)
 		}
 	} catch (err) {
 		if (previewPane) {
@@ -2949,7 +2977,8 @@ const pollThreadsList = async () => {
 						filepath,
 					})
 					activeThreadContext = getCompactifiedContext(content)
-					renderCustomTuiLog(content)
+					lastRenderedThinking = true
+					renderCustomTuiLog(content, false, true)
 				}
 				return
 			}
@@ -3541,17 +3570,22 @@ textarea?.addEventListener("keydown", async (e) => {
 		adjustHeight()
 
 		if (!activeThreadId) {
-			isWaitingForNewThread = true
+			let existingIds = new Set<string>()
 			try {
 				const currentThreads = await invoke<ThreadLog[]>(
 					"get_project_threads",
 					{ projectPath: activeProject },
 				)
-				waitingExistingThreadIds = new Set(currentThreads.map((t) => t.id))
+				existingIds = new Set(currentThreads.map((t) => t.id))
 			} catch (err) {
 				console.error("Failed to get current threads on Enter press:", err)
-				waitingExistingThreadIds = new Set(Array.from(threadFilepaths.keys()))
+				existingIds = new Set(Array.from(threadFilepaths.keys()))
 			}
+			waitingExistingThreadIds = existingIds
+			isWaitingForNewThread = true
+			lastRenderedThreadId = ""
+			lastRenderedThreadLog = ""
+			lastRenderedThinking = false
 		}
 
 		commandHistory.push(trimmedInput)
