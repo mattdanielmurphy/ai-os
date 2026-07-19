@@ -3179,21 +3179,7 @@ const hermesChat = new HermesChatClient()
 let hermesCurrentMessageId: string | null = null
 
 function initHermesChat(cwd?: string): Promise<void> {
-	if (hermesChat.connectionState === "connected" && hermesChat.sessionId && hermesChat.cwd === cwd) {
-		return Promise.resolve()
-	}
-	let prep = Promise.resolve()
-	if (hermesChat.sessionId && hermesChat.cwd !== cwd) {
-		prep = hermesChat.closeSession().catch(() => {})
-	}
-	return prep
-		.then(() => invoke("ensure_hermes_running"))
-		.then(() => hermesChat.connect())
-		.then(() => {
-			if (!hermesChat.sessionId) {
-				return hermesChat.createSession(cwd)
-			}
-		})
+	return hermesChat.init(cwd, () => invoke("ensure_hermes_running") as Promise<void>)
 }
 
 function setupNewThreadUI() {
@@ -3227,10 +3213,9 @@ function setupNewThreadUI() {
 
 	// 4. Close and re-init Hermes session if current engine is hermes
 	if (currentEngine === "hermes") {
-		hermesChat.closeSession().catch(() => {}).then(() => {
-			return initHermesChat(activeProject)
-		}).catch(err => {
-			console.error("Failed to start fresh Hermes session for new thread:", err)
+		hermesChat.disconnect()
+		initHermesChat(activeProject).catch(err => {
+			console.error("[HermesInit] setupNewThreadUI: Failed to start fresh session:", err)
 		})
 	}
 }
@@ -3339,8 +3324,10 @@ function escapeHtml(text: string): string {
 function syncEngineUI(prevEngine?: string) {
 	if (currentEngine === "hermes") {
 		showHermesChatUI(true)
-		initHermesChat(activeProject).catch(err => {
-			console.error("Failed to auto-init Hermes chat:", err)
+		initHermesChat(activeProject).then(() => {
+			console.log('[HermesInit] syncEngineUI: init complete, state=', hermesChat.connectionState, 'session=', hermesChat.sessionId)
+		}).catch(err => {
+			console.error("[HermesInit] syncEngineUI: Failed to auto-init Hermes chat:", err)
 		})
 		hermesChat.onMessageStart = (msgId) => {
 			hermesCurrentMessageId = msgId
@@ -3664,25 +3651,19 @@ textarea?.addEventListener("keydown", async (e) => {
 		// Prompt Mode Engine Routing Logic
 		// Hermes WebSocket path
 		if (currentEngine === "hermes") {
-			if (hermesChat.connectionState === "connected" && hermesChat.sessionId) {
-				// Show user message in Hermes chat
-				appendHermesUserMessage(trimmedInput)
-				hermesChat.submitPrompt(trimmedInput).catch(console.error)
-			} else {
-				console.warn("Hermes chat not connected, trying to connect...")
-				initHermesChat(activeProject).then(() => {
-					appendHermesUserMessage(trimmedInput)
-					hermesChat.submitPrompt(trimmedInput).catch(console.error)
-				}).catch(err => {
-					console.error("Failed to init Hermes chat:", err)
-					// Fallback: write to PTY
-					invoke("write_to_pty", {
-						data: `${trimmedInput}\r`,
-						projectPath: activeProject,
-						terminalType: "hermes",
-					})
+			// Always show user message immediately
+			appendHermesUserMessage(trimmedInput)
+			// Use init() which deduplicates and handles reconnection
+			initHermesChat(activeProject).then(() => {
+				console.log('[HermesPrompt] init complete, submitting prompt')
+				hermesChat.submitPrompt(trimmedInput).catch(err => {
+					console.error('[HermesPrompt] submitPrompt failed:', err)
+					addHermesError(`Failed to send prompt: ${err.message}`)
 				})
-			}
+			}).catch(err => {
+				console.error('[HermesPrompt] init failed:', err)
+				addHermesError(`Connection failed: ${err.message}. Please try again.`)
+			})
 			return
 		}
 
