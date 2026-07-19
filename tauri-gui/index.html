@@ -188,6 +188,22 @@
                     <!-- xterm container -->
                 </div>
 
+                <!-- Hermes WebSocket Chat UI (visible only when engine is hermes) -->
+                <div
+                    id="hermes-chat-container"
+                    class="hermes-chat-container"
+                    data-ui="hermes-chat-container"
+                    style="display: none; overflow-y: auto;"
+                >
+                    <div id="hermes-messages" class="hermes-messages" data-ui="hermes-messages">
+                        <div class="hermes-welcome" data-ui="hermes-welcome">
+                            <div class="hermes-welcome-icon">⚡</div>
+                            <div class="hermes-welcome-text">Hermes Agent ready</div>
+                            <div class="hermes-welcome-hint">Send a prompt to start a conversation</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Hidden legacy containers to prevent JS reference errors -->
                 <div class="hidden">
                     <div id="terminals-wrapper"></div>

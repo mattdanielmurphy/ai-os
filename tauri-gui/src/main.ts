@@ -44,6 +44,7 @@ import { Terminal } from "@xterm/xterm"
 import { WebLinksAddon } from "@xterm/addon-web-links"
 import { marked } from "marked"
 import { renderThreadNotesSidebar } from "./threadNotes"
+import { HermesChatClient } from "./hermesChat"
 
 window.addEventListener("keydown", (e) => {
 	if (e.metaKey && e.altKey && e.key.toLowerCase() === "i") {
@@ -3152,12 +3153,136 @@ btnSubmitNewProject?.addEventListener("click", async () => {
 // 7. Engine Toggle & Routing
 // ----------------------------------------------------
 let currentEngine: "claude" | "agy" | "hermes" = "agy"
+
+// Hermes WebSocket Chat Client
+const hermesChat = new HermesChatClient()
+let hermesCurrentMessageId: string | null = null
+
+function initHermesChat(): Promise<void> {
+	return hermesChat.connect().then(() => hermesChat.createSession())
+}
+
+function showHermesChatUI(show: boolean) {
+	const termContainer = document.getElementById("terminal-container")
+	const chatContainer = document.getElementById("hermes-chat-container")
+	if (termContainer) termContainer.style.display = show ? "none" : ""
+	if (chatContainer) chatContainer.style.display = show ? "" : "none"
+}
+
+function appendHermesUserMessage(text: string) {
+	const msgsEl = document.getElementById("hermes-messages")
+	if (!msgsEl) return
+	// Remove welcome
+	const welcome = msgsEl.querySelector(".hermes-welcome")
+	if (welcome) welcome.remove()
+
+	const div = document.createElement("div")
+	div.className = "hermes-message hermes-message-user"
+	div.innerHTML = `<div class="hermes-message-role">You</div><div class="hermes-message-content">${escapeHtml(text)}</div>`
+	msgsEl.appendChild(div)
+	msgsEl.scrollTop = msgsEl.scrollHeight
+}
+
+function appendHermesUserMessage(text: string) {
+	const msgsEl = document.getElementById("hermes-messages")
+	if (!msgsEl) return
+	// Remove welcome
+	const welcome = msgsEl.querySelector(".hermes-welcome")
+	if (welcome) welcome.remove()
+
+	const div = document.createElement("div")
+	div.className = "hermes-message hermes-message-user"
+	div.innerHTML = `<div class="hermes-message-role">You</div><div class="hermes-message-content">${escapeHtml(text)}</div>`
+	msgsEl.appendChild(div)
+	msgsEl.scrollTop = msgsEl.scrollHeight
+}
+
+function updateHermesMessageContent(msgId: string, text: string) {
+	const el = document.getElementById(msgId)
+	if (!el) return
+	const content = el.querySelector(".hermes-message-content")
+	if (content) {
+		const cursor = content.querySelector(".hermes-streaming-cursor")
+		if (cursor) cursor.remove()
+		content.textContent = text
+		content.appendChild(Object.assign(document.createElement("span"), { className: "hermes-streaming-cursor" }))
+	}
+	const msgsEl = document.getElementById("hermes-messages")
+	if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight
+}
+
+function finalizeHermesMessage(msgId: string) {
+	const el = document.getElementById(msgId)
+	if (!el) return
+	const cursor = el.querySelector(".hermes-streaming-cursor")
+	if (cursor) cursor.remove()
+}
+
+function addHermesThinkingBlock(msgId: string, text: string) {
+	const el = document.getElementById(msgId)
+	if (!el) return
+	let block = el.querySelector(".hermes-thinking-block") as HTMLElement | null
+	if (!block) {
+		block = document.createElement("div")
+		block.className = "hermes-thinking-block"
+		block.innerHTML = `<div class="hermes-thinking-header">💭 Thinking</div><div class="hermes-thinking-body"></div>`
+		block.addEventListener("click", () => block.classList.toggle("expanded"))
+		el.appendChild(block)
+	}
+	const body = block!.querySelector(".hermes-thinking-body")
+	if (body) body.textContent += text
+}
+
+function addHermesToolCall(msgId: string, toolId: string, name: string) {
+	const el = document.getElementById(msgId)
+	if (!el) return
+	// Remove previous tool's cursor
+	const prevRunning = el.querySelector(".hermes-tool-call.running")
+	if (prevRunning) prevRunning.classList.remove("running")
+
+	const div = document.createElement("div")
+	div.className = "hermes-tool-call running"
+	div.id = "tool-" + toolId
+	div.innerHTML = `<div class="hermes-tool-name">🔧 ${escapeHtml(name)}</div><div class="hermes-tool-status">Running...</div>`
+	el.appendChild(div)
+}
+
+function completeHermesToolCall(msgId: string, toolId: string, _name: string, result: string) {
+	const el = document.getElementById("tool-" + toolId) || document.getElementById(msgId)?.querySelector(".hermes-tool-call.running:last-child")
+	if (!el) return
+	el.classList.remove("running")
+	el.classList.add("complete")
+	const statusEl = el.querySelector(".hermes-tool-status")
+	if (statusEl) statusEl.textContent = "✓ Complete"
+	// Add expandable result
+	const resultEl = document.createElement("div")
+	resultEl.className = "hermes-tool-result"
+	resultEl.textContent = result.length > 500 ? result.substring(0, 500) + "..." : result
+	resultEl.addEventListener("click", () => resultEl.classList.toggle("visible"))
+	el.appendChild(resultEl)
+}
+
+function addHermesError(msg: string) {
+	const msgsEl = document.getElementById("hermes-messages")
+	if (!msgsEl) return
+	const div = document.createElement("div")
+	div.className = "hermes-error"
+	div.textContent = "⚠ " + msg
+	msgsEl.appendChild(div)
+	msgsEl.scrollTop = msgsEl.scrollHeight
+}
+
+function escapeHtml(text: string): string {
+	return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
 const engineRadios = document.querySelectorAll<HTMLInputElement>(
 	'input[name="engine"]',
 )
 
 engineRadios.forEach((radio) => {
 	radio.addEventListener("change", async (e) => {
+		const prevEngine = currentEngine
 		currentEngine = (e.target as HTMLInputElement).value as "claude" | "agy" | "hermes"
 		// Persist setting on the active project
 		const currentProj = projects.find((p) => p.path === activeProject)
@@ -3166,7 +3291,43 @@ engineRadios.forEach((radio) => {
 			saveProjects()
 		}
 
-		// Reset terminal screen and show matching engine buffer
+		// Hermes: show chat UI, hide terminal
+		// agy/claude: show terminal, hide chat UI
+		if (currentEngine === "hermes") {
+			showHermesChatUI(true)
+			// Hermes WebSocket init (lazy in the submit handler)
+			hermesChat.onMessageStart = (msgId) => {
+				hermesCurrentMessageId = msgId
+			}
+			hermesChat.onMessageDelta = (_msgId, text) => {
+				if (hermesCurrentMessageId) updateHermesMessageContent(hermesCurrentMessageId, text)
+			}
+			hermesChat.onMessageComplete = (_msgId) => {
+				if (hermesCurrentMessageId) finalizeHermesMessage(hermesCurrentMessageId)
+				hermesCurrentMessageId = null
+			}
+			hermesChat.onThinkingDelta = (_msgId, text) => {
+				if (hermesCurrentMessageId) addHermesThinkingBlock(hermesCurrentMessageId, text)
+			}
+			hermesChat.onToolStart = (_msgId, toolId, name) => {
+				if (hermesCurrentMessageId) addHermesToolCall(hermesCurrentMessageId, toolId, name)
+			}
+			hermesChat.onToolComplete = (_msgId, toolId, name, result) => {
+				if (hermesCurrentMessageId) completeHermesToolCall(hermesCurrentMessageId, toolId, name, result)
+			}
+			hermesChat.onError = (msg) => {
+				addHermesError(msg)
+			}
+		} else {
+			showHermesChatUI(false)
+			// If switching from Hermes, disconnect
+			if (prevEngine === "hermes") {
+				hermesChat.closeSession().catch(() => {})
+				hermesChat.disconnect()
+			}
+		}
+
+		// Reset terminal screen and show matching engine buffer (only for non-hermes)
 		term.reset()
 		const activeBuffers =
 			currentEngine === "claude"
@@ -3184,7 +3345,7 @@ engineRadios.forEach((radio) => {
 
 		try {
 			// Lazy spawn or switch to the engine on backend
-			await invoke<{ shell_pid: number; is_new_session: boolean }>(
+			await invoke<{ shell_pid: number; is_new_session: boolean; hermes_ws_port: number }>(
 				"switch_active_project",
 				{
 					projectPath: activeProject,
@@ -3423,6 +3584,30 @@ textarea?.addEventListener("keydown", async (e) => {
 		}
 
 		// Prompt Mode Engine Routing Logic
+		// Hermes WebSocket path
+		if (currentEngine === "hermes") {
+			if (hermesChat.connectionState === "connected" && hermesChat.sessionId) {
+				// Show user message in Hermes chat
+				appendHermesUserMessage(trimmedInput)
+				hermesChat.submitPrompt(trimmedInput).catch(console.error)
+			} else {
+				console.warn("Hermes chat not connected, trying to connect...")
+				initHermesChat().then(() => {
+					appendHermesUserMessage(trimmedInput)
+					hermesChat.submitPrompt(trimmedInput).catch(console.error)
+				}).catch(err => {
+					console.error("Failed to init Hermes chat:", err)
+					// Fallback: write to PTY
+					invoke("write_to_pty", {
+						data: `${trimmedInput}\r`,
+						projectPath: activeProject,
+						terminalType: "hermes",
+					})
+				})
+			}
+			return
+		}
+
 		let processedInput = trimmedInput
 
 		if (processedInput.startsWith("/")) {

@@ -728,7 +728,7 @@ fn ensure_engine_pty(
     engine: &str,
     app_handle: &tauri::AppHandle,
     session: &mut ProjectSession,
-) -> Result<(u32, bool), String> {
+) -> Result<(u32, bool, u16), String> {
     let thread_id_opt = if session.thread_id.is_empty() { None } else { Some(session.thread_id.as_str()) };
     if engine == "claude" {
         let mut agy_alive = false;
@@ -750,9 +750,9 @@ fn ensure_engine_pty(
             session.claude_writer = Some(writer);
             session.claude_master = Some(master);
             session.claude_pid = Some(pid);
-            Ok((pid, is_new))
+            Ok((pid, is_new, 0))
         } else {
-            Ok((session.claude_pid.unwrap(), false))
+            Ok((session.claude_pid.unwrap(), false, 0))
         }
     } else if engine == "agy" {
         let mut agy_alive = false;
@@ -774,34 +774,13 @@ fn ensure_engine_pty(
             session.agy_writer = Some(writer);
             session.agy_master = Some(master);
             session.agy_pid = Some(pid);
-            Ok((pid, is_new))
+            Ok((pid, is_new, 0))
         } else {
-            Ok((session.agy_pid.unwrap(), false))
+            Ok((session.agy_pid.unwrap(), false, 0))
         }
     } else if engine == "hermes" {
-        let mut hermes_alive = false;
-        let mut client_alive = false;
-        if let Some(pid) = session.hermes_pid {
-            hermes_alive = is_engine_running_proc("hermes", project_path, thread_id_opt, session.hermes_pid);
-            client_alive = is_process_alive(pid);
-        }
-        if !hermes_alive || !client_alive {
-            if is_tmux_available() && !hermes_alive {
-                let session_name = get_tmux_session_name(project_path, "hermes", thread_id_opt);
-                if has_tmux_session(&session_name) {
-                    let _ = std::process::Command::new("tmux")
-                        .args(&["kill-session", "-t", &session_name])
-                        .status();
-                }
-            }
-            let (writer, master, pid, is_new) = spawn_single_pty(project_path, "hermes", app_handle, thread_id_opt)?;
-            session.hermes_writer = Some(writer);
-            session.hermes_master = Some(master);
-            session.hermes_pid = Some(pid);
-            Ok((pid, is_new))
-        } else {
-            Ok((session.hermes_pid.unwrap(), false))
-        }
+        // Hermes uses WebSocket (hermes serve) instead of PTY — skip PTY spawn
+        Ok((0, false, 9119))
     } else {
         Err(format!("Unknown engine: {}", engine))
     }
@@ -825,6 +804,7 @@ fn ensure_mini_pty(
 struct SwitchResult {
     shell_pid: u32,
     is_new_session: bool,
+    hermes_ws_port: u16,
 }
 
 #[tauri::command]
@@ -1023,6 +1003,46 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
 
     let is_new_proj = !sessions.contains_key(&session_key);
     if is_new_proj {
+        if engine == "hermes" {
+            // Hermes uses WebSocket (hermes serve) — skip PTY spawn, only spawn mini shell
+            let app_handle_clone = app_handle.clone();
+            let path_clone = project_path.clone();
+            let mini_thread = std::thread::spawn(move || {
+                spawn_single_pty(&path_clone, "mini", &app_handle_clone, None)
+            });
+            let (mini_writer, mini_master, mini_pid, _) = mini_thread.join()
+                .map_err(|_| "Failed to join mini PTY spawn thread".to_string())??;
+
+            let session = ProjectSession {
+                claude_writer: None,
+                claude_master: None,
+                claude_pid: None,
+                agy_writer: None,
+                agy_master: None,
+                agy_pid: None,
+                hermes_writer: None,
+                hermes_master: None,
+                hermes_pid: None,
+                mini_writer,
+                mini_master,
+                mini_pid,
+                project_path: project_path.clone(),
+                thread_id: thread_id_str.clone(),
+                last_accessed: std::time::SystemTime::now(),
+            };
+
+            sessions.insert(session_key.clone(), session);
+
+            let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
+            *active = Some(project_path.clone());
+
+            return Ok(SwitchResult {
+                shell_pid: 0,
+                is_new_session: true,
+                hermes_ws_port: 9119,
+            });
+        }
+
         // Spawn mini and engine PTYs in parallel to speed up tab loading
         let app_handle_clone1 = app_handle.clone();
         let app_handle_clone2 = app_handle.clone();
@@ -1086,12 +1106,13 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
         return Ok(SwitchResult {
             shell_pid: engine_pid,
             is_new_session,
+            hermes_ws_port: 0,
         });
     }
 
     let session = sessions.get_mut(&session_key).unwrap();
     session.last_accessed = std::time::SystemTime::now();
-    let (shell_pid, is_new_session) = ensure_engine_pty(&project_path, &engine, &app_handle, session)?;
+    let (shell_pid, is_new_session, hermes_ws_port) = ensure_engine_pty(&project_path, &engine, &app_handle, session)?;
     ensure_mini_pty(&project_path, &app_handle, session)?;
 
     let mut active = state.active_project.lock().map_err(|e| e.to_string())?;
@@ -1102,11 +1123,17 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
     Ok(SwitchResult {
         shell_pid,
         is_new_session,
+        hermes_ws_port,
     })
 }
 
 #[tauri::command]
 fn write_to_pty(data: String, project_path: String, terminal_type: String, thread_id: Option<String>, state: tauri::State<AppState>) -> Result<(), String> {
+    // Hermes uses WebSocket (hermes serve) — no PTY to write to
+    if terminal_type == "hermes" {
+        return Ok(());
+    }
+
     let thread_id_str = thread_id.unwrap_or_default();
     let session_key = format!("{}_{}", project_path, thread_id_str);
 
@@ -1118,8 +1145,6 @@ fn write_to_pty(data: String, project_path: String, terminal_type: String, threa
             session.claude_writer.as_mut()
         } else if terminal_type == "agy" {
             session.agy_writer.as_mut()
-        } else if terminal_type == "hermes" {
-            session.hermes_writer.as_mut()
         } else {
             None
         };
