@@ -741,8 +741,8 @@ fn ensure_hermes_serve_running() {
         let mut cmd = std::process::Command::new("/Users/matt/.local/bin/hermes");
         cmd.args(&["serve", "--port", "9119"])
            .env("HERMES_DASHBOARD_SESSION_TOKEN", "ai_os_secret_token_123456")
-           .stdout(std::process::Stdio::null())
-           .stderr(std::process::Stdio::null());
+           .stdout(std::process::Stdio::inherit())
+           .stderr(std::process::Stdio::inherit());
         let _ = cmd.spawn();
         std::thread::sleep(std::time::Duration::from_millis(800));
         
