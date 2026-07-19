@@ -556,6 +556,7 @@ term.onResize(({ cols, rows }) => {
 			cols,
 			projectPath: activeProject,
 			terminalType: "engine",
+			threadId: activeThreadId || "",
 		}).catch((err) => {
 			console.error("Failed to resize Engine PTY:", err)
 		})
@@ -658,6 +659,7 @@ miniTerm.onResize(({ cols, rows }) => {
 			cols,
 			projectPath: activeProject,
 			terminalType: "mini",
+			threadId: activeThreadId || "",
 		}).catch((err) => {
 			console.error("Failed to resize Mini PTY:", err)
 		})
