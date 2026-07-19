@@ -722,6 +722,18 @@ fn is_process_alive(pid: u32) -> bool {
         .unwrap_or(false)
 }
 
+fn ensure_hermes_serve_running() {
+    let is_running = std::net::TcpStream::connect("127.0.0.1:9119").is_ok();
+    if !is_running {
+        let _ = std::process::Command::new("/Users/matt/.local/bin/hermes")
+            .args(&["serve", "--port", "9119"])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+        std::thread::sleep(std::time::Duration::from_millis(800));
+    }
+}
+
 fn ensure_engine_pty(
     project_path: &str,
     engine: &str,
@@ -779,6 +791,7 @@ fn ensure_engine_pty(
         }
     } else if engine == "hermes" {
         // Hermes uses WebSocket (hermes serve) instead of PTY — skip PTY spawn
+        ensure_hermes_serve_running();
         Ok((0, false, 9119))
     } else {
         Err(format!("Unknown engine: {}", engine))
@@ -1003,6 +1016,7 @@ fn switch_active_project(project_path: String, engine: String, thread_id: Option
     let is_new_proj = !sessions.contains_key(&session_key);
     if is_new_proj {
         if engine == "hermes" {
+            ensure_hermes_serve_running();
             // Hermes uses WebSocket (hermes serve) — skip PTY spawn, only spawn mini shell
             let app_handle_clone = app_handle.clone();
             let path_clone = project_path.clone();

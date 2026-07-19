@@ -2502,6 +2502,7 @@ const switchToProject = async (
 				})
 				.catch(console.error)
 		}
+		const prevEngine = currentEngine
 		if (nextProj.engine) {
 			currentEngine = nextProj.engine
 			const radio = document.querySelector(
@@ -2511,6 +2512,7 @@ const switchToProject = async (
 				radio.checked = true
 			}
 		}
+		syncEngineUI(prevEngine)
 		isTerminalMode = !!nextProj.isTerminalMode
 		applyTerminalModeUI()
 		saveProjects()
@@ -3292,6 +3294,50 @@ function escapeHtml(text: string): string {
 	return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
+function syncEngineUI(prevEngine?: string) {
+	if (currentEngine === "hermes") {
+		showHermesChatUI(true)
+		hermesChat.onMessageStart = (msgId) => {
+			hermesCurrentMessageId = msgId
+			const msgsEl = document.getElementById("hermes-messages")
+			if (!msgsEl) return
+			const welcome = msgsEl.querySelector(".hermes-welcome")
+			if (welcome) welcome.remove()
+			const div = document.createElement("div")
+			div.className = "hermes-message hermes-message-assistant"
+			div.id = msgId
+			div.innerHTML = `<div class="hermes-message-role">Hermes</div><div class="hermes-message-content"><span class="hermes-streaming-cursor"></span></div>`
+			msgsEl.appendChild(div)
+			msgsEl.scrollTop = msgsEl.scrollHeight
+		}
+		hermesChat.onMessageDelta = (_msgId, text) => {
+			if (hermesCurrentMessageId) updateHermesMessageContent(hermesCurrentMessageId, text)
+		}
+		hermesChat.onMessageComplete = (_msgId) => {
+			if (hermesCurrentMessageId) finalizeHermesMessage(hermesCurrentMessageId)
+			hermesCurrentMessageId = null
+		}
+		hermesChat.onThinkingDelta = (_msgId, text) => {
+			if (hermesCurrentMessageId) addHermesThinkingBlock(hermesCurrentMessageId, text)
+		}
+		hermesChat.onToolStart = (_msgId, toolId, name) => {
+			if (hermesCurrentMessageId) addHermesToolCall(hermesCurrentMessageId, toolId, name)
+		}
+		hermesChat.onToolComplete = (_msgId, toolId, name, result) => {
+			if (hermesCurrentMessageId) completeHermesToolCall(hermesCurrentMessageId, toolId, name, result)
+		}
+		hermesChat.onError = (msg) => {
+			addHermesError(msg)
+		}
+	} else {
+		showHermesChatUI(false)
+		if (prevEngine === "hermes") {
+			hermesChat.closeSession().catch(() => {})
+			hermesChat.disconnect()
+		}
+	}
+}
+
 const engineRadios = document.querySelectorAll<HTMLInputElement>(
 	'input[name="engine"]',
 )
@@ -3307,51 +3353,7 @@ engineRadios.forEach((radio) => {
 			saveProjects()
 		}
 
-		// Hermes: show chat UI, hide terminal
-		// agy/claude: show terminal, hide chat UI
-		if (currentEngine === "hermes") {
-			showHermesChatUI(true)
-			// Hermes WebSocket init (lazy in the submit handler)
-			hermesChat.onMessageStart = (msgId) => {
-				hermesCurrentMessageId = msgId
-				const msgsEl = document.getElementById("hermes-messages")
-				if (!msgsEl) return
-				const welcome = msgsEl.querySelector(".hermes-welcome")
-				if (welcome) welcome.remove()
-				const div = document.createElement("div")
-				div.className = "hermes-message hermes-message-assistant"
-				div.id = msgId
-				div.innerHTML = `<div class="hermes-message-role">Hermes</div><div class="hermes-message-content"><span class="hermes-streaming-cursor"></span></div>`
-				msgsEl.appendChild(div)
-				msgsEl.scrollTop = msgsEl.scrollHeight
-			}
-			hermesChat.onMessageDelta = (_msgId, text) => {
-				if (hermesCurrentMessageId) updateHermesMessageContent(hermesCurrentMessageId, text)
-			}
-			hermesChat.onMessageComplete = (_msgId) => {
-				if (hermesCurrentMessageId) finalizeHermesMessage(hermesCurrentMessageId)
-				hermesCurrentMessageId = null
-			}
-			hermesChat.onThinkingDelta = (_msgId, text) => {
-				if (hermesCurrentMessageId) addHermesThinkingBlock(hermesCurrentMessageId, text)
-			}
-			hermesChat.onToolStart = (_msgId, toolId, name) => {
-				if (hermesCurrentMessageId) addHermesToolCall(hermesCurrentMessageId, toolId, name)
-			}
-			hermesChat.onToolComplete = (_msgId, toolId, name, result) => {
-				if (hermesCurrentMessageId) completeHermesToolCall(hermesCurrentMessageId, toolId, name, result)
-			}
-			hermesChat.onError = (msg) => {
-				addHermesError(msg)
-			}
-		} else {
-			showHermesChatUI(false)
-			// If switching from Hermes, disconnect
-			if (prevEngine === "hermes") {
-				hermesChat.closeSession().catch(() => {})
-				hermesChat.disconnect()
-			}
-		}
+		syncEngineUI(prevEngine)
 
 		// Reset terminal screen and show matching engine buffer (only for non-hermes)
 		term.reset()
