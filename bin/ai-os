@@ -106,18 +106,7 @@ elif [ "$ENGINE" = "claude" ]; then
     cd "$ORIGINAL_PWD" || exit
     exec claude "$@" --dangerously-skip-permissions
 else
-    echo "[ai-os] Launching Agy orchestrator agent in terminal at $ORIGINAL_PWD..."
+    echo "[ai-os] Launching Agy orchestrator agent with Multi-Tier Triage in terminal at $ORIGINAL_PWD..."
     cd "$ORIGINAL_PWD" || exit
-    HAS_MODEL=false
-    for arg in "$@"; do
-        if [[ "$arg" == "--model" ]]; then
-            HAS_MODEL=true
-            break
-        fi
-    done
-    if [ "$HAS_MODEL" = false ]; then
-        exec agy "$@" --model claude-haiku-ds-v4-flash-low --dangerously-skip-permissions
-    else
-        exec agy "$@" --dangerously-skip-permissions
-    fi
+    exec python3 "$AI_OS_HOME/scripts/triage_router.py" "$@" --dangerously-skip-permissions
 fi
