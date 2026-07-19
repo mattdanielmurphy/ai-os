@@ -3183,20 +3183,6 @@ function appendHermesUserMessage(text: string) {
 	msgsEl.scrollTop = msgsEl.scrollHeight
 }
 
-function appendHermesUserMessage(text: string) {
-	const msgsEl = document.getElementById("hermes-messages")
-	if (!msgsEl) return
-	// Remove welcome
-	const welcome = msgsEl.querySelector(".hermes-welcome")
-	if (welcome) welcome.remove()
-
-	const div = document.createElement("div")
-	div.className = "hermes-message hermes-message-user"
-	div.innerHTML = `<div class="hermes-message-role">You</div><div class="hermes-message-content">${escapeHtml(text)}</div>`
-	msgsEl.appendChild(div)
-	msgsEl.scrollTop = msgsEl.scrollHeight
-}
-
 function updateHermesMessageContent(msgId: string, text: string) {
 	const el = document.getElementById(msgId)
 	if (!el) return
@@ -3223,13 +3209,14 @@ function addHermesThinkingBlock(msgId: string, text: string) {
 	if (!el) return
 	let block = el.querySelector(".hermes-thinking-block") as HTMLElement | null
 	if (!block) {
-		block = document.createElement("div")
-		block.className = "hermes-thinking-block"
-		block.innerHTML = `<div class="hermes-thinking-header">💭 Thinking</div><div class="hermes-thinking-body"></div>`
-		block.addEventListener("click", () => block.classList.toggle("expanded"))
-		el.appendChild(block)
+		const newBlock = document.createElement("div")
+		newBlock.className = "hermes-thinking-block"
+		newBlock.innerHTML = `<div class="hermes-thinking-header">💭 Thinking</div><div class="hermes-thinking-body"></div>`
+		newBlock.addEventListener("click", () => newBlock.classList.toggle("expanded"))
+		el.appendChild(newBlock)
+		block = newBlock
 	}
-	const body = block!.querySelector(".hermes-thinking-body")
+	const body = block.querySelector(".hermes-thinking-body")
 	if (body) body.textContent += text
 }
 
@@ -3298,6 +3285,16 @@ engineRadios.forEach((radio) => {
 			// Hermes WebSocket init (lazy in the submit handler)
 			hermesChat.onMessageStart = (msgId) => {
 				hermesCurrentMessageId = msgId
+				const msgsEl = document.getElementById("hermes-messages")
+				if (!msgsEl) return
+				const welcome = msgsEl.querySelector(".hermes-welcome")
+				if (welcome) welcome.remove()
+				const div = document.createElement("div")
+				div.className = "hermes-message hermes-message-assistant"
+				div.id = msgId
+				div.innerHTML = `<div class="hermes-message-role">Hermes</div><div class="hermes-message-content"><span class="hermes-streaming-cursor"></span></div>`
+				msgsEl.appendChild(div)
+				msgsEl.scrollTop = msgsEl.scrollHeight
 			}
 			hermesChat.onMessageDelta = (_msgId, text) => {
 				if (hermesCurrentMessageId) updateHermesMessageContent(hermesCurrentMessageId, text)

@@ -46,6 +46,7 @@ def main():
             conv_id = metadata.get("tool", {}).get("conversationId")
             if conv_id:
                 paths = [
+                    f"/Users/matt/.gemini/antigravity/brain/{conv_id}/.system_generated/logs/transcript.jsonl",
                     f"/Users/matt/.gemini/antigravity-ide/brain/{conv_id}/.system_generated/logs/transcript.jsonl",
                     f"/Users/matt/.gemini/antigravity-cli/brain/{conv_id}/.system_generated/logs/transcript.jsonl"
                 ]
