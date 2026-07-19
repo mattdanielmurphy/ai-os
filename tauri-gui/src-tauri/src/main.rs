@@ -10,10 +10,9 @@ use axum::{
     extract::State,
 };
 use tower_http::cors::{CorsLayer, Any};
-use std::sync::atomic::AtomicUsize;
 
-static ACTIVE_TITLE_GENERATIONS: AtomicUsize = AtomicUsize::new(0);
-static IN_FLIGHT_TITLE_GENERATIONS: std::sync::OnceLock<Mutex<std::collections::HashSet<String>>> = std::sync::OnceLock::new();
+
+
 
 // Project session containing its own PTY channels and shell process details
 #[allow(dead_code)]
@@ -949,7 +948,7 @@ fn initialize_project_session(project_path: String, thread_id: Option<String>, s
     }
     let session = sessions.get_mut(&session_key).unwrap();
     session.last_accessed = std::time::SystemTime::now();
-    let (pid, _) = ensure_engine_pty(&project_path, "agy", &app_handle, session)?;
+    let (pid, _, _) = ensure_engine_pty(&project_path, "agy", &app_handle, session)?;
     Ok(pid)
 }
 
@@ -1774,7 +1773,6 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                         if let Some(end_idx) = content_str[start_idx..].find("</THREAD_NAME>") {
                             title = content_str[start_idx + 13..start_idx + end_idx].trim().to_string();
                             found_title = true;
-                            println!("[DEBUG thread-naming] Extracted title '{}' from PLANNER_RESPONSE in {}", title, latest_thread_id);
                         }
                     }
                 }
@@ -1810,7 +1808,6 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                         } else {
                             clean_prompt.clone()
                         };
-                        println!("[DEBUG thread-naming] Fallback title set to '{}' for {}", title, latest_thread_id);
                     }
                     
                     snippet = if char_count > 120 {
@@ -1818,98 +1815,11 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
                     } else {
                         clean_prompt
                     };
-                    println!("[DEBUG thread-naming] Snippet set for {}", latest_thread_id);
                 }
             }
             
             if found_title && !snippet.is_empty() {
                 break;
-            }
-        }
-    }
-
-    if !found_title {
-        let mut first_prompt = String::new();
-        let mut first_resp = String::new();
-        let mut first_resp_idx: Option<usize> = None;
-        let mut parsed_lines = Vec::new();
-
-        if let Ok(file_content) = std::fs::read_to_string(latest_filepath) {
-            for (idx, line) in file_content.lines().enumerate() {
-                if let Ok(mut obj) = serde_json::from_str::<serde_json::Value>(line) {
-                    let msg_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                    if msg_type == "USER_INPUT" && first_prompt.is_empty() {
-                        if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
-                            first_prompt = extract_user_request(content_str);
-                        }
-                    }
-                    if (msg_type == "PLANNER_RESPONSE" || msg_type == "MODEL") && first_resp.is_empty() {
-                        if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
-                            first_resp = content_str.to_string();
-                            first_resp_idx = Some(idx);
-                        }
-                    }
-                    parsed_lines.push((line.to_string(), Some(obj)));
-                } else {
-                    parsed_lines.push((line.to_string(), None));
-                }
-            }
-        }
-
-        if !first_prompt.is_empty() && !first_resp.is_empty() {
-            if let Some(idx) = first_resp_idx {
-                let in_flight = IN_FLIGHT_TITLE_GENERATIONS.get_or_init(|| Mutex::new(std::collections::HashSet::new()));
-                let mut in_flight_set = in_flight.lock().unwrap();
-                if !in_flight_set.contains(latest_thread_id) && ACTIVE_TITLE_GENERATIONS.load(Ordering::SeqCst) < 2 {
-                    in_flight_set.insert(latest_thread_id.to_string());
-                    ACTIVE_TITLE_GENERATIONS.fetch_add(1, Ordering::SeqCst);
-                    let latest_thread_id_clone = latest_thread_id.to_string();
-                    let latest_filepath_clone = latest_filepath.to_path_buf();
-                    
-                    std::thread::spawn(move || {
-                        let home = std::env::var("HOME").unwrap_or_default();
-                        let gen_script = std::path::Path::new(&home).join("projects").join("ai-os").join("scripts").join("generate_title.py");
-                        let mut cmd = std::process::Command::new(&gen_script);
-                        cmd.arg(&first_prompt);
-                        cmd.arg(&first_resp);
-                        if let Ok(key) = std::env::var("GEMINI_API_KEY") {
-                            cmd.env("GEMINI_API_KEY", key);
-                        }
-                        if let Ok(output) = cmd.output() {
-                            if output.status.success() {
-                                let generated = String::from_utf8_lossy(&output.stdout).trim().to_string();
-                                if !generated.is_empty() && !generated.starts_with("Error") {
-                                    let mut parsed_lines = parsed_lines;
-                                    if let Some(ref mut obj) = parsed_lines[idx].1 {
-                                        if let Some(content_str) = obj.get("content").and_then(|v| v.as_str()) {
-                                            let new_content = format!("<THREAD_NAME>{}</THREAD_NAME>\n{}", generated, content_str);
-                                            if let Some(map) = obj.as_object_mut() {
-                                                map.insert("content".to_string(), serde_json::Value::String(new_content));
-                                            }
-                                        }
-                                    }
-                                    let mut new_file_content = String::new();
-                                    for (original_line, parsed_obj) in parsed_lines {
-                                        if let Some(obj) = parsed_obj {
-                                            if let Ok(serialized) = serde_json::to_string(&obj) {
-                                                new_file_content.push_str(&serialized);
-                                                new_file_content.push('\n');
-                                                continue;
-                                            }
-                                        }
-                                        new_file_content.push_str(&original_line);
-                                        new_file_content.push('\n');
-                                    }
-                                    let _ = std::fs::write(&latest_filepath_clone, new_file_content);
-                                    println!("[DEBUG thread-naming] Generated and wrote title '{}' to {}", generated, latest_thread_id_clone);
-                                }
-                            }
-                        }
-                        let in_flight = IN_FLIGHT_TITLE_GENERATIONS.get_or_init(|| Mutex::new(std::collections::HashSet::new()));
-                        in_flight.lock().unwrap().remove(&latest_thread_id_clone);
-                        ACTIVE_TITLE_GENERATIONS.fetch_sub(1, Ordering::SeqCst);
-                    });
-                }
             }
         }
     }
@@ -1925,10 +1835,8 @@ fn get_cached_thread_info(latest_filepath: &std::path::Path, latest_thread_id: &
         parsed_timestamp,
     };
 
-    if found_title {
-        let mut cache = cache_mutex.lock().unwrap();
-        cache.insert(latest_thread_id.to_string(), info.clone());
-    }
+    let mut cache = cache_mutex.lock().unwrap();
+    cache.insert(latest_thread_id.to_string(), info.clone());
     Some(info)
 }
 
