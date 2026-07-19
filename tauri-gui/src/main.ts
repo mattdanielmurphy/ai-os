@@ -3190,7 +3190,14 @@ const hermesChat = new HermesChatClient()
 let hermesCurrentMessageId: string | null = null
 
 function initHermesChat(): Promise<void> {
-	return hermesChat.connect().then(() => hermesChat.createSession())
+	if (hermesChat.connectionState === "connected" && hermesChat.sessionId) {
+		return Promise.resolve()
+	}
+	return hermesChat.connect().then(() => {
+		if (!hermesChat.sessionId) {
+			return hermesChat.createSession()
+		}
+	})
 }
 
 function showHermesChatUI(show: boolean) {
@@ -3297,6 +3304,9 @@ function escapeHtml(text: string): string {
 function syncEngineUI(prevEngine?: string) {
 	if (currentEngine === "hermes") {
 		showHermesChatUI(true)
+		initHermesChat().catch(err => {
+			console.error("Failed to auto-init Hermes chat:", err)
+		})
 		hermesChat.onMessageStart = (msgId) => {
 			hermesCurrentMessageId = msgId
 			const msgsEl = document.getElementById("hermes-messages")
