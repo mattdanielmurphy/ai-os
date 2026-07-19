@@ -3197,11 +3197,14 @@ function initHermesChat(cwd?: string): Promise<void> {
 	if (hermesChat.sessionId && hermesChat.cwd !== cwd) {
 		prep = hermesChat.closeSession().catch(() => {})
 	}
-	return prep.then(() => hermesChat.connect()).then(() => {
-		if (!hermesChat.sessionId) {
-			return hermesChat.createSession(cwd)
-		}
-	})
+	return prep
+		.then(() => invoke("ensure_hermes_running"))
+		.then(() => hermesChat.connect())
+		.then(() => {
+			if (!hermesChat.sessionId) {
+				return hermesChat.createSession(cwd)
+			}
+		})
 }
 
 function showHermesChatUI(show: boolean) {

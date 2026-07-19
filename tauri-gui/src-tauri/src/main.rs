@@ -750,6 +750,11 @@ fn ensure_hermes_serve_running() {
     }
 }
 
+#[tauri::command]
+fn ensure_hermes_running() {
+    ensure_hermes_serve_running();
+}
+
 fn ensure_engine_pty(
     project_path: &str,
     engine: &str,
@@ -2913,6 +2918,7 @@ fn main() {
             patch_thread_log_with_output,
             open_devtools,
             get_quota,
+            ensure_hermes_running,
             get_browser_context,
             dispatch_to_gemini,
             search_project_threads,
