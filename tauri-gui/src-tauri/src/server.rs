@@ -22,7 +22,7 @@ use crate::types::{
 // ---------------------------------------------------------------------------
 
 struct WsState {
-    host_tx: Option<mpsc::UnboundedSender<Message>>,
+    host_tx: Option<(u64, mpsc::UnboundedSender<Message>)>,
     clients: HashMap<String, mpsc::UnboundedSender<Message>>,
 }
 
@@ -198,10 +198,8 @@ async fn handle_socket(socket: WebSocket) {
     let (mut sender, mut receiver) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
 
-    let my_client_id = format!(
-        "client_{}",
-        CLIENT_ID_COUNTER.fetch_add(1, Ordering::SeqCst)
-    );
+    let conn_id = CLIENT_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let my_client_id = format!("client_{}", conn_id);
     let client_id_clone = my_client_id.clone();
 
     let write_task = tokio::spawn(async move {
@@ -224,7 +222,7 @@ async fn handle_socket(socket: WebSocket) {
                             if role == "host" {
                                 registered_role = Some("host");
                                 let mut state = get_ws_state().lock().unwrap();
-                                state.host_tx = Some(tx.clone());
+                                state.host_tx = Some((conn_id, tx.clone()));
                             } else if role == "client" {
                                 registered_role = Some("client");
                                 let mut state = get_ws_state().lock().unwrap();
@@ -240,7 +238,7 @@ async fn handle_socket(socket: WebSocket) {
                             let forward_msg =
                                 Message::Text(payload.to_string().into());
                             let state = get_ws_state().lock().unwrap();
-                            if let Some(host_tx) = &state.host_tx {
+                            if let Some((_, host_tx)) = &state.host_tx {
                                 let _ = host_tx.send(forward_msg);
                             }
                         }
@@ -276,7 +274,11 @@ async fn handle_socket(socket: WebSocket) {
     let mut state = get_ws_state().lock().unwrap();
     if let Some(role) = registered_role {
         if role == "host" {
-            state.host_tx = None;
+            if let Some((existing_id, _)) = &state.host_tx {
+                if *existing_id == conn_id {
+                    state.host_tx = None;
+                }
+            }
         } else {
             state.clients.remove(&client_id_clone);
         }

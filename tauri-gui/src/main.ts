@@ -1793,10 +1793,10 @@ const formatMarkdown = (text: string): string => {
 }
 
 // Listen to Backend PTY events
-listen<{ data: string; project_path: string; terminal_type: string }>(
+listen<{ data: string; project_path: string; terminal_type: string; thread_id: string }>(
 	"pty-output",
 	(event) => {
-		let { data, project_path, terminal_type } = event.payload
+		let { data, project_path, terminal_type, thread_id } = event.payload
 
 		if (terminal_type === "agy") {
 			data = formatMarkdown(data)
@@ -1813,17 +1813,18 @@ listen<{ data: string; project_path: string; terminal_type: string }>(
 		}
 
 		// Append to cache buffer
-		if (!buffers[project_path]) {
-			buffers[project_path] = ""
+		const bufferKey = thread_id ? `${project_path}_${thread_id}` : project_path
+		if (!buffers[bufferKey]) {
+			buffers[bufferKey] = ""
 		}
-		buffers[project_path] += data
-		if (buffers[project_path].length > 100000) {
-			buffers[project_path] = buffers[project_path].substring(
-				buffers[project_path].length - 50000,
+		buffers[bufferKey] += data
+		if (buffers[bufferKey].length > 100000) {
+			buffers[bufferKey] = buffers[bufferKey].substring(
+				buffers[bufferKey].length - 50000,
 			)
 		}
 
-		if (project_path === activeProject) {
+		if (project_path === activeProject && thread_id === (activeThreadId || "")) {
 			if (terminal_type === "agy") {
 				const stripped = data
 					.replace(/\x1B(?:\[[0-?]*[ -/]*[@-~]|[\(\)][a-zA-Z0-9])/g, "")
@@ -2008,8 +2009,9 @@ const refreshActiveTerminal = async () => {
 			: currentEngine === "hermes"
 				? hermesBuffers
 				: agyBuffers
-	if (activeBuffers[activeProject]) {
-		term.write(activeBuffers[activeProject])
+	const bufferKey = activeThreadId ? `${activeProject}_${activeThreadId}` : activeProject
+	if (activeBuffers[bufferKey]) {
+		term.write(activeBuffers[bufferKey])
 	} else {
 		term.write(
 			`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`,
@@ -2515,8 +2517,9 @@ const switchToProject = async (
 			: currentEngine === "hermes"
 				? hermesBuffers
 				: agyBuffers
-	if (activeBuffers[path]) {
-		term.write(activeBuffers[path])
+	const bufferKey = activeThreadId ? `${path}_${activeThreadId}` : path
+	if (activeBuffers[bufferKey]) {
+		term.write(activeBuffers[bufferKey])
 	} else {
 		term.write(
 			`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(path)}...\x1b[0m\r\n`,
@@ -2524,8 +2527,9 @@ const switchToProject = async (
 	}
 
 	miniTerm.reset()
-	if (miniTermBuffers[path]) {
-		miniTerm.write(miniTermBuffers[path])
+	const miniKey = activeThreadId ? `${path}_${activeThreadId}` : path
+	if (miniTermBuffers[miniKey]) {
+		miniTerm.write(miniTermBuffers[miniKey])
 	} else {
 		miniTerm.write(
 			`\r\n\x1b[1;32m[ai-os] Connecting to Shell session at: ${formatPathForUser(path)}...\x1b[0m\r\n`,
@@ -3395,8 +3399,9 @@ engineRadios.forEach((radio) => {
 				: currentEngine === "hermes"
 					? hermesBuffers
 					: agyBuffers
-		if (activeBuffers[activeProject]) {
-			term.write(activeBuffers[activeProject])
+		const bufferKey = activeThreadId ? `${activeProject}_${activeThreadId}` : activeProject
+		if (activeBuffers[bufferKey]) {
+			term.write(activeBuffers[bufferKey])
 		} else {
 			term.write(
 				`\r\n\x1b[1;34m[ai-os] Connecting to Engine session at: ${formatPathForUser(activeProject)}...\x1b[0m\r\n`,

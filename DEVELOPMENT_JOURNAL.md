@@ -17,6 +17,8 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - **Implemented Zero-Fork Hermes Triage Interceptor** (`aios_hermes_wrapper.py`) — monkey-patches `chat_completion_helpers.interruptible_api_call` to inject fake `agy_start` tool calls for coding prompts. TUI works. [[agent-log]](agent-logs/2026-07-19_18-36_implemented-zero-fork-hermes-triage-interceptor.md)
 - **Fixed WebUI triage** — the WebUI runs as a separate Python process that never touches the wrapper. Had to create `webui-patches/sitecustomize.py` and set `PYTHONPATH` in hermes-webui `.env` to get the same interception working. This complexity is what triggered the July 20 pivot. [[agent-log]](agent-logs/2026-07-19_22-54_webui-triage-sitecustomize-fix.md)
 
+- **Phase 2: Cut dead complexity** — Removed prepare_spare_engine, elaborate lsof-based pause/resume loop, execution staging/payload system, hardcoded skills API, browser context, gemini dispatch, thread notes, and recent workspaces. Backend down from ~3,578 to 3,018 lines. All cuts verified against frontend invoke() calls. Phase 3 bugfix prompt saved to .devtool/features/. [[log]](agent-logs/2026-07-20_01-30_phase-2-cut-complexity.md)
+
 ## 2026-07-18
 
 - **Hermes Agent GUI Integration** — integrated Hermes WebSocket backend into the Tauri app, with PTY terminal spawning and engine switching. Massive session with many small fixes for websocket races, thread clearing, auto-reconnect, etc. [[logs]](agent-logs/2026-07-18_17-50_Hermes Agent Integration & Bun Migration.md)

@@ -10,6 +10,5 @@ tmp/
 dist/
 src-tauri/target/
 
-# Agent logs: we do not want to track these!
-agent-logs/
-# .agent-logs/ — REMOVED: migrated to agent-logs/
+# Agent logs: we do want to track these!
+#.agent-logs/ — REMOVED: migrated to agent-logs/

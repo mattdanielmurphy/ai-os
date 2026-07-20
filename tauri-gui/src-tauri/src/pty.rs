@@ -254,6 +254,7 @@ pub fn spawn_single_pty(
     let app_handle_clone = app_handle.clone();
     let path_clone = project_path.to_string();
     let type_clone = terminal_type.to_string();
+    let thread_id_clone = thread_id.unwrap_or("").to_string();
     std::thread::spawn(move || {
         let mut reader = reader;
         let mut buf = [0u8; 1024];
@@ -291,6 +292,7 @@ pub fn spawn_single_pty(
                             data,
                             project_path: path_clone.clone(),
                             terminal_type: type_clone.clone(),
+                            thread_id: thread_id_clone.clone(),
                         }).ok();
                     }
                 }

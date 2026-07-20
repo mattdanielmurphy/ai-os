@@ -114,7 +114,7 @@ fn get_child_to_parent_map(brain_dir: &std::path::Path) -> HashMap<String, Strin
                         if transcript_path.exists() {
                             use std::io::Read;
                             if let Ok(mut file) = std::fs::File::open(&transcript_path) {
-                                let mut buffer = vec![0; 4096];
+                                let mut buffer = vec![0; 65536];
                                 if let Ok(n) = file.read(&mut buffer) {
                                     let content = String::from_utf8_lossy(&buffer[..n]);
                                     if let Some(pos) = content.find(
@@ -161,6 +161,74 @@ fn get_root_thread_id(
         visited.insert(current.clone());
     }
     current
+}
+
+fn is_uuid(s: &str) -> bool {
+    s.len() == 36 && s.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+}
+
+fn resolve_thread_metadata(
+    thread_id: &str,
+    child_to_parent: &HashMap<String, String>,
+    brain_dir: &std::path::Path,
+) -> (String, Option<String>) {
+    let mut current = thread_id.to_string();
+    let mut visited = std::collections::HashSet::new();
+    visited.insert(current.clone());
+
+    let mut resolved_title = None;
+    let mut resolved_project_path = None;
+
+    loop {
+        let filepath = brain_dir
+            .join(&current)
+            .join(".system_generated")
+            .join("logs")
+            .join("transcript.jsonl");
+        if filepath.exists() {
+            if let Some(info) = get_cached_thread_info(&filepath, &current) {
+                if resolved_title.is_none() {
+                    let is_placeholder = is_uuid(&info.title)
+                        || info.title.starts_with("Continuing conversation")
+                        || info.title.contains("Thread ID:");
+                    if !is_placeholder {
+                        resolved_title = Some(info.title.clone());
+                    }
+                }
+                if resolved_project_path.is_none() {
+                    if let Some(p) = info.project_path.clone() {
+                        resolved_project_path = Some(p);
+                    }
+                }
+            }
+        }
+
+        if let Some(parent) = child_to_parent.get(&current) {
+            if visited.contains(parent) {
+                break;
+            }
+            current = parent.clone();
+            visited.insert(current.clone());
+        } else {
+            break;
+        }
+    }
+
+    let final_title = resolved_title.unwrap_or_else(|| {
+        let filepath = brain_dir
+            .join(thread_id)
+            .join(".system_generated")
+            .join("logs")
+            .join("transcript.jsonl");
+        if filepath.exists() {
+            if let Some(info) = get_cached_thread_info(&filepath, thread_id) {
+                return info.title;
+            }
+        }
+        thread_id.to_string()
+    });
+
+    (final_title, resolved_project_path)
 }
 
 fn get_thread_chain(
@@ -541,10 +609,13 @@ pub async fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>,
                 None => continue,
             };
 
+        let (resolved_title, resolved_project_path) =
+            resolve_thread_metadata(latest_thread_id, &child_to_parent, &brain_dir);
+
         let matched = if is_misc {
-            info.project_path.is_none()
+            resolved_project_path.is_none()
         } else {
-            if let Some(ref p_path) = info.project_path {
+            if let Some(ref p_path) = resolved_project_path {
                 if let Some(pos) = p_path.find(&project_path) {
                     let after_match = &p_path[pos + project_path.len()..];
                     let is_exact = match after_match.chars().next() {
@@ -564,7 +635,7 @@ pub async fn get_project_threads(project_path: String) -> Result<Vec<ThreadLog>,
             thread_logs.push(ThreadLog {
                 id: root_id,
                 latest_leaf_id: latest_thread_id.clone(),
-                title: info.title,
+                title: resolved_title,
                 snippet: info.snippet,
                 filepath: root_filepath.to_string_lossy().to_string(),
                 mtime: info.parsed_timestamp,
@@ -655,14 +726,17 @@ pub async fn get_all_agy_threads() -> Result<Vec<ThreadLog>, String> {
                 None => continue,
             };
 
+        let (resolved_title, resolved_project_path) =
+            resolve_thread_metadata(latest_thread_id, &child_to_parent, &brain_dir);
+
         thread_logs.push(ThreadLog {
             id: root_id,
             latest_leaf_id: latest_thread_id.clone(),
-            title: info.title,
+            title: resolved_title,
             snippet: info.snippet,
             filepath: root_filepath.to_string_lossy().to_string(),
             mtime: info.parsed_timestamp,
-            detected_project_path: info.project_path,
+            detected_project_path: resolved_project_path,
         });
     }
 

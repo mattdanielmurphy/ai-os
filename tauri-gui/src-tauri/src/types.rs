@@ -39,6 +39,7 @@ pub struct Payload {
     pub data: String,
     pub project_path: String,
     pub terminal_type: String,
+    pub thread_id: String,
 }
 
 #[derive(Clone, serde::Serialize)]
