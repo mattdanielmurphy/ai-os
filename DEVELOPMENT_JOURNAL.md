@@ -11,6 +11,7 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - **Phase 1: Split Tauri backend `main.rs` into modules.** Extracted the 3,188-line monolith into 5 focused modules: `types.rs` (148 lines), `pty.rs` (630), `threads.rs` (1,107), `server.rs` (402), `session.rs` (1,142). Main is now 299 lines. Zero behavior changes, clean compile with zero warnings. This makes the codebase debuggable and sets up Phase 2 (cutting unused complexity). [[agent-log]](agent-logs/2026-07-20_00-30_strategic-pivot-minimal-fork-triage.md)
 - **Fixed rules-watcher & Improved `la` tool:** Updated `la` to show `oneshot` agents as "watching" and improved `la logs` to find logs in plists. Fixed `rules-watcher` plist. [[agent-log]](agent-logs/2026-07-20_02-15_fix-la-status-and-logs-for-oneshots.md)
 - **Fixed rules-watcher Launch Agent & Bidirectional Sync:** Replaced AGENTS.md with a symlink to .gemini/GEMINI.md, upgraded sync script to bidirectional newer-wins, and removed the tmux wrapper from plist to resolve TCC sandbox blocks. [[agent-log]](agent-logs/2026-07-20_01-40_fix-rules-watcher-and-bidirectional-sync.md)
+- **Fixed Tauri Backend Bugs:** Resolved the WebSocket host reconnect race via connection IDs, resolved tab switching terminal output interleaving via thread-specific buffer keys, and fixed thread naming/chain resolution pathing. [[agent-log]](agent-logs/2026-07-20_13-38_fix-tauri-backend-bugs.md)
 
 ## 2026-07-19
 
