@@ -12,11 +12,6 @@ use tauri::GlobalShortcutManager;
 use crate::types::AppState;
 
 #[tauri::command]
-fn prepare_spare_engine(project_path: String, engine: String) -> Result<(), String> {
-    pty::prepare_spare_engine_inner(project_path, engine)
-}
-
-#[tauri::command]
 fn spawn_fresh_engine(
     project_path: String,
     engine: String,
@@ -232,14 +227,12 @@ fn main() {
             // --- state ---
             let sessions = Arc::new(Mutex::new(HashMap::new()));
             let active_project = Arc::new(Mutex::new(None));
-            let staged_payload = Arc::new(Mutex::new(None));
             let last_active_account = Arc::new(Mutex::new(None));
 
             app.manage(AppState {
                 sessions,
                 active_project,
                 app_handle,
-                staged_payload,
                 last_active_account,
             });
 
@@ -261,8 +254,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             session::refresh_tmux_session,
             spawn_fresh_engine,
-            session::initialize_project_session,
-            prepare_spare_engine,
             session::switch_active_project,
             session::write_to_pty,
             session::resize_pty,
@@ -285,14 +276,7 @@ fn main() {
             session::open_devtools,
             session::get_quota,
             session::ensure_hermes_running,
-            session::get_browser_context,
-            session::dispatch_to_gemini,
             threads::search_project_threads,
-            session::read_thread_notes_file,
-            session::write_thread_notes_file,
-            session::get_staged_payload,
-            session::get_recent_workspaces,
-            session::confirm_staged_execution
         ])
         .run(context)
         .expect("error while running tauri application");

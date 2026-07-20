@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use tauri::Manager;
 
 use crate::types::{
-    AppState, ContextSyncPayload, CommitPayload, ExecutionPayload, GeminiSyncPayload,
-    RevisionEvent, SkillItem,
+    ContextSyncPayload, CommitPayload, GeminiSyncPayload,
+    RevisionEvent,
 };
 
 // ---------------------------------------------------------------------------
@@ -186,95 +186,6 @@ async fn handle_gemini_sync(
     Ok("Sync OK".to_string())
 }
 
-async fn handle_skills_list(
-) -> Result<Json<Vec<SkillItem>>, (axum::http::StatusCode, String)> {
-    let list = vec![
-        SkillItem {
-            name: "Brainstorming (Phase 0)".to_string(),
-            description: "Explore the edges of this idea conceptually".to_string(),
-            prompt: "Act as a technical sounding board. I have an idea for a new feature/project, and we need to brainstorm. \n\nDo not try to build it, write code, or structure a final plan yet. Your goal is to help me explore the edges of this idea. Ask me clarifying questions about the core problem, the ideal user experience, and potential pitfalls. Let's keep the conversation fluid and conceptual until I tell you we are ready to lock in a plan.\n\nHere is my initial thought: ".to_string(),
-        },
-        SkillItem {
-            name: "High-Level Plan (Phase 1)".to_string(),
-            description: "Synthesize agreed concept into non-technical product map".to_string(),
-            prompt: "Act as a Product Manager. We are closing the brainstorming phase. Synthesize our agreed-upon concept into a strict High-Level Plan outlining what this feature DOES and the exact user experience. \n\nStrictly avoid discussing how it is built under the hood. Structure your response using this exact framework:\n1. The Trigger: How the user or system initiates the action.\n2. The Staging Area: The intermediate UI, choices, or routing that happens before execution.\n3. Task Configuration: The rules, modes, or constraints applied to the task.\n4. Execution & Feedback: What happens during the process and how the user knows it finished.".to_string(),
-        },
-        SkillItem {
-            name: "Lower-Level Plan (Phase 2)".to_string(),
-            description: "Translate high-level plan into technical architecture".to_string(),
-            prompt: "Act as a Systems Architect. Translate our approved High-Level Plan into a Lower-Level Technical Plan. \n\nFocus on the plumbing and architecture. You may include hyper-specific, uncommon code snippets if they are necessary to illustrate an architectural choice (e.g., a specific Rust/Tauri bridge implementation or complex API endpoint), but do not write the standard implementation logic.\n\nBreak down the architecture into:\n1. Tech Stack & CLI Tools: Required packages or background processes.\n2. Component Bridge: How the layers communicate (e.g., file watchers, HTTP, standard I/O).\n3. State & Context Management: Where temporary data or files live during execution.\n4. Technical Bottlenecks: Highlight 2-3 edge cases or potential fail states to watch out for.".to_string(),
-        },
-        SkillItem {
-            name: "Execution Payload (Phase 3)".to_string(),
-            description: "Generate strict instruction set for local agent".to_string(),
-            prompt: "Act as a Prompt Engineer. We are ready to execute. Take the High-Level Plan and the Lower-Level Technical Plan and generate a strict, optimized instruction set for a local autonomous AI agent.\n\nOutput the final instructions inside a single code block formatted like this:\n```claude-instruction\n[Instructions here]\n```\n\nThe instructions must include:\n- The target context or directory behavior.\n- Strict constraints for the task (e.g., required logging formats, restricted commands).\n- A definitive, step-by-step implementation checklist.\n\nDo not include any conversational filler before or after the code block.".to_string(),
-        },
-        SkillItem {
-            name: "Worker Bee Rules".to_string(),
-            description: "Rules for direct coding contributions".to_string(),
-            prompt: "Worker Bee Mode: Please execute direct code implementations matching the workspace constraints and rule set.".to_string(),
-        },
-        SkillItem {
-            name: "Triage Rules".to_string(),
-            description: "Rules for architectural planning and dispatching".to_string(),
-            prompt: "Triage Mode: Please analyze the prompt, deconstruct the task, and prepare delegated sub-tasks rather than executing directly.".to_string(),
-        },
-    ];
-    Ok(Json(list))
-}
-
-async fn handle_payload_execute(
-    AxumState(app_handle): AxumState<tauri::AppHandle>,
-    Json(payload): Json<ExecutionPayload>,
-) -> Result<String, (axum::http::StatusCode, String)> {
-    println!(
-        "Received execution payload for thread: {}",
-        payload.thread_id
-    );
-
-    let state = app_handle.state::<AppState>();
-    if let Ok(mut staged) = state.staged_payload.lock() {
-        *staged = Some(payload.clone());
-    } else {
-        return Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to lock staged payload".to_string(),
-        ));
-    }
-
-    let app_handle_clone = app_handle.clone();
-    tauri::async_runtime::spawn(async move {
-        if let Some(win) = app_handle_clone.get_window("staging-overlay") {
-            let _ = win.show();
-            let _ = win.set_focus();
-            let _ = win.emit("load-payload", payload);
-        } else {
-            let win_builder = tauri::WindowBuilder::new(
-                &app_handle_clone,
-                "staging-overlay",
-                tauri::WindowUrl::App("staging.html".into()),
-            )
-            .title("AI-OS: Stage Execution")
-            .inner_size(680.0, 420.0)
-            .resizable(false)
-            .decorations(false)
-            .transparent(true)
-            .always_on_top(true)
-            .center();
-
-            if let Ok(win) = win_builder.build() {
-                let payload_clone = payload.clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(500));
-                    let _ = win.emit("load-payload", payload_clone);
-                });
-            }
-        }
-    });
-
-    Ok("Staged successfully".to_string())
-}
-
 // ---------------------------------------------------------------------------
 // WebSocket handler
 // ---------------------------------------------------------------------------
@@ -389,8 +300,6 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/context/sync", post(handle_sync))
             .route("/api/revision/commit", post(handle_commit))
             .route("/api/gemini/sync", post(handle_gemini_sync))
-            .route("/api/payload/execute", post(handle_payload_execute))
-            .route("/api/skills/list", axum::routing::get(handle_skills_list))
             .layer(cors)
             .with_state(app_handle);
 

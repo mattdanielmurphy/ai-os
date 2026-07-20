@@ -27,21 +27,10 @@ pub struct ProjectSession {
     pub last_accessed: std::time::SystemTime,
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-pub struct ExecutionPayload {
-    pub thread_id: String,
-    pub thread_title: String,
-    pub phase: u32,
-    pub payload: String,
-    pub source_url: String,
-    pub security_token: String,
-}
-
 pub struct AppState {
     pub sessions: Arc<Mutex<HashMap<String, ProjectSession>>>,
     pub active_project: Arc<Mutex<Option<String>>>,
     pub app_handle: tauri::AppHandle,
-    pub staged_payload: Arc<Mutex<Option<ExecutionPayload>>>,
     pub last_active_account: Arc<Mutex<Option<String>>>,
 }
 
@@ -109,32 +98,6 @@ pub struct ContextSyncPayload {
 pub struct GeminiSyncPayload {
     pub url: String,
     pub body: String,
-}
-
-#[derive(serde::Serialize)]
-pub struct SkillItem {
-    pub name: String,
-    pub description: String,
-    pub prompt: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct BrowserContext {
-    pub url: String,
-    pub title: String,
-    pub inner_text: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct WorkspaceItem {
-    pub path: String,
-    pub last_used: u64,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct WorkspacesConfig {
-    pub recent: Vec<WorkspaceItem>,
-    pub pinned: Vec<WorkspaceItem>,
 }
 
 #[derive(Clone)]

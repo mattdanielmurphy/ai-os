@@ -7,7 +7,7 @@ epic: null
 dueDate: null
 created: "2026-07-20"
 modified: "2026-07-20"
-completedAt: null
+completedAt: "2026-07-20"
 labels: []
 order: 1
 ---
