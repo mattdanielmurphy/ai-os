@@ -118,6 +118,32 @@ def _apply_all_patches():
     os.environ.setdefault("AGY_API_KEY", "agy-native-bypass-key")
     print("[AIOS WebUI Triage] AGY_API_KEY env var set", file=sys.stderr)
 
+    # ── Patch B: resolve_runtime_provider (WebUI credential resolver) ─────────
+    # The WebUI calls resolve_runtime_provider(requested="agy") to get api_key,
+    # base_url, and api_mode for _agent_kwargs. Without this, it warns
+    # "Unknown provider 'agy'" and leaves _rt unbound, breaking api_mode lookup.
+    try:
+        import hermes_cli.runtime_provider as _rtp
+        _orig_rtp = _rtp.resolve_runtime_provider
+
+        def _patched_rtp(*, requested=None, **kwargs):
+            if (requested or "").strip().lower() == "agy":
+                return {
+                    "provider": "agy",
+                    "api_mode": "chat_completions",
+                    "base_url": "http://127.0.0.1:8080/v1",
+                    "api_key": "agy-native-bypass-key",
+                    "source": "aios-webui-bypass",
+                    "requested_provider": "agy",
+                }
+            return _orig_rtp(requested=requested, **kwargs)
+
+        _rtp.resolve_runtime_provider = _patched_rtp
+        print("[AIOS WebUI Triage] resolve_runtime_provider patched for agy", file=sys.stderr)
+    except Exception as _e:
+        print(f"[AIOS WebUI Triage] resolve_runtime_provider patch failed: {_e}", file=sys.stderr)
+
+
     # ── Patch B: resolve_provider_client (agy support for old builds) ────────
     try:
         import agent.auxiliary_client as _aux
