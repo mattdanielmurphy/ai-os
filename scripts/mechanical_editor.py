@@ -90,6 +90,22 @@ def main():
     renamed_files = []
 
     try:
+        # Load environment variables from ~/.zshrc so Claude doesn't hang prompting for auth when run from a background daemon
+        zshrc_path = Path.home() / ".zshrc"
+        if zshrc_path.exists():
+            import os
+            with open(zshrc_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("export ANTHROPIC_BASE_URL="):
+                        os.environ["ANTHROPIC_BASE_URL"] = line.split("=", 1)[1].strip('"').strip("'")
+                    elif line.startswith("export ANTHROPIC_API_KEY="):
+                        os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
+                    elif line.startswith("export OPENAI_API_KEY="):
+                        os.environ["OPENAI_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
+                    elif line.startswith("export OPENAI_API_BASE="):
+                        os.environ["OPENAI_API_BASE"] = line.split("=", 1)[1].strip('"').strip("'")
+
         # Rename existing rules files to .bak (using with_name to preserve suffix)
         if gemini_md.exists():
             gemini_md.rename(gemini_md.with_name(gemini_md.name + ".bak"))
