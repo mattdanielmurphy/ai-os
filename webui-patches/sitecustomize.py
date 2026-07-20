@@ -125,18 +125,24 @@ def _apply_all_patches():
 
         def _patched_resolve(provider, model=None, **kwargs):
             if (provider or "").strip().lower() == "agy":
-                try:
-                    from openai import OpenAI
-                    client = OpenAI(api_key="agy-native-bypass-key", base_url="http://127.0.0.1:8080")
-                    return (client, model or "agy")
-                except Exception as _e:
-                    print(f"[AIOS WebUI Triage] agy client create failed: {_e}", file=sys.stderr)
+                # agent_init.py only reads .api_key and .base_url off the returned
+                # client — it doesn't make any calls at this stage. Return a stub.
+                from types import SimpleNamespace
+                stub = SimpleNamespace(
+                    api_key="agy-native-bypass-key",
+                    base_url="http://127.0.0.1:8080",
+                    _custom_headers=None,
+                    default_headers=None,
+                    _default_headers=None,
+                )
+                return (stub, model or "agy")
             return _orig_resolve(provider, model=model, **kwargs)
 
         _aux.resolve_provider_client = _patched_resolve
         print("[AIOS WebUI Triage] resolve_provider_client patched for agy", file=sys.stderr)
     except Exception as _e:
         print(f"[AIOS WebUI Triage] resolve_provider_client patch failed: {_e}", file=sys.stderr)
+
 
     # ── Patch C: interruptible_api_call (triage interceptor) ─────────────────
     try:
