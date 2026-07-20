@@ -22,17 +22,25 @@ def main():
 
     description = ""
     # Parse args manually to avoid external dependencies
+    file_path = ""
     for i in range(len(sys.argv)):
         if sys.argv[i] == "--description" and i + 1 < len(sys.argv):
             description = sys.argv[i+1]
+        elif sys.argv[i] == "--file" and i + 1 < len(sys.argv):
+            file_path = sys.argv[i+1]
 
     if not description:
         print("Error: --description is required", file=sys.stderr)
         sys.exit(1)
 
-    # 1. Read log content from stdin
-    print("Reading log content from stdin...")
-    log_content = sys.stdin.read().strip()
+    # 1. Read log content
+    if file_path:
+        print(f"Reading log content from {file_path}...")
+        with open(file_path, "r", encoding="utf-8") as f:
+            log_content = f.read().strip()
+    else:
+        print("Reading log content from stdin...")
+        log_content = sys.stdin.read().strip()
     if not log_content:
         print("Error: Log content cannot be empty", file=sys.stderr)
         sys.exit(1)

@@ -41,73 +41,114 @@ def extract_prompt(api_kwargs):
         
     return str(content)
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+        for key, value in self.items():
+            if isinstance(value, dict):
+                self[key] = AttrDict(value)
+            elif isinstance(value, list):
+                self[key] = [AttrDict(x) if isinstance(x, dict) else x for x in value]
+    def model_dump(self, *args, **kwargs):
+        def _dump(obj):
+            if isinstance(obj, AttrDict):
+                return {k: _dump(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [_dump(v) for v in obj]
+            return obj
+        return _dump(self)
+
 def create_synthetic_response(prompt):
     tool_call_id = f"call_agy_{int(time.time())}"
     function_args = json.dumps({"PROMPT": str(prompt)})
     
-    message = SimpleNamespace(
-        role="assistant",
-        content="Delegating task to agy.",
-        tool_calls=[
-            SimpleNamespace(
-                id=tool_call_id,
-                type="function",
-                function=SimpleNamespace(
-                    name="agy_start",
-                    arguments=function_args
-                )
-            )
-        ]
-    )
-    
-    choice = SimpleNamespace(
-        message=message,
-        finish_reason="tool_calls",
-        index=0
-    )
-    
-    return SimpleNamespace(
-        id=f"chatcmpl-triage-{int(time.time())}",
-        object="chat.completion",
-        created=int(time.time()),
-        model="triage-interceptor",
-        choices=[choice]
-    )
+    return AttrDict({
+        "id": f"chatcmpl-triage-{int(time.time())}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": "triage-interceptor",
+        "choices": [{
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "Delegating task to agy.",
+                "tool_calls": [{
+                    "id": tool_call_id,
+                    "type": "function",
+                    "function": {
+                        "name": "agy_start",
+                        "arguments": function_args
+                    }
+                }]
+            },
+            "finish_reason": "tool_calls"
+        }]
+    })
 
 def create_synthetic_stream(prompt):
     tool_call_id = f"call_agy_{int(time.time())}"
     function_args = json.dumps({"PROMPT": str(prompt)})
+    base_id = f"chatcmpl-triage-{int(time.time())}"
+    created = int(time.time())
     
-    delta = SimpleNamespace(
-        role="assistant",
-        content="Delegating task to agy.",
-        tool_calls=[
-            SimpleNamespace(
-                index=0,
-                id=tool_call_id,
-                type="function",
-                function=SimpleNamespace(
-                    name="agy_start",
-                    arguments=function_args
-                )
-            )
-        ]
-    )
-    
-    choice = SimpleNamespace(
-        delta=delta,
-        finish_reason="tool_calls",
-        index=0
-    )
-    
-    chunk = SimpleNamespace(
-        id=f"chatcmpl-triage-{int(time.time())}",
-        object="chat.completion.chunk",
-        created=int(time.time()),
-        model="triage-interceptor",
-        choices=[choice]
-    )
-    yield chunk
+    # Chunk 1: The tool call ID and name
+    yield AttrDict({
+        "id": base_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": "triage-interceptor",
+        "choices": [{
+            "index": 0,
+            "delta": {
+                "role": "assistant",
+                "content": "Delegating task to agy.",
+                "tool_calls": [{
+                    "index": 0,
+                    "id": tool_call_id,
+                    "type": "function",
+                    "function": {
+                        "name": "agy_start",
+                        "arguments": ""
+                    }
+                }]
+            },
+            "finish_reason": None
+        }]
+    })
+
+    # Chunk 2: The tool call arguments
+    yield AttrDict({
+        "id": base_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": "triage-interceptor",
+        "choices": [{
+            "index": 0,
+            "delta": {
+                "tool_calls": [{
+                    "index": 0,
+                    "function": {
+                        "arguments": function_args
+                    }
+                }]
+            },
+            "finish_reason": None
+        }]
+    })
+
+    # Chunk 3: The finish reason
+    yield AttrDict({
+        "id": base_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": "triage-interceptor",
+        "choices": [{
+            "index": 0,
+            "delta": {},
+            "finish_reason": "tool_calls"
+        }]
+    })
 
 def patched_api_call(agent_instance, api_kwargs, *args, **kwargs):
     prompt = extract_prompt(api_kwargs)
