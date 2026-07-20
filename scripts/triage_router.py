@@ -6,6 +6,8 @@ import urllib.request
 import urllib.parse
 import subprocess
 import time
+import contextlib
+import shutil
 from pathlib import Path
 
 # Config and settings paths
@@ -13,6 +15,30 @@ SETTING_PATH = Path.home() / ".gemini" / "antigravity-cli" / "settings.json"
 OAUTH_CREDS_PATH = Path.home() / ".gemini" / "oauth_creds.json"
 TELEMETRY_DB_PATH = Path.home() / ".ai-os-telemetry.json"
 ERROR_LOG_PATH = Path("/tmp/aios_last_cmd.log")
+
+@contextlib.contextmanager
+def hide_agents_md():
+    """Temporarily renames AGENTS.md to prevent agy from loading it, avoiding double system prompts when launched by Hermes."""
+    paths_to_hide = [Path("AGENTS.md"), Path(".agents/AGENTS.md")]
+    hidden = []
+    
+    try:
+        for p in paths_to_hide:
+            if p.exists():
+                bak = p.with_name(f".{p.name}.bak")
+                try:
+                    p.rename(bak)
+                    hidden.append((bak, p))
+                except Exception:
+                    pass
+        yield
+    finally:
+        for bak, original in hidden:
+            if bak.exists():
+                try:
+                    bak.rename(original)
+                except Exception:
+                    pass
 
 def get_access_token():
     if not OAUTH_CREDS_PATH.exists():
@@ -235,14 +261,16 @@ def main():
         cmd = ["agy"] + args
         if not has_model:
             cmd += ["--model", model]
-        sys.exit(subprocess.call(cmd))
+        with hide_agents_md():
+            sys.exit(subprocess.call(cmd))
 
     # Bypassing classification if model override is provided
     if has_model:
         model = model_override
         print(f"[triage] Model override provided: running {model}")
         cmd = ["agy"] + args
-        sys.exit(subprocess.call(cmd))
+        with hide_agents_md():
+            sys.exit(subprocess.call(cmd))
 
     # 3. Tier 1 Classification
     print(f"[triage] Intercepting prompt: '{query[:50]}...'")
@@ -279,7 +307,8 @@ def main():
             continue
         cmd.append(arg)
 
-    exit_code = subprocess.call(cmd)
+    with hide_agents_md():
+        exit_code = subprocess.call(cmd)
 
     # 6. Tier 2 Executive Investigation on failure
     if exit_code != 0:
@@ -312,7 +341,8 @@ def main():
             if arg == "--model":
                 continue
             cmd_escalated.append(arg)
-        sys.exit(subprocess.call(cmd_escalated))
+        with hide_agents_md():
+            sys.exit(subprocess.call(cmd_escalated))
 
     sys.exit(0)
 
