@@ -79,13 +79,13 @@ To prevent infinite context snowballing on long-term operations, historical text
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│ 1. Index Layer: .agent-logs/index.md                    │◀── Baseline Entry
+│ 1. Index Layer: agent-logs/index.md                    │◀── Baseline Entry
 │    - 1-sentence summaries and unique Thread IDs         │
 └───────────────────────────┬────────────────────────────┘
                             │ (On Request)
                             ▼
 ┌────────────────────────────────────────────────────────┐
-│ 2. Detail Layer: .agent-logs/details/[ID].md           │◀── Secondary Layer
+│ 2. Detail Layer: agent-logs/details/[ID].md           │◀── Secondary Layer
 │    - Nuanced logs, technical step outputs, prompt text │
 └───────────────────────────┬────────────────────────────┘
                             │ (On Request)
@@ -96,8 +96,8 @@ To prevent infinite context snowballing on long-term operations, historical text
 └────────────────────────────────────────────────────────┘
 ```
 
-1. **`context_handoff.py` (The Index Layer):** Appends brief structured handoff logs to a consolidated index document (`.agent-logs/index.md`). Freshly initialized threads pull only this lightweight timeline index, preserving zero-token baseline efficiency.
-2. **The Detail Buffer:** Nuanced session logs, verbose console tracking, and intermediate reasoning trees are written separate to `.agent-logs/details/[ID].md`. The agent references the high-level index and explicitly requests detailed sub-logs *only* if historical relevance is identified.
+1. **`context_handoff.py` (The Index Layer):** Appends brief structured handoff logs to a consolidated index document (`agent-logs/index.md`). Freshly initialized threads pull only this lightweight timeline index, preserving zero-token baseline efficiency.
+2. **The Detail Buffer:** Nuanced session logs, verbose console tracking, and intermediate reasoning trees are written separate to `agent-logs/details/[ID].md`. The agent references the high-level index and explicitly requests detailed sub-logs *only* if historical relevance is identified.
 3. **Git Memory Scripts:** Deep behavioral audit tools:
 
 - `memory_search.sh`: Scans short commit hash patterns derived from deep logs.
@@ -224,7 +224,7 @@ Because text features a minimal storage footprint, exponential historical growth
 
 | Data Class | Local Storage Mechanism | Scale Projections (Est.) | Mitigation Mechanism |
 | --- | --- | --- | --- |
-| **Handoff Logs / Indexing** | Human-readable Markdown (`.agent-logs/`) | ~2–5 KB per complex operational thread | Strict split between minimal `.md` high-level indexes and dense detailing directories. |
+| **Handoff Logs / Indexing** | Human-readable Markdown (`agent-logs/`) | ~2–5 KB per complex operational thread | Strict split between minimal `.md` high-level indexes and dense detailing directories. |
 | **Scraped Browser Text** | Markdown containing source text blocks | Variable; ~50–200 KB per detailed DOM extraction | Strictly transient processing. Raw HTML targets are deleted post-extraction, keeping only target texts. |
 | **Environmental Frame Maps** | Highly compressed binary blobs | ~300 KB–1.5 MB per local capture event | Storage window pruning. Assets are managed via a rolling queue on disk; aging captures are dropped. |
 
@@ -324,9 +324,9 @@ The script uses a standardized header block for the browser extension environmen
 To support this reverse flow, the Rust bridge layer runs a minimal local loopback daemon (via `axum` or `actix-web`) listening exclusively on `127.0.0.1`.
 
 - **`/api/context/sync`**: Receives structural updates of the current conversation to maintain historical alignment.
-- **`/api/notes/save`**: Accepts individual document payloads triggered by the injected user buttons, dumping clean markdown files directly into `/Users/matthewmurphy/projects/ai-os/.agent-logs/details/`.
+- **`/api/notes/save`**: Accepts individual document payloads triggered by the injected user buttons, dumping clean markdown files directly into `/Users/matthewmurphy/projects/ai-os/agent-logs/details/`.
 - **`/api/revision/commit`**: Coordinates stateless web-chat updates into localized version histories:
-1. **Worktree Isolation:** Receives a payload containing `thread_id`, `filename`, and the raw `content` string. It references or initializes a hidden local Git directory assigned exclusively to that thread context (`.agent-logs/git/[thread_id]/`).
+1. **Worktree Isolation:** Receives a payload containing `thread_id`, `filename`, and the raw `content` string. It references or initializes a hidden local Git directory assigned exclusively to that thread context (`agent-logs/git/[thread_id]/`).
 2. **Deterministic Commit Execution:** Overwrites the target file locally and fires an automated Git sequence:
 ```bash
 git add .

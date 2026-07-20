@@ -21,7 +21,7 @@ When Pre-triage is unchecked, the agent operates in **Worker Bee Mode**. In this
 - Expected to write code directly, run terminal commands, and perform actions on the local filesystem.
 - Receives strict rules on file editing (e.g., prohibiting `rm -rf`, enforcing code constraints, and requiring precise edits).
 - Uses a local temporary folder (`./tmp`) to avoid permission prompts during file modifications.
-- At the end of its session, it creates an `.agent-logs/` file mapping out the goal, changes, and architectural discoveries made during the execution.
+- At the end of its session, it creates an `agent-logs/` file mapping out the goal, changes, and architectural discoveries made during the execution.
 - Capable of context self-healing by triggering automated handoffs for complex tasks.
 
 ### 2. Triage Mode
@@ -53,7 +53,7 @@ The ai-os workspace is composed of several key components:
 - **Triage Editing System:** Surgical text mutations and LLM-driven patch applications (`scripts/precision_edit.py`, `scripts/mechanical_editor.py`).
 - **Git Memory Pipeline:** Multi-layer indexing for safe history retrieval (`scripts/memory_search.sh`, `scripts/memory_diff.sh`).
 - **Dynamic Rules Injection:** Manages context routing to active models and global rulesets (`scripts/append_system_rule.py`).
-- **Automated Context Handoff:** Creates standardized context log files in `.agent-logs/` conforming to the Indexed Handoff Protocol (`scripts/context_handoff.py`).
+- **Automated Context Handoff:** Creates standardized context log files in `agent-logs/` conforming to the Indexed Handoff Protocol (`scripts/context_handoff.py`).
 
 ### Roadmap & Planned Features
 

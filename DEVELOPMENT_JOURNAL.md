@@ -1,0 +1,34 @@
+# Development Journal
+
+A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
+
+---
+
+## 2026-07-20
+
+- **Strategic Pivot: Minimal Fork + litellm Bridge.** Hit breaking point with the current approach — monkey-patching `interruptible_api_call` in `aios_hermes_wrapper.py` plus a separate `sitecustomize.py` for the WebUI is too fragile. Hermes WebUI "cancel" drops thread context, which defeats the purpose of interactive agent loop. Decided to pivot to a **minimal fork of Hermes Agent** that adds agy as a real *provider* (not a faked tool call), with ~30 lines of changes instead of 190 lines of monkey-patching. Fork retains upstream merge compatibility. Architecture: `User → Launcher/Shell Wrapper → Triage → litellm → Model`. Claude Code handles Ctrl+C correctly with full context preservation. [[agent-log]](agent-logs/2026-07-20_00-30_strategic-pivot-minimal-fork-triage.md)
+- **Created this dev journal.** Agent logs are too detailed for human consumption. This file is the human-readable timeline. All agents must append here at session end. [[agent-log]](agent-logs/2026-07-20_00-30_strategic-pivot-minimal-fork-triage.md)
+- **Fixed rules-watcher Launch Agent & Bidirectional Sync:** Replaced AGENTS.md with a symlink to .gemini/GEMINI.md, upgraded sync script to bidirectional newer-wins, and removed the tmux wrapper from plist to resolve TCC sandbox blocks. [[agent-log]](agent-logs/2026-07-20_01-40_fix-rules-watcher-and-bidirectional-sync.md)
+
+## 2026-07-19
+
+- **Implemented Zero-Fork Hermes Triage Interceptor** (`aios_hermes_wrapper.py`) — monkey-patches `chat_completion_helpers.interruptible_api_call` to inject fake `agy_start` tool calls for coding prompts. TUI works. [[agent-log]](agent-logs/2026-07-19_18-36_implemented-zero-fork-hermes-triage-interceptor.md)
+- **Fixed WebUI triage** — the WebUI runs as a separate Python process that never touches the wrapper. Had to create `webui-patches/sitecustomize.py` and set `PYTHONPATH` in hermes-webui `.env` to get the same interception working. This complexity is what triggered the July 20 pivot. [[agent-log]](agent-logs/2026-07-19_22-54_webui-triage-sitecustomize-fix.md)
+
+## 2026-07-18
+
+- **Hermes Agent GUI Integration** — integrated Hermes WebSocket backend into the Tauri app, with PTY terminal spawning and engine switching. Massive session with many small fixes for websocket races, thread clearing, auto-reconnect, etc. [[logs]](agent-logs/2026-07-18_17-50_Hermes Agent Integration & Bun Migration.md)
+- **Migrated Tauri GUI from pnpm to Bun.** [[log]](agent-logs/2026-07-18_19-53_migrate-tauri-to-bun.md)
+- **DeepSeek V4 Flash Low Triage System** — set up cheap-model-first routing with handoff to pro models for complex tasks. [[log]](agent-logs/2026-07-18_14-19_deepseek-v4-flash-low-triage.md)
+
+## 2026-07-16
+
+- **Wails Thread Browser** — built a desktop app for searching Hermes SQLite + filesystem transcripts with Mantine UI. [[log]](agent-logs/2026-07-16_00-02_wails-thread-browser.md)
+
+## 2026-07-13
+
+- Fixed context handoff mechanism and terminal output attachment. [[logs]](agent-logs/2026-07-13_02-11_handoff.md)
+
+## 2026-07-11
+
+- Fixes to Gemini thread ingestion, markdown rendering, and orchestrator mode. First session logs appear. [[logs]](agent-logs/)

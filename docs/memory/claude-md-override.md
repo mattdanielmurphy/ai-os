@@ -12,7 +12,7 @@ The workspace identity matrix defined in this project's `CLAUDE.md` (§3, Keywor
 ## What this means
 
 - **Notes routing** bypasses native memory entirely — always resolves to the iCloud Obsidian vault path.
-- **Engineering logs** always go to `.agent-logs/` in the project root.
+- **Engineering logs** always go to `agent-logs/` in the project root.
 - **Session context restoration** reads from the Obsidian vault (most recent `User_Note_*.md` files), not from `CLAUDE.md` local memory.
 
 ## Why

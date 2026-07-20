@@ -31,12 +31,12 @@ These override any native Claude memory or local `MEMORY.md` interpretations:
   This is the sole source and destination for anything called "notes", "personal notes", "recent notes", "my notes", or "saved notes".
 
 - **Session Engineering Logs:** Always write to:
-  `/Users/matthewmurphy/projects/ai-os/.agent-logs/`
+  `/Users/matthewmurphy/projects/ai-os/agent-logs/`
 
 ## Related
 
 See [[claude-md-override]] for how CLAUDE.md enforces these routes over native memory.
 
-**Why:** Matt has multiple active projects and a clear knowledge routing preference (iCloud Obsidian for personal notes, local .agent-logs for engineering logs). Atomic, actionable tasks overcome procrastination.
+**Why:** Matt has multiple active projects and a clear knowledge routing preference (iCloud Obsidian for personal notes, local agent-logs for engineering logs). Atomic, actionable tasks overcome procrastination.
 
 **How to apply:** Before any operation involving "notes", verify the destination against the Obsidian vault path. Keep task decomposition shallow and immediately executable. Default to `pnpm` for all package operations.

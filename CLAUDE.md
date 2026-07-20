@@ -34,7 +34,7 @@
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-0. **Fresh Thread Context:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, and the `agent-logs/` directory. Read the project description, active goals, and the most recent 2-3 agent log files to reconstruct a rich, continuous understanding of the codebase, recent user requests, architectural decisions, and current focus, acting as if you are in the same ongoing thread.
+0. **Fresh Thread Context:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, `DEVELOPMENT_JOURNAL.md`, and the `agent-logs/` directory. Read the dev journal first (it's the human-readable timeline of key decisions), then the most recent 2-3 agent log files to reconstruct a rich, continuous understanding of the codebase, recent user requests, architectural decisions, and current focus, acting as if you are in the same ongoing thread.
 1. **Log Directory:** ALWAYS look for and maintain an `agent-logs/` directory at the root of the project.
 2. **Reading Logs:** Before starting a bug fix or feature, scan `agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
 3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `agent-logs/`.
@@ -47,6 +47,7 @@
      - `## What Didn't Work / Known Issues`: Failed approaches and things that still need attention (crucial for future agents).
      - `## Architecture Notes`: Discoveries about how the codebase works that aren't obvious.
 4. **Commit:** Commit the log file alongside your code changes.
+5. **Development Journal:** At the END of every session (even if no code was changed), you MUST append a concise entry to `DEVELOPMENT_JOURNAL.md` at the project root. One date heading per day, one bullet per session. Format: `- **Short title:** What was decided, changed, or discovered. Why it matters. Link to relevant agent log.` Keep each bullet to 2-3 lines max — this is for the human, not the agent.
 </AGENT_WORK_LOGS>
 
 <WORKSPACE_RULES>

@@ -23,6 +23,19 @@ import os
 import json
 import time as _time
 
+# Fix NO_PROXY immediately — the system env may contain bare IPv6 ('::1') and
+# CIDR entries ('127.0.0.0/8') which httpx can't parse as URL patterns. This
+# must run before any OpenAI/httpx client is constructed.
+_raw_no_proxy = os.environ.get("NO_PROXY", "") or os.environ.get("no_proxy", "")
+if "::1" in _raw_no_proxy or "/8" in _raw_no_proxy:
+    _safe = ",".join(
+        p for p in _raw_no_proxy.split(",")
+        if "::" not in p.strip() and "/" not in p.strip()
+    )
+    os.environ["NO_PROXY"] = _safe
+    os.environ["no_proxy"] = _safe
+
+
 _AIOS_SCRIPTS = "/Users/matt/projects/ai-os/scripts"
 _PATCHED = False
 
@@ -214,31 +227,22 @@ def _apply_all_patches():
         print(f"[AIOS WebUI Triage] interruptible patch failed: {_e}", file=sys.stderr)
 
 
-# ── Meta-path hook: fires when agent.chat_completion_helpers is imported ──────
-# This guarantees patches run after hermes-agent is on sys.path but before
-# any AIAgent.__init__ call (which imports resolve_provider_client inline).
+# ── Meta-path hook: fires when agent.* is first imported ──────────────────────
+# Python 3.4+ only calls find_spec — find_module is never invoked.
+# We return None (let normal import proceed) but fire patches as a side effect.
 
 class _TriageInstallHook:
-    """Lazy installer: triggers _apply_all_patches on first agent import."""
+    """Fires _apply_all_patches the moment any agent.* module is imported."""
 
-    def find_module(self, fullname, path=None):
-        # Watch for the first agent submodule import — that's our signal that
-        # hermes-agent is fully on sys.path and ready to be patched.
+    def find_spec(self, fullname, path, target=None):
         if fullname in ("agent.chat_completion_helpers", "agent.auxiliary_client",
                         "agent.agent_init"):
-            return self
-        return None
-
-    def load_module(self, fullname):
-        import importlib
-        # Remove ourselves first to avoid recursion
-        try:
-            sys.meta_path.remove(self)
-        except ValueError:
-            pass
-        mod = importlib.import_module(fullname)
-        _apply_all_patches()
-        return mod
+            try:
+                sys.meta_path.remove(self)
+            except ValueError:
+                pass
+            _apply_all_patches()
+        return None  # always let normal import machinery handle it
 
 
 sys.meta_path.append(_TriageInstallHook())

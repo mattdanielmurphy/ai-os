@@ -19,7 +19,6 @@ def search_agent_logs(query, projects_root="~/projects"):
 
         agent_log_patterns = [
             os.path.join(project_path, "agent-logs"),
-            os.path.join(project_path, ".agent-logs")
         ]
 
         for log_pattern in agent_log_patterns:

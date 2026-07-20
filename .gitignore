@@ -10,6 +10,5 @@ tmp/
 dist/
 src-tauri/target/
 
-# Sensitive Agent Logs
-.agent-logs/
-# agent-logs/
+# Agent logs (now tracked in git at agent-logs/, not hidden)
+# .agent-logs/ — REMOVED: migrated to agent-logs/

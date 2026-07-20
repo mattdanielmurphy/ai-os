@@ -113,7 +113,7 @@
 * Established project boundaries and `~` directory isolation.
 * Enforced absolute `rm` bans and `~/.Trash/` relocation protocols.
 * Configured Obsidian `.md` routing to iCloud directory.
-* Bootstrapped `AG_CONTEXT.md` and `.agent-logs/` structural constraints.
+* Bootstrapped `AG_CONTEXT.md` and `agent-logs/` structural constraints.
 
 ### [2026-06-24] Phase 3: Background Auto-Commit Protocol
 * **Section 7 in CLAUDE.md:** Added "Background Auto-Commit Protocol" requiring immediate background `git add . && git commit -m "[Auto-Commit] ..."` after any file modifications.
@@ -125,7 +125,7 @@
   - Project root: `/Users/matthewmurphy/projects/ai-os`
   - Context verification: `/Users/matthewmurphy/projects/ai-os/AG_CONTEXT.md`
   - Features ledger: `/Users/matthewmurphy/projects/ai-os/FEATURES.md`
-  - Agent work logs: `/Users/matthewmurphy/projects/ai-os/.agent-logs/`
+  - Agent work logs: `/Users/matthewmurphy/projects/ai-os/agent-logs/`
   - Scratch sandbox: `/Users/matthewmurphy/projects/ai-os/tmp/`
   - Obsidian vault: `/Users/matthewmurphy/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`
 * **Global pnpm Binary Link:** `package.json` defines `ai-os` binary → `./bin/ai-os`, `private: true`, `packageManager: pnpm@11.2.2`. Registered system-wide via `pnpm link --global`.
@@ -141,7 +141,7 @@
   - `~/CLAUDE.md` → `projects/ai-os/CLAUDE.md`
   - `~/AG_CONTEXT.md` → `projects/ai-os/AG_CONTEXT.md`
   - `~/FEATURES.md` → `projects/ai-os/FEATURES.md`
-  - `~/.agent-logs` → `projects/ai-os/.agent-logs`
+  - `~/.agent-logs` → `projects/ai-os/agent-logs`
 * **AG_CONTEXT.md §Phase Constraints:** "Global Home Anchoring (Level 2.5)" documents that all future config extensions and operational databases must recognize `~` as the active execution anchor so they survive traversal into downstream project subdirectories.
 * **CLAUDE.md §0.1:** "Home-Origin Execution Contract" added — defines that the agent may be launched from `$HOME`, must resolve all scaffolding against the canonical project root, and must treat `~` as a valid entry point (not a sandbox violation).
 
@@ -225,8 +225,8 @@
 ### [2026-06-27] Phases 9 & 10: Loop Prevention, Fast-Path Editing, & Automated Handoff
 * **Loop Prevention Rule Update:** Replaced cost telemetry rules in `GEMINI.md` and `CLAUDE.md` to prevent internal telemetry command execution during tool polling and wait cycles, executing only when yielding control back to the user.
 * **Precision Editor (`scripts/precision_edit.py`):** Created a robust, LLM-free direct file editing script supporting `replace`, `append`, and `insert_after_string` modes with strict error checking (fails if target matches 0 or >1 times in replace/insert modes).
-* **Automated Context Handoff (`scripts/context_handoff.py`):** Built state handoff logging to create standardized context files in `.agent-logs/` and updated `GEMINI.md` system rules to allow spawning a fresh child `agy` process to resume work and prevent context window bloat.
-* **Indexed Memory Architecture:** Upgraded context handoff system to separate succinct high-level summaries from granular details using `.agent-logs/details/step_<timestamp_or_id>.md` references, preventing handoff context bloat.
+* **Automated Context Handoff (`scripts/context_handoff.py`):** Built state handoff logging to create standardized context files in `agent-logs/` and updated `GEMINI.md` system rules to allow spawning a fresh child `agy` process to resume work and prevent context window bloat.
+* **Indexed Memory Architecture:** Upgraded context handoff system to separate succinct high-level summaries from granular details using `agent-logs/details/step_<timestamp_or_id>.md` references, preventing handoff context bloat.
 \n### [2026-06-27] Add Project Flow & Interactive Modal Dialog\n* **Add Project Flow Modal:** Created a beautiful, modern, dark-themed, glassmorphic interactive HTML modal that prompts the user to either open an existing folder or start a new project when clicking the '+' sidebar button.\n* **Open Existing Finder Dialog:** Created `select_directory` command in Rust backend integrating `tauri::api::dialog::blocking::FileDialogBuilder` to prompt macOS native Finder folder selector and import existing codebases.\n* **Start New Git & GitHub Repository:** Implemented `create_new_project` command in Rust backend that automatically structures new projects in `~/projects/<name>`, initializes a local git repository with an initial commit, creates a private GitHub repository using the `gh` CLI tool, and links the local and remote repositories.\n* **Git Repo Name Auto-generation:** Added real-time kebab-case transformation in the frontend project creation form to automatically propose a compliant git repository name based on the entered human-readable project name.\n
 
 ### [2026-06-27] Dynamic DeepSeek Delegation Toggle
@@ -253,7 +253,7 @@
 * **Token-Saving Shell Interception:** Established a strategy to intercept noisy/verbose shell commands (like `git commit`, `npm install`) at the `zsh` function level instead of relying on prompt-based LLM behavioral rules. This bypasses ingrained LLM muscle memory by silently wrapping the native commands in `.zshrc_aios`, executing them normally but redirecting output to `/dev/null` and returning a deterministic, token-efficient summary back to the agent.
 
 ### [2026-06-29] Agent Logging Transcript Integration
-* **Transcript Symlinking Protocol:** Updated `<AGENT_WORK_LOGS>` rules in `.gemini/GEMINI.md` to instruct the agent to symlink the `agy` `transcript.jsonl` directory to `.agent-logs/transcripts/<Conversation ID>` at the end of each session.
+* **Transcript Symlinking Protocol:** Updated `<AGENT_WORK_LOGS>` rules in `.gemini/GEMINI.md` to instruct the agent to symlink the `agy` `transcript.jsonl` directory to `agent-logs/transcripts/<Conversation ID>` at the end of each session.
 * **Hybrid Context Logging:** The manual markdown logs now serve as a semantic "index" or TL;DR, containing a direct filesystem hyperlink to the symlinked raw transcript directory for deep-dive context retrieval without cluttering the main agent summary log.
 
 ### [2026-06-29] Token Optimization & Multi-Command Logging
