@@ -2,6 +2,10 @@
 
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
+### [2026-07-21] Auto-Commit & Git Sync Enhancements
+* **Auto-Commit Message & Push Integration (`scripts/auto_commit.py`):** Updated the auto-commit script to use active local model endpoints (`deepseek-v4-flash-high`) via LiteLLM to generate specific, 1-2 sentence commit descriptions of staged diffs (with clean file-summary fallbacks if the API is unavailable). Added automatic `git push` execution to auto_commit.py so changes are always pushed upon committing.
+* **Git Auto-Pull Protocol:** Enforced in `AGENTS.md` and `CLAUDE.md` that agents must run `git pull` before beginning work on established git projects to prevent merge clashes.
+
 ### [2026-07-10] Tmux-based LiteLLM Launch Agent
 * **LiteLLM Launch Agent & Tmux Monitor:** Implemented a macOS Launch Agent (`com.mattmurphy.litellm.plist`) and a wrapper script (`run_litellm.sh`) to run LiteLLM within a persistent, detached `tmux` session (`litellm`) on port 8082. This permits real-time console monitoring via `tmux attach -t litellm` and seamless daemon restarts (e.g. via `Ctrl+C` inside tmux or `tmux kill-session -t litellm`), while sourcing the user's login shell profile to preserve environment API keys (e.g. `OPENROUTER_API_KEY`).
 

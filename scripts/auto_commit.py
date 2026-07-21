@@ -50,14 +50,15 @@ def main():
     # 4. Request commit message from local LiteLLM proxy
     print("Generating commit message via LiteLLM...")
     prompt = (
-        "You are a technical assistant. Generate a concise, one-sentence git commit message summarizing the staged changes.\n"
-        "Format the commit message as: \"[Auto-Commit] <Action verb in present tense>: <Concise description>\"\n"
+        "You are a technical assistant. Generate a concise, clear git commit message (1-2 sentences max) summarizing the staged changes.\n"
+        "Format the commit message as: \"[Auto-Commit] <Action verb in present tense>: <Concise description of changes made>\"\n"
+        "Do not include generic messages like 'updated files'. Be specific about what changed.\n"
         "Do not include any other text, markdown formatting, or surrounding quotes. Respond with ONLY the commit message itself.\n\n"
         f"Here is the diff:\n{diff}"
     )
 
     req_data = json.dumps({
-        "model": "claude-haiku*",
+        "model": "deepseek-v4-flash-high",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 400,
         "temperature": 0.2
@@ -69,7 +70,17 @@ def main():
         headers={"Content-Type": "application/json"}
     )
 
-    commit_msg = "[Auto-Commit] Update files"
+    # Build an informative fallback message based on staged files rather than generic "Update files"
+    staged_status, _ = run_cmd(["git", "status", "--porcelain"])
+    staged_files = [line.strip().split()[-1] for line in staged_status.splitlines() if line.strip()]
+    if staged_files:
+        files_summary = ", ".join(staged_files[:3])
+        if len(staged_files) > 3:
+            files_summary += f" and {len(staged_files) - 3} other file(s)"
+        commit_msg = f"[Auto-Commit] Update {files_summary}"
+    else:
+        commit_msg = "[Auto-Commit] Update project files"
+
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
             res_body = json.loads(response.read().decode("utf-8"))
@@ -85,7 +96,6 @@ def main():
                 if content:
                     commit_msg = content
             else:
-                # Try fallback reasoning_content or other keys if available
                 reasoning = message.get("reasoning_content") or message.get("reasoning")
                 if reasoning:
                     print(f"Warning: Model returned reasoning but no content: {reasoning[:100]}...", file=sys.stderr)
@@ -98,5 +108,14 @@ def main():
     run_cmd(["git", "commit", "-m", commit_msg])
     print("Git commit completed successfully!")
 
+    # 6. Push changes to remote repository
+    print("Pushing commits to remote repository...")
+    _, push_code = run_cmd(["git", "push"], check=False)
+    if push_code == 0:
+        print("Git push completed successfully!")
+    else:
+        print("Warning: git push failed or no remote configured.", file=sys.stderr)
+
 if __name__ == "__main__":
     main()
+

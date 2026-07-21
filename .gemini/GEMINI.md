@@ -1,7 +1,8 @@
 # Core Project Rules
 
-## Auto-Commit Protocol
-**Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to delegate the commit process to a cheaper subagent/script.
+## Auto-Commit & Sync Protocols
+- **Git Auto-Pull:** Before any agent begins work on an established git project, it MUST run `git pull` (or `git pull --rebase` if local uncommitted work exists) to pull latest remote changes and prevent merge clashes.
+- **Auto-Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to delegate the commit process. Auto-commit automatically requires a descriptive commit message detailing the changes made (generated via LiteLLM from staged diff/files) and pushes the commits (`git push`) to the remote repository.
 
 ## Project Detection
 1. **Root Rule:** A "Project Root" is the nearest ancestor containing a `.git` folder, `package.json`, `Cargo.toml`, `requirements.txt`, or `go.mod`.
