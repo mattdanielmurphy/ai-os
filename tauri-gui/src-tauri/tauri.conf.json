@@ -52,7 +52,7 @@
       "dangerousRemoteDomainIpcAccess": [
         {
           "domain": "gemini.google.com",
-          "windows": ["floating"],
+          "windows": ["gemini_main", "floating"],
           "enableTauriAPI": true
         }
       ]

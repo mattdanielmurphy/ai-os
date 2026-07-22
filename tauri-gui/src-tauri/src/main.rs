@@ -278,28 +278,41 @@ fn main() {
             "#;
 
             let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini.js").unwrap_or_default();
-            let full_init_script = format!("{}\n{}", userscript_code, floating_init_script);
+
+            // 1. Expanded Normal Gemini Window (App Launch Target)
+            let gemini_main_window = tauri::WindowBuilder::new(
+                &app_handle,
+                "gemini_main",
+                tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap()),
+            )
+            .title("Gemini")
+            .initialization_script(&userscript_code)
+            .visible(true)
+            .decorations(true)
+            .transparent(false)
+            .inner_size(1200.0, 760.0)
+            .build()
+            .unwrap();
+
+            let _ = gemini_main_window.center();
+
+            // 2. Dedicated Floating Mini-Window Mode (Triggered only by Cmd+Option+Space)
+            let full_floating_init_script = format!("{}\n{}", userscript_code, floating_init_script);
 
             let floating_window = tauri::WindowBuilder::new(
                 &app_handle,
                 "floating",
                 tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap()),
             )
-            .title("Gemini")
-            .initialization_script(&full_init_script)
-            .visible(true)
+            .title("Gemini Quick Prompt")
+            .initialization_script(&full_floating_init_script)
+            .visible(false)
             .decorations(false)
             .transparent(true)
+            .inner_size(960.0, 324.0)
             .build()
             .unwrap();
 
-            let target_h = 760.0;
-            let target_w = 1200.0;
-
-            let _ = floating_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
-                width: target_w,
-                height: target_h,
-            }));
             let _ = floating_window.center();
 
             // Hide the default coding window ("main") on startup
