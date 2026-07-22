@@ -12,6 +12,10 @@
 - `/.devtool/features`: Features and user task specifications.
 
 ## Key Architecture & Domain Rules
+- **AI Clipboard Memory Tool (Usage: search-clipboard '<query>' [--pro])**: Agents can search macOS Alfred clipboard history using natural language by running ⚡ Flash model found no confident match. Auto-escalating to Gemini 2.5 Pro...
+
+=== AI Search Results for '<query>' ===
+No matching items found by AI. non-interactively in terminal. Supports URL pre-filtering, brand alias expansion (e.g. g.co, gemini.google.com), and auto-escalation to Gemini 2.5 Pro.
 - **Stable Anchor + Volatile Append Context Strategy:** Uses a structural map (repo map generated via AST parser/tree-sitter) as the stable front of the prompt context, and appends only active files and user requests at the end to maximize cache hits.
 - **Delegation Philosophy:** agy handles work directly by default, using its native tools. When delegation makes sense (large context savings), agy prefers self-delegation (`agy -p`) over external tools like Claude Code to avoid per-call costs. Extreme delegation mode (always delegate to Claude Code) is preserved as a skill for when it's needed.
 - **Dual-Rail Google Grid:** Seamlessly rotates Google accounts/authentication to double task quotas and VM limits.

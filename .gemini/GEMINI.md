@@ -101,6 +101,20 @@
   `python3 /Users/matt/projects/ai-os/scripts/handover.py --to-model pro --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
 - **Exclusively Use agy for Subagents**: When agy quota is high/abundant, use agy exclusively. If a prompt goes to Hermes (default), use the MCP tool to spawn a tmux-bound `agy` CLI instance as a subagent, or if already in agy, have agy spin up its own subagent natively. Do not spawn external API agents or run subagents without attaching/steering capabilities.
 
+
+### macOS TCC Permission Cache Invalidation Guardrail
+- **Context**: On macOS, rebuilding ad-hoc code binaries (e.g. swift build or xcodebuild) changes the binary's code directory hash (CDHash). macOS TCC tracks Accessibility and Input Monitoring permissions by (Bundle ID + CDHash).
+- **Constraint**: When an agent rebuilds a macOS app binary or encounters recurring 'Permission needed' loops despite permissions being toggled ON in System Settings:
+  - The agent MUST run `tccutil reset Accessibility <bundle-id>` and `tccutil reset ListenEvent <bundle-id>` to clear stale TCC cache entries.
+  - After resetting TCC caches and restarting the app, macOS will prompt for fresh Accessibility trust, stabilizing the permission grant for the new build.
+
+### Agent Clipboard Search Tool
+- **Context**: When a user refers to code, links, commands, or snippets seen/copied recently that are missing from active context/logs.
+- **Action**: Run ⚡ Flash model found no confident match. Auto-escalating to Gemini 2.5 Pro...
+
+=== AI Search Results for '<natural language query>' ===
+No matching items found by AI. via terminal (runs non-interactively when executed by background agent commands).
+
 # Global Workflows
 @~/.ai-workflows/audit.md
 @~/.ai-workflows/fast.md

@@ -107,6 +107,12 @@ Before acting on a workflow request (like 'audit', 'fast', or 'start'), you MUST
 - ~/.ai-workflows/fast.md
 - ~/.ai-workflows/start.md
 
+### macOS TCC Permission Cache Invalidation Guardrail
+- **Context**: On macOS, rebuilding ad-hoc code binaries (e.g. swift build or xcodebuild) changes the binary's code directory hash (CDHash). macOS TCC tracks Accessibility and Input Monitoring permissions by (Bundle ID + CDHash).
+- **Constraint**: When an agent rebuilds a macOS app binary or encounters recurring 'Permission needed' loops despite permissions being toggled ON in System Settings:
+  - The agent MUST run `tccutil reset Accessibility <bundle-id>` and `tccutil reset ListenEvent <bundle-id>` to clear stale TCC cache entries.
+  - After resetting TCC caches and restarting the app, macOS will prompt for fresh Accessibility trust, stabilizing the permission grant for the new build.
+
 ## Chrome DevTools MCP Safety Rules
 The user runs a single Chrome instance with the remote debugging port open, meaning their personal browsing tabs are mixed with development tabs. To protect the user's personal data and workflow, you MUST strictly adhere to the following rules when using Chrome DevTools MCP:
 
