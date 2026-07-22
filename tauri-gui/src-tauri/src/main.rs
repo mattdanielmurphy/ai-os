@@ -58,8 +58,12 @@ fn main() {
                         }
                         modifiedElements = [];
 
-                        document.documentElement.style.background = '';
-                        document.body.style.background = '';
+                        document.documentElement.style.background = '#131314';
+                        document.body.style.background = '#131314';
+                        const cw = document.querySelector('chat-window');
+                        if (cw) {
+                            cw.style.background = '#131314';
+                        }
                         document.documentElement.style.paddingTop = '';
                         if (document.body) {
                             document.body.style.paddingTop = '';
@@ -238,27 +242,6 @@ fn main() {
                       const chatWindow = document.querySelector('chat-window');
                       if (chatWindow) {
                         chatWindow.classList.remove('show-lm-background', 'lm-canvas-styling');
-                      }
-
-                      try {
-                        addedStyleSheet = new CSSStyleSheet();
-                        addedStyleSheet.replaceSync(`
-                          chat-window::before,
-                          chat-window::after {
-                            display: none !important;
-                            background-image: none !important;
-                            opacity: 0 !important;
-                          }
-                          chat-app {
-                            padding-top: 0px !important;
-                          }
-                          .input-area-container {
-                            z-index: 9999999 !important;
-                          }
-                        `);
-                        document.adoptedStyleSheets = [...document.adoptedStyleSheets, addedStyleSheet];
-                      } catch (e) {
-                        console.log('Constructable stylesheets blocked or unsupported, relying on class removal.', e);
                       }
 
                       const applyChatAppPadding = () => {
