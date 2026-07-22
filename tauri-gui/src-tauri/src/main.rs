@@ -257,9 +257,13 @@ fn main() {
                       chatAppObserver.observe(document.body, { childList: true, subtree: true });
                     }
                     if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', initIsolation);
+                        document.addEventListener('DOMContentLoaded', () => {
+                            initIsolation();
+                            transformToNormalWebview();
+                        });
                     } else {
                         initIsolation();
+                        transformToNormalWebview();
                     }
                 })();
             "#;
@@ -275,8 +279,8 @@ fn main() {
             .title("Gemini")
             .initialization_script(&full_init_script)
             .visible(true)
-            .decorations(false)
-            .transparent(true)
+            .decorations(true)
+            .transparent(false)
             .build()
             .unwrap();
 
