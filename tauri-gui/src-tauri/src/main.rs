@@ -200,7 +200,7 @@ fn main() {
                           let hasHistory = false;
                           let inputText = mainInput ? (mainInput.value || mainInput.innerText || "") : "";
                           let bodyText = document.body.innerText || "";
-                          if (bodyText.length - inputText.length > 500) {
+                          if (bodyText.length - inputText.length > 2500) {
                               hasHistory = true;
                           }
                           if (hasHistory) {
