@@ -93,6 +93,18 @@ def main():
         print("Warning: auto_commit.py exited with non-zero status", file=sys.stderr)
         sys.exit(code)
 
+    # Trigger background review asynchronously if transcript pointer exists
+    if metadata_str:
+        try:
+            conv_id = json.loads(metadata_str).get("tool", {}).get("conversationId")
+            if conv_id:
+                t_path = f"/Users/matt/.gemini/antigravity/brain/{conv_id}/.system_generated/logs/transcript.jsonl"
+                if os.path.exists(t_path):
+                    print("Launching background review extractor...")
+                    subprocess.Popen(["python3", "scripts/background_review.py", t_path, os.getcwd()])
+        except Exception as e:
+            print(f"Notice: background review trigger skipped ({e})", file=sys.stderr)
+
     print("Housekeeping finished successfully!")
 
 if __name__ == "__main__":
