@@ -44,82 +44,6 @@ fn main() {
                     let modifiedElements = [];
                     let addedStyleSheet = null;
 
-                    function injectPseudoToolbar() {
-                        if (document.getElementById('aios-pseudo-toolbar')) return;
-
-                        const toolbar = document.createElement('div');
-                        toolbar.id = 'aios-pseudo-toolbar';
-                        toolbar.setAttribute('data-tauri-drag-region', 'true');
-                        toolbar.style.cssText = `
-                            position: fixed !important;
-                            top: 0 !important;
-                            left: 0 !important;
-                            right: 0 !important;
-                            height: 38px !important;
-                            background: rgba(30, 30, 30, 0.96) !important;
-                            backdrop-filter: blur(16px) !important;
-                            -webkit-backdrop-filter: blur(16px) !important;
-                            border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-                            display: flex !important;
-                            align-items: center !important;
-                            padding: 0 14px !important;
-                            z-index: 999999999 !important;
-                            user-select: none !important;
-                            -webkit-user-select: none !important;
-                            box-sizing: border-box !important;
-                        `;
-
-                        toolbar.innerHTML = `
-                            <div style="display: flex; align-items: center; gap: 8px; z-index: 1000000000;">
-                                <button id="aios-close-btn" title="Close" style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f56; border: 0.5px solid #e0443e; cursor: pointer; padding: 0; margin: 0; outline: none; transition: transform 0.1s ease;"></button>
-                                <button id="aios-min-btn" title="Minimize" style="width: 12px; height: 12px; border-radius: 50%; background: #ffbd2e; border: 0.5px solid #dea123; cursor: pointer; padding: 0; margin: 0; outline: none; transition: transform 0.1s ease;"></button>
-                                <button id="aios-max-btn" title="Maximize" style="width: 12px; height: 12px; border-radius: 50%; background: #27c93f; border: 0.5px solid #1aab29; cursor: pointer; padding: 0; margin: 0; outline: none; transition: transform 0.1s ease;"></button>
-                            </div>
-                            <div style="flex: 1; text-align: center; font-size: 13px; color: #a1a1a6; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; pointer-events: none;">
-                                Gemini
-                            </div>
-                        `;
-
-                        (document.body || document.documentElement).appendChild(toolbar);
-
-                        toolbar.addEventListener('mousedown', (e) => {
-                            if (!e.target.closest('button')) {
-                                if (window.__TAURI__) {
-                                    window.__TAURI__.window.appWindow.startDragging();
-                                }
-                            }
-                        });
-
-                        const closeBtn = toolbar.querySelector('#aios-close-btn');
-                        const minBtn = toolbar.querySelector('#aios-min-btn');
-                        const maxBtn = toolbar.querySelector('#aios-max-btn');
-
-                        if (closeBtn) {
-                            closeBtn.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                if (window.__TAURI__) {
-                                    window.__TAURI__.window.appWindow.hide();
-                                }
-                            });
-                        }
-                        if (minBtn) {
-                            minBtn.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                if (window.__TAURI__) {
-                                    window.__TAURI__.window.appWindow.minimize();
-                                }
-                            });
-                        }
-                        if (maxBtn) {
-                            maxBtn.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                if (window.__TAURI__) {
-                                    window.__TAURI__.window.appWindow.toggleMaximize();
-                                }
-                            });
-                        }
-                    }
-
                     function transformToNormalWebview() {
                         if (isTransformed) return;
                         isTransformed = true;
@@ -136,6 +60,10 @@ fn main() {
 
                         document.documentElement.style.background = '';
                         document.body.style.background = '';
+                        document.documentElement.style.paddingTop = '';
+                        if (document.body) {
+                            document.body.style.paddingTop = '';
+                        }
 
                         const target = document.querySelector('.input-area-container');
                         if (target) {
@@ -148,13 +76,6 @@ fn main() {
                             } catch (e) {}
                         }
 
-                        injectPseudoToolbar();
-
-                        document.documentElement.style.setProperty('padding-top', '38px', 'important');
-                        if (document.body) {
-                            document.body.style.setProperty('padding-top', '38px', 'important');
-                        }
-
                         const chatApp = document.querySelector('chat-app');
                         if (chatApp) {
                             chatApp.style.paddingTop = '';
@@ -162,10 +83,17 @@ fn main() {
 
                         if (window.__TAURI__) {
                             const appWin = window.__TAURI__.window.appWindow;
+                            appWin.setDecorations(true);
+
+                            const screenH = window.screen.availHeight || 900;
+                            const screenW = window.screen.availWidth || 1440;
+                            const targetH = Math.min(760, Math.max(500, Math.floor(screenH * 0.80)));
+                            const targetW = Math.min(1200, Math.max(800, Math.floor(screenW * 0.82)));
+
                             if (window.__TAURI__.window.LogicalSize) {
-                                appWin.setSize(new window.__TAURI__.window.LogicalSize(1280, 880));
+                                appWin.setSize(new window.__TAURI__.window.LogicalSize(targetW, targetH));
                             } else {
-                                appWin.setSize(new window.__TAURI__.window.PhysicalSize(2560, 1760));
+                                appWin.setSize(new window.__TAURI__.window.PhysicalSize(targetW, targetH));
                             }
                             appWin.center();
                         }
@@ -379,6 +307,7 @@ fn main() {
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
+                        let _ = window.set_decorations(false);
                         let _ = window.eval("window.location.href = 'https://gemini.google.com/app';");
                         let _ = window.show();
                         let _ = window.set_focus();
