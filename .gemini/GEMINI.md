@@ -115,7 +115,7 @@
 === AI Search Results for '<natural language query>' ===
 No matching items found by AI. via terminal (runs non-interactively when executed by background agent commands).
 
-# Global Workflows
+## Global Workflows
 @~/.ai-workflows/audit.md
 @~/.ai-workflows/fast.md
 @~/.ai-workflows/start.md
@@ -127,3 +127,30 @@ The user runs a single Chrome instance with the remote debugging port open, mean
 2. **Require Confirmation on Ambiguity**: If it is not 100% obvious which tab you are supposed to interact with, you MUST ask the user to confirm the target tab before doing anything. 
 3. **Strict Isolation**: NEVER modify, close, navigate, or clear data on any tab other than the explicit target tab. Treat all other tabs as off-limits personal data.
 4. **Prefer New Tabs**: If a task requires testing a new URL or running a clean test, use `mcp_chrome-devtools_new_page` to spawn a fresh tab rather than hijacking an existing one. Work exclusively within that new tab.
+
+## Hermes Operational Emulation & Self-Improvement Protocol (Antigravity Only)
+When running under Gemini/Antigravity without Hermes' active daemon, you MUST emulate Hermes' core runtime directives:
+
+1. **Tool-Use Enforcement**:
+   - You MUST use tools to take action — never describe what you plan to do without executing it in the same turn.
+   - Responses that only describe intentions ("I will run the tests", "Let me inspect the file") without accompanying tool calls are prohibited.
+
+2. **Task Completion & Anti-Fabrication**:
+   - Deliverables must be working artifacts backed by real tool execution output, not prose or stubs.
+   - Do not stop after writing a stub, plan, or single command. Keep working until the code/feature is exercised.
+   - If a tool or command fails, report the blocker honestly. NEVER substitute plausible-looking fabricated output (invented file contents, fake JSON responses, made-up metrics).
+
+3. **Parallel Tool Batching**:
+   - Request independent information (reading multiple files, searching directories, web lookups) in a single response turn rather than serializing them across multiple turns.
+   - Only serialize tool calls when a step depends directly on the result of a previous step.
+
+4. **Google & Antigravity Operational Directives**:
+   - **Absolute Paths**: Always construct and use absolute file paths for all filesystem operations.
+   - **Verify First**: Inspect file contents and project structure before making modifications.
+   - **Dependency Checks**: Check `package.json`, `Cargo.toml`, `requirements.txt`, etc., before assuming a dependency exists.
+   - **Non-Interactive Flags**: Use `-y`, `--yes`, `--non-interactive` to prevent CLI tasks from hanging on input prompts.
+
+5. **Self-Improvement & Continuous Learning**:
+   - **Post-Task Evaluation**: After completing a complex task (5+ tool calls), resolving a tricky bug, or discovering an unstated workspace constraint, evaluate what was learned before concluding the session.
+   - **Declarative Memory**: Record durable facts into `AG_CONTEXT.md` as declarative statements (e.g. "Project uses Bun for package management", not "Always use Bun").
+   - **Skill Distillation**: If a new workflow or procedure is created, distill it into a reusable skill following Hermes authoring standards (Frontmatter description <= 60 characters, single declarative sentence, structured sections: `When to Use`, `Prerequisites`, `Procedure`, `Pitfalls`, `Verification`).
