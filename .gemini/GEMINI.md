@@ -94,12 +94,16 @@
 - **Constraint**: When the agent finishes a task, it MUST NOT set `status: "done"` or move the feature file to `.devtool/features/done/`. Instead, it must transition the task to `status: "review"` in the frontmatter, and leave the feature file directly under `.devtool/features/` (not in `done/`), because only the user can confirm if the task was completed to their satisfaction.
 
 ### Model Triage and Handoff Rules
-- **Triage Role**: When running under `claude-haiku-ds-v4-flash-low` (Fast/Cheap Model), you are in triage mode. Assess if the user request requires deep reasoning, multi-file edits, complex refactoring, or multi-step execution.
-- **Execution Limit**: If the task is trivially simple (e.g., viewing a file, explaining a simple concept, making a minor 1-line tweak), complete it directly.
-- **Handoff Action**: If the task is complex, you MUST immediately hand off by spawning the local `agy` CLI client (`antigravity-cli`) rather than hitting an API endpoint. Under active high-quota settings, always use `agy` (running the Google Gemini pro model, targeted using `--to-model pro`) as the target instead of other external command line agents.
-- **Interactive Handoff & Spawn**: Never run agents blind (do not use `--non-interactive`, `--print`, or background execution without attachment). Handoffs must be run interactively to allow the user to review the plan and steering instructions. The handoff command MUST execute the `handover.py` script, which replaces the current process (`os.execvp("agy", ...)`) to attach the interactive `agy` CLI session directly to your terminal. Execute the handoff by running:
-  `python3 /Users/matt/projects/ai-os/scripts/handover.py --to-model pro --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
-- **Exclusively Use agy for Subagents**: When agy quota is high/abundant, use agy exclusively. If a prompt goes to Hermes (default), use the MCP tool to spawn a tmux-bound `agy` CLI instance as a subagent, or if already in agy, have agy spin up its own subagent natively. Do not spawn external API agents or run subagents without attaching/steering capabilities.
+- **Pre-Flight Quota Check & Mode Switching Rule**: At the start of Antigravity calls (pre-flight check):
+  1. **Run Quota CLI:** Execute `ag-quota -j` (or fallback to `codexbar status` / `codexbar list`).
+  2. **Evaluate Quota & Burn Velocity:** Check remaining fraction across available models (e.g., Gemini 3.1 Pro / Flash / Claude).
+  3. **Automatic Mode Switch:**
+     - **Low Quota / Fast Burn Rate:** If quota is depleted (e.g. key model remaining fraction < 25%) or burning quickly, automatically switch to **Strict Orchestrator Mode (Minimal-Token Mode / Mode 3)**.
+     - **Strict Orchestrator Behavior:** Act strictly as a high-level coordinator doing minimal direct tool work. Delegate code generation and multi-step editing tasks to `claude code` running cost-effective models (e.g., via Google/OpenRouter APIs via LiteLLM) or cheap subagents.
+     - **High / Abundant Quota:** Continue operating in standard Mode 2 (Mixed Delegation) / direct execution.
+- **Triage Role**: Assess request complexity and available quota before heavy execution.
+- **Execution Limit**: If the task is trivially simple, complete it directly.
+- **Handoff & Subagent Delegation Action**: Use `claude code` or lightweight subagents with cheap models when in minimal-token mode. Under active high-quota settings, standard agy subagent/direct execution applies.
 
 
 ### macOS TCC Permission Cache Invalidation Guardrail

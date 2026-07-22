@@ -3,6 +3,9 @@
 *This ledger tracks confirmed capabilities, implemented features, and resolved structural bugs within the workspace.*
 
 ### [2026-07-21] Auto-Commit & Git Sync Enhancements
+
+### [2026-07-22] Quota Pre-Flight Check & Minimal-Token Mode Auto-Switching
+* **Pre-Flight Quota Rule ():** Configured Antigravity pre-flight list instructions to run `ag-quota -j` (or `codexbar status`/`codexbar list`) at the start of calls. Automatically evaluates remaining fraction across available models (e.g. Gemini 3.1 Pro / Flash / Claude). If quota is low (<25%) or burning quickly, the system automatically transitions into Minimal-Token Mode (Strict Orchestrator Mode 3) and delegates heavy edits/reads to `claude code` or cheap subagent models via LiteLLM.
 * **Auto-Commit Message & Push Integration (`scripts/auto_commit.py`):** Updated the auto-commit script to use active local model endpoints (`deepseek-v4-flash-high`) via LiteLLM to generate specific, 1-2 sentence commit descriptions of staged diffs (with clean file-summary fallbacks if the API is unavailable). Added automatic `git push` execution to auto_commit.py so changes are always pushed upon committing.
 * **Git Auto-Pull Protocol:** Enforced in `AGENTS.md` and `CLAUDE.md` that agents must run `git pull` before beginning work on established git projects to prevent merge clashes.
 

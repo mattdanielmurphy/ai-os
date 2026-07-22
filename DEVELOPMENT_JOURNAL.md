@@ -6,6 +6,10 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-07-20
 
+## 2026-07-22
+
+- **Quota Pre-Flight Check & Minimal-Token Mode Rule:** Added pre-flight quota inspection rule to `AGENTS.md`. Antigravity calls evaluate quota via `ag-quota -j` (or `codexbar status`/`list`) and automatically switch to Minimal-Token Mode (Strict Orchestrator Mode 3) under low quota or rapid burn velocity, delegating code generation to `claude code` or cheap subagents. [[log]](agent-logs/2026-07-22_02-08_preflight-quota-check-minimal-token-mode.md)
+
 - **Strategic Pivot: Minimal Fork + litellm Bridge.** Hit breaking point with the current approach — monkey-patching `interruptible_api_call` in `aios_hermes_wrapper.py` plus a separate `sitecustomize.py` for the WebUI is too fragile. Hermes WebUI "cancel" drops thread context, which defeats the purpose of interactive agent loop. Decided to pivot to a **minimal fork of Hermes Agent** that adds agy as a real *provider* (not a faked tool call), with ~30 lines of changes instead of 190 lines of monkey-patching. Fork retains upstream merge compatibility. Architecture: `User → Launcher/Shell Wrapper → Triage → litellm → Model`. Claude Code handles Ctrl+C correctly with full context preservation. [[agent-log]](agent-logs/2026-07-20_00-30_strategic-pivot-minimal-fork-triage.md)
 - **Created this dev journal.** Agent logs are too detailed for human consumption. This file is the human-readable timeline. All agents must append here at session end. [[agent-log]](agent-logs/2026-07-20_00-30_strategic-pivot-minimal-fork-triage.md)
 - **Phase 1: Split Tauri backend `main.rs` into modules.** Extracted the 3,188-line monolith into 5 focused modules: `types.rs` (148 lines), `pty.rs` (630), `threads.rs` (1,107), `server.rs` (402), `session.rs` (1,142). Main is now 299 lines. Zero behavior changes, clean compile with zero warnings. This makes the codebase debuggable and sets up Phase 2 (cutting unused complexity). [[agent-log]](agent-logs/2026-07-20_00-30_strategic-pivot-minimal-fork-triage.md)
