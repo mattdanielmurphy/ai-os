@@ -87,7 +87,13 @@ fn main() {
 
                         if (window.__TAURI__) {
                             const appWin = window.__TAURI__.window.appWindow;
-                            appWin.setDecorations(true);
+                            try {
+                                if (appWin && typeof appWin.setDecorations === 'function') {
+                                    appWin.setDecorations(true);
+                                }
+                            } catch (e) {
+                                console.log('setDecorations ignored or unsupported in runtime:', e);
+                            }
 
                             const screenH = window.screen.availHeight || 900;
                             const screenW = window.screen.availWidth || 1440;
@@ -256,14 +262,17 @@ fn main() {
                       const chatAppObserver = new MutationObserver(applyChatAppPadding);
                       chatAppObserver.observe(document.body, { childList: true, subtree: true });
                     }
+                    function resetToFloatingMiniMode() {
+                        isTransformed = false;
+                        document.documentElement.style.background = 'transparent';
+                        document.body.style.background = 'transparent';
+                        initIsolation();
+                    }
+
                     if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', () => {
-                            initIsolation();
-                            transformToNormalWebview();
-                        });
+                        document.addEventListener('DOMContentLoaded', initIsolation);
                     } else {
                         initIsolation();
-                        transformToNormalWebview();
                     }
                 })();
             "#;
@@ -279,8 +288,8 @@ fn main() {
             .title("Gemini")
             .initialization_script(&full_init_script)
             .visible(true)
-            .decorations(true)
-            .transparent(false)
+            .decorations(false)
+            .transparent(true)
             .build()
             .unwrap();
 
