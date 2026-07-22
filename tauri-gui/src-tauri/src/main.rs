@@ -281,25 +281,37 @@ fn main() {
                 })();
             "#;
 
+            let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini.js").unwrap_or_default();
+            let full_init_script = format!("{}\n{}", userscript_code, floating_init_script);
+
             let floating_window = tauri::WindowBuilder::new(
                 &app_handle,
                 "floating",
                 tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap()),
             )
-            .title("Gemini Floating")
-            .initialization_script(floating_init_script)
-            .visible(false)
-            .decorations(false)
-            .transparent(true)
+            .title("Gemini")
+            .initialization_script(&full_init_script)
+            .visible(true)
+            .decorations(true)
+            .transparent(false)
             .build()
             .unwrap();
 
-            let _ = floating_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
-                width: 960.0,
-                height: 324.0,
-            }));
+            let target_h = 760.0;
+            let target_w = 1200.0;
 
-            // --- global shortcut ---
+            let _ = floating_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                width: target_w,
+                height: target_h,
+            }));
+            let _ = floating_window.center();
+
+            // Hide the default coding window ("main") on startup
+            if let Some(main_win) = app_handle.get_window("main") {
+                let _ = main_win.hide();
+            }
+
+            // --- global shortcuts ---
             let app_handle_clone = app_handle.clone();
             let mut shortcut_manager = app.global_shortcut_manager();
             let _ = shortcut_manager.register("Cmd+Option+Space", move || {
@@ -307,8 +319,18 @@ fn main() {
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
                     } else {
-                        let _ = window.set_decorations(false);
-                        let _ = window.eval("window.location.href = 'https://gemini.google.com/app';");
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            });
+
+            let app_handle_coding = app_handle.clone();
+            let _ = shortcut_manager.register("Cmd+Option+C", move || {
+                if let Some(window) = app_handle_coding.get_window("main") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
                         let _ = window.show();
                         let _ = window.set_focus();
                     }
