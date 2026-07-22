@@ -1,1 +1,1 @@
-.gemini/GEMINI.md
+/Users/matt/.gemini/GEMINI.md
