@@ -23,6 +23,7 @@ fn spawn_fresh_engine(
 }
 
 fn main() {
+    std::env::set_var("RUST_BACKTRACE", "1");
     std::panic::set_hook(Box::new(|panic_info| {
         let backtrace = std::backtrace::Backtrace::capture();
         let home = std::env::var("HOME").unwrap_or_default();
