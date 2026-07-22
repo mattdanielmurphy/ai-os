@@ -275,8 +275,8 @@ fn main() {
             .title("Gemini")
             .initialization_script(&full_init_script)
             .visible(true)
-            .decorations(true)
-            .transparent(false)
+            .decorations(false)
+            .transparent(true)
             .build()
             .unwrap();
 
