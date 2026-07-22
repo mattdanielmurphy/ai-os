@@ -7,6 +7,8 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 ## 2026-07-20
 
 ## 2026-07-22
+- **Standard macOS Menu & Shortcuts:** Added full native macOS menu bar (App, File, Edit, View, Actions, Window, Help) and native hotkeys across all windows. See [2026-07-22_04-14_standard-mac-app-menu-shortcuts.md](file:///Users/matt/projects/ai-os/agent-logs/2026-07-22_04-14_standard-mac-app-menu-shortcuts.md).
+- **Standard macOS Menu & Shortcuts:** Added full native macOS menu bar (App, File, Edit, View, Actions, Window, Help) and native hotkeys across all windows. See [2026-07-22_04-14_standard-mac-app-menu-shortcuts.md](file:///Users/matt/projects/ai-os/agent-logs/2026-07-22_04-14_standard-mac-app-menu-shortcuts.md).
 
 - **Quota Pre-Flight Check & Minimal-Token Mode Rule:** Added pre-flight quota inspection rule to `AGENTS.md`. Antigravity calls evaluate quota via `ag-quota -j` (or `codexbar status`/`list`) and automatically switch to Minimal-Token Mode (Strict Orchestrator Mode 3) under low quota or rapid burn velocity, delegating code generation to `claude code` or cheap subagents. [[log]](agent-logs/2026-07-22_02-08_preflight-quota-check-minimal-token-mode.md)
 - **Gemini Floating Webview Native macOS Decorations & Screen-Bounded Resizing:** Replaced HTML pseudo-toolbar with native macOS window decorations (`appWin.setDecorations(true)`), giving standard title bar and stoplights. Bounded window dimensions dynamically to 80% of `window.screen.availHeight` centered on screen to ensure the bottom edge never goes off screen. [[log]](agent-logs/2026-07-22_02-38_native-decorations-and-screen-bounded-resizing.md)

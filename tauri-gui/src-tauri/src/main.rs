@@ -32,8 +32,68 @@ fn main() {
     std::env::set_var("PATH", new_path);
 
     let context = tauri::generate_context!();
+    let app_name = &context.package_info().name;
+
+    let app_menu = tauri::Menu::new()
+        .add_native_item(tauri::MenuItem::About(app_name.to_string(), tauri::AboutMetadata::default()))
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_native_item(tauri::MenuItem::Services)
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_native_item(tauri::MenuItem::Hide)
+        .add_native_item(tauri::MenuItem::HideOthers)
+        .add_native_item(tauri::MenuItem::ShowAll)
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_native_item(tauri::MenuItem::Quit);
+
+    let file_menu = tauri::Menu::new()
+        .add_item(tauri::CustomMenuItem::new("new_window", "New Window").accelerator("Cmd+N"))
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_native_item(tauri::MenuItem::CloseWindow);
+
+    let edit_menu = tauri::Menu::new()
+        .add_native_item(tauri::MenuItem::Undo)
+        .add_native_item(tauri::MenuItem::Redo)
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_native_item(tauri::MenuItem::Cut)
+        .add_native_item(tauri::MenuItem::Copy)
+        .add_native_item(tauri::MenuItem::Paste)
+        .add_native_item(tauri::MenuItem::SelectAll)
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_item(tauri::CustomMenuItem::new("find", "Find on Page...").accelerator("Cmd+F"));
+
+    let view_menu = tauri::Menu::new()
+        .add_item(tauri::CustomMenuItem::new("reload", "Reload Page").accelerator("Cmd+R"))
+        .add_item(tauri::CustomMenuItem::new("toggle_devtools", "Toggle Developer Tools").accelerator("Cmd+Alt+I"))
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_native_item(tauri::MenuItem::EnterFullScreen);
+
+    let actions_menu = tauri::Menu::new()
+        .add_item(tauri::CustomMenuItem::new("new_engine", "Spawn Fresh Engine").accelerator("Cmd+Shift+N"))
+        .add_item(tauri::CustomMenuItem::new("switch_project", "Switch Active Project...").accelerator("Cmd+O"))
+        .add_item(tauri::CustomMenuItem::new("search_threads", "Search AI Threads...").accelerator("Cmd+Shift+F"));
+
+    let window_menu = tauri::Menu::new()
+        .add_native_item(tauri::MenuItem::Minimize)
+        .add_native_item(tauri::MenuItem::Zoom)
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_item(tauri::CustomMenuItem::new("focus_gemini", "Gemini Window").accelerator("Cmd+1"))
+        .add_item(tauri::CustomMenuItem::new("focus_coding", "Coding Harness Window").accelerator("Cmd+2"))
+        .add_item(tauri::CustomMenuItem::new("toggle_quick_prompt", "Toggle Quick Prompt Floating Window").accelerator("Cmd+Alt+Space"));
+
+    let help_menu = tauri::Menu::new()
+        .add_item(tauri::CustomMenuItem::new("help_docs", "AI-OS Documentation"));
+
+    let menu = tauri::Menu::new()
+        .add_submenu(tauri::Submenu::new(app_name, app_menu))
+        .add_submenu(tauri::Submenu::new("File", file_menu))
+        .add_submenu(tauri::Submenu::new("Edit", edit_menu))
+        .add_submenu(tauri::Submenu::new("View", view_menu))
+        .add_submenu(tauri::Submenu::new("Actions", actions_menu))
+        .add_submenu(tauri::Submenu::new("Window", window_menu))
+        .add_submenu(tauri::Submenu::new("Help", help_menu));
+
     tauri::Builder::default()
-        .menu(tauri::Menu::os_default(&context.package_info().name))
+        .menu(menu)
         .setup(|app| {
             let app_handle = app.handle();
 
@@ -362,6 +422,61 @@ fn main() {
             });
 
             Ok(())
+        })
+        .on_menu_event(|event| {
+            let app_handle = event.window().app_handle();
+            match event.menu_item_id() {
+                "new_window" => {
+                    if let Some(win) = app_handle.get_window("gemini_main") {
+                        let _ = win.show();
+                        let _ = win.set_focus();
+                    }
+                }
+                "find" => {
+                    let _ = event.window().eval(r#"
+                        if (window.find) {
+                            const query = prompt('Find in page:');
+                            if (query) window.find(query);
+                        }
+                    "#);
+                }
+                "reload" => {
+                    let _ = event.window().eval("window.location.reload();");
+                }
+                "toggle_devtools" => {
+                    if event.window().is_devtools_open() {
+                        event.window().close_devtools();
+                    } else {
+                        event.window().open_devtools();
+                    }
+                }
+                "focus_gemini" => {
+                    if let Some(win) = app_handle.get_window("gemini_main") {
+                        let _ = win.show();
+                        let _ = win.set_focus();
+                    }
+                }
+                "focus_coding" => {
+                    if let Some(win) = app_handle.get_window("main") {
+                        let _ = win.show();
+                        let _ = win.set_focus();
+                    }
+                }
+                "toggle_quick_prompt" => {
+                    if let Some(win) = app_handle.get_window("floating") {
+                        if win.is_visible().unwrap_or(false) {
+                            let _ = win.hide();
+                        } else {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                }
+                "help_docs" => {
+                    let _ = event.window().eval("window.open('https://github.com/mattdanielmurphy/ai-os', '_blank');");
+                }
+                _ => {}
+            }
         })
         .on_page_load(|window, _| {
             let _ = window.eval(
