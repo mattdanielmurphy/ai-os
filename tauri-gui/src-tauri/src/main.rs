@@ -40,6 +40,48 @@ fn main() {
             // --- floating window init script ---
             let floating_init_script = r#"
                 (function() {
+                    let isTransformed = false;
+                    let modifiedElements = [];
+                    let addedStyleSheet = null;
+
+                    function transformToNormalWebview() {
+                        if (isTransformed) return;
+                        isTransformed = true;
+
+                        for (let el of modifiedElements) {
+                            if (el && el.style) {
+                                el.style.visibility = '';
+                                el.style.pointerEvents = '';
+                                el.style.background = '';
+                                el.style.backgroundImage = '';
+                            }
+                        }
+                        modifiedElements = [];
+
+                        document.documentElement.style.background = '';
+                        document.body.style.background = '';
+
+                        const target = document.querySelector('.input-area-container');
+                        if (target) {
+                            target.style.zIndex = '';
+                        }
+
+                        if (addedStyleSheet && document.adoptedStyleSheets) {
+                            try {
+                                document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== addedStyleSheet);
+                            } catch (e) {}
+                        }
+
+                        const chatApp = document.querySelector('chat-app');
+                        if (chatApp) {
+                            chatApp.style.paddingTop = '';
+                        }
+
+                        if (window.__TAURI__) {
+                            window.__TAURI__.window.appWindow.setSize(new window.__TAURI__.window.PhysicalSize(1000, 850));
+                        }
+                    }
+
                     function initIsolation() {
                       const target = document.querySelector('.input-area-container');
 
@@ -47,6 +89,8 @@ fn main() {
                         setTimeout(initIsolation, 500);
                         return;
                       }
+
+                      if (isTransformed) return;
 
                       target.style.setProperty('z-index', '9999999', 'important');
 
@@ -57,12 +101,14 @@ fn main() {
                           if (sibling !== current) {
                             sibling.style.visibility = 'hidden';
                             sibling.style.pointerEvents = 'none';
+                            modifiedElements.push(sibling);
                           }
                         }
                         current.style.visibility = 'visible';
                         if (current !== target) {
                           current.style.background = 'transparent';
                           current.style.backgroundImage = 'none';
+                          modifiedElements.push(current);
                         }
                         current = current.parentElement;
                       }
@@ -71,6 +117,7 @@ fn main() {
                       document.body.style.background = 'transparent';
 
                       target.addEventListener('mousedown', (e) => {
+                          if (isTransformed) return;
                           if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
                               if (window.__TAURI__) {
                                   window.__TAURI__.window.appWindow.startDragging();
@@ -78,10 +125,43 @@ fn main() {
                           }
                       });
 
+                      document.addEventListener('keydown', (e) => {
+                          if (e.metaKey && e.altKey && e.code === 'KeyI') {
+                              if (window.__TAURI__) {
+                                  window.__TAURI__.invoke('open_devtools');
+                              }
+                          }
+                          if (!isTransformed && e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                              const active = document.activeElement;
+                              if (active && (active.tagName === 'TEXTAREA' || active.isContentEditable || active.getAttribute('contenteditable') === 'true' || active.closest('rich-textarea, .input-area-container'))) {
+                                  setTimeout(transformToNormalWebview, 100);
+                              }
+                          }
+                      }, true);
+
+                      document.addEventListener('click', (e) => {
+                          if (isTransformed) return;
+                          const btn = e.target.closest('button');
+                          if (btn) {
+                              const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+                              const className = (btn.className || '').toString().toLowerCase();
+                              if (aria.includes('send') || className.includes('send') || btn.querySelector('mat-icon[fonticon*="send"]') || btn.closest('.send-button-container')) {
+                                  setTimeout(transformToNormalWebview, 100);
+                              }
+                          }
+                      }, true);
+
                       let lastHeight = 324;
                       let resizeTimeout;
 
                       function calculateAndSetSize() {
+                          if (isTransformed) return;
+
+                          if (document.querySelector('user-message, model-message, message-list, .conversation-container, .response-container-content')) {
+                              transformToNormalWebview();
+                              return;
+                          }
+
                           let desiredHeight = 180;
                           const textboxes = Array.from(document.querySelectorAll('textarea, [contenteditable="true"], rich-textarea'));
                           let mainInput = null;
@@ -101,17 +181,14 @@ fn main() {
                               }
                           }
                           let hasHistory = false;
-                          if (document.querySelector('user-message, model-message, message-list')) {
+                          let inputText = mainInput ? (mainInput.value || mainInput.innerText || "") : "";
+                          let bodyText = document.body.innerText || "";
+                          if (bodyText.length - inputText.length > 500) {
                               hasHistory = true;
-                          } else {
-                              let inputText = mainInput ? (mainInput.value || mainInput.innerText || "") : "";
-                              let bodyText = document.body.innerText || "";
-                              if (bodyText.length - inputText.length > 500) {
-                                  hasHistory = true;
-                              }
                           }
                           if (hasHistory) {
-                              desiredHeight = 800;
+                              transformToNormalWebview();
+                              return;
                           }
                           desiredHeight = Math.round(desiredHeight * 1.8);
                           desiredHeight = Math.max(324, Math.min(1440, desiredHeight));
@@ -124,12 +201,14 @@ fn main() {
                       }
 
                       const resizeObserver = new ResizeObserver(() => {
+                          if (isTransformed) return;
                           clearTimeout(resizeTimeout);
                           resizeTimeout = setTimeout(calculateAndSetSize, 50);
                       });
                       resizeObserver.observe(document.body);
 
                       const mutObserver = new MutationObserver(() => {
+                          if (isTransformed) return;
                           clearTimeout(resizeTimeout);
                           resizeTimeout = setTimeout(calculateAndSetSize, 50);
                       });
@@ -141,8 +220,8 @@ fn main() {
                       }
 
                       try {
-                        const sheet = new CSSStyleSheet();
-                        sheet.replaceSync(`
+                        addedStyleSheet = new CSSStyleSheet();
+                        addedStyleSheet.replaceSync(`
                           chat-window::before,
                           chat-window::after {
                             display: none !important;
@@ -156,20 +235,13 @@ fn main() {
                             z-index: 9999999 !important;
                           }
                         `);
-                        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+                        document.adoptedStyleSheets = [...document.adoptedStyleSheets, addedStyleSheet];
                       } catch (e) {
                         console.log('Constructable stylesheets blocked or unsupported, relying on class removal.', e);
                       }
 
-                      document.addEventListener('keydown', (e) => {
-                          if (e.metaKey && e.altKey && e.code === 'KeyI') {
-                              if (window.__TAURI__) {
-                                  window.__TAURI__.invoke('open_devtools');
-                              }
-                          }
-                      });
-
                       const applyChatAppPadding = () => {
+                        if (isTransformed) return;
                         const chatApp = document.querySelector('chat-app');
                         if (chatApp) {
                           chatApp.style.setProperty('padding-top', '0px', 'important');
