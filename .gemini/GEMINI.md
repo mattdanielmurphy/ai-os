@@ -94,14 +94,21 @@
 - **Constraint**: When the agent finishes a task, it MUST NOT set `status: "done"` or move the feature file to `.devtool/features/done/`. Instead, it must transition the task to `status: "review"` in the frontmatter, and leave the feature file directly under `.devtool/features/` (not in `done/`), because only the user can confirm if the task was completed to their satisfaction.
 
 ### Model Triage and Handoff Rules
-- **Pre-Flight Quota Check & Mode Switching Rule**: At the start of Antigravity calls (pre-flight check):
-  1. **Run Quota CLI:** Execute `ag-quota -j` (or fallback to `codexbar status` / `codexbar list`).
-  2. **Evaluate Quota & Burn Velocity:** Check remaining fraction across available models (e.g., Gemini 3.1 Pro / Flash / Claude).
-  3. **Automatic Mode Switch:**
-     - **Low Quota / Fast Burn Rate:** If quota is depleted (e.g. key model remaining fraction < 25%) or burning quickly, automatically switch to **Strict Orchestrator Mode (Minimal-Token Mode / Mode 3)**.
-     - **Strict Orchestrator Behavior:** Act strictly as a high-level coordinator doing minimal direct tool work. Delegate code generation and multi-step editing tasks to `claude code` running cost-effective models (e.g., via Google/OpenRouter APIs via LiteLLM) or cheap subagents.
-     - **High / Abundant Quota:** Continue operating in standard Mode 2 (Mixed Delegation) / direct execution.
-- **Triage Role**: Assess request complexity and available quota before heavy execution.
+- **Pre-Flight Quota & Multi-Account Velocity Check**: At the start of Antigravity calls (pre-flight check):
+  1. **Run Quota CLI (Both Accounts):** Execute `ag-quota --all -j` to query remaining quotas across both active accounts (`darryl.l.murphy@gmail.com` and `iammattmurphy@gmail.com`).
+  2. **Account Switching Trigger:** If the primary account's key model fraction drops below 10% (or is exhausted), switch active accounts using `ag-quota switch` or route calls to the secondary account before throttling.
+  3. **Multi-Window Burn Velocity Evaluation (5-Hour & Weekly):**
+     - **5-Hour Window:** Calculate hourly consumption velocity \(V_{5h} = \frac{1 - R_{5h}}{T_{elapsed}}\). If projected consumption will exhaust the 5-hour quota window before reset, trigger conservation.
+     - **Weekly Window:** Target maximum safe burn rate while keeping weekly depletion close to 100% at week end:
+       \[
+       R_{threshold} = 1.0 - \left( \frac{\text{Hours Elapsed in Week}}{168} \right)
+       \]
+       If active combined remaining fraction across accounts is below \(R_{threshold}\) (i.e. burning faster than linear weekly budget), activate **Strict Orchestrator Mode (Mode 3)**.
+  4. **Automatic Mode Switch:**
+     - **Conserve Mode (Mode 3 - Minimal-Token Mode):** Triggered when both accounts are low, 5-hour burn velocity threatens reset outage, or weekly remaining fraction is below the target weekly budget line.
+     - **Strict Orchestrator Behavior:** Act strictly as a high-level coordinator doing minimal direct tool work. Delegate code generation and multi-step editing tasks to `claude code` or cheap subagents.
+     - **Normal Mode (Mode 2):** Operate in standard mixed delegation mode when combined account quota velocity is healthy relative to weekly/5h reset timelines.
+- **Triage Role**: Assess request complexity and available quota velocity before heavy execution.
 - **Execution Limit**: If the task is trivially simple, complete it directly.
 - **Handoff & Subagent Delegation Action**: Use `claude code` or lightweight subagents with cheap models when in minimal-token mode. Under active high-quota settings, standard agy subagent/direct execution applies.
 
