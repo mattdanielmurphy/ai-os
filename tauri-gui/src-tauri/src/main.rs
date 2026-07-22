@@ -308,16 +308,25 @@ fn main() {
                       const resizeObserver = new ResizeObserver(() => {
                           if (isTransformed) return;
                           clearTimeout(resizeTimeout);
-                          resizeTimeout = setTimeout(calculateAndSetSize, 50);
+                          resizeTimeout = setTimeout(calculateAndSetSize, 100);
                       });
-                      resizeObserver.observe(document.body);
+                      const inputContainer = document.querySelector('.input-area-container');
+                      if (inputContainer) resizeObserver.observe(inputContainer);
 
-                      const mutObserver = new MutationObserver(() => {
+                      const mutObserver = new MutationObserver((mutations) => {
                           if (isTransformed) return;
+                          let shouldCheck = false;
+                          for (const m of mutations) {
+                              if (m.addedNodes.length > 0 || m.removedNodes.length > 0) {
+                                  shouldCheck = true;
+                                  break;
+                              }
+                          }
+                          if (!shouldCheck) return;
                           clearTimeout(resizeTimeout);
-                          resizeTimeout = setTimeout(calculateAndSetSize, 50);
+                          resizeTimeout = setTimeout(calculateAndSetSize, 100);
                       });
-                      mutObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+                      mutObserver.observe(document.body, { childList: true, subtree: true });
 
                       const chatWindow = document.querySelector('chat-window');
                       if (chatWindow) {
