@@ -143,8 +143,8 @@ fn main() {
                       });
 
                       document.addEventListener('keydown', (e) => {
-                          if (e.metaKey && e.altKey && e.code === 'KeyI') {
-                              if (window.__TAURI__) {
+                          if (e.metaKey && e.altKey && (e.code === 'KeyI' || e.key === 'i' || e.key === 'I')) {
+                              if (window.__TAURI__ && window.__TAURI__.invoke) {
                                   window.__TAURI__.invoke('open_devtools');
                               }
                           }
@@ -358,8 +358,8 @@ fn main() {
             let _ = window.eval(
                 r#"
                 document.addEventListener('keydown', (e) => {
-                    if (e.metaKey && e.altKey && e.code === 'KeyI') {
-                        if (window.__TAURI__) {
+                    if (e.metaKey && e.altKey && (e.code === 'KeyI' || e.key === 'i' || e.key === 'I')) {
+                        if (window.__TAURI__ && window.__TAURI__.invoke) {
                             window.__TAURI__.invoke('open_devtools');
                         }
                     }
