@@ -4173,7 +4173,6 @@ document.addEventListener("click", (e) => {
 
 // Initialize workspace session
 ;(async () => {
-	await syncProjectsFromAllThreads()
 	try {
 		const initialProject = await invoke<string | null>("get_initial_project")
 		if (initialProject) {
@@ -4212,8 +4211,14 @@ document.addEventListener("click", (e) => {
 	await switchToProject(activeProject, true)
 })()
 
-// Periodically sync projects from threads
-setInterval(syncProjectsFromAllThreads, 10000)
+// Periodically sync projects from threads only when main coding window is visible
+setInterval(() => {
+	appWindow.isVisible().then((visible: boolean) => {
+		if (visible) {
+			syncProjectsFromAllThreads()
+		}
+	}).catch(() => {})
+}, 15000)
 
 // Poll engine running state
 setInterval(async () => {

@@ -33,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const prompt = promptInput.value.trim();
                 if (!prompt && !attachedContext) return;
                 
-                const contextToSend = attachedContext;
-
                 // Reset UI and hide window immediately to make it instant
                 promptInput.value = '';
                 attachedContext = null;
@@ -44,15 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 appWindow.hide().catch(console.error);
 
-                try {
-                    // Dispatch the command with the prompt and context in the background
-                    await invoke('dispatch_to_gemini', {
-                        prompt,
-                        context: contextToSend
-                    });
-                } catch(err) {
-                    console.error("Failed to dispatch to Gemini:", err);
-                    alert("Dispatch failed: " + String(err));
+                if (prompt) {
+                    try {
+                        await navigator.clipboard.writeText(prompt);
+                    } catch (e) {
+                        console.error('Failed to copy quick prompt to clipboard:', e);
+                    }
                 }
             }
         });

@@ -23,6 +23,20 @@ fn spawn_fresh_engine(
 }
 
 fn main() {
+    std::panic::set_hook(Box::new(|panic_info| {
+        let backtrace = std::backtrace::Backtrace::capture();
+        let home = std::env::var("HOME").unwrap_or_default();
+        let log_dir = std::path::Path::new(&home).join(".ai-os").join("crash_logs");
+        let _ = std::fs::create_dir_all(&log_dir);
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let file_path = log_dir.join(format!("crash_{}.log", timestamp));
+        let msg = format!("Panic: {}\nBacktrace:\n{:?}", panic_info, backtrace);
+        let _ = std::fs::write(&file_path, &msg);
+        eprintln!("[AI-OS CRASH LOG WRITTEN] {}", file_path.display());
+    }));
     let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
     let home = std::env::var("HOME").unwrap_or_default();
     let new_path = format!(
