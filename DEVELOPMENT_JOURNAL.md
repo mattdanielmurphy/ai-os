@@ -2,7 +2,8 @@
 
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
----
+## 2026-07-23
+- **Clinical Trial Scraper & AI Evaluator Pipeline:** Implemented Bun/TypeScript pipeline under `services/clinical-trials/` querying ClinicalTrials.gov REST API v2, evaluating study eligibility against `context/clinical-profile.md` using Jules/rules engine, outputting Obsidian notes to `Financial/Clinical Trials/`, and dispatching Hermes alerts. [[log]](agent-logs/2026-07-23_16-26_clinical-trial-scraper-pipeline.md)
 
 ## 2026-07-20
 

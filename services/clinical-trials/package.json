@@ -1,0 +1,18 @@
+{
+  "name": "clinical-trials-scraper",
+  "version": "1.0.0",
+  "description": "Clinical Trial Scraper & AI Evaluator Service for ai-os",
+  "main": "src/fetcher.ts",
+  "type": "module",
+  "scripts": {
+    "fetch": "bun run src/fetcher.ts",
+    "eval": "bun run src/evaluator.ts",
+    "notify": "bun run src/notifier.ts",
+    "run-all": "bun run src/fetcher.ts && bun run src/evaluator.ts && bun run src/notifier.ts",
+    "test": "bun test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

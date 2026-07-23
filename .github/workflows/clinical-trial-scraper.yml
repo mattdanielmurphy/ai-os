@@ -1,0 +1,48 @@
+name: Clinical Trial Scraper & AI Evaluator Pipeline
+
+on:
+  schedule:
+    # Run every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scrape-and-evaluate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: |
+          cd services/clinical-trials
+          bun install
+
+      - name: Fetch Clinical Trials (REST v2 API)
+        run: |
+          cd services/clinical-trials
+          bun run fetch
+
+      - name: Evaluate Trials against Clinical Profile
+        run: |
+          cd services/clinical-trials
+          bun run eval
+
+      - name: Invoke Jules AI Agent Evaluation (Optional Cloud Step)
+        if: env.JULES_API_KEY != ''
+        uses: google-labs-code/jules-invoke@v1
+        env:
+          JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+        with:
+          prompt: "Evaluate candidate_trials.json against context/clinical-profile.md to produce refined eligibility rationale."
+
+      - name: Generate Personal Notes & Dispatch Notifications
+        run: |
+          cd services/clinical-trials
+          bun run notify
