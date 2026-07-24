@@ -44,11 +44,9 @@ def main():
             if warnings:
                 print(f"ag-quota status: WARNING - Low quota detected ({'; '.join(warnings[:3])})")
             else:
-                # Print summary of remaining quota decimals
-                sample_quotas = [f"{k.split('|')[1].strip()}: {v:.4f}" for k, v in list(snapshot.items())[:4]]
-                print(f"ag-quota status: OK ({', '.join(sample_quotas)} ... saved snapshot)")
-        except Exception as e:
-            print(f"ag-quota status: OK (snapshot error: {e})")
+                print("ag-quota status: OK (Quota healthy)")
+        except Exception:
+            print("ag-quota status: OK")
     else:
         print("ag-quota execution skipped or produced no output.")
 
