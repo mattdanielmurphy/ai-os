@@ -46,4 +46,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 - Fixes to Gemini thread ingestion, markdown rendering, and orchestrator mode. First session logs appear. [[logs]](agent-logs/)
 
-- **App Reliability & Quick Prompt Fixes:** Added Rust panic hook logging to , deferred thread scanning to when the Coding window is visible, and resolved Quick Prompt context pasting loops. See [agent log](file:///Users/matt/projects/ai-os/agent-logs/2026-07-22_13-26_app-reliability-crash-logging.md).
+- **App Reliability & Quick Prompt Fixes:** Added Rust panic hook logging to , deferred thread scanning to when the Coding window is visible, and resolved Quick Prompt context pasting loops. See [agent log](file:///Users/matt/projects/ai-os/agent-logs/2026-07-22_13-26_app-reliability-crash-logging.md).## 2026-07-23
+
+- **Hammerspoon QWERTY MIDI Controller:** Added modular  script to Hammerspoon with global anchoring and key swallowing, and documented it in the Obsidian wiki.
