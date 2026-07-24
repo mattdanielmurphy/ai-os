@@ -523,7 +523,19 @@ fn main() {
                             window.__TAURI__.invoke('open_devtools');
                         }
                     }
-                });
+                    if (e.metaKey && (e.code === 'KeyT' || e.key === 't' || e.key === 'T')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const btn = document.querySelector('[data-test-id="new-chat-button"] a') || 
+                                    document.querySelector('[data-test-id="new-chat-button"]') || 
+                                    document.querySelector('a[aria-label="New chat"]');
+                        if (btn) {
+                            btn.click();
+                        } else {
+                            window.location.href = 'https://gemini.google.com/app';
+                        }
+                    }
+                }, true);
             "#,
             );
         })
