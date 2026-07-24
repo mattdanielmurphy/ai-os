@@ -286,6 +286,41 @@ async fn handle_socket(socket: WebSocket) {
     write_task.abort();
 }
 
+#[derive(serde::Deserialize)]
+pub struct PromptDispatchPayload {
+    pub prompt: String,
+}
+
+async fn handle_prompt_dispatch(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    Json(payload): Json<PromptDispatchPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    if let Some(win) = app_handle.get_window("gemini_main") {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+
+        let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
+        let eval_script = format!(
+            r#"
+            (function() {{
+                if (window.injectAndSendPrompt) {{
+                    window.injectAndSendPrompt({});
+                }} else {{
+                    window.__pendingPrompt = {};
+                }}
+            }})();
+            "#,
+            js_prompt, js_prompt
+        );
+
+        let _ = win.eval(&eval_script);
+        Ok("Prompt dispatched to Gemini window".to_string())
+    } else {
+        Err((axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Server spawn
 // ---------------------------------------------------------------------------
@@ -302,6 +337,8 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/context/sync", post(handle_sync))
             .route("/api/revision/commit", post(handle_commit))
             .route("/api/gemini/sync", post(handle_gemini_sync))
+            .route("/api/prompt", post(handle_prompt_dispatch))
+            .route("/api/gemini/prompt", post(handle_prompt_dispatch))
             .layer(cors)
             .with_state(app_handle);
 

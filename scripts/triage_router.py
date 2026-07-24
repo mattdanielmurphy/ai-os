@@ -235,9 +235,10 @@ def run_valve_boilerplate(query):
     sys.exit(0)
 
 def open_gemini_webview_thread(query, model=None):
-    """Launches a new gemini.google.com webview thread with the user's prompt."""
-    print(f"[triage] Launching new Gemini webview thread for prompt: '{query[:60]}...'")
-    
+    """Dispatches prompt directly to the ai-os Tauri app via local HTTP server API,
+    or launches ai-os app if not currently running."""
+    print(f"[triage] Dispatching prompt ({len(query)} chars) to Gemini webview in ai-os...")
+
     # 1. Copy prompt to macOS clipboard as fallback
     try:
         proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
@@ -245,11 +246,31 @@ def open_gemini_webview_thread(query, model=None):
     except Exception:
         pass
 
-    # 2. Build URL with prompt parameter
-    url = f"https://gemini.google.com/app?prompt={urllib.parse.quote(query)}"
+    # 2. Attempt HTTP POST to local AI-OS Tauri Axum server (127.0.0.1:3031/api/prompt)
+    payload = json.dumps({"prompt": query}).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:3031/api/prompt",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=2) as res:
+            if res.status == 200:
+                print("[triage] Successfully dispatched prompt directly to running AI-OS Gemini window!")
+                sys.exit(0)
+    except Exception:
+        pass
 
-    # 3. Open URL in browser/webview
-    subprocess.run(["open", url])
+    # 3. If AI-OS app server is not running, write pending prompt file and launch ai-os GUI
+    print("[triage] AI-OS app not currently active. Launching ai-os GUI with pending prompt...")
+    pending_file = Path.home() / ".ai-os" / "pending_prompt.txt"
+    pending_file.parent.mkdir(parents=True, exist_ok=True)
+    pending_file.write_text(query, encoding="utf-8")
+
+    aios_bin = Path("/Users/matt/projects/ai-os/bin/ai-os")
+    subprocess.Popen([str(aios_bin), "--gui"])
     sys.exit(0)
 
 APP_ALIASES = {

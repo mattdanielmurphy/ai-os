@@ -419,6 +419,29 @@ fn main() {
             });
 
 
+            // Check for pending prompt file created when CLI launched app
+            let home_dir = std::env::var("HOME").unwrap_or_default();
+            let pending_prompt_path = std::path::Path::new(&home_dir).join(".ai-os").join("pending_prompt.txt");
+            if pending_prompt_path.exists() {
+                if let Ok(prompt) = std::fs::read_to_string(&pending_prompt_path) {
+                    let _ = std::fs::remove_file(&pending_prompt_path);
+                    let js_prompt = serde_json::to_string(&prompt).unwrap_or_default();
+                    let eval_script = format!(
+                        r#"
+                        (function() {{
+                            if (window.injectAndSendPrompt) {{
+                                window.injectAndSendPrompt({});
+                            }} else {{
+                                window.__pendingPrompt = {};
+                            }}
+                        }})();
+                        "#,
+                        js_prompt, js_prompt
+                    );
+                    let _ = gemini_main_window.eval(&eval_script);
+                }
+            }
+
             // --- spawn servers ---
             server::spawn_axum_server(app_handle.clone());
 

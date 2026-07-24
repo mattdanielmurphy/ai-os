@@ -26,6 +26,7 @@
     "vite": "^5.0.0"
   },
   "scripts": {
+    "build-macos": "bun tauri build --bundles app --target aarch64-apple-darwin && mv /Users/matt/projects/ai-os/tauri-gui/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/ai-os.app /Applications/ai-os.app",
     "dev": "vite",
     "cli": "./bin/ai-os",
     "build": "tsc && vite build",
