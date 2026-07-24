@@ -234,6 +234,24 @@ def run_valve_boilerplate(query):
     print(payload_instructions)
     sys.exit(0)
 
+def open_gemini_webview_thread(query, model=None):
+    """Launches a new gemini.google.com webview thread with the user's prompt."""
+    print(f"[triage] Launching new Gemini webview thread for prompt: '{query[:60]}...'")
+    
+    # 1. Copy prompt to macOS clipboard as fallback
+    try:
+        proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+        proc.communicate(input=query.encode("utf-8"))
+    except Exception:
+        pass
+
+    # 2. Build URL with prompt parameter
+    url = f"https://gemini.google.com/app?prompt={urllib.parse.quote(query)}"
+
+    # 3. Open URL in browser/webview
+    subprocess.run(["open", url])
+    sys.exit(0)
+
 APP_ALIASES = {
     "chrome": "Google Chrome",
     "google chrome": "Google Chrome",
@@ -403,10 +421,8 @@ def main():
     selected_model = "Gemini 3.5 Flash (Low)"
     
     if category == "simple_non_coding":
-        # DeepSeek V4 Flash is not locally configured in agy, fall back to cheap Gemini 3.5 Flash (Low)
         selected_model = "Gemini 3.5 Flash (Low)"
     elif category == "coding_standard":
-        # Quota checks for conservation
         quota_5h, quota_week, is_real = get_quota()
         if is_real and quota_5h < 0.20:
             print(f"[triage] Quota < 20% ({int(quota_5h * 100)}%). Throttling to Gemini 3.1 Pro (Low) to conserve resources.")
@@ -418,14 +434,18 @@ def main():
     elif category == "valve_boilerplate":
         run_valve_boilerplate(query)
 
-    # 5. Run the chosen model
-    print(f"[triage] Selected model: {selected_model}")
-    cmd = ["agy"]
-    # Rebuild arguments injecting chosen model
-    cmd += ["--model", selected_model]
+    # Check if CLI execution was explicitly requested via flags
+    force_cli = any(arg in args for arg in ["--cli", "--terminal", "--agy", "--claude"])
+
+    if not force_cli:
+        # Default behavior: Open ai-os Tauri app / gemini.google.com webview thread with prompt
+        open_gemini_webview_thread(query, selected_model)
+
+    # 5. Run agy in CLI if explicitly requested
+    print(f"[triage] Running CLI mode with selected model: {selected_model}")
+    cmd = ["agy", "--model", selected_model]
     for arg in args:
-        # Skip original --model if user passed a default somehow
-        if arg == "--model":
+        if arg in ["--model", "--cli", "--terminal", "--agy"]:
             continue
         cmd.append(arg)
 

@@ -51,3 +51,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 - **Hammerspoon QWERTY MIDI Controller:** Added modular  script to Hammerspoon with global anchoring and key swallowing, and documented it in the Obsidian wiki.
 - **Fast-Path Direct Command Execution:** Added `try_direct_execution` in `triage_router.py` to intercept simple OS commands (`open google chrome`, URLs, app launch, process termination) instantly without model latency or starting `agy`. [[log]](agent-logs/2026-07-23_22-21_fast-path-direct-command-execution.md)
+- **Gemini Webview Thread Escalation:** Updated `triage_router.py` and `userscripts/gemini.js` so AI queries automatically open a new `gemini.google.com` webview thread with the prompt auto-populated and sent, replacing terminal `agy` CLI output. [[log]](agent-logs/2026-07-23_22-26_gemini-webview-thread-escalation.md)
