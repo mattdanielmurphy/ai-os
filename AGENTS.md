@@ -89,6 +89,9 @@
   3. **Explicit Assumptions & Boundaries**: State the exact boundaries under which the claim holds true. Distinguish clearly between factually consistent (matches source claims) and practically valid (holds up under real-world scrutiny/testing).
 
 ### Note Creation Protocol ("make a note about this")
+
+### Conversation Documentation Protocol
+- **Constraint**: During an active conversation working on architectural features, design plans, or multi-step integrations, the agent MUST continuously maintain and update live technical documentation in docs/ideas/ or docs/active/. Do not wait for the end of the session to capture architectural decisions, TTS/STT pipelines, and integration specs.
 - **Constraint**: When asked to "make a note about this" (or similar note creation requests):
   1. **Format & Structure**: Write a self-contained Markdown note summarizing the entire thread in detail. Begin with YAML frontmatter containing relevant tags. Format body with a succinct high-level summary at the top, a detailed bulleted breakdown of all topics/nuances, expanded sections for key details/data, and a link/reference to the thread topic at the bottom.
   2. **Terminal Output**: Output a single, copy-pasteable command or automated write to `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`. Intelligently route the file to the most sensible folder (e.g., `Ongoing/`, `Health & Fitness/`, `School/`, etc.). If no specific file fits, target `Ongoing/Interesting Facts.md`.

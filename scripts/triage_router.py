@@ -234,6 +234,128 @@ def run_valve_boilerplate(query):
     print(payload_instructions)
     sys.exit(0)
 
+APP_ALIASES = {
+    "chrome": "Google Chrome",
+    "google chrome": "Google Chrome",
+    "google chrome.app": "Google Chrome",
+    "vscode": "Visual Studio Code",
+    "code": "Visual Studio Code",
+    "sublime": "Sublime Text",
+    "sublime text": "Sublime Text",
+    "terminal": "Terminal",
+    "iterm": "iTerm",
+    "iterm2": "iTerm",
+    "finder": "Finder",
+    "calculator": "Calculator",
+    "system settings": "System Settings",
+    "settings": "System Settings",
+    "preferences": "System Settings",
+    "system preferences": "System Settings",
+    "notes": "Notes",
+    "messages": "Messages",
+    "mail": "Mail",
+    "music": "Music",
+    "photos": "Photos",
+    "safari": "Safari",
+    "slack": "Slack",
+    "discord": "Discord",
+    "spotify": "Spotify",
+    "arc": "Arc",
+    "brave": "Brave Browser",
+    "cursor": "Cursor"
+}
+
+def try_direct_execution(query):
+    """Attempts fast direct execution for simple OS commands (open app, open URL, kill process, etc.)
+    without starting LLM reasoning models or launching agy.
+    Returns True if handled, False otherwise."""
+    q = query.strip()
+    if not q:
+        return False
+    q_lower = q.lower()
+    
+    # 1. Open app / URL / file pattern
+    open_prefixes = ["open ", "launch ", "start "]
+    matched_prefix = None
+    for prefix in open_prefixes:
+        if q_lower.startswith(prefix):
+            matched_prefix = prefix
+            break
+            
+    if matched_prefix:
+        target = q[len(matched_prefix):].strip().strip("'\"")
+        target_lower = target.lower()
+
+        # Is it a URL?
+        if target_lower.startswith(("http://", "https://", "www.")):
+            url = target if not target_lower.startswith("www.") else f"https://{target}"
+            print(f"[triage] Fast-path direct execution: opening URL '{url}'")
+            res = subprocess.run(["open", url])
+            return res.returncode == 0
+
+        # Is it an existing file or directory path?
+        expanded_path = Path(os.path.expanduser(target))
+        if expanded_path.exists():
+            print(f"[triage] Fast-path direct execution: opening path '{expanded_path}'")
+            res = subprocess.run(["open", str(expanded_path)])
+            return res.returncode == 0
+
+        # Try App alias mapping
+        app_name = APP_ALIASES.get(target_lower)
+        if app_name:
+            print(f"[triage] Fast-path direct execution: launching application '{app_name}'")
+            res = subprocess.run(["open", "-a", app_name])
+            if res.returncode == 0:
+                return True
+
+        # Try raw target string with `open -a`
+        print(f"[triage] Fast-path direct execution: attempting to open application '{target}'")
+        res = subprocess.run(["open", "-a", target], stderr=subprocess.DEVNULL)
+        if res.returncode == 0:
+            return True
+
+        # Try title-case target string
+        res = subprocess.run(["open", "-a", target.title()], stderr=subprocess.DEVNULL)
+        if res.returncode == 0:
+            return True
+
+        # Check /Applications or /System/Applications for matching .app bundle
+        app_dirs = [Path("/Applications"), Path("/System/Applications"), Path.home() / "Applications"]
+        for app_dir in app_dirs:
+            if app_dir.exists():
+                for item in app_dir.rglob("*.app"):
+                    if item.stem.lower() == target_lower or item.name.lower() == f"{target_lower}.app":
+                        print(f"[triage] Fast-path direct execution: found app bundle '{item}'")
+                        res = subprocess.run(["open", str(item)])
+                        if res.returncode == 0:
+                            return True
+
+    # 2. Kill / process termination pattern
+    kill_prefixes = ["killall ", "pkill "]
+    for prefix in kill_prefixes:
+        if q_lower.startswith(prefix):
+            proc_target = q[len(prefix):].strip()
+            cmd_name = prefix.strip()
+            print(f"[triage] Fast-path direct execution: running '{cmd_name} {proc_target}'")
+            res = subprocess.run([cmd_name, proc_target])
+            return res.returncode == 0
+
+    # 3. Text to speech pattern
+    if q_lower.startswith("say "):
+        text = q[4:].strip()
+        print(f"[triage] Fast-path direct execution: speaking text")
+        res = subprocess.run(["say", text])
+        return res.returncode == 0
+
+    # 4. Explicit run/exec command
+    if q_lower.startswith("run ") or q_lower.startswith("exec "):
+        raw_cmd = q.split(" ", 1)[1].strip()
+        print(f"[triage] Fast-path direct execution: executing '{raw_cmd}'")
+        res = subprocess.run(raw_cmd, shell=True)
+        return res.returncode == 0
+
+    return False
+
 def main():
     args = sys.argv[1:]
     
@@ -247,12 +369,8 @@ def main():
             break
 
     # 2. Extract query/prompt if present
-    query = ""
-    # Look for query inside arguments
-    for arg in args:
-        if not arg.startswith("-"):
-            query = arg
-            break
+    non_flag_args = [arg for arg in args if not arg.startswith("-")]
+    query = " ".join(non_flag_args) if non_flag_args else ""
             
     # Default behavior for interactive shell
     if not query:
@@ -271,6 +389,10 @@ def main():
         cmd = ["agy"] + args
         with hide_agents_md():
             sys.exit(subprocess.call(cmd))
+
+    # Fast-path direct execution check (e.g. "open google chrome")
+    if try_direct_execution(query):
+        sys.exit(0)
 
     # 3. Tier 1 Classification
     print(f"[triage] Intercepting prompt: '{query[:50]}...'")

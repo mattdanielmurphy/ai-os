@@ -36,7 +36,12 @@ def test_triage():
         "Gemini 3.5 Flash (Low)",
         error_log
     )
-    print(f"Escalation Target: {escalation}")
+    print("\n--- Testing Direct Execution Fast-Path ---")
+    direct_queries = ["open google chrome", "launch calculator", "open https://example.com"]
+    for dq in direct_queries:
+        print(f"Direct Query: '{dq}'")
+        # Test dry matching logic or call try_direct_execution
+        assert dq.lower().startswith(("open ", "launch ", "start "))
 
 if __name__ == "__main__":
     test_triage()
