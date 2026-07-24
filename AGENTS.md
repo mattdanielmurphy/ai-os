@@ -112,7 +112,7 @@
 
 ### Model Triage and Handoff Rules
 - **Pre-Flight Quota & Multi-Account Velocity Check**: At the start of Antigravity calls (pre-flight check):
-  1. **Run Quota CLI (Both Accounts):** Execute `ag-quota --all -j` to query remaining quotas across all configured accounts.
+  1. **Run Quota CLI (Both Accounts):** `preflight.py` runs `ag-quota --all -j` to query remaining quotas across accounts quietly without dumping verbose JSON details into the context window on every turn.
   2. **Multi-Window Burn Velocity Evaluation (5-Hour & Weekly):**
      - **5-Hour Window:** Calculate hourly consumption velocity \(V_{5h} = \frac{1 - R_{5h}}{T_{elapsed}}\). If projected consumption will exhaust the 5-hour quota window before reset, trigger conservation.
      - **Weekly Window:** Target maximum safe burn rate while keeping weekly depletion close to 100% at week end:

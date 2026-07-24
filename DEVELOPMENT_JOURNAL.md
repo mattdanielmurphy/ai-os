@@ -3,6 +3,7 @@
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-07-23
+- **Quiet Preflight Quota Check:** Updated `scripts/preflight.py` and `AGENTS.md` so that `ag-quota --all -j` checks quota status quietly without outputting raw JSON details into the model context window on every turn. [[log]](agent-logs/2026-07-23_20-35_quiet-preflight-quota-check.md)
 - **Clinical Trial Scraper & AI Evaluator Pipeline:** Implemented Bun/TypeScript pipeline under `services/clinical-trials/` querying ClinicalTrials.gov REST API v2, evaluating study eligibility against `context/clinical-profile.md` using Jules/rules engine, outputting Obsidian notes to `Financial/Clinical Trials/`, and dispatching Hermes alerts. [[log]](agent-logs/2026-07-23_16-26_clinical-trial-scraper-pipeline.md)
 
 ## 2026-07-20
