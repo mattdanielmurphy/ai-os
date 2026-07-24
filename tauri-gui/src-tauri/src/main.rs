@@ -418,17 +418,6 @@ fn main() {
                 }
             });
 
-            let app_handle_coding = app_handle.clone();
-            let _ = shortcut_manager.register("Cmd+Option+C", move || {
-                if let Some(window) = app_handle_coding.get_window("main") {
-                    if window.is_visible().unwrap_or(false) {
-                        let _ = window.hide();
-                    } else {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
-                }
-            });
 
             // --- spawn servers ---
             server::spawn_axum_server(app_handle.clone());
