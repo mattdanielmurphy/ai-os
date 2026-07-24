@@ -290,19 +290,33 @@ def open_gemini_webview_thread(query, model=None):
 
     sys.exit(0)
 
-def launch_antigravity_terminal(query, model=None):
-    """Launches a new conversation in Antigravity in a new Terminal window."""
-    selected_model = model or "Gemini 3.5 Flash (Low)"
-    print(f"[triage] Launching new Antigravity session with {selected_model} for: '{query[:60]}...'")
+def launch_antigravity_app(query, model=None):
+    """Launches / opens /Applications/Antigravity.app, copies prompt to clipboard,
+    and opens a new conversation thread with the prompt."""
+    print(f"[triage] Opening /Applications/Antigravity.app with prompt ({len(query)} chars)...")
     
-    # Escape quotes and backslashes for AppleScript
-    escaped_query = query.replace('\\', '\\\\').replace('"', '\\"')
-    cmd_str = f"agy --model \\\"{selected_model}\\\" -p \\\"{escaped_query}\\\""
-    
-    applescript = f'''
-    tell application "Terminal"
-        do script "{cmd_str}"
-        activate
+    # 1. Copy prompt to macOS system clipboard
+    try:
+        proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+        proc.communicate(input=query.encode("utf-8"))
+    except Exception:
+        pass
+
+    # 2. Open / Activate /Applications/Antigravity.app and trigger new chat + paste
+    applescript = '''
+    tell application "Antigravity" to activate
+    delay 0.3
+    tell application "System Events"
+        tell process "Antigravity"
+            -- Shortcut for New Conversation / Focus Chat
+            keystroke "n" using {command down}
+            delay 0.3
+            -- Paste prompt from clipboard
+            keystroke "v" using {command down}
+            delay 0.2
+            -- Send prompt
+            key code 36
+        end tell
     end tell
     '''
     
@@ -510,8 +524,8 @@ def main():
 
     # Route based on prompt intent:
     if is_coding_intent:
-        # Coding / file / codebase task -> Launch new Antigravity session in Terminal
-        launch_antigravity_terminal(query, selected_model)
+        # Coding / file / codebase task -> Launch / open /Applications/Antigravity.app
+        launch_antigravity_app(query, selected_model)
     else:
         # Non-coding general query -> Open Gemini Webview in ai-os app
         open_gemini_webview_thread(query, selected_model)
