@@ -290,6 +290,25 @@ def open_gemini_webview_thread(query, model=None):
 
     sys.exit(0)
 
+def launch_antigravity_terminal(query, model=None):
+    """Launches a new conversation in Antigravity in a new Terminal window."""
+    selected_model = model or "Gemini 3.5 Flash (Low)"
+    print(f"[triage] Launching new Antigravity session with {selected_model} for: '{query[:60]}...'")
+    
+    # Escape quotes and backslashes for AppleScript
+    escaped_query = query.replace('\\', '\\\\').replace('"', '\\"')
+    cmd_str = f"agy --model \\\"{selected_model}\\\" -p \\\"{escaped_query}\\\""
+    
+    applescript = f'''
+    tell application "Terminal"
+        do script "{cmd_str}"
+        activate
+    end tell
+    '''
+    
+    subprocess.run(["osascript", "-e", applescript])
+    sys.exit(0)
+
 APP_ALIASES = {
     "chrome": "Google Chrome",
     "google chrome": "Google Chrome",
@@ -458,9 +477,13 @@ def main():
     # 4. Route selection
     selected_model = "Gemini 3.5 Flash (Low)"
     
-    if category == "simple_non_coding":
+    is_coding_intent = category in ["coding_standard", "coding_complex"] or any(
+        kw in query.lower() for kw in ["file", "find", "search", "code", "repo", "script", "fix", "debug", "refactor", "build", "run", "git"]
+    )
+
+    if category == "simple_non_coding" and not is_coding_intent:
         selected_model = "Gemini 3.5 Flash (Low)"
-    elif category == "coding_standard":
+    elif category == "coding_standard" or is_coding_intent:
         quota_5h, quota_week, is_real = get_quota()
         if is_real and quota_5h < 0.20:
             print(f"[triage] Quota < 20% ({int(quota_5h * 100)}%). Throttling to Gemini 3.1 Pro (Low) to conserve resources.")
@@ -475,20 +498,23 @@ def main():
     # Check if CLI execution was explicitly requested via flags
     force_cli = any(arg in args for arg in ["--cli", "--terminal", "--agy", "--claude"])
 
-    if not force_cli:
-        # Default behavior: Open ai-os Tauri app / gemini.google.com webview thread with prompt
+    if force_cli:
+        print(f"[triage] Explicit CLI flag detected: running terminal agy with {selected_model}")
+        cmd = ["agy", "--model", selected_model]
+        for arg in args:
+            if arg in ["--model", "--cli", "--terminal", "--agy"]:
+                continue
+            cmd.append(arg)
+        with hide_agents_md():
+            sys.exit(subprocess.call(cmd))
+
+    # Route based on prompt intent:
+    if is_coding_intent:
+        # Coding / file / codebase task -> Launch new Antigravity session in Terminal
+        launch_antigravity_terminal(query, selected_model)
+    else:
+        # Non-coding general query -> Open Gemini Webview in ai-os app
         open_gemini_webview_thread(query, selected_model)
-
-    # 5. Run agy in CLI if explicitly requested
-    print(f"[triage] Running CLI mode with selected model: {selected_model}")
-    cmd = ["agy", "--model", selected_model]
-    for arg in args:
-        if arg in ["--model", "--cli", "--terminal", "--agy"]:
-            continue
-        cmd.append(arg)
-
-    with hide_agents_md():
-        exit_code = subprocess.call(cmd)
 
     # 6. Tier 2 Executive Investigation on failure
     if exit_code != 0:
