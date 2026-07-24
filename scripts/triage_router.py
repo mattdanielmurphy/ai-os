@@ -292,7 +292,7 @@ def open_gemini_webview_thread(query, model=None):
 
 def launch_antigravity_app(query, model=None):
     """Launches / opens /Applications/Antigravity.app, copies prompt to clipboard,
-    and opens a new conversation thread with the prompt."""
+    and opens a new conversation thread with Shift+Cmd+O (twice)."""
     print(f"[triage] Opening /Applications/Antigravity.app with prompt ({len(query)} chars)...")
     
     # 1. Copy prompt to macOS system clipboard
@@ -302,19 +302,21 @@ def launch_antigravity_app(query, model=None):
     except Exception:
         pass
 
-    # 2. Open / Activate /Applications/Antigravity.app and trigger new chat + paste
+    # 2. Open / Activate /Applications/Antigravity.app and trigger new unattached chat (Shift+Cmd+O twice) + paste
     applescript = '''
     tell application "Antigravity" to activate
     delay 0.3
     tell application "System Events"
         tell process "Antigravity"
-            -- Shortcut for New Conversation / Focus Chat
-            keystroke "n" using {command down}
-            delay 0.3
+            -- Press Shift+Cmd+O twice to trigger a new unattached conversation
+            keystroke "o" using {command down, shift down}
+            delay 0.2
+            keystroke "o" using {command down, shift down}
+            delay 0.4
             -- Paste prompt from clipboard
             keystroke "v" using {command down}
             delay 0.2
-            -- Send prompt
+            -- Send prompt (Return key)
             key code 36
         end tell
     end tell
