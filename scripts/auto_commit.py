@@ -116,6 +116,39 @@ def main():
     else:
         print("Warning: git push failed or no remote configured.", file=sys.stderr)
 
+    # 7. Postflight Quota Delta Check
+    print("\n--- Running Post-flight Quota Delta Check ---")
+    snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
+    if os.path.exists(snapshot_path):
+        try:
+            with open(snapshot_path, "r", encoding="utf-8") as f:
+                prev_snapshot = json.load(f)
+            quota_out, quota_code = run_cmd(["ag-quota", "--all", "-j"], check=False)
+            if quota_code == 0 and quota_out:
+                current_data = json.loads(quota_out)
+                deltas = []
+                for acct in current_data:
+                    email = acct.get("email") or acct.get("quota_summary", {}).get("Email", "unknown")
+                    models = acct.get("quota_summary", {}).get("Models", [])
+                    for m in models:
+                        disp = m.get("DisplayName") or m.get("ModelID", "")
+                        key = f"{email} | {disp}"
+                        curr_frac = m.get("RemainingFraction", 1.0)
+                        if isinstance(curr_frac, (int, float)) and key in prev_snapshot:
+                            prev_frac = prev_snapshot[key]
+                            diff = curr_frac - prev_frac
+                            if abs(diff) > 0.0001:
+                                sign = "+" if diff > 0 else ""
+                                deltas.append(f"{disp}: {curr_frac:.4f} ({sign}{diff:.4f})")
+                if deltas:
+                    print(f"Quota Delta since preflight: {', '.join(deltas)}")
+                else:
+                    print("Quota Delta: No quota change detected since preflight.")
+        except Exception as e:
+            print(f"Post-flight quota check skipped: {e}")
+    else:
+        print("No preflight quota snapshot found (~/.ag_quota_snapshot.json). Skipping delta check.")
+
 if __name__ == "__main__":
     main()
 

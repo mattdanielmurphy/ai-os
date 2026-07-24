@@ -20,23 +20,35 @@ def main():
         try:
             import json
             data = json.loads(out)
+            snapshot = {}
             warnings = []
             if isinstance(data, list):
                 for acct in data:
                     email = acct.get("email") or acct.get("quota_summary", {}).get("Email", "unknown")
                     models = acct.get("quota_summary", {}).get("Models", [])
                     for m in models:
-                        frac = m.get("RemainingFraction", 1)
+                        frac = m.get("RemainingFraction", 1.0)
                         is_ex = m.get("IsExhausted", False)
                         disp = m.get("DisplayName") or m.get("ModelID", "")
+                        key = f"{email} | {disp}"
+                        if isinstance(frac, (int, float)):
+                            snapshot[key] = round(frac, 4)
                         if is_ex or (isinstance(frac, (int, float)) and frac < 0.25):
-                            warnings.append(f"{email} ({disp}): {frac*100:.0f}% remaining")
+                            warnings.append(f"{key}: {frac*100:.1f}% remaining")
+
+            # Save quota snapshot for postflight delta comparison
+            snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
+            with open(snapshot_path, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f, indent=2)
+
             if warnings:
                 print(f"ag-quota status: WARNING - Low quota detected ({'; '.join(warnings[:3])})")
             else:
-                print("ag-quota status: OK (Quota healthy)")
-        except Exception:
-            print("ag-quota status: OK")
+                # Print summary of remaining quota decimals
+                sample_quotas = [f"{k.split('|')[1].strip()}: {v:.4f}" for k, v in list(snapshot.items())[:4]]
+                print(f"ag-quota status: OK ({', '.join(sample_quotas)} ... saved snapshot)")
+        except Exception as e:
+            print(f"ag-quota status: OK (snapshot error: {e})")
     else:
         print("ag-quota execution skipped or produced no output.")
 

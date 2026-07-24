@@ -290,9 +290,41 @@ def open_gemini_webview_thread(query, model=None):
 
     sys.exit(0)
 
+def get_antigravity_window_bounds():
+    """Gets (x, y, w, h) of window 1 of Antigravity process."""
+    try:
+        res = subprocess.run([
+            "osascript", "-e",
+            'tell application "System Events" to tell process "Antigravity" to return (position of window 1) & (size of window 1)'
+        ], capture_output=True, text=True, timeout=3)
+        parts = [int(p.strip()) for p in res.stdout.strip().replace("{", "").replace("}", "").split(",")]
+        if len(parts) == 4:
+            return parts[0], parts[1], parts[2], parts[3]
+    except Exception:
+        pass
+    return 0, 38, 1200, 800
+
+def click_coords(x, y):
+    """Sends a hardware mouse click event at screen coordinates (x, y)."""
+    import ctypes
+    cg = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")
+    class CGPoint(ctypes.Structure):
+        _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
+    cg.CGEventCreateMouseEvent.restype = ctypes.c_void_p
+    cg.CGEventCreateMouseEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint32, CGPoint, ctypes.c_uint32]
+    cg.CGEventPost.restype = None
+    cg.CGEventPost.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
+
+    pt = CGPoint(x, y)
+    event_down = cg.CGEventCreateMouseEvent(None, 1, pt, 0)
+    event_up = cg.CGEventCreateMouseEvent(None, 2, pt, 0)
+    cg.CGEventPost(0, event_down)
+    cg.CGEventPost(0, event_up)
+
 def launch_antigravity_app(query, model=None):
     """Launches / opens /Applications/Antigravity.app, copies prompt to clipboard,
-    and opens a new conversation thread with Shift+Cmd+O (twice)."""
+    opens new conversation with Shift+Cmd+O twice, resets element list with a top-right click,
+    tabs twice to the textarea, pastes, and sends."""
     print(f"[triage] Opening /Applications/Antigravity.app with prompt ({len(query)} chars)...")
     
     # 1. Copy prompt to macOS system clipboard
@@ -302,27 +334,50 @@ def launch_antigravity_app(query, model=None):
     except Exception:
         pass
 
-    # 2. Open / Activate /Applications/Antigravity.app and trigger new unattached chat (Shift+Cmd+O twice) + paste
-    applescript = '''
+    # 2. Activate Antigravity, ensure frontmost focus, and press Shift+Cmd+O twice (key code 31)
+    applescript_step1 = '''
     tell application "Antigravity" to activate
+    repeat 10 times
+        tell application "System Events"
+            if frontmost of process "Antigravity" is true then exit repeat
+        end tell
+        delay 0.1
+    end repeat
     delay 0.3
     tell application "System Events"
-        tell process "Antigravity"
-            -- Press Shift+Cmd+O twice to trigger a new unattached conversation
-            keystroke "o" using {command down, shift down}
-            delay 0.2
-            keystroke "o" using {command down, shift down}
-            delay 0.4
-            -- Paste prompt from clipboard
-            keystroke "v" using {command down}
-            delay 0.2
-            -- Send prompt (Return key)
-            key code 36
-        end tell
+        -- Key code 31 = 'O' (Shift + Cmd + O)
+        key code 31 using {command down, shift down}
+        delay 0.3
+        key code 31 using {command down, shift down}
+        delay 0.6
     end tell
     '''
-    
-    subprocess.run(["osascript", "-e", applescript])
+    subprocess.run(["osascript", "-e", applescript_step1])
+
+    # 3. Perform mouse click 100px from right, 100px from top of window to reset focus
+    x, y, w, h = get_antigravity_window_bounds()
+    click_x = x + w - 100
+    click_y = y + 100
+    print(f"[triage] Performing focus reset click at ({click_x}, {click_y})...")
+    click_coords(click_x, click_y)
+    time.sleep(0.3)
+
+    # 4. Tab twice to bring focus to textarea, paste prompt, and send (Return)
+    applescript_step2 = '''
+    tell application "System Events"
+        -- Press Tab twice to select textarea from reset state
+        key code 48
+        delay 0.2
+        key code 48
+        delay 0.3
+        -- Paste prompt from clipboard
+        keystroke "v" using {command down}
+        delay 0.3
+        -- Send prompt (Return key)
+        key code 36
+    end tell
+    '''
+    subprocess.run(["osascript", "-e", applescript_step2])
     sys.exit(0)
 
 APP_ALIASES = {
