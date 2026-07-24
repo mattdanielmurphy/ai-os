@@ -4,7 +4,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 9.26 GB (9 260 179 456 bytes)
+      Free: 18.18 GB (18 180 759 552 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Update/mnt1
       File System: APFS
@@ -23,7 +23,7 @@ Storage:
 
     Data:
 
-      Free: 9.26 GB (9 260 179 456 bytes)
+      Free: 18.18 GB (18 180 759 552 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Data
       File System: APFS
@@ -59,7 +59,7 @@ Storage:
 
     Macintosh HD:
 
-      Free: 9.26 GB (9 260 179 456 bytes)
+      Free: 18.18 GB (18 180 759 552 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /
       File System: APFS
@@ -77,31 +77,30 @@ Storage:
           S.M.A.R.T. Status: Verified
 
 ## Active LaunchAgents
-total 232
-drwxr-xr-x@ 24 matt  staff    768 Jul 16 02:34 .
-drwx------@ 98 matt  staff   3136 Jul 16 02:47 ..
-drwxr-xr-x@ 13 matt  staff    416 Jul 10 16:40 Archive
--rwxr-xr-x@  1 matt  staff   1270 Jul 13 17:14 chrome_debug_watcher.sh
--rw-r--r--@  1 matt  staff    871 Jul  5 00:08 com.google.GoogleUpdater.wake.plist
--rw-r--r--@  1 matt  staff    181 Jul  5 00:08 com.google.keystone.agent.plist
--rw-r--r--@  1 matt  staff    181 Jul  5 00:08 com.google.keystone.xpcservice.plist
--rw-r--r--@  1 matt  staff    656 Jul 11 16:22 com.matt.agent.agymcp.plist
--rw-------@  1 matt  staff   1158 Jul 10 16:39 com.matt.agent.backup-agents.plist
--rw-------@  1 matt  staff    850 Jul 10 16:39 com.matt.agent.chrome-debug.plist
--rw-------@  1 matt  staff    957 Jul 10 16:39 com.matt.agent.energy-monitor.plist
--rw-------@  1 matt  staff    890 Jul 10 16:48 com.matt.agent.gemini-ingest.plist
--rw-r--r--@  1 matt  staff   1198 Jul 11 17:54 com.matt.agent.gemini-thread-saver.plist
--rw-------@  1 matt  staff   2573 Jul 10 16:40 com.matt.agent.hermes-gateway.plist
--rw-------@  1 matt  staff    894 Jul 10 16:39 com.matt.agent.irig-watcher.plist
--rw-------@  1 matt  staff    930 Jul 10 16:39 com.matt.agent.litellm.plist
--rw-------@  1 matt  staff    959 Jul 10 16:39 com.matt.agent.notesync.plist
--rw-------@  1 matt  staff   1006 Jul 10 16:39 com.matt.agent.rules-watcher.plist
--rw-r--r--@  1 matt  staff    427 Jul  4 23:32 com.pieces.os.launch.plist
--rw-r--r--@  1 matt  staff    747 Jul  4 23:32 com.samschott.maestral.maestral.plist
--rw-r--r--@  1 matt  staff    482 Jul 13 16:57 com.user.chrome.debug.plist
--rwxr-xr-x@  1 matt  staff    376 Jul 10 15:53 git-sync.sh
--rw-r--r--@  1 matt  staff    685 Jul  4 23:32 homebrew.mxcl.nginx.plist
--rwxr-xr-x@  1 matt  staff  33472 Jul  4 23:32 notesync-wrapper
+total 224
+drwxr-xr-x@  23 matt  staff    736 Jul 21 20:11 .
+drwx------@ 101 matt  staff   3232 Jul 23 21:25 ..
+drwxr-xr-x@  14 matt  staff    448 Jul 21 20:38 Archive
+-rw-r--r--@   1 matt  staff    871 Jul  5 00:08 com.google.GoogleUpdater.wake.plist
+-rw-r--r--@   1 matt  staff    181 Jul  5 00:08 com.google.keystone.agent.plist
+-rw-r--r--@   1 matt  staff    181 Jul  5 00:08 com.google.keystone.xpcservice.plist
+-rw-------@   1 matt  staff    905 Jul 19 23:51 com.matt.agent.agy-proxy.plist
+-rw-r--r--@   1 matt  staff    656 Jul 11 16:22 com.matt.agent.agymcp.plist
+-rw-------@   1 matt  staff   1158 Jul 10 16:39 com.matt.agent.backup-agents.plist
+-rw-------@   1 matt  staff    850 Jul 10 16:39 com.matt.agent.chrome-debug.plist
+-rw-------@   1 matt  staff    957 Jul 10 16:39 com.matt.agent.energy-monitor.plist
+-rw-------@   1 matt  staff    890 Jul 10 16:48 com.matt.agent.gemini-ingest.plist
+-rw-------@   1 matt  staff   2513 Jul 19 18:35 com.matt.agent.hermes-gateway.plist
+-rw-------@   1 matt  staff    894 Jul 10 16:39 com.matt.agent.irig-watcher.plist
+-rw-------@   1 matt  staff    930 Jul 10 16:39 com.matt.agent.litellm.plist
+-rw-r--r--@   1 matt  staff   1234 Jul 21 20:06 com.matt.agent.local-automation-server.plist
+-rw-------@   1 matt  staff    959 Jul 10 16:39 com.matt.agent.notesync.plist
+-rw-------@   1 matt  staff    889 Jul 20 01:49 com.matt.agent.rules-watcher.plist
+-rw-r--r--@   1 matt  staff    427 Jul  4 23:32 com.pieces.os.launch.plist
+-rw-r--r--@   1 matt  staff    747 Jul  4 23:32 com.samschott.maestral.maestral.plist
+-rwxr-xr-x@   1 matt  staff    376 Jul 10 15:53 git-sync.sh
+-rw-r--r--@   1 matt  staff    685 Jul  4 23:32 homebrew.mxcl.nginx.plist
+-rwxr-xr-x@   1 matt  staff  33472 Jul  4 23:32 notesync-wrapper
 ## Connected Displays
 Graphics/Displays:
 
@@ -124,3 +123,50 @@ Graphics/Displays:
           Connection Type: Internal
 
 ## Hammerspoon Config
+-- ~/.hammerspoon/init.lua
+-- Entry point for the Hammerspoon configuration.
+-- Loads modular components and sets up automatic config reloading.
+--
+-- ── Global Anchoring Convention ─────────────────────────────────────────────────
+-- CRITICAL: All persistent Hammerspoon resources (watchers, window filters, event
+-- taps, hotkeys) MUST be anchored to the global `_G.activeWatchers` table. Lua's
+-- garbage collector silently collects `local` variables after a module finishes
+-- loading, which destroys the underlying macOS event taps and causes silent
+-- failures. Never assign these to local variables, and never implement periodic
+-- timer "health checks" as a workaround — the root cause is always a missing
+-- global reference.
+-- ────────────────────────────────────────────────────────────────────────────────
+
+-- ── Global anchor table ─────────────────────────────────────────────────────────
+-- All modules and sub-modules share this same table via the `_G` key.
+_G.activeWatchers = _G.activeWatchers or {}
+
+-- ── Config auto-reloader ────────────────────────────────────────────────────────
+-- Watches the entire ~/.hammerspoon/ directory tree for .lua changes and
+-- triggers a full reload so edits take effect immediately.
+
+local function _reloadConfig(files)
+  local shouldReload = false
+  for _, file in ipairs(files) do
+    if file:sub(-4) == ".lua" then
+      shouldReload = true
+      break
+    end
+  end
+  if shouldReload then
+    hs.reload()
+  end
+end
+
+activeWatchers.configWatcher = hs.pathwatcher.new(os.getenv("HOME") .. "/.hammerspoon/", _reloadConfig)
+activeWatchers.configWatcher:start()
+
+-- ── Modules ─────────────────────────────────────────────────────────────────────
+
+require("modules.clipboard")
+require("modules.keybindings")
+require("modules.qwerty_midi")
+
+-- ── Startup confirmation ─────────────────────────────────────────────────────────
+
+hs.alert.show("⚙️  Hammerspoon config loaded")

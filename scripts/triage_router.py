@@ -263,14 +263,31 @@ def open_gemini_webview_thread(query, model=None):
     except Exception:
         pass
 
-    # 3. If AI-OS app server is not running, write pending prompt file and launch ai-os GUI
-    print("[triage] AI-OS app not currently active. Launching ai-os GUI with pending prompt...")
+    # 3. If AI-OS app server is not running, write pending prompt file and launch /Applications/ai-os.app
+    print("[triage] AI-OS app not currently active. Launching /Applications/ai-os.app with pending prompt...")
     pending_file = Path.home() / ".ai-os" / "pending_prompt.txt"
     pending_file.parent.mkdir(parents=True, exist_ok=True)
     pending_file.write_text(query, encoding="utf-8")
 
-    aios_bin = Path("/Users/matt/projects/ai-os/bin/ai-os")
-    subprocess.Popen([str(aios_bin), "--gui"])
+    app_paths = [
+        Path("/Applications/ai-os.app"),
+        Path("/Applications/AI-OS.app"),
+        Path.home() / "Applications" / "ai-os.app",
+        Path.home() / "Applications" / "AI-OS.app"
+    ]
+    
+    launched = False
+    for app_path in app_paths:
+        if app_path.exists():
+            subprocess.run(["open", str(app_path)])
+            launched = True
+            break
+            
+    if not launched:
+        res = subprocess.run(["open", "-a", "AI-OS"], stderr=subprocess.DEVNULL)
+        if res.returncode != 0:
+            subprocess.run(["open", "-a", "ai-os"], stderr=subprocess.DEVNULL)
+
     sys.exit(0)
 
 APP_ALIASES = {
