@@ -3,7 +3,7 @@
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-07-24
-- **Quota Preflight Decimal & Postflight Delta:** Updated `scripts/preflight.py` to display model remaining quota decimal values and save state to `~/.ag_quota_snapshot.json`. Updated `scripts/auto_commit.py` to compute and display postflight quota deltas upon commit/push. [[log]](agent-logs/2026-07-24_00-25_quota-preflight-decimal-postflight-delta.md)
+- **Reverted In-Agent Quota Delta Check:** Removed verbose model-side post-flight quota delta check from `auto_commit.py` and restored quiet `preflight.py` status. Quota delta tracking will be handled natively in `ai-os` app UI/wrapper rather than model context window tools. [[log]](agent-logs/2026-07-24_00-25_quota-preflight-decimal-postflight-delta.md)
 
 ## 2026-07-23
 - **Quiet Preflight Quota Check:** Updated `scripts/preflight.py` and `AGENTS.md` so that `ag-quota --all -j` checks quota status quietly without outputting raw JSON details into the model context window on every turn. [[log]](agent-logs/2026-07-23_20-35_quiet-preflight-quota-check.md)
