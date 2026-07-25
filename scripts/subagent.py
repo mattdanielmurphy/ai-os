@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
+import json
 import os
 import sys
 import time
 import subprocess
 import argparse
 import shlex
+import tempfile
 from pathlib import Path
 from parse_litellm_models import validate_model, get_available_models, DEFAULT_CONFIG_PATH
 
-def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
+LITELLM_URL = "http://localhost:8082/v1/messages"
+
+def run_in_tmux(model, prompt="", session_name="subagents"):
     cwd_tmp = Path.cwd() / "tmp" / "subagent_logs"
     if not cwd_tmp.parent.exists():
         cwd_tmp = Path("/Users/matt/projects/ai-os/tmp/subagent_logs")
@@ -24,7 +28,6 @@ def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
     if res.returncode != 0:
         subprocess.run(["tmux", "new-session", "-d", "-s", session_name, "-n", "sub", "bash"], check=True)
     else:
-        # Kill dead panes so we can respawn
         subprocess.run(["tmux", "respawn-pane", "-k", "-t", f"{session_name}:0.0", "bash"],
                        stderr=subprocess.DEVNULL)
 
@@ -32,8 +35,28 @@ def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
     model_short = model.split("/")[-1][:10]
     title = f"{model_short}-{clean_prompt}" if clean_prompt else f"{model_short}-{timestamp}"
 
-    inner_cmd = " ".join(shlex.quote(arg) for arg in cmd_args)
-    bash_cmd = f"{inner_cmd} 2>&1 | tee {shlex.quote(str(log_file))}; echo ${{PIPESTATUS[0]}} > {shlex.quote(str(exit_file))}"
+    # Write payload to a temp file to avoid shell/json escaping issues
+    payload = json.dumps({
+        "model": model,
+        "max_tokens": 8192,
+        "messages": [{"role": "user", "content": prompt}]
+    })
+    payload_file = cwd_tmp / f"{run_id}.payload.json"
+    payload_file.write_text(payload)
+
+    quoted_log = shlex.quote(str(log_file))
+    quoted_exit = shlex.quote(str(exit_file))
+    quoted_payload = shlex.quote(str(payload_file))
+
+    bash_cmd = (
+        f"curl -s -w '\\n%{{http_code}}' -X POST {LITELLM_URL} "
+        f"-H 'Content-Type: application/json' "
+        f"-H 'x-api-key: dummy' "
+        f"-H 'anthropic-version: 2023-06-01' "
+        f"-d @{quoted_payload} "
+        f"2>&1 | tee {quoted_log}; echo ${{PIPESTATUS[0]}} > {quoted_exit}; "
+        f"rm -f {quoted_payload}"
+    )
 
     try:
         subprocess.run(["tmux", "respawn-pane", "-k",
@@ -81,12 +104,42 @@ def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
 
     return exit_code
 
+
+def call_litellm_direct(model, prompt):
+    """Call LiteLLM API directly (used for --no-tmux mode)."""
+    payload = json.dumps({
+        "model": model,
+        "max_tokens": 8192,
+        "messages": [{"role": "user", "content": prompt}]
+    })
+    proc = subprocess.run(
+        ["curl", "-s", "-w", "\n%{http_code}",
+         "-X", "POST", LITELLM_URL,
+         "-H", "Content-Type: application/json",
+         "-H", "x-api-key: dummy",
+         "-H", "anthropic-version: 2023-06-01",
+         "-d", payload],
+        capture_output=True, text=True
+    )
+    # Parse response
+    lines = proc.stdout.strip().split("\n")
+    http_code = lines[-1].strip() if lines else "000"
+    body = "\n".join(lines[:-1])
+
+    if http_code.startswith("2"):
+        print(body)
+        return 0
+    else:
+        print(f"API Error ({http_code}): {body}", file=sys.stderr)
+        return 1
+
+
 def main():
     models_str = ", ".join(get_available_models(DEFAULT_CONFIG_PATH))
     epilog_str = f"Available Models (excluding fallbacks):\n  {models_str}"
 
     parser = argparse.ArgumentParser(
-        description="Invoke subagents with strict model validation against LiteLLM config.yaml.",
+        description="Invoke subagents via LiteLLM proxy. Uses curl directly (not claude CLI) to support any LiteLLM model.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=epilog_str
     )
@@ -103,20 +156,15 @@ def main():
         print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
 
-    cmd = ["claude", "--model", args.model, "-p", args.prompt]
-
     if not args.no_tmux:
-        exit_code = run_in_tmux(cmd, model=args.model, prompt=args.prompt)
+        exit_code = run_in_tmux(model=args.model, prompt=args.prompt)
         if exit_code is not None:
             sys.exit(exit_code)
 
-    print(f"[Subagent Invoker Direct] Model: {args.model} | Prompt length: {len(args.prompt)} chars", file=sys.stderr)
-    try:
-        res = subprocess.run(cmd)
-        sys.exit(res.returncode)
-    except Exception as e:
-        print(f"Execution Error: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Direct (non-tmux) execution
+    exit_code = call_litellm_direct(args.model, args.prompt)
+    sys.exit(exit_code)
+
 
 if __name__ == "__main__":
     main()
