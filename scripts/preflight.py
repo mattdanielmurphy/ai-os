@@ -50,7 +50,19 @@ def main():
     else:
         print("ag-quota execution skipped or produced no output.")
 
-    # 2. Rules Build & Sync
+        # 1b. LiteLLM Model Stack Context Dump
+    print("\n--- LiteLLM Model Stack Header ---")
+    model_parser = os.path.expanduser("~/projects/ai-os/scripts/parse_litellm_models.py")
+    if os.path.exists(model_parser):
+        hdr_out, code_hdr = run_cmd(["python3", model_parser, "--header"])
+        if code_hdr == 0 and hdr_out:
+            print(hdr_out)
+        else:
+            print("LiteLLM Header parse: WARNING (Failed to parse header)")
+    else:
+        print("parse_litellm_models.py missing.")
+
+# 2. Rules Build & Sync
     print("\n--- Running Rules Bundler (build_rules.py) ---")
     rules_script = os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")
     if os.path.exists(rules_script):
