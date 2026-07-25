@@ -50,7 +50,17 @@ def main():
     else:
         print("ag-quota execution skipped or produced no output.")
 
-    # 2. Git Pull
+    # 2. Rules Build & Sync
+    print("\n--- Running Rules Bundler (build_rules.py) ---")
+    rules_script = os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")
+    if os.path.exists(rules_script):
+        out_r, code_r = run_cmd(["python3", rules_script])
+        if code_r == 0:
+            print("rules status: OK (CLAUDE.md & GEMINI.md built)")
+        else:
+            print("rules status: WARNING (build_rules.py failed)")
+
+    # 3. Git Pull
     print("\n--- Running Git Pull ---")
     if os.path.exists(".git"):
         # Check uncommitted work

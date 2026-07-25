@@ -1,4 +1,3 @@
-<SYSTEM_INSTRUCTIONS>
 # Core Project Rules & System Instructions
 
 ## Auto-Commit Protocol
@@ -159,10 +158,3 @@ The user runs a single Chrome instance with the remote debugging port open, mean
 2. **Require Confirmation on Ambiguity**: If it is not 100% obvious which tab you are supposed to interact with, you MUST ask the user to confirm the target tab before doing anything. 
 3. **Strict Isolation**: NEVER modify, close, navigate, or clear data on any tab other than the explicit target tab. Treat all other tabs as off-limits personal data.
 4. **Prefer New Tabs**: If a task requires testing a new URL or running a clean test, use `mcp_chrome-devtools_new_page` to spawn a fresh tab rather than hijacking an existing one. Work exclusively within that new tab.
-
-## Claude Code / Hermes CLI Specific Rules
-
-- **Interactive Handoff & Spawn**: Never run agents blind (do not use `--non-interactive`, `--print`, or background execution without attachment). Handoffs must be run interactively to allow the user to review the plan and steering instructions. The handoff command MUST execute the `handover.py` script, which replaces the current process (`os.execvp("agy", ...)`) to attach the interactive `agy` CLI session directly to your terminal. Execute the handoff by running:
-  `python3 /Users/matt/projects/ai-os/scripts/handover.py --to-model pro --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
-- **Exclusively Use agy for Subagents**: When agy quota is high/abundant, use agy exclusively. If a prompt goes to Hermes (default), use the MCP tool to spawn a tmux-bound `agy` CLI instance as a subagent, or if already in agy, have agy spin up its own subagent natively. Do not spawn external API agents or run subagents without attaching/steering capabilities.
-</SYSTEM_INSTRUCTIONS>

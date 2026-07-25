@@ -1,0 +1,5 @@
+## Claude Code / Hermes CLI Specific Rules
+
+- **Interactive Handoff & Spawn**: Never run agents blind (do not use `--non-interactive`, `--print`, or background execution without attachment). Handoffs must be run interactively to allow the user to review the plan and steering instructions. The handoff command MUST execute the `handover.py` script, which replaces the current process (`os.execvp("agy", ...)`) to attach the interactive `agy` CLI session directly to your terminal. Execute the handoff by running:
+  `python3 /Users/matt/projects/ai-os/scripts/handover.py --to-model pro --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`
+- **Exclusively Use agy for Subagents**: When agy quota is high/abundant, use agy exclusively. If a prompt goes to Hermes (default), use the MCP tool to spawn a tmux-bound `agy` CLI instance as a subagent, or if already in agy, have agy spin up its own subagent natively. Do not spawn external API agents or run subagents without attaching/steering capabilities.
