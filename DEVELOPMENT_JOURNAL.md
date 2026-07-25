@@ -3,6 +3,7 @@
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-07-25
+- **Subagent Tmux Monitoring Integration:** Upgraded `scripts/subagent.py` to launch `claude` subagent calls in dedicated windows inside a `subagents` tmux session (`remain-on-exit on`), providing synchronous live stdout streaming while enabling real-time terminal monitoring. [[log]](agent-logs/2026-07-25_15-30_subagent-tmux-monitoring-integration.md)
 - **Thread Compactifying & Reset Automation:** Built dynamic token evaluator `scripts/check_thread_bloat.py`, context handoff script `scripts/context_handoff.py`, `/resume` skill (`~/.gemini/config/skills/resume/SKILL.md`), and automated thread reset trigger `scripts/trigger_thread_reset.py`. Archived `thread-compactifying` plan. [[log]](agent-logs/2026-07-25_06-50_thread-compactifying-execution.md)
 
 ## 2026-07-24
