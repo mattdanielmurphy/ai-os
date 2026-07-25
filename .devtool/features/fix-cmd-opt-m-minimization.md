@@ -6,7 +6,7 @@ assignee: null
 epic: null
 dueDate: null
 created: "2026-07-24T23:42:00-06:00"
-modified: "2026-07-24T23:42:00-06:00"
+modified: "2026-07-25T00:35:00-06:00"
 completedAt: null
 labels: ["bug", "tauri", "eventtap", "macos"]
 order: 1
