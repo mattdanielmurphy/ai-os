@@ -36,7 +36,7 @@
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
-0. **Fresh Thread Context:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, `DEVELOPMENT_JOURNAL.md`, and the `agent-logs/` directory. Read the dev journal first (it's the human-readable timeline of key decisions), then the most recent 2-3 agent log files to reconstruct a rich, continuous understanding of the codebase, recent user requests, architectural decisions, and current focus, acting as if you are in the same ongoing thread.
+0. **Fresh Thread Context & Recent History:** When starting a new thread/session, you MUST immediately scan the project root for `AG_CONTEXT.md`, `FEATURES.md`, `DEVELOPMENT_JOURNAL.md`, and the `agent-logs/` directory. Read `DEVELOPMENT_JOURNAL.md` first (it contains the concise timeline of recent key decisions and session summaries), then inspect the 2-3 most recent log files in `agent-logs/`. Use these brief summaries of past agent attempts and user feedback to understand what was recently tried, what failed, and the current state, preventing redundant mistakes or failed re-attempts.
 1. **Log Directory:** ALWAYS look for and maintain an `agent-logs/` directory at the root of the project.
 2. **Reading Logs:** Before starting a bug fix or feature, scan `agent-logs/` for related past work. Read relevant logs to understand what was tried, what failed, and the architectural context discovered by previous agents. Pay special attention to "What Didn't Work" to avoid repeating mistakes.
 3. **Writing Logs:** At the END of every session where you make code changes, create a new log file in `agent-logs/`.
