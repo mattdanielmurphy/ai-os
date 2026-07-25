@@ -31,7 +31,7 @@
 14. **No Transient Artifacts:** DO NOT generate temporary planning files on disk (e.g., `task.md`, `walkthrough.md`, `implementation_plan.md`). Keep all task checklists and architectural planning strictly internal to your thought process.
 15. **Strict File Reading:** NEVER use `python3 -c`, `awk`, `sed`, `head`, or `tail` via `run_command` to print file contents to the terminal. Use the `read_lines` MCP tool for surgical inspections.
 16. **Global Configuration Truth:** Any time you are asked to add, modify, or read "global rules", "customizations", or "agent configurations", you MUST perform those changes in the master configuration files located in `~/projects/ai-os/` (specifically `~/projects/ai-os/AGENTS.md` for agy/Gemini and `~/projects/ai-os/CLAUDE.md` for Hermes/Claude). NEVER create or modify standalone configuration files in `~/.gemini/config/` or `~/.config/` unless explicitly instructed to update a symlink.
-</CORE_RULES>
+</CORE_RULES>35. **Cross-Agent Skill Provisioning:** Any time an agent creates, modifies, or deletes a custom skill (e.g. in `~/.gemini/config/skills/`), it MUST ensure the skill is symlinked across all active agent environments (`~/.claude/skills/<skill-name>` for Claude Code and `~/.hermes/skills/<skill-name>` for Hermes) so all models share the exact same capabilities.
 
 <AGENT_WORK_LOGS>
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
