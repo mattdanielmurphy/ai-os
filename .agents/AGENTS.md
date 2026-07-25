@@ -1,1 +1,1 @@
-/Users/matt/.gemini/GEMINI.md
+/Users/matt/projects/ai-os/AGENTS.md
