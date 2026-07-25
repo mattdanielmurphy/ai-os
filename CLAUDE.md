@@ -151,6 +151,7 @@ No matching items found by AI. via terminal (runs non-interactively when execute
 @~/.ai-workflows/audit.md
 @~/.ai-workflows/fast.md
 @~/.ai-workflows/start.md
+@~/.ai-workflows/strict-delegation.md
 
 ## Chrome DevTools MCP Safety Rules
 The user runs a single Chrome instance with the remote debugging port open, meaning their personal browsing tabs are mixed with development tabs. To protect the user's personal data and workflow, you MUST strictly adhere to the following rules when using Chrome DevTools MCP:
