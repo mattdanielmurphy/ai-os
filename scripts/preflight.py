@@ -85,8 +85,33 @@ def main():
             print("Running `git pull`...")
             pull_out, pull_code = run_cmd(["git", "pull"])
         print(pull_out if pull_out else "Git pull finished.")
+    # 4. Thread Bloat Check
+    print("\n--- Running Thread Bloat Check (check_thread_bloat.py) ---")
+    bloat_script = os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py")
+    if os.path.exists(bloat_script):
+        b_out, code_b = run_cmd(["python3", bloat_script, "-j"])
+        if code_b == 0 and b_out:
+            try:
+                import json
+                b_data = json.loads(b_out)
+                t_sys = b_data.get("t_sys", 0)
+                t_hist = b_data.get("t_hist", 0)
+                t_thresh = b_data.get("t_hist_threshold", 0)
+                is_bloated = b_data.get("is_bloated", False)
+                status_str = "WARNING (Bloated)" if is_bloated else "OK"
+                print(f"thread bloat status: {status_str} [T_sys: {t_sys}, T_hist: {t_hist}/{t_thresh}]")
+                if is_bloated:
+                    print("  -> Generating context handoff automatically...")
+                    handoff_script = os.path.expanduser("~/projects/ai-os/scripts/context_handoff.py")
+                    if os.path.exists(handoff_script):
+                        run_cmd(["python3", handoff_script])
+                    print("  -> [BLOAT ALERT] Run `python3 scripts/trigger_thread_reset.py` to reset thread & restore context.")
+            except Exception:
+                print("thread bloat status: OK")
+        else:
+            print("thread bloat status: OK")
     else:
-        print("Not a git repository. Skipping git pull.")
+        print("check_thread_bloat.py missing.")
 
 if __name__ == "__main__":
     main()
