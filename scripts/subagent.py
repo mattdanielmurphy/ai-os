@@ -110,7 +110,7 @@ def run_in_tmux(model: str, prompt: str, cwd: str | None = None) -> int:
     # No pipe/redirection = PTY preserved = full TUI frames visible.
     bash_cmd = (
         f"{cwd_cmd}"
-        f"claude --model {q_model} --dangerously-skip-permissions {q_prompt}"
+        f"claude --bare --model {q_model} --dangerously-skip-permissions {q_prompt}"
     )
 
     try:
@@ -209,7 +209,9 @@ def main():
         sys.exit(subprocess.run(["claude", "--model", args.model,
                                  "--dangerously-skip-permissions", "-p", args.prompt]).returncode)
 
-    sys.exit(run_in_tmux(model=args.model, prompt=args.prompt, cwd=args.cwd))
+    # Default to the current working directory if none was explicitly provided
+    active_cwd = args.cwd if args.cwd else os.getcwd()
+    sys.exit(run_in_tmux(model=args.model, prompt=args.prompt, cwd=active_cwd))
 
 
 if __name__ == "__main__":
