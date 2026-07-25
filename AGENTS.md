@@ -1,5 +1,8 @@
 # Core Project Rules
 
+## Post-Edit Reload Protocol
+- **Hammerspoon Reload Rule:** Whenever you modify any source/Lua file in `qwerty-midi-hammerspoon` (or projects using Hammerspoon bundles), you MUST immediately run `bash /Users/matt/projects/qwerty-midi-hammerspoon/bin/bundle_and_reload.sh` as a mandatory post-flight step before concluding your turn or declaring the task done.
+
 ## Auto-Commit & Sync Protocols
 - **Pre-Flight Protocol:** Before any agent begins work on an established git project, it MUST run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` to perform all pre-flight routines (evaluating `ag-quota` velocity, auto-pulling/rebasing latest git changes, etc.) in a single step.
 - **Auto-Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to delegate the commit process. Auto-commit automatically requires a descriptive commit message detailing the changes made (generated via LiteLLM from staged diff/files) and pushes the commits (`git push`) to the remote repository.
@@ -33,6 +36,8 @@
 18. **Batch Subagent Delegation:** When delegating to a research subagent, batch ALL related questions into a single prompt rather than making serial round-trips. One subagent call asking 3 questions costs less than 3 calls asking 1 question each. For edit tasks, batch multiple edit operations into a single `mechanical_editor.py` spec when possible.
 19. **Concise Subagent Responses:** When delegating to research subagents, explicitly request "token-efficient summary capped at 500 tokens" in the prompt. Subagent responses should return structured summaries (bullet points or CSV), not verbose markdown with full file contents. If a subagent returns a verbose response, note that as a waste incident.
 20. **Global Configuration Truth:** Any time you are asked to add, modify, or read "global rules", "customizations", or "agent configurations", you MUST perform those changes in the master configuration files located in `~/projects/ai-os/` (specifically `~/projects/ai-os/AGENTS.md` for agy/Gemini and `~/projects/ai-os/CLAUDE.md` for Hermes/Claude). NEVER create or modify standalone configuration files in `~/.gemini/config/` or `~/.config/` unless explicitly instructed to update a symlink.
+21. **Antigravity Skill Reloading:** New skills installed to `~/.gemini/config/skills/` require reloading the Antigravity app window using `Cmd+R` (or starting a new thread) before the skill triggers or appears in UI suggestions.
+
 
 ## Agent Work Logs
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
