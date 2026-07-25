@@ -177,7 +177,7 @@ def run_in_tmux(model: str, prompt: str, cwd: str | None = None) -> int:
                         if not clean.endswith("\n"):
                             sys.stdout.write("\n")
                         sys.stdout.flush()
-                    _kill_pane()
+                    # _kill_pane()  # disabled by user request to keep session alive
                     return 0
             except (OSError, json.JSONDecodeError):
                 continue
