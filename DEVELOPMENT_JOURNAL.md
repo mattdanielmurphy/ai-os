@@ -2,6 +2,9 @@
 
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
+## 2026-07-25
+- **Thread Compactifying & Reset Automation:** Built dynamic token evaluator `scripts/check_thread_bloat.py`, context handoff script `scripts/context_handoff.py`, `/resume` skill (`~/.gemini/config/skills/resume/SKILL.md`), and automated thread reset trigger `scripts/trigger_thread_reset.py`. Archived `thread-compactifying` plan. [[log]](agent-logs/2026-07-25_06-50_thread-compactifying-execution.md)
+
 ## 2026-07-24
 - **Reverted In-Agent Quota Delta Check:** Removed verbose model-side post-flight quota delta check from `auto_commit.py` and restored quiet `preflight.py` status. Quota delta tracking will be handled natively in `ai-os` app UI/wrapper rather than model context window tools. [[log]](agent-logs/2026-07-24_00-25_quota-preflight-decimal-postflight-delta.md)
 
