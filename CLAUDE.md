@@ -20,6 +20,7 @@
 7. **Documentation:** When implementing features or bug fixes, always document any new capabilities, enhancements, or architectural additions by updating the features list in the `FEATURES.md` file at the root of the project.
 8. **Token Protection & Builds:** NEVER run raw verbose compile/build commands (like raw `xcodebuild` or raw compiler tasks) that output massive build logs. Always filter command outputs to print only the success status or relevant compiler error/warning highlights (and cap total output size/lines) to prevent blowing out the agent input token context window.
 9. **Directory Consideration & Target Folders:** When asked to create files, utilities, or projects, NEVER litter them directly in generic parent directories (e.g. `~/projects` or a non-project root directory). First consider the current directory: if it is a generic container directory, you MUST create a dedicated sub-directory, move into it, and place all new files and initialize repositories inside that sub-directory.
+   - **No-Workspace Fallback:** When running without an active workspace open, NEVER create projects inside `~/.gemini/antigravity/scratch/`. ALWAYS create new project directories in `~/projects/<project-name>` (e.g., `~/projects/vercel-openrouter-proxy`).
 10. **Telemetry Prohibitions & Task Delegation:**
     - NEVER run `get_last_cost.py` or any local cost/telemetry calculation scripts.
     - **Mixed Delegation Mode:** You are allowed to handle editing and code generation tasks directly using your native tools (at the expense of quota) when it is simpler and faster. 
@@ -119,10 +120,12 @@
 </SYSTEM_INSTRUCTIONS>
 
 # Critical Workflows
-Before acting on a workflow request (like 'audit', 'fast', or 'start'), you MUST read the exact instructions defined in the following absolute paths:
+Before acting on a workflow request (like 'audit', 'fast', 'start', or 'strict-delegation'), you MUST read the exact instructions defined in the following absolute paths:
 - ~/.ai-workflows/audit.md
 - ~/.ai-workflows/fast.md
 - ~/.ai-workflows/start.md
+- ~/.ai-workflows/strict-delegation.md
+
 
 ### macOS TCC Permission Cache Invalidation Guardrail
 - **Context**: On macOS, rebuilding ad-hoc code binaries (e.g. swift build or xcodebuild) changes the binary's code directory hash (CDHash). macOS TCC tracks Accessibility and Input Monitoring permissions by (Bundle ID + CDHash).
