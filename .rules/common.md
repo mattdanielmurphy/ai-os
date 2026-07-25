@@ -36,6 +36,18 @@
 20. **Global Configuration Truth & Single Source Bundling:** All rules are maintained in `~/projects/ai-os/.rules/` (`common.md`, `gemini_only.md`, `claude_only.md`). When adding, modifying, or creating system rules, ALWAYS edit files in `~/projects/ai-os/.rules/` and run `python3 /Users/matt/projects/ai-os/scripts/build_rules.py`. NEVER manually edit generated `CLAUDE.md` or `GEMINI.md` directly.
 21. **Antigravity Skill Reloading:** New skills installed to `~/.gemini/config/skills/` require reloading the Antigravity app window using `Cmd+R` (or starting a new thread) before the skill triggers or appears in UI suggestions.
 
+## Helper Utilities Directory & Agent Tooling
+When performing standard system actions, agents SHOULD prefer calling established local helper scripts in `~/projects/ai-os/scripts/` over raw manual implementations:
+- **`subagent.py`**: Invokes subagents with model validation against `litellm/config.yaml`. (e.g. `python3 ~/projects/ai-os/scripts/subagent.py -p "<prompt>" -m <model>`)
+- **`clip_search.py`**: Searches macOS clipboard history when referenced code/links are missing from context. (e.g. `python3 ~/projects/ai-os/scripts/clip_search.py "<query>"`)
+- **`search_all_agent_logs.py`**: Searches across all past `agent-logs/` history to review prior attempts/fixes. (e.g. `python3 ~/projects/ai-os/scripts/search_all_agent_logs.py "<query>"`)
+- **`generate_repo_map.py`**: Generates a token-efficient visual directory/code structure map for large repositories. (e.g. `python3 ~/projects/ai-os/scripts/generate_repo_map.py`)
+- **`precision_edit.py`**: Performs surgical micro-edits/replacements on files without full rewrites. (e.g. `python3 ~/projects/ai-os/scripts/precision_edit.py <file> <action> --target "<target>" --content "<content>"`)
+- **`mechanical_editor.py`**: Executes structured multi-chunk edits across one or more files.
+- **`parse_litellm_models.py`**: Queries model tiers and validates model strings against `/Users/matt/litellm/config.yaml`.
+- **`preflight.py`**: Evaluates quota velocity, pulls latest git changes, and dumps LiteLLM model stack header.
+- **`auto_commit.py`**: Stages changes, generates descriptive commit messages, and pushes to remote.
+
 ## Agent Work Logs
 **Instruction:** Maintain a history of agentic attempts across sessions to preserve context.
 
