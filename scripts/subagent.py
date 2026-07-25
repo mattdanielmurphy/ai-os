@@ -8,29 +8,6 @@ import shlex
 from pathlib import Path
 from parse_litellm_models import validate_model, get_available_models, DEFAULT_CONFIG_PATH
 
-def cleanup_stale_tmux_windows(session_name="subagents", max_dead=20):
-    """
-    Cleans up oldest dead panes/windows in the tmux session if count exceeds max_dead.
-    """
-    try:
-        out = subprocess.check_output(
-            ["tmux", "list-panes", "-a", "-F", "#{window_id} #{pane_dead}", "-t", session_name],
-            text=True,
-            stderr=subprocess.DEVNULL
-        )
-        dead_windows = []
-        for line in out.strip().splitlines():
-            parts = line.strip().split()
-            if len(parts) == 2 and parts[1] == "1":
-                dead_windows.append(parts[0])
-
-        if len(dead_windows) > max_dead:
-            to_remove = dead_windows[:-max_dead]
-            for win_id in to_remove:
-                subprocess.run(["tmux", "kill-window", "-t", win_id], stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
-
 def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
     cwd_tmp = Path.cwd() / "tmp" / "subagent_logs"
     if not cwd_tmp.parent.exists():
@@ -42,36 +19,40 @@ def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
     log_file = cwd_tmp / f"{run_id}.log"
     exit_file = cwd_tmp / f"{run_id}.exit"
 
+    # Ensure the subagents session exists with one window, one pane
     res = subprocess.run(["tmux", "has-session", "-t", session_name], capture_output=True)
     if res.returncode != 0:
-        subprocess.run(["tmux", "new-session", "-d", "-s", session_name, "-n", "overview", "bash"], check=True)
-
-    cleanup_stale_tmux_windows(session_name)
+        subprocess.run(["tmux", "new-session", "-d", "-s", session_name, "-n", "sub", "bash"], check=True)
+    else:
+        # Kill dead panes so we can respawn
+        subprocess.run(["tmux", "respawn-pane", "-k", "-t", f"{session_name}:0.0", "bash"],
+                       stderr=subprocess.DEVNULL)
 
     clean_prompt = "".join(c if (c.isalnum() or c in ("-", "_")) else "_" for c in prompt[:15]).strip("_")
     model_short = model.split("/")[-1][:10]
-    window_name = f"{model_short}-{clean_prompt}" if clean_prompt else f"{model_short}-{timestamp}"
+    title = f"{model_short}-{clean_prompt}" if clean_prompt else f"{model_short}-{timestamp}"
 
     inner_cmd = " ".join(shlex.quote(arg) for arg in cmd_args)
     bash_cmd = f"{inner_cmd} 2>&1 | tee {shlex.quote(str(log_file))}; echo ${{PIPESTATUS[0]}} > {shlex.quote(str(exit_file))}"
 
-    tmux_cmd = [
-        "tmux", "new-window", "-P", "-F", "#{window_id}",
-        "-t", session_name,
-        "-n", window_name,
-        f"bash -c {shlex.quote(bash_cmd)}"
-    ]
-
     try:
-        window_id = subprocess.check_output(tmux_cmd, text=True).strip()
-        subprocess.run(["tmux", "set-window-option", "-t", window_id, "remain-on-exit", "on"], stderr=subprocess.DEVNULL)
+        subprocess.run(["tmux", "respawn-pane", "-k",
+                        "-t", f"{session_name}:0.0",
+                        "bash", "-c", bash_cmd],
+                       check=True, capture_output=True)
+        subprocess.run(["tmux", "set-window-option", "-t", f"{session_name}:0",
+                        "remain-on-exit", "on"],
+                       stderr=subprocess.DEVNULL)
+        subprocess.run(["tmux", "rename-window", "-t", f"{session_name}:0", title],
+                       stderr=subprocess.DEVNULL)
     except Exception as e:
-        print(f"[Subagent Tmux Error] Could not spawn tmux window: {e}. Falling back to standard process.", file=sys.stderr)
+        print(f"[Subagent Tmux Error] Could not respawn tmux pane: {e}. Falling back to direct execution.", file=sys.stderr)
         return None
 
     print(f"[Subagent Invoker] Model: {model} | Prompt length: {len(prompt)} chars", file=sys.stderr)
-    print(f"[Subagent Tmux] Session: '{session_name}' | Window: '{window_name}' ({window_id})", file=sys.stderr)
+    print(f"[Subagent Tmux] Session: '{session_name}' (window 0 — attach with: tmux attach -t {session_name})", file=sys.stderr)
 
+    # Stream output as it arrives
     last_pos = 0
     while not exit_file.exists():
         time.sleep(0.2)
@@ -84,6 +65,7 @@ def run_in_tmux(cmd_args, model="claude", prompt="", session_name="subagents"):
                     sys.stdout.flush()
                     last_pos = f.tell()
 
+    # Drain remaining output
     if log_file.exists():
         with open(log_file, "r", encoding="utf-8", errors="replace") as f:
             f.seek(last_pos)
