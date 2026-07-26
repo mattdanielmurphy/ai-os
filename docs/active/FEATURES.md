@@ -23,7 +23,7 @@
 * **Orchestrator Rule Update:** Updated `.agents/AGENTS.md` rules to instruct the orchestrator to run `housekeep.py` asynchronously as its final tool call, allowing it to present task outputs immediately without blocking.
 
 ### [2026-07-09] Systemic Delegation Settings & Orchestrator-Only Mode (Mode 3)
-* **Delegation Settings Enforced:** Added a ruleset in .agents/AGENTS.md defining three delegation levels (Mode 1: Self-Contained, Mode 2: Hybrid, Mode 3: Orchestrator-Only) and activated Mode 3 as the active constraint. Under Mode 3, the orchestrator model (Gemini) acts strictly as a coordinator, never reading or writing files directly, instead delegating all edits/reads to subagent scripts (mechanical_editor.py / precision_edit.py) or using grep_search.
+* **Delegation Settings Enforced:** Added a ruleset in .agents/AGENTS.md defining three delegation levels (Mode 1: Self-Contained, Mode 2: Hybrid, Mode 3: Orchestrator-Only) and activated Mode 3 as the active constraint. Under Mode 3, the orchestrator model (Gemini) acts strictly as a coordinator, never reading or writing files directly, instead delegating all edits/reads to subagent scripts (subagent.py / precision_edit.py) or using grep_search.
 
 ### [2026-07-09] Conversation Transcript Auditing for Token Waste
 * **Transcript Audit Script (`scripts/audit_transcripts.py`):** Created a Python utility that scans and parses `transcript_full.jsonl` files in the Antigravity CLI and IDE brain directories. It detects direct file reads/writes by the main orchestrator (Gemini 3.5 Flash) and calculates the estimated cumulative token waste caused by keeping large files in the prompt context over subsequent steps.
@@ -207,7 +207,7 @@
 ### [2026-06-27] Phase 2: System Instructions & Orchestration Tools
 * **System Rules Append Script:** Implemented `scripts/append_system_rule.py` to programmatically insert rules into `~/.gemini/GEMINI.md` under global or agent-specific headers (`### GLOBAL RULES`, `### ANTIGRAVITY (PREMIUM) RULES`, `### CLAUDE (ECONOMY) RULES`).
 * **Ingest Codebase Tool:** Ensured `scripts/ingest_codebase` is properly registered and executable, skeletonizing code structures to minimize tokens.
-* **Mechanical Editor:** Implemented `scripts/mechanical_editor.py` to automate unified `.patch` execution with deepseek model via LiteLLM proxy, with a fallback programmatic JSON search-and-replace mechanism if patching fails.
+* **Mechanical Editor:** Implemented `scripts/subagent.py` to automate unified `.patch` execution with deepseek model via LiteLLM proxy, with a fallback programmatic JSON search-and-replace mechanism if patching fails.
 
 ### [2026-06-27] Phase 5: Context Architecture Cleanup & Routing Fixes
 * **Context Manager Routing Update:** Updated `scripts/append_system_rule.py` to support multi-file target routing: `--agent global` writes rules to both `~/.gemini/GEMINI.md` and `CLAUDE.md`, `--agent agy` writes to `~/.gemini/GEMINI.md` under `### ANTIGRAVITY (PREMIUM) RULES`, and `--agent claude` writes to `CLAUDE.md` under `## CLAUDE-SPECIFIC RULES`.
@@ -217,7 +217,7 @@
 
 ### [2026-06-27] Phase 6: Accurate Telemetry, Quota Tracking, & Sub-Model Costing
 * **Centralized Telemetry Database:** Implemented `scripts/telemetry_db.py` to record sub-model LiteLLM calls (with prompt/completion token details and DeepSeek-based pricing calculations) and track `agy` execution turns in a local database `~/.ai-os-telemetry.json`.
-* **Orchestrator Cost Interception:** Modified `scripts/mechanical_editor.py` to intercept the `usage` block from the LiteLLM API response and log metrics to `telemetry_db.py` on success.
+* **Orchestrator Cost Interception:** Modified `scripts/subagent.py` to intercept the `usage` block from the LiteLLM API response and log metrics to `telemetry_db.py` on success.
 
 ### [2026-06-27] Phase 8: Real-Time Quota Telemetry (Source of Truth)
 * **Automated OAuth Token Refresh:** Implemented a robust token refresh mechanism using client ID `1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com` and client secret `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`. When the local token in `~/.gemini/antigravity-cli/antigravity-oauth-token` is expired or close to expiry, the script programmatically requests a refresh and persists the updated token back to disk.
@@ -238,7 +238,7 @@
 
 ### [2026-06-27] Dynamic DeepSeek Delegation Toggle
 * **Dynamic Toggle in `.zshrc_aios`:** Added `AIOS_DELEGATE` environment variable and `delegate_on`/`delegate_off` aliases.
-* **Triage Editing System Rule Update:** Integrated rules checking delegation state (`echo $AIOS_DELEGATE`) in both `~/.gemini/GEMINI.md` and `/Users/matthewmurphy/projects/ai-os/CLAUDE.md`. Under Scenario A (delegate=true), agents delegate to `mechanical_editor.py`; under Scenario B (delegate=false), agents use Quoted Heredoc safely (with single quotes around `'EOF_SAFE'`) to directly write code files.
+* **Triage Editing System Rule Update:** Integrated rules checking delegation state (`echo $AIOS_DELEGATE`) in both `~/.gemini/GEMINI.md` and `/Users/matthewmurphy/projects/ai-os/CLAUDE.md`. Under Scenario A (delegate=true), agents delegate to `subagent.py`; under Scenario B (delegate=false), agents use Quoted Heredoc safely (with single quotes around `'EOF_SAFE'`) to directly write code files.
 
 ### [2026-06-27] Token-Saving Quiet Run wrapper
 * **`qr` (Quiet Run) wrapper:** Added `qr` helper function to `~/.zshrc_aios` and `/Users/matthewmurphy/projects/ai-os/.zshrc_aios`. Pipes command stdout/stderr to `/tmp/aios_last_cmd.log`, outputting a compact success message on status 0, or printing the last 20 log lines on failure.
