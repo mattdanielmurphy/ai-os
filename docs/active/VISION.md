@@ -69,7 +69,7 @@ Built to prevent "Token Ping-Pong" and enable autonomous execution.
 
 Governed by the dynamic `$AIOS_DELEGATE` toggle (`delegate_on` / `delegate_off`).
 
-- **Quota Saving Mode (Delegated):** Agent generates a spec and hands it to `mechanical_editor.py`, which uses a local LiteLLM proxy to generate and apply a strict `.patch`.
+- **Quota Saving Mode (Delegated):** Agent generates a spec and hands it to `subagent.py`, which uses a local LiteLLM proxy to generate and apply a strict `.patch`.
 - **Premium Speed Mode (Direct):** Agent writes code directly using **Quoted Heredocs** (`cat << 'EOF_SAFE' > file.tmp`) to prevent zsh escaping and string interpolation errors.
 - **Fast-Path (`precision_edit.py`):** Zero-API-cost deterministic script for strict 1-line appends, inserts, or replacements.
 

@@ -192,7 +192,7 @@ def audit_transcript(filepath):
                 cmd = args.get("CommandLine") or ""
                 # Detect shell redirects for direct_writes
                 # Check if it's a delegated script before checking for redirects
-                if any(script in cmd for script in ['mechanical_editor', 'auto_commit', 'housekeep', 'precision_edit']):
+                if any(script in cmd for script in ['subagent', 'auto_commit', 'housekeep', 'precision_edit']):
                     delegated_calls.append({
                         "step": step_idx,
                         "tool": name,
@@ -232,7 +232,7 @@ def audit_transcript(filepath):
                         # Gracefully handle cases where parsing fails
                         pass
 
-                if any(script in cmd for script in ['mechanical_editor', 'auto_commit', 'housekeep', 'precision_edit']):
+                if any(script in cmd for script in ['subagent', 'auto_commit', 'housekeep', 'precision_edit']):
                     delegated_calls.append({
                         "step": step_idx,
                         "tool": name,
@@ -291,7 +291,7 @@ def print_markdown_report(audit):
     print(f"\n- **Total Steps**: {audit['total_steps']}")
     print(f"- **Direct File Reads (view_file)**: {len(audit['direct_reads'])}")
     print(f"- **Direct File Writes/Edits**: {len(audit['direct_writes'])}")
-    print(f"- **Delegated Tasks (mechanical_editor, etc.)**: {len(audit['delegated_calls'])}")
+    print(f"- **Delegated Tasks (subagent, etc.)**: {len(audit['delegated_calls'])}")
     print(f"- **Estimated Cumulative Token Waste (from direct reads)**: {int(audit['cumulative_waste_tokens']):,} tokens")
     print(f"- **Total Gemini Tokens Consumed (API Cost)**: {int(audit['total_gemini_tokens']):,} tokens")
     print(f"  - **Input Context (Cumulative)**: {int(audit['cumulative_input_tokens']):,} tokens")

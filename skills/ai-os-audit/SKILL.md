@@ -43,7 +43,7 @@ python3 scripts/audit_transcripts.py /path/to/transcript.jsonl
 The script categorizes every step in the transcript:
 1. **Direct reads** — Files read by the orchestrator (expensive)
 2. **Direct writes** — Files written directly via heredocs/redirection
-3. **Delegated calls** — Edits routed through mechanical_editor.py or Claude Code (cheap)
+3. **Delegated calls** — Edits routed through subagent.py or Claude Code (cheap)
 4. **Other calls** — shell commands, ripgrep searches, etc.
 
 It also calculates **cumulative token waste** — the compounding cost of reading large files early in a long conversation.
@@ -53,7 +53,7 @@ It also calculates **cumulative token waste** — the compounding cost of readin
 After an audit reveals issues:
 
 1. **High direct-read count** → Add more aggressive rules to route file reading through subagents
-2. **Low delegation rate** → Verify the `$AIOS_DELEGATE` toggle and mechanical_editor.py availability
+2. **Low delegation rate** → Verify the `$AIOS_DELEGATE` toggle and subagent.py availability
 3. **Token waste spikes** → The session was too long; branch earlier next time
 4. **Grep without directory filters** → Add file-type or subdirectory constraints to search patterns
 

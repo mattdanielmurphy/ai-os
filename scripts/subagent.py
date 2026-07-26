@@ -28,6 +28,20 @@ LOG_DIR = Path("/Users/matt/projects/ai-os/tmp/subagent_logs")
 CLAUDE_SESSION_DIR = Path.home() / ".claude/projects/-Users-matt-projects-ai-os"
 
 
+
+def list_available_models(config_path):
+    try:
+        print("Available models:")
+        with open(config_path, "r", encoding="utf-8") as f:
+            for line in f:
+                s = line.strip()
+                if s.startswith("- model_name:"):
+                    name = s.split(":", 1)[1].strip()
+                    if not name.endswith("-or"):
+                        print(f"  • {name}")
+    except Exception as e:
+        print(f"Error reading configuration file: {e}", file=sys.stderr)
+
 def _ensure_session():
     r = subprocess.run(["tmux", "has-session", "-t", SESSION], capture_output=True)
     if r.returncode != 0:
@@ -252,35 +266,126 @@ def run_in_tmux(model: str, prompt: str, cwd: str | None = None) -> int:
         _cleanup_pane(pane_id)
 
 
+def validate_allowed_model(model_name):
+    allowed = ["deepseek-v4-flash", "deepseek-v4-pro", "gemini-3.5-flash-lite", "gemini-3.1-pro", "gemini-3.6-flash", "haiku"]
+    if model_name not in allowed:
+        print(f"Error: Delegating to {model_name} is prohibited. Please use a permitted model: {', '.join(allowed)}", file=sys.stderr)
+        sys.exit(1)
+
 def main():
     models = ", ".join(get_available_models(DEFAULT_CONFIG_PATH))
 
     parser = argparse.ArgumentParser(
-        description="Spawn claude Code TUI in tmux pane. Captures response from claude session logs.",
+        description="Spawn claude Code TUI in tmux pane or execute directly. Merged with mechanical_editor.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"Available Models:\n  {models}")
 
-    parser.add_argument("-p", "--prompt", required=True, help="Task for the subagent.")
+    parser.add_argument("filepath", nargs="?", help="Path to the file to modify, or a technical spec if --spec is not provided")
+    parser.add_argument("--spec", help="Technical spec describing the modifications")
+
+    parser.add_argument("-p", "--prompt", help="Direct task prompt for the subagent (alternative to filepath/spec).")
     parser.add_argument("-m", "--model", default="deepseek-v4-flash", help="Model name from litellm config.yaml")
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH, help="Path to litellm config.yaml")
     parser.add_argument("--cwd", help="Working directory (default: current)")
-    parser.add_argument("--no-tmux", action="store_true", help="Skip tmux, use -p mode")
+    parser.add_argument("--no-tmux", action="store_true", help="Skip tmux, use -p mode directly via Claude CLI")
+    parser.add_argument("-l", "--list", action="store_true", help="List available models from LiteLLM config")
 
     args = parser.parse_args()
+
+    if args.list:
+        list_available_models(args.config)
+        sys.exit(0)
+
+    # Validate model early
+    validate_allowed_model(args.model)
 
     valid, msg, _ = validate_model(args.model, config_path=args.config)
     if not valid:
         print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
 
-    if args.no_tmux:
-        print(f"[Direct] Model: {args.model}", file=sys.stderr)
-        sys.exit(subprocess.run(["claude", "--model", args.model,
-                                 "--dangerously-skip-permissions", "-p", args.prompt]).returncode)
+    # Resolve prompt from args
+    final_prompt = None
+    if args.prompt:
+        final_prompt = args.prompt
+    else:
+        filepath_arg = None
+        spec_arg = None
 
-    # Default to the current working directory if none was explicitly provided
-    active_cwd = args.cwd if args.cwd else os.getcwd()
-    sys.exit(run_in_tmux(model=args.model, prompt=args.prompt, cwd=active_cwd))
+        if args.filepath and not args.spec:
+            potential_path = Path(args.filepath)
+            if potential_path.exists():
+                parser.error('A technical spec is required when editing an existing file.')
+            else:
+                spec_arg = args.filepath
+        elif args.filepath and args.spec:
+            filepath_arg = args.filepath
+            spec_arg = args.spec
+        elif not args.filepath and args.spec:
+            spec_arg = args.spec
+        else:
+            parser.error('A technical spec, task description, or --prompt is required.')
+
+        if filepath_arg:
+            filepath = Path(filepath_arg).resolve()
+            if not filepath.exists():
+                print(f"Error: File {filepath} does not exist.", file=sys.stderr)
+                sys.exit(1)
+            final_prompt = f"Apply this technical spec: '{spec_arg}' to the file: '{filepath}'"
+        else:
+            final_prompt = spec_arg
+
+    # Context hiding setup (moved from mechanical_editor)
+    gemini_md = Path.home() / ".gemini" / "GEMINI.md"
+    claude_md = Path.home() / ".claude" / "CLAUDE.md"
+
+    # Pre-check: auto-recover from hard crashes where .bak exists but original doesn't
+    for md_path in [gemini_md, claude_md]:
+        bak_path = md_path.with_name(md_path.name + ".bak")
+        if bak_path.exists() and not md_path.exists():
+            bak_path.rename(md_path)
+            print(f"[Subagent] Recovered {bak_path} → {md_path}", flush=True)
+
+    renamed_files = []
+
+    # Setup ZSHRC variables
+    zshrc_path = Path.home() / ".zshrc"
+    if zshrc_path.exists():
+        with open(zshrc_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("export ANTHROPIC_BASE_URL="):
+                    os.environ["ANTHROPIC_BASE_URL"] = line.split("=", 1)[1].strip('"').strip("'")
+                elif line.startswith("export ANTHROPIC_API_KEY="):
+                    os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
+                elif line.startswith("export OPENAI_API_KEY="):
+                    os.environ["OPENAI_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
+                elif line.startswith("export OPENAI_API_BASE="):
+                    os.environ["OPENAI_API_BASE"] = line.split("=", 1)[1].strip('"').strip("'")
+
+    try:
+        # Rename rules files
+        if gemini_md.exists():
+            gemini_md.rename(gemini_md.with_name(gemini_md.name + ".bak"))
+            renamed_files.append(gemini_md)
+        if claude_md.exists():
+            claude_md.rename(claude_md.with_name(claude_md.name + ".bak"))
+            renamed_files.append(claude_md)
+
+        if args.no_tmux:
+            print(f"[Direct] Model: {args.model}", file=sys.stderr)
+            ret_code = subprocess.run(["claude", "--model", args.model,
+                                     "--dangerously-skip-permissions", "-p", final_prompt]).returncode
+            sys.exit(ret_code)
+        else:
+            active_cwd = args.cwd if args.cwd else os.getcwd()
+            sys.exit(run_in_tmux(model=args.model, prompt=final_prompt, cwd=active_cwd))
+    finally:
+        # Restore renamed files
+        for original_path in renamed_files:
+            bak_path = original_path.with_name(original_path.name + ".bak")
+            if bak_path.exists():
+                bak_path.rename(original_path)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import difflib
 import argparse
 from pathlib import Path
 
-DEFAULT_CONFIG_PATH = "/Users/matt/litellm/config.yaml"
+DEFAULT_CONFIG_PATH = "/app/litellm_config.yaml"
 
 def parse_litellm_tiers(config_path=DEFAULT_CONFIG_PATH):
     path = Path(config_path)

@@ -50,7 +50,7 @@ The ai-os workspace is composed of several key components:
 - **Orchestration & Bootloading:** A shell-wrapping bootloader (`bin/ai-os`, `.zshrc_aios`) that intercepts destructive commands and injects quiet-run wrappers.
 - **Tauri GUI & PTY Layer:** A React/TS frontend utilizing `xterm.js` to render multiplexed background processes via Rust bindings (`src/main.ts`, `src-tauri/src/main.rs`).
 - **Cost & Quota Telemetry Engine:** Sub-model cost math and token refresh flows (`scripts/telemetry_db.py`).
-- **Triage Editing System:** Surgical text mutations and LLM-driven patch applications (`scripts/precision_edit.py`, `scripts/mechanical_editor.py`).
+- **Triage Editing System:** Surgical text mutations and LLM-driven patch applications (`scripts/precision_edit.py`, `scripts/subagent.py`).
 - **Git Memory Pipeline:** Multi-layer indexing for safe history retrieval (`scripts/memory_search.sh`, `scripts/memory_diff.sh`).
 - **Dynamic Rules Injection:** Manages context routing to active models and global rulesets (`scripts/append_system_rule.py`).
 - **Automated Context Handoff:** Creates standardized context log files in `agent-logs/` conforming to the Indexed Handoff Protocol (`scripts/context_handoff.py`).
