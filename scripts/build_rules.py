@@ -5,6 +5,7 @@ build_rules.py - Single Source Rule Bundler for ai-os
 Combines modular rules from .rules/ into destination targets:
   - CLAUDE.md = common.md + claude_only.md
   - GEMINI.md = common.md + gemini_only.md (written to ~/.gemini/GEMINI.md and synced to ~/projects/ai-os/AGENTS.md)
+  - HERMES.md = common.md + hermes_only.md (written to ~/projects/ai-os/HERMES.md and ~/.hermes/HERMES.md)
 """
 
 import os
@@ -16,9 +17,12 @@ RULES_DIR = PROJECT_ROOT / ".rules"
 COMMON_PATH = RULES_DIR / "common.md"
 CLAUDE_ONLY_PATH = RULES_DIR / "claude_only.md"
 GEMINI_ONLY_PATH = RULES_DIR / "gemini_only.md"
+HERMES_ONLY_PATH = RULES_DIR / "hermes_only.md"
 
 CLAUDE_TARGET = PROJECT_ROOT / "CLAUDE.md"
 GEMINI_TARGET = Path("/Users/matt/.gemini/GEMINI.md")
+HERMES_TARGET_PROJECT = PROJECT_ROOT / "HERMES.md"
+HERMES_TARGET_GLOBAL = Path("/Users/matt/.hermes/HERMES.md")
 
 def read_file(path: Path) -> str:
     if not path.exists():
@@ -36,6 +40,7 @@ def main():
     common = read_file(COMMON_PATH)
     claude_only = read_file(CLAUDE_ONLY_PATH)
     gemini_only = read_file(GEMINI_ONLY_PATH)
+    hermes_only = read_file(HERMES_ONLY_PATH)
 
     # Build CLAUDE.md
     claude_content = f"<SYSTEM_INSTRUCTIONS>\n{common}\n\n{claude_only}\n</SYSTEM_INSTRUCTIONS>"
@@ -44,6 +49,16 @@ def main():
     # Build GEMINI.md
     gemini_content = f"{gemini_only}\n\n{common}"
     write_file(GEMINI_TARGET, gemini_content)
+
+    # Build HERMES.md
+    hermes_content = f"<HERMES_SYSTEM_INSTRUCTIONS>\n{common}\n\n{hermes_only}\n</HERMES_SYSTEM_INSTRUCTIONS>"
+    write_file(HERMES_TARGET_PROJECT, hermes_content)
+    write_file(HERMES_TARGET_GLOBAL, hermes_content)
+
+    # Sync skills across Hermes, Claude, Antigravity, agy, Codex
+    sync_skills_script = PROJECT_ROOT / "scripts" / "sync_skills.py"
+    if sync_skills_script.exists():
+        os.system(f"python3 {sync_skills_script}")
 
     # Maintain single clean symlink for AGENTS.md -> GEMINI.md if missing or broken
     agents_symlink = PROJECT_ROOT / "AGENTS.md"

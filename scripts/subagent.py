@@ -36,17 +36,81 @@ def _ensure_session():
                        stderr=subprocess.DEVNULL)
 
 
-def _kill_pane():
-    subprocess.run(["tmux", "send-keys", "-t", f"{SESSION}:0.0", "C-c"], stderr=subprocess.DEVNULL)
+def _kill_pane(pane_id: str):
+    target = f"{SESSION}:0.{pane_id}"
+    subprocess.run(["tmux", "send-keys", "-t", target, "C-c"], stderr=subprocess.DEVNULL)
     time.sleep(0.5)
-    subprocess.run(["tmux", "send-keys", "-t", f"{SESSION}:0.0", "Enter"], stderr=subprocess.DEVNULL)
+    subprocess.run(["tmux", "send-keys", "-t", target, "Enter"], stderr=subprocess.DEVNULL)
     time.sleep(0.3)
 
 
-def _respawn(cmd: str):
-    _kill_pane()
-    subprocess.run(["tmux", "respawn-pane", "-k", "-t", f"{SESSION}:0.0", "bash", "-c", cmd],
+def _respawn(cmd: str, pane_id: str):
+    _kill_pane(pane_id)
+    target = f"{SESSION}:0.{pane_id}"
+    subprocess.run(["tmux", "respawn-pane", "-k", "-t", target, "bash", "-c", cmd],
                    check=True, capture_output=True, timeout=5)
+
+
+def _allocate_pane() -> str:
+    """Find a free pane in subagents:0 or create one. Returns pane_id (e.g. '0', '1')."""
+    _ensure_session()
+
+    # Query all panes in the window, checking pane_dead and @busy status
+    # Format: pane_id pane_dead busy
+    panes = subprocess.run(
+        ["tmux", "list-panes", "-t", f"{SESSION}:0", "-F", "#{pane_id} #{pane_dead} #{E:@busy}"],
+        capture_output=True, text=True, timeout=5
+    ).stdout.strip().splitlines()
+
+    for line in panes:
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split()
+        pid = parts[0]
+        # pane_dead is "1" when the pane has exited (remain-on-exit)
+        pane_dead = parts[1] if len(parts) > 1 else "0"
+        busy = parts[2] if len(parts) > 2 else "0"
+
+        # Free if pane is dead OR busy flag is not "1"
+        if pane_dead == "1" or busy != "1":
+            subprocess.run(
+                ["tmux", "set-option", "-p", "-t", f"{SESSION}:0.{pid}", "@busy", "1"],
+                check=True, capture_output=True, timeout=5
+            )
+            return pid
+
+    # No free pane — split the current pane to create a new one
+    # Use the last pane's id as the target for splitting
+    split_target = f"{SESSION}:0.{pid}" if panes else f"{SESSION}:0"
+    result = subprocess.run(
+        ["tmux", "split-window", "-h", "-d", "-t", split_target, "-P", "-F", "#{pane_id}"],
+        capture_output=True, text=True, check=True, timeout=5
+    )
+    new_pid = result.stdout.strip()
+    subprocess.run(
+        ["tmux", "set-option", "-p", "-t", f"{SESSION}:0.{new_pid}", "@busy", "1"],
+        check=True, capture_output=True, timeout=5
+    )
+    return new_pid
+
+
+def _cleanup_pane(pane_id: str):
+    """Mark pane as free; if more than 1 pane exists, kill it."""
+    target = f"{SESSION}:0.{pane_id}"
+    subprocess.run(
+        ["tmux", "set-option", "-p", "-t", target, "@busy", "0"],
+        capture_output=True, timeout=5
+    )
+
+    # Count panes in the window
+    count_result = subprocess.run(
+        ["tmux", "list-panes", "-t", f"{SESSION}:0", "-F", "#{pane_id}"],
+        capture_output=True, text=True, timeout=5
+    )
+    pane_count = len([l for l in count_result.stdout.strip().splitlines() if l.strip()])
+    if pane_count > 1:
+        subprocess.run(["tmux", "kill-pane", "-t", target], capture_output=True, timeout=5)
 
 
 def _rename(title: str):
@@ -113,8 +177,10 @@ def run_in_tmux(model: str, prompt: str, cwd: str | None = None) -> int:
         f"claude --bare --model {q_model} --dangerously-skip-permissions {q_prompt}"
     )
 
+    pane_id = _allocate_pane()
+
     try:
-        _respawn(bash_cmd)
+        _respawn(bash_cmd, pane_id)
         _rename(title)
     except Exception:
         return 1
@@ -125,62 +191,65 @@ def run_in_tmux(model: str, prompt: str, cwd: str | None = None) -> int:
 
     claude_projects_dir = Path.home() / ".claude/projects"
 
-    while True:
-        time.sleep(0.5)
-        if not claude_projects_dir.exists():
-            continue
-
-        logs = sorted(
-            [f for f in claude_projects_dir.glob("**/*.jsonl") if os.path.getmtime(f) >= start_ts - 5],
-            key=os.path.getmtime,
-            reverse=True,
-        )
-
-        for log in logs:
-            try:
-                last_text = None
-                end_turn = False
-                final_text = None
-
-                with open(log, "r", encoding="utf-8", errors="replace") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            entry = json.loads(line)
-                        except json.JSONDecodeError:
-                            continue
-
-                        if entry.get("type") == "assistant":
-                            msg = entry.get("message", {}) if isinstance(entry.get("message"), dict) else {}
-                            stop_reason = msg.get("stop_reason") or entry.get("stop_reason")
-
-                            content = msg.get("content", "") or entry.get("content", "")
-                            if isinstance(content, list):
-                                texts = [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
-                                content = "".join(texts)
-
-                            if content and isinstance(content, str) and content.strip():
-                                last_text = content.strip()
-
-                            if stop_reason == "end_turn":
-                                end_turn = True
-                                final_text = content.strip() if (content and isinstance(content, str) and content.strip()) else last_text
-
-                if end_turn:
-                    output = final_text or last_text
-                    if output:
-                        import re
-                        clean = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', output)
-                        sys.stdout.write(clean)
-                        if not clean.endswith("\n"):
-                            sys.stdout.write("\n")
-                        sys.stdout.flush()
-                    # _kill_pane()  # disabled by user request to keep session alive
-                    return 0
-            except (OSError, json.JSONDecodeError):
+    try:
+        while True:
+            time.sleep(0.5)
+            if not claude_projects_dir.exists():
                 continue
+
+            logs = sorted(
+                [f for f in claude_projects_dir.glob("**/*.jsonl") if os.path.getmtime(f) >= start_ts - 5],
+                key=os.path.getmtime,
+                reverse=True,
+            )
+
+            for log in logs:
+                try:
+                    last_text = None
+                    end_turn = False
+                    final_text = None
+
+                    with open(log, "r", encoding="utf-8", errors="replace") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            try:
+                                entry = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+
+                            if entry.get("type") == "assistant":
+                                msg = entry.get("message", {}) if isinstance(entry.get("message"), dict) else {}
+                                stop_reason = msg.get("stop_reason") or entry.get("stop_reason")
+
+                                content = msg.get("content", "") or entry.get("content", "")
+                                if isinstance(content, list):
+                                    texts = [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
+                                    content = "".join(texts)
+
+                                if content and isinstance(content, str) and content.strip():
+                                    last_text = content.strip()
+
+                                if stop_reason == "end_turn":
+                                    end_turn = True
+                                    final_text = content.strip() if (content and isinstance(content, str) and content.strip()) else last_text
+
+                    if end_turn:
+                        output = final_text or last_text
+                        if output:
+                            import re
+                            clean = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', output)
+                            sys.stdout.write(clean)
+                            if not clean.endswith("\n"):
+                                sys.stdout.write("\n")
+                            sys.stdout.flush()
+                        # _kill_pane()  # disabled by user request to keep session alive
+                        return 0
+                except (OSError, json.JSONDecodeError):
+                    continue
+    finally:
+        _cleanup_pane(pane_id)
 
 
 def main():

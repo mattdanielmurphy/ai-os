@@ -25,7 +25,7 @@
     - **Token-Conscious Work:** You may handle editing and code generation tasks directly — agy has full access to its native tools. However, consider spawning agy subagents when the subtask would save significant context window tokens relative to the overhead of delegation. Factors to weigh: current thread length, token caching benefits, and whether the subtask needs very different context than what's already loaded.
     - **Self-Delegation (Preferred):** When delegation makes sense, prefer agy subagents (`agy -p '...'`) over external tools like Claude Code. Claude Code costs money per call; agy subagents are local and free (aside from context). Only delegate to Claude Code when agy genuinely cannot handle the task (e.g., the task specifically needs Claude's capabilities).
 11. **Research Delegation & Optimized Grep:** Avoid using `grep`, `rg`, or `grep_search` to blindly hunt for code logic or variable definitions at a broad scope — it produces massive result lists and wastes tokens. When you need to scan a large workspace, prefer delegating the search to an agy subagent or using `delegate_research` to have a subagent return a token-efficient summary. When searching directly, always narrow the scope (file extensions, subdirectory paths) to prevent massive result lists.
-12. **Synchronous Subagents (Strict):** Subagent scripts (`mechanical_editor.py`, `precision_edit.py`) MUST execute synchronously — never as background/async tasks. (Exception: `housekeep.py` can be run asynchronously). If your platform defaults to async execution, set WaitMsBeforeAsync to 0/synchronous mode, or cancel the async call and switch to `precision_edit.py` instead. NEVER use `command_status`, `manage_task`, or any polling mechanism — if a script was launched async, treat it as a mistake, cancel it, and re-launch synchronously.
+12. **Synchronous Subagents (Strict):** Subagent scripts (`mechanical_editor.py`, `precision_edit.py`) MUST execute synchronously — never as background/async tasks. (Exception: `housekeep.py` can be run asynchronously). If your platform defaults to async execution, set WaitMsBeforeAsync to 0/synchronous mode, or cancel the async call and switch to `precision_edit.py` instead. NEVER use `command_status`, `manage_task`, or any polling mechanism — if a script was launched async, treat it as a mistake, cancel it, and re-launch synchronously. You MUST NEVER run 'tmux kill-session' or otherwise kill the 'subagents' tmux session under any circumstances, because the user is actively monitoring it.
 13. **No Heredocs:** NEVER use Quoted Heredocs (`cat << 'EOF'`) to write or modify files. All code and markdown modifications MUST route through `mechanical_editor.py` or `precision_edit.py`.
 14. **No Transient Artifacts:** DO NOT generate temporary planning files on disk (e.g., `task.md`, `walkthrough.md`, `implementation_plan.md`). Keep all task checklists and architectural planning strictly internal to your thought process.
 15. **Strict File Reading:** NEVER use `python3 -c`, `awk`, `sed`, `head`, or `tail` via `run_command` to print file contents to the terminal. Use the `read_lines` MCP tool for surgical inspections.
@@ -34,7 +34,8 @@
 18. **Batch Subagent Delegation:** When delegating to a research subagent, batch ALL related questions into a single prompt rather than making serial round-trips. One subagent call asking 3 questions costs less than 3 calls asking 1 question each. For edit tasks, batch multiple edit operations into a single `mechanical_editor.py` spec when possible.
 19. **Concise Subagent Responses:** When delegating to research subagents, explicitly request "token-efficient summary capped at 500 tokens" in the prompt. Subagent responses should return structured summaries (bullet points or CSV), not verbose markdown with full file contents. If a subagent returns a verbose response, note that as a waste incident.
 20. **Global Configuration Truth & Single Source Bundling:** All rules are maintained in `~/projects/ai-os/.rules/` (`common.md`, `gemini_only.md`, `claude_only.md`). When adding, modifying, or creating system rules, ALWAYS edit files in `~/projects/ai-os/.rules/` and run `python3 /Users/matt/projects/ai-os/scripts/build_rules.py`. NEVER manually edit generated `CLAUDE.md` or `GEMINI.md` directly.
-21. **Antigravity Skill Reloading:** New skills installed to `~/.gemini/config/skills/` require reloading the Antigravity app window using `Cmd+R` (or starting a new thread) before the skill triggers or appears in UI suggestions.
+21. **Cross-Platform Skill Synchronization:** All custom skills created or updated by any agent (Hermes, Antigravity/Gemini, Claude Code, Codex, agy) must be synchronized across all platforms. When creating or editing a skill, ALL skill edits and additions MUST happen in `~/projects/ai-os/skills/` ONLY. After adding or modifying a skill, run `python3 /Users/matt/projects/ai-os/scripts/sync_skills.py` (or run `python3 /Users/matt/projects/ai-os/scripts/build_rules.py`, which automatically invokes `sync_skills.py`). This ensures Hermes, Claude, Antigravity, Codex, and agy have seamless access to all custom skills.
+22. **Antigravity Skill Reloading:** New skills installed to `~/.gemini/config/skills/` require reloading the Antigravity app window using `Cmd+R` (or starting a new thread) before the skill triggers or appears in UI suggestions.
 
 ## Helper Utilities Directory & Agent Tooling
 When performing standard system actions, agents SHOULD prefer calling established local helper scripts in `~/projects/ai-os/scripts/` over raw manual implementations:
@@ -138,7 +139,7 @@ When performing standard system actions, agents SHOULD prefer calling establishe
        \]
        If active combined remaining fraction across accounts is below \(R_{threshold}\) (i.e. burning faster than linear weekly budget), activate **Strict Orchestrator Mode (Mode 3)**.
   3. **Automatic Mode Switch:**
-     - **Conserve Mode (Mode 3 - Minimal-Token Mode):** Triggered when both accounts are low, 5-hour burn velocity threatens reset outage, or weekly remaining fraction is below the target weekly budget line.
+     - **Conserve Mode (Mode 3 - Minimal-Token Mode):** Triggered when 'ag-quota status: WARNING - Low quota detected' is printed in the preflight check, or when both accounts are low, 5-hour burn velocity threatens reset outage, or weekly remaining fraction is below the target weekly budget line.
      - **Strict Orchestrator Behavior:** Act strictly as a high-level coordinator doing minimal direct tool work. Delegate code generation and multi-step editing tasks to `claude code` or cheap subagents.
      - **Normal Mode (Mode 2):** Operate in standard mixed delegation mode when combined account quota velocity is healthy relative to weekly/5h reset timelines.
 - **Triage Role**: Assess request complexity and available quota velocity before heavy execution.
@@ -162,7 +163,7 @@ No matching items found by AI. via terminal (runs non-interactively when execute
 @~/.ai-workflows/audit.md
 @~/.ai-workflows/fast.md
 @~/.ai-workflows/start.md
-@~/.ai-workflows/strict-delegation.md
+@~/.hermes/skills/strict-delegation/SKILL.md
 
 ## Chrome DevTools MCP Safety Rules
 The user runs a single Chrome instance with the remote debugging port open, meaning their personal browsing tabs are mixed with development tabs. To protect the user's personal data and workflow, you MUST strictly adhere to the following rules when using Chrome DevTools MCP:
@@ -171,3 +172,4 @@ The user runs a single Chrome instance with the remote debugging port open, mean
 2. **Require Confirmation on Ambiguity**: If it is not 100% obvious which tab you are supposed to interact with, you MUST ask the user to confirm the target tab before doing anything. 
 3. **Strict Isolation**: NEVER modify, close, navigate, or clear data on any tab other than the explicit target tab. Treat all other tabs as off-limits personal data.
 4. **Prefer New Tabs**: If a task requires testing a new URL or running a clean test, use `mcp_chrome-devtools_new_page` to spawn a fresh tab rather than hijacking an existing one. Work exclusively within that new tab.
+- **Tmux Guardrail:** NEVER run `tmux kill-session` or forcefully terminate the `subagents` tmux session. The user actively monitors this session, and killing it ejects them.
