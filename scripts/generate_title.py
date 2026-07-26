@@ -7,8 +7,6 @@ import urllib.request
 import urllib.parse
 from pathlib import Path
 
-OPENROUTER_KEY = "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"
-
 def get_access_token():
     TOKEN_PATH = Path.home() / ".gemini" / "antigravity-cli" / "antigravity-oauth-token"
     CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
@@ -120,11 +118,15 @@ def call_openrouter_api(prompt, response):
         ]
     }
     
+    openrouter_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_KEY")
+    if not openrouter_key:
+        raise ValueError("OpenRouter API key not found. Please set OPENROUTER_API_KEY in your environment.")
+
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
         headers={
-            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Authorization": f"Bearer {openrouter_key}",
             "Content-Type": "application/json"
         },
         method="POST"
