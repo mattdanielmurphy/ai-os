@@ -55,7 +55,7 @@ Every file in the framework has a single, non-overlapping responsibility.
 **Role**: Configuration and protocol rules for multi-agent and subagent workflows. Where CLAUDE.md says "this is how I behave," AGENTS.md says "this is how the swarm operates."
 
 **Contains**:
-- Subagent delegation rules (when to use mechanical_editor.py, when to use precision_edit.py)
+- Subagent delegation rules (when to use subagent.py, when to use precision_edit.py)
 - Subagent quotas and budget limits
 - Multi-agent orchestration instructions
 - MCP tool usage conventions

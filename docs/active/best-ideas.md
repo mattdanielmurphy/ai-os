@@ -47,7 +47,7 @@ A single userscript (`gemini.js`) injected into the browser/Tauri webview interc
 
 ### Triage Editing System ($AIOS_DELEGATE)
 Edits are dynamically routed based on the active delegate state:
-- **Quota-Saving Mode (`AIOS_DELEGATE=true`):** Complex operations are handled by calling `mechanical_editor.py` to generate and apply unified patches via cheap local proxy endpoints.
+- **Quota-Saving Mode (`AIOS_DELEGATE=true`):** Complex operations are handled by calling `subagent.py` to generate and apply unified patches via cheap local proxy endpoints.
 - **Premium Speed Mode (`AIOS_DELEGATE=false`):** Direct edits are executed using Quoted Heredocs to bypass command escaping errors.
 - **Fast-Path (`precision_edit.py`):** Multi-mode LLM-free programmatic appends, replacements, and insertions.
 

@@ -10,4 +10,4 @@ Perform a token waste audit on the previous conversation transcript using the fo
 3. **Analyze Findings**:
    - Identify the files that were read or edited directly by the orchestrator.
    - Describe which steps contributed most to cumulative token waste (e.g., files read early in a long thread).
-4. **Propose Optimizations**: Identify specific ways we can modify the system of rules (e.g., in `.agents/AGENTS.md`) and helper functions (like `mechanical_editor.py` or shell wrappers) to minimize direct file reads/writes and enforce cheaper delegation to Deepseek or Claude Code.
+4. **Propose Optimizations**: Identify specific ways we can modify the system of rules (e.g., in `.agents/AGENTS.md`) and helper functions (like `subagent.py` or shell wrappers) to minimize direct file reads/writes and enforce cheaper delegation to Deepseek or Claude Code.

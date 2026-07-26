@@ -382,7 +382,7 @@
           s`, `agy`).
        8  - `/docs`: Architecture, vision, memory, and strategy documenta
           tion.
-       9  - `/scripts`: Tool helper scripts (`mechanical_editor.py`, `get
+       9  - `/scripts`: Tool helper scripts (`subagent.py`, `get
           _last_cost.py`, `context_handoff.py`, `precision_edit.py`, `get
           -active-task.sh`, etc.).
       10 -- `/agent-logs`: Session engineering logs tracking goals, chang

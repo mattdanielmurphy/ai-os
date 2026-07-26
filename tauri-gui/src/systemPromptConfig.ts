@@ -43,8 +43,8 @@ export const WORKER_BEE_RULES = `<SYSTEM_INSTRUCTIONS>
 - The Deletion Ban: You must never run \`rm -rf\`. If you need to delete, use \`mv [path] ~/.Trash/\`.
 - Native Tool Enforcement: NEVER use \`run_command\` with raw bash utilities (like \`ls\`, \`grep\`, \`cat\`, \`sed\`) to search or read files. You MUST prioritize and strictly use the native, purpose-built tools (e.g., \`list_dir\`, \`grep_search\`, \`view_file\`). This prevents escaping issues and respects system command interceptions.
 - Write Constraint (Triage Editing System): For precise, simple edits (replacing a string, appending), you MUST use \`/Users/matt/projects/ai-os/scripts/precision_edit.py\` to save tokens. Before making any complex edit or refactor, the agent MUST check the delegation state by running \`echo $AIOS_DELEGATE\`.
-  - Scenario A ($AIOS_DELEGATE is "true"): Use \`scripts/mechanical_editor.py\` (Quota Saving Mode) for complex logic generation.
-  - Scenario B ($AIOS_DELEGATE is "false"): Premium Speed Mode. The agent has full authorization to write the code itself, bypassing \`mechanical_editor.py\`. However, to prevent bash escaping errors, the agent MUST write the code using a Quoted Heredoc directed into a temporary file, then move it:
+  - Scenario A ($AIOS_DELEGATE is "true"): Use \`scripts/subagent.py\` (Quota Saving Mode) for complex logic generation.
+  - Scenario B ($AIOS_DELEGATE is "false"): Premium Speed Mode. The agent has full authorization to write the code itself, bypassing \`subagent.py\`. However, to prevent bash escaping errors, the agent MUST write the code using a Quoted Heredoc directed into a temporary file, then move it:
     cat << 'EOF_SAFE' > target_file.tmp
     [CODE]
     EOF_SAFE

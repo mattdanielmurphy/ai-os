@@ -31,7 +31,7 @@ A text-first local development ecosystem that merges a multi-agent orchestration
 - **Gating Variable:** Driven by the boolean flag `$AIOS_DELEGATE`.
 - **Edits Split Path:**
   - **Precision Refactoring:** Simple modifications or string replacements bypass heavy LLM loops completely and execute via local utilities (`scripts/precision_edit.py`).
-  - **Complex Blocks ($AIOS_DELEGATE = true):** Quota-saving mode. Routes structural generation out to DeepSeek via a local LiteLLM proxy instance running on `localhost:4000` via `scripts/mechanical_editor.py`.
+  - **Complex Blocks ($AIOS_DELEGATE = true):** Quota-saving mode. Routes structural generation out to DeepSeek via a local LiteLLM proxy instance running on `localhost:4000` via `scripts/subagent.py`.
   - **Complex Blocks ($AIOS_DELEGATE = false):** Premium execution mode. Executes generation directly through the primary model utilizing quoted heredoc boundaries to bypass escaping failures.
 
 #### Telemetry & Quota Accounting
@@ -57,7 +57,7 @@ Infrastructure tooling across the repository is driven by text-first script comp
 
 #### Routing & Data Proxies
 
-- **`mechanical_editor.py`:** Lightweight proxy client that converts file generation payloads into JSON configurations targeted at the local LiteLLM server gateway.
+- **`subagent.py`:** Lightweight proxy client that converts file generation payloads into JSON configurations targeted at the local LiteLLM server gateway.
 - **`telemetry_db.py`:** Persistent local store aggregating input/output token counts, execution latencies, and model targets.
 - **`context_handoff.py`:** Generates structured handoff sheets summarizing system state, files modified, and next-step assertions before clearing context windows.
 
