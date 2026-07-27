@@ -45,7 +45,7 @@ When performing standard system actions, agents SHOULD prefer calling establishe
 - **`generate_repo_map.py`**: Generates a token-efficient visual directory/code structure map for large repositories. (e.g. `python3 ~/projects/ai-os/scripts/generate_repo_map.py`)
 - **`precision_edit.py`**: Performs surgical micro-edits/replacements on files without full rewrites. (e.g. `python3 ~/projects/ai-os/scripts/precision_edit.py <file> <action> --target "<target>" --content "<content>"`)
 - **`subagent.py`**: Executes structured multi-chunk edits across one or more files.
-- **`parse_litellm_models.py`**: Queries model tiers and validates model strings against `/Users/matt/litellm/config.yaml`.
+- **`parse_litellm_models.py`**: Queries model tiers and validates model strings against `/Users/matt/projects/ai-os/litellm/config.yaml`.
 - **`preflight.py`**: Evaluates quota velocity, pulls latest git changes, and dumps LiteLLM model stack header.
 - **`auto_commit.py`**: Stages changes, generates descriptive commit messages, and pushes to remote.
 
