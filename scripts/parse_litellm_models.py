@@ -6,7 +6,7 @@ import difflib
 import argparse
 from pathlib import Path
 
-DEFAULT_CONFIG_PATH = "/app/litellm_config.yaml"
+DEFAULT_CONFIG_PATH = "/Users/matt/litellm/config.yaml"
 
 def parse_litellm_tiers(config_path=DEFAULT_CONFIG_PATH):
     path = Path(config_path)
@@ -69,16 +69,17 @@ def get_available_models(config_path=DEFAULT_CONFIG_PATH, exclude_fallbacks=True
 def validate_model(requested_model, config_path=DEFAULT_CONFIG_PATH):
     available = get_available_models(config_path=config_path, exclude_fallbacks=True)
     if requested_model in available:
-        return True, f"Valid model: {requested_model}", available
+        return True, requested_model, available
 
-    matches = difflib.get_close_matches(requested_model, available, n=1, cutoff=0.3)
+    matches = difflib.get_close_matches(requested_model, available, n=1, cutoff=0.6)
     closest = matches[0] if matches else None
 
-    models_str = ", ".join(available)
-    err_msg = "That's not a model name."
     if closest:
-        err_msg += f" Did you mean \"{closest}\" which is the closest match we've got?"
-    err_msg += f" Available models: {models_str}"
+        return True, closest, available
+
+    models_str = "\n  • ".join(available)
+    err_msg = "That's not a model name."
+    err_msg += f"\nAvailable models:\n  • {models_str}"
 
     return False, err_msg, available
 

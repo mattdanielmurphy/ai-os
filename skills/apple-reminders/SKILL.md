@@ -1,130 +1,58 @@
 ---
 name: apple-reminders
-description: "Apple Reminders via remindctl: add, list, complete."
-version: 1.0.0
+description: "Apple Reminders via apple-reminders CLI: create timed and geofenced location reminders for Matt's personal to-dos."
+version: 1.2.0
 author: Hermes Agent
 license: MIT
 platforms: [macos]
 metadata:
   hermes:
-    tags: [Reminders, tasks, todo, macOS, Apple]
+    tags: [Reminders, tasks, todo, macOS, Apple, geofence, location, personal-todos]
 prerequisites:
-  commands: [remindctl]
+  commands: [apple-reminders]
 ---
 
-# Apple Reminders
+# Apple Reminders (`apple-reminders`)
 
-Use `remindctl` to manage Apple Reminders directly from the terminal. Tasks sync across all Apple devices via iCloud.
+Use `apple-reminders` CLI (`~/.local/bin/apple-reminders`) for **ALL** personal reminders, to-dos, timed alerts, and location-based geofences requested by Matt.
 
-## Prerequisites
+## Trigger Phrases
 
-- **macOS** with Reminders.app
-- Install: `brew install steipete/tap/remindctl`
-- Grant Reminders permission when prompted
-- Check: `remindctl status` / Request: `remindctl authorize`
+Whenever Matt says:
+- "make a reminder...", "set a reminder...", "remind me..."
+- "add a to-do...", "add to my reminders...", "personal to-do..."
+- "geofence reminder for...", "when I get to [location]..."
 
-## When to Use
-
-- User mentions "reminder" or "Reminders app"
-- Creating personal to-dos with due dates that sync to iOS
-- Managing Apple Reminders lists
-- User wants tasks to appear on their iPhone/iPad
-
-## When NOT to Use
-
-- Scheduling agent alerts → use the cronjob tool instead
-- Calendar events → use Apple Calendar or Google Calendar
-- Project task management → use GitHub Issues, Notion, etc.
-- If user says "remind me" but means an agent alert → clarify first
+👉 **Route EXCLUSIVELY to Apple Reminders** via `apple-reminders`. Do NOT use cron jobs or project task trackers for Matt's personal to-dos unless explicitly directed otherwise.
 
 ## Quick Reference
 
-### View Reminders
+### 1. Timed Reminders
 
 ```bash
-remindctl                    # Today's reminders
-remindctl today              # Today
-remindctl tomorrow           # Tomorrow
-remindctl week               # This week
-remindctl overdue            # Past due
-remindctl all                # Everything
-remindctl 2026-01-04         # Specific date
+apple-reminders add --title "Transfer money" --due "2026-07-27 12:00" --notes "Details..."
 ```
 
-### Manage Lists
+### 2. Geofenced Location Reminders
 
 ```bash
-remindctl list               # List all lists
-remindctl list Work          # Show specific list
-remindctl list Projects --create    # Create list
-remindctl list Work --delete        # Delete list
+apple-reminders add --title "Present Mounjaro savings card" \
+  --location-name "Costco Wholesale Sherwood Park" \
+  --lat 53.5466885 --lon -113.3173788 \
+  --radius 150 --proximity enter \
+  --notes "Card is in Apple Wallet"
 ```
 
-### Create Reminders
+### 3. List / Complete / Delete
 
 ```bash
-remindctl add "Buy milk"
-remindctl add --title "Call mom" --list Personal --due tomorrow
-remindctl add --title "Meeting prep" --due "2026-02-15 09:00"
+apple-reminders list
+apple-reminders complete --title "<query>"
+apple-reminders delete --title "<query>"
 ```
 
-### Due Time vs Alarm / Early Nudge
+## How Geofencing Sync Works
 
-`--due` and `--alarm` are different fields:
-
-- `--due` sets the reminder's due date/time.
-- `--alarm` sets the EventKit alarm/notification trigger. Timed due reminders may default to an alarm at the due time, but pass `--alarm` explicitly when the user asks for an earlier nudge.
-
-For a reminder due at 2:00 PM with a notification 30 minutes earlier:
-
-```bash
-remindctl add --title "Hairdresser" --due "2026-05-15 14:00" --alarm "2026-05-15 13:30"
-```
-
-To edit an existing reminder:
-
-```bash
-remindctl edit 87354 --due "2026-05-15 14:00" --alarm "2026-05-15 13:30"
-```
-
-The Reminders UI may show or group the item by the alarm time because that is when the notification fires. Verify with JSON instead of assuming the due time moved:
-
-```bash
-remindctl today --json
-```
-
-Expected shape:
-
-- `dueDate`: actual due time
-- `alarmDate`: notification / early nudge time
-
-Apple's public `EKReminder` docs list only reminder-specific properties. Alarm support comes from inherited `EKCalendarItem` behavior exposed by remindctl's `--alarm` flag.
-
-### Complete / Delete
-
-```bash
-remindctl complete 1 2 3          # Complete by ID
-remindctl delete 4A83 --force     # Delete by ID
-```
-
-### Output Formats
-
-```bash
-remindctl today --json       # JSON for scripting
-remindctl today --plain      # TSV format
-remindctl today --quiet      # Counts only
-```
-
-## Date Formats
-
-Accepted by `--due` and date filters:
-- `today`, `tomorrow`, `yesterday`
-- `YYYY-MM-DD`
-- `YYYY-MM-DD HH:mm`
-- ISO 8601 (`2026-01-04T12:34:56Z`)
-
-## Rules
-
-1. When user says "remind me", clarify: Apple Reminders (syncs to phone) vs agent cronjob alert
-2. Always confirm reminder content and due date before creating
-3. Use `--json` for programmatic parsing
+- When a geofenced reminder is added via `apple-reminders` on Mac, EventKit saves the structured location (`EKStructuredLocation`) to iCloud.
+- iCloud syncs the geofence parameters directly to Matt's iPhone/Apple Watch.
+- iOS handles location tracking in the background and fires a native alert when entering the geofence barrier.
