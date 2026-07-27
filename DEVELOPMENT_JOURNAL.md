@@ -68,3 +68,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 2026-07-25
 - **Simplified tmux subagent integration:** Rewrote `subagent.py` to launch claude TUI directly in one pane (no pipe, preserves PTY for frames). Captures output from claude session JSONL logs after user exits with `/exit`. Added mandatory preflight/commit rules to `claude_only.md`. [agent-log](agent-logs/2026-07-25_15-40_fix-claude-rules-tmux-subagent.md)
 - **qwerty-midi shift labels:** Implemented dynamic visual label toggling for Shift Mode in qwerty-midi-hammerspoon web UI. Links to [2026-07-25_16-00_qwerty-midi-shift-labels.md](agent-logs/2026-07-25_16-00_qwerty-midi-shift-labels.md)
+
+## 2026-07-26
+- **Concurrent Subagents:** Updated subagent.py to allocate and clean up tmux panes dynamically, allowing multiple subagents to run simultaneously in the same window. [[log]](agent-logs/2026-07-26_13-57_concurrent-subagents.md)

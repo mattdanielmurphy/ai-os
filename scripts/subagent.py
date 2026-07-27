@@ -266,11 +266,13 @@ def run_in_tmux(model: str, prompt: str, cwd: str | None = None) -> int:
         _cleanup_pane(pane_id)
 
 
-def validate_allowed_model(model_name):
+def validate_allowed_model(requested_model, matched_model):
     allowed = ["deepseek-v4-flash", "deepseek-v4-pro", "gemini-3.5-flash-lite", "gemini-3.1-pro", "gemini-3.6-flash", "haiku"]
-    if model_name not in allowed:
-        print(f"Error: Delegating to {model_name} is prohibited. Please use a permitted model: {', '.join(allowed)}", file=sys.stderr)
-        sys.exit(1)
+    for a in allowed:
+        if requested_model.startswith(a) or matched_model.startswith(a):
+            return
+    print(f"Error: Delegating to {requested_model} (resolved to {matched_model}) is prohibited. Please use a permitted model: {', '.join(allowed)}", file=sys.stderr)
+    sys.exit(1)
 
 def main():
     models = ", ".join(get_available_models(DEFAULT_CONFIG_PATH))
@@ -296,13 +298,14 @@ def main():
         list_available_models(args.config)
         sys.exit(0)
 
-    # Validate model early
-    validate_allowed_model(args.model)
-
     valid, msg, _ = validate_model(args.model, config_path=args.config)
     if not valid:
         print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
+        
+    matched_model = msg
+    validate_allowed_model(args.model, matched_model)
+    args.model = matched_model
 
     # Resolve prompt from args
     final_prompt = None
