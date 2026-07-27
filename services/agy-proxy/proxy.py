@@ -15,6 +15,19 @@ logger = logging.getLogger("agy-proxy")
 
 app = FastAPI()
 
+# All available Antigravity models for agy routing
+AVAILABLE_MODELS = [
+    "agy",
+    "gemini-3.6-flash-low",
+    "gemini-3.6-flash-medium",
+    "gemini-3.6-flash-high",
+    "gemini-3.1-pro-low",
+    "gemini-3.1-pro-high",
+    "claude-sonnet-4-6",
+    "claude-opus-4-6-thinking",
+    "gpt-oss-120b-medium",
+]
+
 class Message(BaseModel):
     role: str
     content: str
@@ -31,8 +44,11 @@ def run_agy_stream(prompt: str, model_name: str):
     # Send role start
     yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk', 'created': created_time, 'model': model_name, 'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
-    # We use --print to get the raw assistant output from agy
-    cmd = ["/Users/matt/.local/bin/agy", "--dangerously-skip-permissions", "--print", prompt]
+    # Build agy command — pass --model when a specific model is requested
+    cmd = ["/Users/matt/.local/bin/agy", "--dangerously-skip-permissions", "--print"]
+    if model_name and model_name != "agy":
+        cmd.extend(["--model", model_name])
+    cmd.append(prompt)
     logger.info(f"Running command: {' '.join(cmd)}")
     
     proc = subprocess.Popen(
@@ -46,7 +62,6 @@ def run_agy_stream(prompt: str, model_name: str):
 
     try:
         for line in proc.stdout:
-            # Wrap each line (or chunk) in OpenAI format
             payload = {
                 'id': request_id, 
                 'object': 'chat.completion.chunk', 
@@ -61,7 +76,6 @@ def run_agy_stream(prompt: str, model_name: str):
             yield f"data: {json.dumps(payload)}\n\n"
         
         proc.wait()
-        # Final stop
         yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk', 'created': created_time, 'model': model_name, 'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
     except Exception as e:
         logger.error(f"Stream error: {e}")
@@ -84,7 +98,6 @@ def run_agy_stream(prompt: str, model_name: str):
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
-    # Construct prompt from messages (simple concatenation for agy --print)
     prompt = ""
     for msg in request.messages:
         prompt += f"{msg.role.upper()}: {msg.content}\n\n"
@@ -94,7 +107,10 @@ async def chat_completions(request: ChatCompletionRequest):
     if request.stream:
         return StreamingResponse(run_agy_stream(prompt, request.model), media_type="text/event-stream")
     else:
-        cmd = ["/Users/matt/.local/bin/agy", "--dangerously-skip-permissions", "--print", prompt]
+        cmd = ["/Users/matt/.local/bin/agy", "--dangerously-skip-permissions", "--print"]
+        if request.model and request.model != "agy":
+            cmd.extend(["--model", request.model])
+        cmd.append(prompt)
         logger.info(f"Running sync command: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
         return {
@@ -117,11 +133,11 @@ async def list_models():
     return {
         "object": "list",
         "data": [
-            {"id": "agy", "object": "model", "created": 1700000000, "owned_by": "agy"}
+            {"id": m, "object": "model", "created": 1700000000, "owned_by": "agy"}
+            for m in AVAILABLE_MODELS
         ]
     }
 
 if __name__ == "__main__":
     import uvicorn
-    # Defaulting to 8080 as planned in the transcript
     uvicorn.run(app, host="127.0.0.1", port=8080)
