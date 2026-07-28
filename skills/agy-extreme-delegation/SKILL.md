@@ -66,3 +66,15 @@ To restore normal (non-extreme) mode, revert section 10 back to the standard rul
 - Normal daily development work where agy should just get things done
 - Any task where the overhead of external delegation (spawning Claude Code, etc.) costs more than just doing the work directly
 - Cost-sensitive scenarios where Claude Code API charges would exceed the value of delegation
+
+## ⚠️ CRITICAL: Anti-Recursion Guard
+
+**Never pass the extreme-delegation instructions to a downstream subagent.** When delegating to Claude Code, `subagent.py`, or any other agent:
+
+1. **Strip the delegation rules from the prompt.** The subagent receives a self-contained technical spec for its specific task only — NOT the full AGENTS.md section 10 or any extreme-delegation instructions.
+2. **No recursive delegation.** The subagent must complete its task using its own tools (Read, Edit, Bash). It MUST NOT delegate to another subagent.
+3. **One level deep, that's it.** The orchestrator delegates. The subagent executes. No grandchild agents. No delegation chains.
+
+**Why:** Extreme delegation + recursive delegation = exponential subagent explosion. A single userscript request spawned 81+ subagents in seconds. NEVER let delegation cascade.
+
+Also: this skill must NEVER be loaded by a subagent spawned by Antigravity.app. It is a TOP-LEVEL orchestrator configuration only.
