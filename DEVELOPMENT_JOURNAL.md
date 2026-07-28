@@ -2,6 +2,9 @@
 
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
+## 2026-07-27
+- **Fixed agy-proxy tool support & added agy subagent mode.** The custom agy-proxy on port 8080 was silently dropping `tools` from OpenAI-format requests, breaking `delegate_task` subagents (they couldn't see tool schemas, responded with text only). Added full tool schema support: when tools are present, proxy forwards to the real LiteLLM proxy on 8082 (which supports tool calling natively); when no tools, preserves existing `agy --print` path for Google OAuth quota. Also added `--use-agy` flag to `scripts/subagent.py` to spawn agy in tmux with brain-directory log monitoring. Set `delegation.max_spawn_depth=2`. [[log]](agent-logs/2026-07-27_22-41_agy-proxy-tool-fix-subagent-integration.md)
+
 ## 2026-07-25
 - **Subagent Tmux Monitoring Integration:** Upgraded `scripts/subagent.py` to launch `claude` subagent calls in dedicated windows inside a `subagents` tmux session (`remain-on-exit on`), providing synchronous live stdout streaming while enabling real-time terminal monitoring. [[log]](agent-logs/2026-07-25_15-30_subagent-tmux-monitoring-integration.md)
 - **Subagent Log Monitoring for End Turn:** Updated `scripts/subagent.py` to poll Claude Code JSONL logs for `stop_reason == 'end_turn'`, printing final text response and auto-closing tmux subagent pane upon completion. [[log]](agent-logs/2026-07-25_16-36_subagent-log-monitoring.md)
