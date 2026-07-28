@@ -172,4 +172,20 @@ The user runs a single Chrome instance with the remote debugging port open, mean
 2. **Require Confirmation on Ambiguity**: If it is not 100% obvious which tab you are supposed to interact with, you MUST ask the user to confirm the target tab before doing anything. 
 3. **Strict Isolation**: NEVER modify, close, navigate, or clear data on any tab other than the explicit target tab. Treat all other tabs as off-limits personal data.
 4. **Prefer New Tabs**: If a task requires testing a new URL or running a clean test, use `mcp_chrome-devtools_new_page` to spawn a fresh tab rather than hijacking an existing one. Work exclusively within that new tab.
-- **Tmux Guardrail:** NEVER run `tmux kill-session` or forcefully terminate the `subagents` tmux session. The user actively monitors this session, and killing it ejects them.
+|- **Tmux Guardrail:** NEVER run `tmux kill-session` or forcefully terminate the `subagents` tmux session. The user actively monitors this session, and killing it ejects them.
+
+## Model Override via `{MODEL=...}` in Delegation Prompts
+
+The agy-proxy (port 8080) supports per-call model overrides for `delegate_task`. To use:
+
+1. Embed `{MODEL=<alias>}` anywhere in a `delegate_task` prompt string.
+2. The proxy strips the tag before the prompt reaches the LLM.
+3. The alias is passed as `--model <alias>` to agy.
+
+**Configuration:** `delegation.model` in Hermes config must be set to `subagent` (the placeholder that triggers override resolution). Run `hermes config set delegation.model subagent` to enable.
+
+**Fallback:** If `delegation.model` is `"subagent"` but no `{MODEL=...}` tag is found in the prompt, agy runs with its default model (no `--model` flag).
+
+**Valid aliases:** `agy`, `gemini-3.6-flash-low`, `gemini-3.6-flash-medium`, `gemini-3.6-flash-high`, `gemini-3.1-pro-low`, `gemini-3.1-pro-high`, `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gpt-oss-120b-medium`.
+
+**Example:** `delegate_task(context="{MODEL=claude-sonnet-4-6} Review this PR...")` → proxy routes to claude-sonnet-4-6.
