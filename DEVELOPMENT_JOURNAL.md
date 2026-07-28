@@ -3,6 +3,7 @@
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-07-27
+- **Model-override via `{MODEL=...}` in proxy prompt, and subagent model routing.** Fixed the broken `_resolve_model()` stub in the agy-proxy (dead duplicate loop, wrong docstring, no cross-message stripping). Added `_resolve_model()` calls and `"subagent"` fallback guard in both `run_agy_sync()` and `run_agy_stream()`. Added `"subagent"` to `AVAILABLE_MODELS`. All unit tests pass (7/7). **Requires manual step:** run `hermes config set delegation.model subagent` to enable. [[plan]](plans/model-override-proxy/plan.md) [[log]](agent-logs/2026-07-27_23-29_model-override-proxy.md)
 - **Fixed agy-proxy tool support & added agy subagent mode.** The custom agy-proxy on port 8080 was silently dropping `tools` from OpenAI-format requests, breaking `delegate_task` subagents (they couldn't see tool schemas, responded with text only). Added full tool schema support: when tools are present, proxy forwards to the real LiteLLM proxy on 8082 (which supports tool calling natively); when no tools, preserves existing `agy --print` path for Google OAuth quota. Also added `--use-agy` flag to `scripts/subagent.py` to spawn agy in tmux with brain-directory log monitoring. Set `delegation.max_spawn_depth=2`. [[log]](agent-logs/2026-07-27_22-41_agy-proxy-tool-fix-subagent-integration.md)
 
 ## 2026-07-25
