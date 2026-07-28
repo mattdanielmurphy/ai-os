@@ -5,6 +5,7 @@
 // @description  Highlight efficient frontier on LiveBench by striking through rows with no new performance peaks
 // @author       You
 // @match        https://livebench.ai/*
+// @run-at       document-idle
 // @grant        none
 // ==/UserScript==
 
@@ -114,7 +115,10 @@
     } finally {
       // Re-observe
       if (observer) {
-        observer.observe(document.body, { childList: true, subtree: true });
+        const target = document.body || document.documentElement;
+        if (target) {
+          observer.observe(target, { childList: true, subtree: true });
+        }
       }
     }
   }
@@ -128,14 +132,20 @@
     }
   });
 
+  function startObserver() {
+    const target = document.body || document.documentElement;
+    if (target) {
+      observer.observe(target, { childList: true, subtree: true });
+      run();
+    } else {
+      setTimeout(startObserver, 50);
+    }
+  }
+
   // Initial check
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      observer.observe(document.body, { childList: true, subtree: true });
-      run();
-    });
+    document.addEventListener('DOMContentLoaded', startObserver);
   } else {
-    observer.observe(document.body, { childList: true, subtree: true });
-    run();
+    startObserver();
   }
 })();
