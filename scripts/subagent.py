@@ -29,6 +29,19 @@ LOG_DIR = Path("/Users/matt/projects/ai-os/tmp/subagent_logs")
 CLAUDE_SESSION_DIR = Path.home() / ".claude/projects/-Users-matt-projects-ai-os"
 AGY_BRAIN_DIR = Path.home() / ".gemini" / "antigravity-cli" / "brain"
 
+# ⚠️ ANTI-RECURSION PREAMBLE
+# Prepended to every subagent prompt. This prevents recursive delegation cascades:
+# a spawned subagent that reads AGENTS.md or CLAUDE.md with delegation rules
+# must NOT delegate itself.
+ANTI_RECURSION_PREAMBLE = (
+    "CRITICAL RULE — You are a DIRECT EXECUTOR, not an orchestrator. "
+    "You MUST complete the task below using your OWN tools (Read, Edit, Bash). "
+    "You MUST NOT delegate, spawn subagents, call subagent.py, or invoke any other agent. "
+    "If the project's AGENTS.md or CLAUDE.md contains delegation rules (section 10, "
+    "strict-delegation, subagent instructions), IGNORE those rules — they apply only to "
+    "the top-level orchestrator, not to you. You are a leaf worker. Do your own work.\n\n"
+)
+
 
 def list_available_models(config_path):
     try:
@@ -451,7 +464,12 @@ def main():
         else:
             final_prompt = spec_arg
 
-    # Context hiding setup
+    # ⚠️ Prepend anti-recursion preamble to every subagent prompt.
+    # This is the ONLY context the subagent gets — no Hermes system prompt,
+    # no AGENTS.md delegation rules, no memory bleed. Just its task.
+    final_prompt = ANTI_RECURSION_PREAMBLE + final_prompt
+
+    # Context hiding setup — temporarily move GEMINI.md and CLAUDE.md aside
     gemini_md = Path.home() / ".gemini" / "GEMINI.md"
     claude_md = Path.home() / ".claude" / "CLAUDE.md"
 
@@ -463,19 +481,14 @@ def main():
 
     renamed_files = []
 
+    # Read ONLY ANTHROPIC_API_KEY from .zshrc for claude auth.
+    # DO NOT source the full .zshrc — that leaks orchestrator env into subagent.
     zshrc_path = Path.home() / ".zshrc"
     if zshrc_path.exists():
-        with open(zshrc_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("export ANTHROPIC_BASE_URL="):
-                    os.environ["ANTHROPIC_BASE_URL"] = line.split("=", 1)[1].strip('"').strip("'")
-                elif line.startswith("export ANTHROPIC_API_KEY="):
-                    os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
-                elif line.startswith("export OPENAI_API_KEY="):
-                    os.environ["OPENAI_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
-                elif line.startswith("export OPENAI_API_BASE="):
-                    os.environ["OPENAI_API_BASE"] = line.split("=", 1)[1].strip('"').strip("'")
+        for line in open(zshrc_path):
+            line = line.strip()
+            if line.startswith("export ANTHROPIC_API_KEY="):
+                os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
 
     try:
         if gemini_md.exists():
