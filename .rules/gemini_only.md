@@ -1,7 +1,7 @@
 ## Gemini / Antigravity Specific Rules
 
 ## Flash-Lite Edit Delegation (Antigravity Native)
-- **Rule:** When running in Antigravity, the top-level orchestrator agent MUST **never write or modify files directly** using `write_to_file`, `replace_file_content`, or `multi_replace_file_content` itself. Instead, it MUST delegate ALL file creation and editing operations to a `flash_lite` subagent via `invoke_subagent` with `Model: "flash_lite"`.
+- **Rule:** When running in Antigravity, the top-level orchestrator agent MUST **never write or modify files directly** using `write_to_file`, `replace_file_content`, or `multi_replace_file_content` itself. Instead, it MUST delegate ALL file creation and editing operations to a `flash_lite` subagent via `invoke_subagent` with `Model: "flash_lite"`. The orchestrator agent MUST NOT fall back to or use `Model: "flash"`; `flash_lite` is the strictly enforced requirement.
 - **How:** Spawn the subagent with a fully self-contained prompt that includes the exact target file path(s), precise instructions for what to write/change, and sufficient context so it needs no clarifying questions. The subagent inherits the workspace and has full write tool access. Include the directive `[LEAF AGENT: DO NOT RE-DELEGATE]` in the subagent prompt so the child knows it is a leaf agent.
 - **Exceptions** (orchestrator may edit directly):
   1. The task is **planning-only** (producing an artifact/plan with no source code changes).
