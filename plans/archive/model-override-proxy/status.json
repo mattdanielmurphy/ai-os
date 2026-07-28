@@ -1,13 +1,13 @@
 {
   "plan": "model-override-proxy",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETED",
   "steps": [
     {"id": "step-1", "title": "Fix _resolve_model() stub (replace lines 82–103)", "status": "DONE"},
     {"id": "step-2", "title": "Add _resolve_model() call to run_agy_sync()", "status": "DONE"},
     {"id": "step-3", "title": "Add \"subagent\" placeholder guard in both agy functions", "status": "DONE"},
     {"id": "step-4", "title": "Add \"subagent\" to AVAILABLE_MODELS", "status": "DONE"},
     {"id": "step-5", "title": "Update ~/.hermes/config.yaml delegation.model to subagent", "status": "DONE"},
-    {"id": "step-6", "title": "Verification — run unit tests and smoke tests", "status": "IN_PROGRESS"}
+    {"id": "step-6", "title": "Verification — run unit tests and smoke tests", "status": "DONE"}
   ],
-  "current_step": "step-6"
+  "current_step": null
 }

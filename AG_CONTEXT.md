@@ -24,3 +24,19 @@ No matching items found by AI. non-interactively in terminal. Supports URL pre-f
 - **Hermes Thread Sync Daemon:** Integrates and synchronizes CLI/GUI NDJSON execution logs (`~/.gemini/antigravity-cli/brain/`) with Hermes' FTS5-enabled SQLite database (`~/.hermes/state.db`) bidirectionally. It launches as a background subprocess via the `bin/ai-os` execution wrapper, maintaining a unified search history across both platforms.
 - **Hermes System Prompt Handoff**: Enabled the `agymcp` server to dynamically extract the active Hermes system prompt from `~/.hermes/state.db` and prepend it to prompts sent to `agy` (via `agy`, `agy_continue`, and `agy_start`) to align instructions and preserve behavioral consistency during task handoffs.
 - **Multi-Tier Triage Routing & Pre-Flight Quota Check**: Evaluates remaining quota using `ag-quota -j` (or `codexbar status`). Automatically switches Antigravity to Minimal-Token Mode (Strict Orchestrator Mode 3) if remaining quota is low (<25%) or burning quickly, delegating code generation to `claude code` or cheap LiteLLM/subagent models.
+
+## Model Override via `{MODEL=...}` in Delegation Prompts
+
+The agy-proxy (port 8080) supports per-call model overrides for `delegate_task`. To use:
+
+1. Embed `{MODEL=<alias>}` anywhere in a `delegate_task` prompt string.
+2. The proxy strips the tag before the prompt reaches the LLM.
+3. The alias is passed as `--model <alias>` to agy.
+
+**Configuration:** `delegation.model` in Hermes config must be set to `subagent` (the placeholder that triggers override resolution). Run `hermes config set delegation.model subagent` to enable.
+
+**Fallback:** If `delegation.model` is `"subagent"` but no `{MODEL=...}` tag is found in the prompt, agy runs with its default model (no `--model` flag).
+
+**Valid aliases:** `agy`, `gemini-3.6-flash-low`, `gemini-3.6-flash-medium`, `gemini-3.6-flash-high`, `gemini-3.1-pro-low`, `gemini-3.1-pro-high`, `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gpt-oss-120b-medium`.
+
+**Example:** `delegate_task(context="{MODEL=claude-sonnet-4-6} Review this PR...")` → proxy routes to claude-sonnet-4-6.
