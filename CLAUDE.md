@@ -37,7 +37,7 @@
 
 ## Claude Code / Hermes CLI Specific Rules
 
-- **Mandatory Preflight (Always):** At the VERY START of every session — before ANY code reading, editing, or research — run `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. Do not skip this even if you think you ran it recently. This runs `ag-quota`, git pull/rebase, rules bundle, and thread bloat check in a single step.
+- **Mandatory Preflight (Always):** At the VERY START of every session — before ANY code reading, editing, or research — run `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. You MUST wait for preflight to finish synchronously before taking any action. If preflight suggests using Jules, NEVER force Jules automatically — STOP and ask the user if they want to use Jules.
 - **Mandatory Auto-Commit (Always):** At the END of every session (or when a complete logical change is done), run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to stage, commit, and push changes. Do not skip this.
 - **Interactive Handoff & Spawn**: Never run agents blind (do not use `--non-interactive`, `--print`, or background execution without attachment). Handoffs must be run interactively to allow the user to review the plan and steering instructions. The handoff command MUST execute the `handover.py` script, which replaces the current process (`os.execvp("agy", ...)`) to attach the interactive `agy` CLI session directly to your terminal. Execute the handoff by running:
   `python3 /Users/matt/projects/ai-os/scripts/handover.py --to-model pro --completed "<what you analyzed/researched>" --next-steps "<what needs to be done next>"`

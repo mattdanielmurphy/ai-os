@@ -72,11 +72,13 @@ def evaluate_triage(prompt, files=None):
             decision["reasoning"].append(f"Heavy/bulk task detected. Offloading to Jules Parallel Fan-Out (Jules quota: {jules_avail} remaining).")
         else:
             decision["reasoning"].append(f"Heavy task detected. Offloading to Jules to conserve local Pro quota (Jules quota: {jules_avail} remaining).")
+        decision["reasoning"].append("RECOMMENDATION: Preflight suggests Jules offloading. DO NOT AUTO-OFFLOAD. STOP AND ASK THE USER FOR CONFIRMATION.")
     elif low_local_quota and jules_avail > 0 and not is_quick_task:
         decision["engine"] = "jules"
         decision["use_jules"] = True
         decision["recommended_model"] = "jules-remote"
         decision["reasoning"].append("Local Pro quota is LOW. Delegating task to Jules.")
+        decision["reasoning"].append("RECOMMENDATION: Preflight suggests Jules offloading. DO NOT AUTO-OFFLOAD. STOP AND ASK THE USER FOR CONFIRMATION.")
     elif is_quick_task:
         decision["engine"] = "local"
         decision["recommended_model"] = "gemini-3.5-flash-lite"
@@ -85,6 +87,11 @@ def evaluate_triage(prompt, files=None):
         decision["engine"] = "local"
         decision["recommended_model"] = "muse-spark-1.1"
         decision["reasoning"].append("Standard interactive task. Executing locally via primary daily driver model.")
+
+    if decision["use_jules"]:
+        rec_msg = "RECOMMENDATION: Preflight suggests Jules offloading. DO NOT AUTO-OFFLOAD. STOP AND ASK THE USER FOR CONFIRMATION."
+        if rec_msg not in decision["reasoning"]:
+            decision["reasoning"].append(rec_msg)
 
     return decision
 

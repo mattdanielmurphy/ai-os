@@ -1,8 +1,11 @@
-#!/usr/bin/env python3
 import subprocess
 import sys
 import os
-from compile_dynamic_prompt import compile_prompt
+import datetime
+import concurrent.futures
+import json
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def run_cmd(args, check=False):
     try:
@@ -11,25 +14,30 @@ def run_cmd(args, check=False):
     except Exception as e:
         return "", 1
 
-def main():
-    print("=== PRE-FLIGHT CHECK ===")
+def log_preflight(status):
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_msg = f"{ts} | WD: {os.getcwd()} | Status: {status}\n"
     
-    # Dynamic Prompt Check
-    print("\n--- Running Dynamic Prompt Compiler (compile_dynamic_prompt.py) ---")
+    paths = [os.path.expanduser("~/.preflight.log"), "./tmp/last_preflight.log"]
+    for p in paths:
+        try:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(log_msg)
+        except Exception:
+            pass
+    return ts
+
+def run_step(name, func, *args):
     try:
-        from compile_dynamic_prompt import compile_prompt
-        prompt_text = compile_prompt(role="orchestrator", platform="antigravity")
-        approx_tokens = len(prompt_text) // 4
-        print(f"Dynamic Prompt: OK (Role: Orchestrator | ~{approx_tokens:,} tokens)")
+        return name, func(*args)
     except Exception as e:
-        print(f"Dynamic Prompt: ERROR ({e})")
-    
-    # 1. Quota Check
-    print("--- Running Quota Check (ag-quota) ---")
+        return name, f"ERROR: {e}"
+
+def step_quota():
     out, code = run_cmd(["ag-quota", "--all", "-j"])
     if code == 0 and out:
         try:
-            import json
             data = json.loads(out)
             snapshot = {}
             warnings = []
@@ -46,97 +54,83 @@ def main():
                             snapshot[key] = round(frac, 4)
                         if is_ex or (isinstance(frac, (int, float)) and frac < 0.25):
                             warnings.append(f"{key}: {frac*100:.1f}% remaining")
-
-            # Save quota snapshot for postflight delta comparison
             snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
             with open(snapshot_path, "w", encoding="utf-8") as f:
                 json.dump(snapshot, f, indent=2)
-
             if warnings:
-                print(f"ag-quota status: WARNING - Low quota detected ({'; '.join(warnings[:3])})")
-            else:
-                print("ag-quota status: OK (Quota healthy)")
+                return f"ag-quota status: WARNING - Low quota detected ({'; '.join(warnings[:3])})"
+            return "ag-quota status: OK (Quota healthy)"
         except Exception:
-            print("ag-quota status: OK")
-    else:
-        print("ag-quota execution skipped or produced no output.")
+            return "ag-quota status: OK"
+    return "ag-quota execution skipped or produced no output."
 
-    # 1b. Jules Delegation Quota Check
-    print("\n--- Running Jules Quota Check (jules_quota.py) ---")
-    jules_quota_script = os.path.expanduser("~/projects/ai-os/scripts/jules_quota.py")
-    if os.path.exists(jules_quota_script):
-        jq_out, jq_code = run_cmd(["python3", jules_quota_script])
-        if jq_code == 0 and jq_out:
-            print(jq_out)
-        else:
-            print("Jules Quota Check: UNCONFIGURED or ERROR")
-    else:
-        print("jules_quota.py missing.")
+def step_jules_quota():
+    from jules_quota import get_jules_status
+    status = get_jules_status()
+    if status["status"] == "OK":
+        acct_summary = ", ".join([f"{a['name']}: {a['remaining']}/{a['limit']}" for a in status["accounts"] if a["status"] == "OK"])
+        return f"Jules Quota: OK - {status['total_remaining']}/{status['total_limit']} total sessions remaining ({acct_summary})"
+    return f"Jules Quota: {status['status']} - {status.get('message', '')}"
 
-    # 1c. Automated Task Triaging
-    print("\n--- Running Task Triager (triage_task.py) ---")
-    triage_script = os.path.expanduser("~/projects/ai-os/scripts/triage_task.py")
-    if os.path.exists(triage_script):
-        t_out, t_code = run_cmd(["python3", triage_script, "--prompt", "preflight check"])
-        if t_code == 0 and t_out:
-            print(t_out)
-        else:
-            print("Task Triager: OK")
+def step_triage():
+    from triage_task import evaluate_triage
+    decision = evaluate_triage(prompt="preflight check")
+    output = [f"Recommended Engine: {decision['engine'].upper()} ({decision['recommended_model']})",
+              f"Use Jules: {decision['use_jules']}"]
+    if decision["reasoning"]:
+        output.append("Reasoning:")
+        for r in decision["reasoning"]:
+            output.append(f"  - {r}")
+    return "\n".join(output)
 
-    # 1d. LiteLLM Model Stack Context Dump
-    print("\n--- LiteLLM Model Stack Header ---")
-    model_parser = os.path.expanduser("~/projects/ai-os/scripts/parse_litellm_models.py")
-    if os.path.exists(model_parser):
-        hdr_out, code_hdr = run_cmd(["python3", model_parser, "--header"])
-        if code_hdr == 0 and hdr_out:
-            print(hdr_out)
-        else:
-            print("LiteLLM Header parse: WARNING (Failed to parse header)")
-    else:
-        print("parse_litellm_models.py missing.")
+def step_litellm():
+    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/parse_litellm_models.py"), "--header"])
+    return out if code == 0 else "LiteLLM Header parse: WARNING"
 
-    # 2. Rules Build & Sync
-    print("\n--- Running Rules Bundler (build_rules.py) ---")
-    rules_script = os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")
-    if os.path.exists(rules_script):
-        out_r, code_r = run_cmd(["python3", rules_script])
-        if code_r == 0:
-            print("rules status: OK (CLAUDE.md & GEMINI.md built)")
-        else:
-            print("rules status: WARNING (build_rules.py failed)")
+def step_rules():
+    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")])
+    return "rules status: OK" if code == 0 else "rules status: WARNING"
 
-    # 3. Git Pull
-    print("\n--- Running Git Pull ---")
+def step_bloat():
+    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py"), "-j"])
+    return f"thread bloat status: {'WARNING (Bloated)' if 'true' in out.lower() else 'OK'}" if code == 0 else "thread bloat status: OK"
+
+def step_git():
     if os.path.exists(".git"):
         _, diff_code = run_cmd(["git", "diff", "--quiet"])
         _, status_code = run_cmd(["git", "diff", "--cached", "--quiet"])
-        if diff_code != 0 or status_code != 0:
-            print("Local uncommitted work detected. Running `git pull --rebase`...")
-            pull_out, pull_code = run_cmd(["git", "pull", "--rebase"])
-        else:
-            print("Running `git pull`...")
-            pull_out, pull_code = run_cmd(["git", "pull"])
-        print(pull_out if pull_out else "Git pull finished.")
+        cmd = ["git", "pull", "--rebase"] if diff_code != 0 or status_code != 0 else ["git", "pull"]
+        out, _ = run_cmd(cmd)
+        return f"Git pull finished: {out[:50]}"
+    return "Git pull skipped"
 
-    # 4. Thread Bloat Check
-    print("\n--- Running Thread Bloat Check (check_thread_bloat.py) ---")
-    bloat_script = os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py")
-    if os.path.exists(bloat_script):
-        b_out, code_b = run_cmd(["python3", bloat_script, "-j"])
-        if code_b == 0 and b_out:
-            try:
-                import json
-                b_data = json.loads(b_out)
-                t_sys = b_data.get("t_sys", 0)
-                t_hist = b_data.get("t_hist", 0)
-                t_thresh = b_data.get("t_hist_threshold", 0)
-                is_bloated = b_data.get("is_bloated", False)
-                status_str = "WARNING (Bloated)" if is_bloated else "OK"
-                print(f"thread bloat status: {status_str} [T_sys: {t_sys}, T_hist: {t_hist}/{t_thresh}]")
-            except Exception:
-                print("thread bloat status: OK")
-        else:
-            print("thread bloat status: OK")
+def main():
+    log_preflight("STARTED")
+    print("=== PRE-FLIGHT CHECK ===")
+    
+    steps = [
+        ("Quota", step_quota),
+        ("Jules Quota", step_jules_quota),
+        ("Task Triager", step_triage),
+        ("LiteLLM", step_litellm),
+        ("Rules", step_rules),
+        ("Thread Bloat", step_bloat),
+        ("Git", step_git)
+    ]
+    
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        future_to_step = {executor.submit(run_step, name, func): name for name, func in steps}
+        for future in concurrent.futures.as_completed(future_to_step):
+            name, result = future.result()
+            results[name] = result
+            
+    for name, _ in steps:
+        print(f"\n--- {name} ---")
+        print(results[name])
+
+    ts = log_preflight("COMPLETED")
+    print(f"\n[PREFLIGHT LOGGED] Timestamp: {ts} | Written to ~/.preflight.log")
 
 if __name__ == "__main__":
     main()

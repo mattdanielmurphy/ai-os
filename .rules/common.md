@@ -1,7 +1,8 @@
 # Core Project Rules & System Instructions
 
 ## Auto-Commit Protocol
-- **Git Auto-Pull & Pre-Flight:** Before any agent begins work on an established git project, it MUST run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` to perform all pre-flight routines (evaluating `ag-quota` velocity, auto-pulling/rebasing latest git changes, etc.) in a single step.
+- **Git Auto-Pull & Pre-Flight:** Agents MUST run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` synchronously at the very start of every session/turn, MUST wait for it to complete, and MUST respect its outputs before taking any further actions.
+- **Jules Delegation:** Agents MUST NEVER force or automatically delegate tasks to Jules. If preflight suggests using Jules (`Use Jules: True`), the agent MUST STOP and ask the user for explicit confirmation before invoking Jules.
 - **Auto-Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` to delegate the commit process. Auto-commit automatically requires a descriptive commit message detailing the changes made (generated via LiteLLM from staged diff/files) and pushes the commits (`git push`) to the remote repository.
 
 ## Project Detection
