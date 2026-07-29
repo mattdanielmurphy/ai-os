@@ -190,3 +190,7 @@ The agy-proxy (port 8080) supports per-call model overrides for `delegate_task`.
 **Valid aliases:** `agy`, `gemini-3.6-flash-low`, `gemini-3.6-flash-medium`, `gemini-3.6-flash-high`, `gemini-3.1-pro-low`, `gemini-3.1-pro-high`, `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gpt-oss-120b-medium`.
 
 **Example:** `delegate_task(context="{MODEL=claude-sonnet-4-6} Review this PR...")` → proxy routes to claude-sonnet-4-6.
+
+## Google Jules Agent Delegation
+- **Strict Prohibition on `jules` CLI:** Agents MUST NEVER invoke the `jules` CLI binary (`jules new`, `jules remote`, `jules login`, etc.) directly, because it launches interactive terminal TUI frames that hang non-interactive agent sessions.
+- **REST Script Usage:** ALL Jules delegation, session management, and quota checks MUST strictly route through `python3 ~/projects/ai-os/scripts/jules_delegate.py`, `jules_provisioner.py`, or `jules_quota.py`.
