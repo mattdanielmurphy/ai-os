@@ -2,9 +2,9 @@
 
 - **Mandatory Synchronous Preflight & Waiting:** Agents MUST run preflight at the start of every session, wait for it to complete synchronously, and respect its findings. Agents MUST NEVER force Jules without asking the user first.
 
-## Mandatory agymcp Delegation Protocol (NO Native Subagents)
-- **Strict Prohibition**: The main orchestrator (M) MUST NEVER use native Antigravity `invoke_subagent`. Native subagents inject system prompt bloat (~40k tokens) and cannot be resumed or monitored in tmux.
-- **Mandatory Tool (`agymcp`)**: ALL subagent tasks (Context Fetching, Pro Planning, File Edits, QA Audits) MUST be invoked via the `agymcp` server (`agymcp:agy`, `agymcp:agy_continue`, or `agymcp:agy_start`).
+## Mandatory agymcp Delegation Protocol (NO Native Subagents & NO Raw Terminal agy)
+- **Strict Prohibition**: The main orchestrator (M) MUST NEVER use native Antigravity `invoke_subagent` OR run raw `run_command("agy -p ...")` terminal commands. 
+- **Mandatory Tool (`agymcp`)**: ALL subagent tasks (Context Fetching, Pro Planning, File Edits, QA Audits) MUST be invoked via the `agymcp` server tools (`agymcp:agy`, `agymcp:agy_continue`, or `agymcp:agy_start`), which manages tmux background sessions cleanly.
 
 ## Flash-Lite Edit Delegation (Antigravity Native)
 - **Rule:** When running in Antigravity, the top-level orchestrator agent MUST **never write or modify files directly** using `write_to_file`, `replace_file_content`, or `multi_replace_file_content` itself. Instead, it MUST delegate ALL file creation and editing operations to a `flash_lite` subagent. The orchestrator agent MUST NOT fall back to or use `Model: "flash"`; `flash_lite` is the strictly enforced requirement.
@@ -18,9 +18,15 @@
   3. The edit is a single-character or trivially obvious fix (e.g. fixing a typo the user just pointed out inline).
 
 ## Mandatory Response Artifact Protocol
-- **Single Conversation Response Artifact**: Every turn response MUST update a single persistent artifact per thread at `<appDataDir>/brain/<conversation-id>/conversation_response.md` (overwriting with `Overwrite: true`). This keeps the artifact viewer pinned on the same file so updates open seamlessly without creating multiple new artifact tabs.
-- **Artifact Metadata Parameters**: ALWAYS set `UserFacing: true` and `RequestFeedback: true` in `ArtifactMetadata` so the UI presents it directly with the inline markup/commenting controls.
-- **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain only a single line link/pointer to `[conversation_response.md](file://...)`, so the user interacts exclusively through the persistent artifact viewer.
+- **Single Conversation Response Artifact with Turn History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
+- **Pre-Write Archive & Forward-Link Patching Step**: 
+  1. Before overwriting `conversation_response.md`, copy it to `<appDataDir>/brain/<conversation-id>/history/turn_<index>.md`.
+  2. Patch the newly copied `history/turn_<index>.md` header to append a forward link: `[➡️ Next Turn Response (conversation_response.md)](file:///<appDataDir>/brain/<conversation-id>/conversation_response.md)`.
+- **Header History Navigation Link & User Prompt Snippet**: At the top of each new `conversation_response.md`, include:
+  1. A clear clickable markdown link to the previous turn file: `[⬅️ Previous Turn Response (turn_<index>.md)](file:///<appDataDir>/brain/<conversation-id>/history/turn_<index>.md)`.
+  2. A blockquote snippet containing a truncated excerpt (1-2 lines) of the user's prompt for context.
+- **Artifact Metadata Parameters**: ALWAYS set `UserFacing: true` and `RequestFeedback: true` in `ArtifactMetadata`.
+- **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain only a single line link/pointer to `[conversation_response.md](file://...)`.
 
 ## Background Task UI Prevention & Cleanup Rule
 - **Prevent Stray UI Background Tasks**: When calling `run_command` for non-daemon synchronous probes (`git status`, `which`, `--help`), ALWAYS set `WaitMsBeforeAsync` to at least `5000` (or up to `10000`). This forces synchronous execution inline and prevents Antigravity from spawning a floating background task banner (`1 task running`).
