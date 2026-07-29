@@ -1,5 +1,7 @@
 ## Gemini / Antigravity Specific Rules
 
+- **Mandatory Synchronous Preflight & Waiting:** Agents MUST run preflight at the start of every session, wait for it to complete synchronously, and respect its findings. Agents MUST NEVER force Jules without asking the user first.
+
 ## Flash-Lite Edit Delegation (Antigravity Native)
 - **Rule:** When running in Antigravity, the top-level orchestrator agent MUST **never write or modify files directly** using `write_to_file`, `replace_file_content`, or `multi_replace_file_content` itself. Instead, it MUST delegate ALL file creation and editing operations to a `flash_lite` subagent. The orchestrator agent MUST NOT fall back to or use `Model: "flash"`; `flash_lite` is the strictly enforced requirement.
 - **How:** To definitively prevent recursive subagent loops, the orchestrator MUST physically restrict the subagent's tools:

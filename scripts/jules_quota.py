@@ -3,8 +3,13 @@ import os
 import json
 import urllib.request
 import urllib.error
+import time
+import concurrent.futures
+import sys
 
 DAILY_LIMIT_PER_ACCT = 100
+CACHE_FILE = "/tmp/jules_quota_cache.json"
+CACHE_EXPIRY = 30
 
 def get_keys():
     keys = []
@@ -37,7 +42,7 @@ def query_account_quota(name, api_key):
     req = urllib.request.Request(url, headers=headers)
     
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             sessions = data.get("sessions", [])
             active_count = len(sessions)
@@ -46,33 +51,49 @@ def query_account_quota(name, api_key):
     except Exception as e:
         return {"name": name, "status": "ERROR", "message": str(e), "active": 0, "remaining": 0, "limit": DAILY_LIMIT_PER_ACCT}
 
-def get_jules_status():
+def get_jules_status(force=False):
+    if not force and os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r") as f:
+                cache = json.load(f)
+                if time.time() - cache["timestamp"] < CACHE_EXPIRY:
+                    return cache["data"]
+        except Exception:
+            pass
+
     keys = get_keys()
     if not keys:
         return {"status": "UNCONFIGURED", "message": "No JULES_API_KEY or JULES_API_KEY_ALT found"}
 
     results = []
-    total_remaining = 0
-    total_limit = 0
-    
-    for name, key in keys:
-        res = query_account_quota(name, key)
-        results.append(res)
-        if res["status"] == "OK":
-            total_remaining += res["remaining"]
-            total_limit += res["limit"]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        future_to_key = {executor.submit(query_account_quota, name, key): name for name, key in keys}
+        for future in concurrent.futures.as_completed(future_to_key):
+            results.append(future.result())
 
-    return {
+    total_remaining = sum(r["remaining"] for r in results if r["status"] == "OK")
+    total_limit = sum(r["limit"] for r in results if r["status"] == "OK")
+
+    status_data = {
         "status": "OK" if any(r["status"] == "OK" for r in results) else "ERROR",
         "total_remaining": total_remaining,
         "total_limit": total_limit,
         "accounts": results
     }
 
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump({"timestamp": time.time(), "data": status_data}, f)
+    except Exception:
+        pass
+    
+    return status_data
+
 if __name__ == "__main__":
-    status = get_jules_status()
+    force = "--force" in sys.argv
+    status = get_jules_status(force=force)
     if status["status"] == "OK":
-        acct_summary = ", ".join([f"{a['name']}: {a['remaining']}/{a['limit']}" for a in status["accounts"] if a["status"] == "OK"])
+        acct_summary = ", ".join([f"{a['name']}: {a['remaining']}/{a['limit']}" for a in status['accounts'] if a['status'] == "OK"])
         print(f"Jules Quota: OK - {status['total_remaining']}/{status['total_limit']} total sessions remaining ({acct_summary})")
     else:
         print(f"Jules Quota: {status['status']} - {status.get('message', '')}")
