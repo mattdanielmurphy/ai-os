@@ -2,6 +2,10 @@
 
 - **Mandatory Synchronous Preflight & Waiting:** Agents MUST run preflight at the start of every session, wait for it to complete synchronously, and respect its findings. Agents MUST NEVER force Jules without asking the user first.
 
+## Mandatory agymcp Delegation Protocol (NO Native Subagents)
+- **Strict Prohibition**: The main orchestrator (M) MUST NEVER use native Antigravity `invoke_subagent`. Native subagents inject system prompt bloat (~40k tokens) and cannot be resumed or monitored in tmux.
+- **Mandatory Tool (`agymcp`)**: ALL subagent tasks (Context Fetching, Pro Planning, File Edits, QA Audits) MUST be invoked via the `agymcp` server (`agymcp:agy`, `agymcp:agy_continue`, or `agymcp:agy_start`).
+
 ## Flash-Lite Edit Delegation (Antigravity Native)
 - **Rule:** When running in Antigravity, the top-level orchestrator agent MUST **never write or modify files directly** using `write_to_file`, `replace_file_content`, or `multi_replace_file_content` itself. Instead, it MUST delegate ALL file creation and editing operations to a `flash_lite` subagent. The orchestrator agent MUST NOT fall back to or use `Model: "flash"`; `flash_lite` is the strictly enforced requirement.
 - **How:** To definitively prevent recursive subagent loops, the orchestrator MUST physically restrict the subagent's tools:
@@ -12,6 +16,16 @@
   1. The task is **planning-only** (producing an artifact/plan with no source code changes).
   2. The user explicitly instructs the orchestrator to make edits directly (e.g. "do it yourself", "edit it directly").
   3. The edit is a single-character or trivially obvious fix (e.g. fixing a typo the user just pointed out inline).
+
+## Mandatory Response Artifact Protocol
+- **Single Conversation Response Artifact**: Every turn response MUST update a single persistent artifact per thread at `<appDataDir>/brain/<conversation-id>/conversation_response.md` (overwriting with `Overwrite: true`). This keeps the artifact viewer pinned on the same file so updates open seamlessly without creating multiple new artifact tabs.
+- **Artifact Metadata Parameters**: ALWAYS set `UserFacing: true` and `RequestFeedback: true` in `ArtifactMetadata` so the UI presents it directly with the inline markup/commenting controls.
+- **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain only a single line link/pointer to `[conversation_response.md](file://...)`, so the user interacts exclusively through the persistent artifact viewer.
+
+## Background Task UI Prevention & Cleanup Rule
+- **Prevent Stray UI Background Tasks**: When calling `run_command` for non-daemon synchronous probes (`git status`, `which`, `--help`), ALWAYS set `WaitMsBeforeAsync` to at least `5000` (or up to `10000`). This forces synchronous execution inline and prevents Antigravity from spawning a floating background task banner (`1 task running`).
+- **Post-Flight & Periodic Task Cleanup**: Before concluding a turn after major calls or multi-step tool sequences, check for active background tasks via `manage_task(Action='list')`. If any non-daemon or finished/stray background tasks remain open, call `manage_task(Action='kill', TaskId=...)` to clean them up and keep the UI task bar clear.
+
 - **Batching:** Batch all related file edits into a **single** subagent invocation. Do not spawn one subagent per file.
 - **Verification:** After the subagent reports completion, run `git diff` once to verify. Do not re-read files unless the diff reveals something unexpected.
 
