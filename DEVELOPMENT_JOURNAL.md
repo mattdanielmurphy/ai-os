@@ -75,3 +75,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-07-26
 - **Concurrent Subagents:** Updated subagent.py to allocate and clean up tmux panes dynamically, allowing multiple subagents to run simultaneously in the same window. [[log]](agent-logs/2026-07-26_13-57_concurrent-subagents.md)
+
+## 2026-07-28
+- **Flash Lite Recursion Fix:** Fixed an infinite subagent recursion loop by clarifying leaf agent delegation rules in gemini_only.md. Link to agent log: [2026-07-28_17-50_fix-flash-lite-recursion.md](agent-logs/2026-07-28_17-50_fix-flash-lite-recursion.md)
