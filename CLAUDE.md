@@ -192,6 +192,10 @@ The agy-proxy (port 8080) supports per-call model overrides for `delegate_task`.
 
 **Example:** `delegate_task(context="{MODEL=claude-sonnet-4-6} Review this PR...")` → proxy routes to claude-sonnet-4-6.
 
+## Google Jules Agent Delegation
+- **Strict Prohibition on `jules` CLI:** Agents MUST NEVER invoke the `jules` CLI binary (`jules new`, `jules remote`, `jules login`, etc.) directly, because it launches interactive terminal TUI frames that hang non-interactive agent sessions.
+- **REST Script Usage:** ALL Jules delegation, session management, and quota checks MUST strictly route through `python3 ~/projects/ai-os/scripts/jules_delegate.py`, `jules_provisioner.py`, or `jules_quota.py`.
+
 ## Claude Code / Hermes CLI Specific Rules
 
 - **Mandatory Preflight (Always):** At the VERY START of every session — before ANY code reading, editing, or research — run `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. Do not skip this even if you think you ran it recently. This runs `ag-quota`, git pull/rebase, rules bundle, and thread bloat check in a single step.
