@@ -10,6 +10,7 @@ Combines modular rules from .rules/ into destination targets:
 
 import os
 from pathlib import Path
+from compile_dynamic_prompt import compile_prompt
 
 PROJECT_ROOT = Path("/Users/matt/projects/ai-os")
 RULES_DIR = PROJECT_ROOT / ".rules"
@@ -37,21 +38,21 @@ def write_file(path: Path, content: str):
     print(f"✅ Generated: {path}")
 
 def main():
-    common = read_file(COMMON_PATH)
-    claude_only = read_file(CLAUDE_ONLY_PATH)
-    gemini_only = read_file(GEMINI_ONLY_PATH)
-    hermes_only = read_file(HERMES_ONLY_PATH)
+    # common = read_file(COMMON_PATH)
+    # claude_only = read_file(CLAUDE_ONLY_PATH)
+    # gemini_only = read_file(GEMINI_ONLY_PATH)
+    # hermes_only = read_file(HERMES_ONLY_PATH)
 
     # Build CLAUDE.md
-    claude_content = f"<SYSTEM_INSTRUCTIONS>\n{common}\n\n{claude_only}\n</SYSTEM_INSTRUCTIONS>"
+    claude_content = compile_prompt(role="orchestrator", platform="claude")
     write_file(CLAUDE_TARGET, claude_content)
 
     # Build GEMINI.md
-    gemini_content = f"{gemini_only}\n\n{common}"
+    gemini_content = compile_prompt(role="orchestrator", platform="antigravity")
     write_file(GEMINI_TARGET, gemini_content)
 
     # Build HERMES.md
-    hermes_content = f"<HERMES_SYSTEM_INSTRUCTIONS>\n{common}\n\n{hermes_only}\n</HERMES_SYSTEM_INSTRUCTIONS>"
+    hermes_content = compile_prompt(role="orchestrator", platform="hermes")
     write_file(HERMES_TARGET_PROJECT, hermes_content)
     write_file(HERMES_TARGET_GLOBAL, hermes_content)
 
