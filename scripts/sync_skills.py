@@ -29,7 +29,7 @@ TARGET_DIRS = [
     HOME / ".gemini" / "config" / "skills",
     HOME / ".gemini" / "antigravity-cli" / "skills",
     HOME / ".agy" / "skills",
-    HOME / ".antigravity" / "skills",
+    HOME / ".gemini" / "antigravity" / "skills",
 ]
 
 def sync_skill_directory(src_dir: Path, dest_dir: Path):

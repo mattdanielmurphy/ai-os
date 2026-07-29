@@ -33,9 +33,18 @@ def read_file(path: Path) -> str:
 
 def write_file(path: Path, content: str):
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        try:
+            os.chmod(path, 0o644)
+        except Exception:
+            pass
     with open(path, "w", encoding="utf-8") as f:
         f.write(content + "\n")
-    print(f"✅ Generated: {path}")
+    try:
+        os.chmod(path, 0o444)
+    except Exception:
+        pass
+    print(f"✅ Generated (Protected 444): {path}")
 
 def main():
     # common = read_file(COMMON_PATH)

@@ -567,7 +567,7 @@ def main():
         run_valve_boilerplate(query)
 
     # Check if CLI execution was explicitly requested via flags
-    force_cli = any(arg in args for arg in ["--cli", "--terminal", "--agy", "--claude"])
+    force_cli = any(arg in args for arg in ["--cli", "--terminal", "--agy", "--claude"]) or query.startswith("/")
 
     if force_cli:
         print(f"[triage] Explicit CLI flag detected: running terminal agy with {selected_model}")
