@@ -8,20 +8,42 @@ import urllib.error
 
 BASE_URL = "https://jules.googleapis.com/v1alpha"
 
-def get_api_key():
-    key = os.environ.get("JULES_API_KEY")
-    if not key:
-        key_file = os.path.expanduser("~/.jules/api_key")
-        if os.path.exists(key_file):
-            with open(key_file) as f:
-                key = f.read().strip()
-    if not key:
-        print("Error: JULES_API_KEY environment variable or ~/.jules/api_key not found.", file=sys.stderr)
-        sys.exit(1)
-    return key
+def get_api_keys():
+    keys = []
+    
+    # Primary Key
+    k1 = os.environ.get("JULES_API_KEY")
+    if not k1:
+        f1 = os.path.expanduser("~/.jules/api_key")
+        if os.path.exists(f1):
+            with open(f1) as f:
+                k1 = f.read().strip()
+    if k1:
+        keys.append(("JULES_API_KEY", k1))
 
-def make_request(endpoint, data=None, method="GET"):
-    api_key = get_api_key()
+    # Alt Key
+    k2 = os.environ.get("JULES_API_KEY_ALT")
+    if not k2:
+        f2 = os.path.expanduser("~/.jules/api_key_alt")
+        if os.path.exists(f2):
+            with open(f2) as f:
+                k2 = f.read().strip()
+    if k2:
+        keys.append(("JULES_API_KEY_ALT", k2))
+
+    if not keys:
+        print("Error: Neither JULES_API_KEY nor JULES_API_KEY_ALT was found.", file=sys.stderr)
+        sys.exit(1)
+    
+    return keys
+
+def make_request(endpoint, data=None, method="GET", key_index=0):
+    keys = get_api_keys()
+    if key_index >= len(keys):
+        print("Error: All configured JULES API keys failed.", file=sys.stderr)
+        sys.exit(1)
+
+    key_name, api_key = keys[key_index]
     url = f"{BASE_URL}/{endpoint}"
     headers = {
         "x-goog-api-key": api_key,
@@ -35,11 +57,15 @@ def make_request(endpoint, data=None, method="GET"):
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
+        if e.code in (429, 403) and key_index + 1 < len(keys):
+            print(f"[*] {key_name} returned HTTP {e.code}. Failing over to next key...", file=sys.stderr)
+            return make_request(endpoint, data=data, method=method, key_index=key_index + 1)
+        
         error_body = e.read().decode("utf-8")
-        print(f"API Error: {e.code} - {e.reason}\n{error_body}", file=sys.stderr)
+        print(f"API Error ({key_name}): {e.code} - {e.reason}\n{error_body}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Request Exception: {e}", file=sys.stderr)
+        print(f"Request Exception ({key_name}): {e}", file=sys.stderr)
         sys.exit(1)
 
 def cmd_create(args):
@@ -79,7 +105,7 @@ def cmd_get(args):
     print(json.dumps(res, indent=2))
 
 def main():
-    parser = argparse.ArgumentParser(description="Google Jules Delegation Helper Script")
+    parser = argparse.ArgumentParser(description="Google Jules Multi-Account Delegation Helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     p_create = subparsers.add_parser("create", help="Create a new Jules session")
