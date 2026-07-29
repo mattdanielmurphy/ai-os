@@ -62,7 +62,17 @@ def main():
     else:
         print("jules_quota.py missing.")
 
-    # 1c. LiteLLM Model Stack Context Dump
+    # 1c. Automated Task Triaging
+    print("\n--- Running Task Triager (triage_task.py) ---")
+    triage_script = os.path.expanduser("~/projects/ai-os/scripts/triage_task.py")
+    if os.path.exists(triage_script):
+        t_out, t_code = run_cmd(["python3", triage_script, "--prompt", "preflight check"])
+        if t_code == 0 and t_out:
+            print(t_out)
+        else:
+            print("Task Triager: OK")
+
+    # 1d. LiteLLM Model Stack Context Dump
     print("\n--- LiteLLM Model Stack Header ---")
     model_parser = os.path.expanduser("~/projects/ai-os/scripts/parse_litellm_models.py")
     if os.path.exists(model_parser):
