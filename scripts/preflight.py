@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import os
+from compile_dynamic_prompt import compile_prompt
 
 def run_cmd(args, check=False):
     try:
@@ -12,6 +13,16 @@ def run_cmd(args, check=False):
 
 def main():
     print("=== PRE-FLIGHT CHECK ===")
+    
+    # Dynamic Prompt Check
+    print("\n--- Running Dynamic Prompt Compiler (compile_dynamic_prompt.py) ---")
+    try:
+        from compile_dynamic_prompt import compile_prompt
+        prompt_text = compile_prompt(role="orchestrator", platform="antigravity")
+        approx_tokens = len(prompt_text) // 4
+        print(f"Dynamic Prompt: OK (Role: Orchestrator | ~{approx_tokens:,} tokens)")
+    except Exception as e:
+        print(f"Dynamic Prompt: ERROR ({e})")
     
     # 1. Quota Check
     print("--- Running Quota Check (ag-quota) ---")
