@@ -50,7 +50,19 @@ def main():
     else:
         print("ag-quota execution skipped or produced no output.")
 
-        # 1b. LiteLLM Model Stack Context Dump
+    # 1b. Jules Delegation Quota Check
+    print("\n--- Running Jules Quota Check (jules_quota.py) ---")
+    jules_quota_script = os.path.expanduser("~/projects/ai-os/scripts/jules_quota.py")
+    if os.path.exists(jules_quota_script):
+        jq_out, jq_code = run_cmd(["python3", jules_quota_script])
+        if jq_code == 0 and jq_out:
+            print(jq_out)
+        else:
+            print("Jules Quota Check: UNCONFIGURED or ERROR")
+    else:
+        print("jules_quota.py missing.")
+
+    # 1c. LiteLLM Model Stack Context Dump
     print("\n--- LiteLLM Model Stack Header ---")
     model_parser = os.path.expanduser("~/projects/ai-os/scripts/parse_litellm_models.py")
     if os.path.exists(model_parser):
@@ -62,7 +74,7 @@ def main():
     else:
         print("parse_litellm_models.py missing.")
 
-# 2. Rules Build & Sync
+    # 2. Rules Build & Sync
     print("\n--- Running Rules Bundler (build_rules.py) ---")
     rules_script = os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")
     if os.path.exists(rules_script):
@@ -75,7 +87,6 @@ def main():
     # 3. Git Pull
     print("\n--- Running Git Pull ---")
     if os.path.exists(".git"):
-        # Check uncommitted work
         _, diff_code = run_cmd(["git", "diff", "--quiet"])
         _, status_code = run_cmd(["git", "diff", "--cached", "--quiet"])
         if diff_code != 0 or status_code != 0:
@@ -85,6 +96,7 @@ def main():
             print("Running `git pull`...")
             pull_out, pull_code = run_cmd(["git", "pull"])
         print(pull_out if pull_out else "Git pull finished.")
+
     # 4. Thread Bloat Check
     print("\n--- Running Thread Bloat Check (check_thread_bloat.py) ---")
     bloat_script = os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py")
@@ -100,18 +112,10 @@ def main():
                 is_bloated = b_data.get("is_bloated", False)
                 status_str = "WARNING (Bloated)" if is_bloated else "OK"
                 print(f"thread bloat status: {status_str} [T_sys: {t_sys}, T_hist: {t_hist}/{t_thresh}]")
-                if is_bloated:
-                    print("  -> Generating context handoff automatically...")
-                    handoff_script = os.path.expanduser("~/projects/ai-os/scripts/context_handoff.py")
-                    if os.path.exists(handoff_script):
-                        run_cmd(["python3", handoff_script])
-                    print("  -> [BLOAT ALERT] Run `python3 scripts/trigger_thread_reset.py` to reset thread & restore context.")
             except Exception:
                 print("thread bloat status: OK")
         else:
             print("thread bloat status: OK")
-    else:
-        print("check_thread_bloat.py missing.")
 
 if __name__ == "__main__":
     main()
