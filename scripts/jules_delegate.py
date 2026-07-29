@@ -1,90 +1,105 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
 import argparse
-import sys
 import urllib.request
 import urllib.error
-from pathlib import Path
+
+BASE_URL = "https://jules.googleapis.com/v1alpha"
 
 def get_api_key():
-    api_key = os.environ.get("JULES_API_KEY")
-    if not api_key:
-        key_path = Path.home() / ".jules" / "api_key"
-        if key_path.exists():
-            api_key = key_path.read_text().strip()
-    
-    if not api_key:
-        print("Error: JULES_API_KEY environment variable or ~/.jules/api_key not found.")
+    key = os.environ.get("JULES_API_KEY")
+    if not key:
+        key_file = os.path.expanduser("~/.jules/api_key")
+        if os.path.exists(key_file):
+            with open(key_file) as f:
+                key = f.read().strip()
+    if not key:
+        print("Error: JULES_API_KEY environment variable or ~/.jules/api_key not found.", file=sys.stderr)
         sys.exit(1)
-    return api_key
+    return key
 
-def jules_request(method, endpoint, data=None):
+def make_request(endpoint, data=None, method="GET"):
     api_key = get_api_key()
-    url = f"https://jules.googleapis.com/v1alpha/{endpoint}"
-    
+    url = f"{BASE_URL}/{endpoint}"
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "x-goog-api-key": api_key,
         "Content-Type": "application/json"
     }
     
-    req_data = None
-    if data:
-        req_data = json.dumps(data).encode('utf-8')
-        
-    req = urllib.request.Request(url, data=req_data, headers=headers, method=method)
+    payload = json.dumps(data).encode("utf-8") if data else None
+    req = urllib.request.Request(url, data=payload, headers=headers, method=method)
     
     try:
-        with urllib.request.urlopen(req) as response:
-            return json.loads(response.read().decode('utf-8'))
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        print(f"API Error: {e.code} - {e.reason}")
-        print(e.read().decode('utf-8'))
+        error_body = e.read().decode("utf-8")
+        print(f"API Error: {e.code} - {e.reason}\n{error_body}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Request Exception: {e}", file=sys.stderr)
         sys.exit(1)
 
 def cmd_create(args):
-    data = {
-        "sourceContext": {
-            "repo": args.repo,
-            "branch": args.branch
-        },
+    repo = args.repo.strip()
+    if not repo.startswith("sources/"):
+        if "/" not in repo:
+            print("Error: --repo should be in format 'owner/repo'", file=sys.stderr)
+            sys.exit(1)
+        if not repo.startswith("github/"):
+            repo = f"github/{repo}"
+        repo = f"sources/{repo}"
+
+    payload = {
         "prompt": args.prompt,
-        "autoPr": args.auto_pr
+        "sourceContext": {
+            "source": repo,
+            "githubRepoContext": {
+                "startingBranch": args.branch
+            }
+        }
     }
-    result = jules_request("POST", "sessions", data)
-    print(json.dumps(result, indent=2))
+    if args.auto_pr:
+        payload["automationMode"] = "AUTO_CREATE_PR"
+
+    res = make_request("sessions", data=payload, method="POST")
+    print(json.dumps(res, indent=2))
 
 def cmd_list(args):
-    result = jules_request("GET", "sessions")
-    print(json.dumps(result, indent=2))
+    res = make_request("sessions")
+    print(json.dumps(res, indent=2))
 
 def cmd_get(args):
-    result = jules_request("GET", f"sessions/{args.session}")
-    print(json.dumps(result, indent=2))
+    session_id = args.session.strip()
+    if not session_id.startswith("sessions/"):
+        session_id = f"sessions/{session_id}"
+    res = make_request(session_id)
+    print(json.dumps(res, indent=2))
 
 def main():
-    parser = argparse.ArgumentParser(description="JULES delegate CLI")
+    parser = argparse.ArgumentParser(description="Google Jules Delegation Helper Script")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # Create
-    create_parser = subparsers.add_parser("create")
-    create_parser.add_argument("--repo", required=True)
-    create_parser.add_argument("--prompt", required=True)
-    create_parser.add_argument("--branch", default="main")
-    create_parser.add_argument("--auto-pr", action="store_true", default=True)
-    create_parser.set_defaults(func=cmd_create)
+    p_create = subparsers.add_parser("create", help="Create a new Jules session")
+    p_create.add_argument("--repo", required=True, help="Target GitHub repo (e.g. mattdanielmurphy/gitl-emails)")
+    p_create.add_argument("--prompt", required=True, help="Task prompt for Jules")
+    p_create.add_argument("--branch", default="main", help="Starting branch (default: main)")
+    p_create.add_argument("--no-auto-pr", dest="auto_pr", action="store_false", default=True, help="Disable auto PR creation")
 
-    # List
-    list_parser = subparsers.add_parser("list")
-    list_parser.set_defaults(func=cmd_list)
+    p_list = subparsers.add_parser("list", help="List active Jules sessions")
 
-    # Get
-    get_parser = subparsers.add_parser("get")
-    get_parser.add_argument("--session", required=True)
-    get_parser.set_defaults(func=cmd_get)
+    p_get = subparsers.add_parser("get", help="Get details of a specific session")
+    p_get.add_argument("--session", required=True, help="Session ID or resource name")
 
     args = parser.parse_args()
-    args.func(args)
+    if args.command == "create":
+        cmd_create(args)
+    elif args.command == "list":
+        cmd_list(args)
+    elif args.command == "get":
+        cmd_get(args)
 
 if __name__ == "__main__":
     main()
