@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""
+gen_conversation_md.py — Generate conversation_response.md from transcript + agent response files.
+
+ARCHITECTURE:
+  Each turn, the agent:
+    1. Writes its response (plain markdown) to:
+         brain/<conv-id>/history/turn_<N>.md
+    2. Runs:
+         python3 gen_conversation_md.py <conv-id> --title "Thread Title"
+
+  This script reads:
+    - transcript.jsonl  -> all user messages + timestamps (auto-extracted)
+    - history/turn_N.md -> agent response content per turn (agent writes this)
+
+  And generates the full HTML-table conversation_response.md.
+
+USAGE:
+  python3 gen_conversation_md.py <conversation-id> [--title "Thread Title"] [--app-data-dir PATH]
+"""
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+
+APP_DATA_DIR = Path.home() / '.gemini/antigravity'
+STRUT = '&nbsp;' * 28
+
+
+# ─── Timestamp ────────────────────────────────────────────────────────────────
+
+def fmt_time(iso_str: str) -> str:
+    """Convert ISO8601 local timestamp string to '2:05pm' format."""
+    try:
+        dt = datetime.fromisoformat(iso_str.strip())
+        hour = dt.hour % 12 or 12
+        ampm = 'am' if dt.hour < 12 else 'pm'
+        return f"{hour}:{dt.minute:02d}{ampm}"
+    except Exception:
+        return ''
+
+
+# ─── Transcript Parsing ───────────────────────────────────────────────────────
+
+def extract_user_input(content: str):
+    """Extract (prompt_text, local_timestamp_str) from a USER_INPUT step content."""
+    req = re.search(r'<USER_REQUEST>(.*?)</USER_REQUEST>', content, re.DOTALL)
+    ts  = re.search(r'current local time is:\s*([^\n<]+)', content)
+    prompt = req.group(1).strip() if req else content[:600].strip()
+    time   = fmt_time(ts.group(1)) if ts else ''
+    return prompt, time
+
+
+def parse_exchanges(transcript_path: Path) -> list:
+    """
+    Parse transcript.jsonl into a list of exchanges.
+
+    Each exchange:
+      {
+        'users':      [{'prompt': str, 'time': str, 'step': int}, ...],
+        'agent_turn': int,   # 1-indexed; matches history/turn_N.md filename
+        'agent_time': str,
+      }
+
+    Multiple USER_INPUT steps before a PLANNER_RESPONSE -> steers.
+    Each PLANNER_RESPONSE group closes one exchange and increments agent_turn.
+    """
+    exchanges  = []
+    pending    = []    # USER_INPUT entries since last closed exchange
+    agent_turn = 0
+    in_agent   = False # True once we've seen a PLANNER_RESPONSE for current group
+
+    with open(transcript_path) as f:
+        for raw in f:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                obj = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            t   = obj.get('type', '')
+            idx = obj.get('step_index', 0)
+
+            if t == 'USER_INPUT':
+                if in_agent:
+                    in_agent = False  # new user message starts a new group
+                prompt, ts = extract_user_input(obj.get('content', ''))
+                if prompt:
+                    pending.append({'prompt': prompt, 'time': ts, 'step': idx})
+
+            elif t == 'PLANNER_RESPONSE':
+                if pending and not in_agent:
+                    agent_turn += 1
+                    created    = obj.get('created_at') or obj.get('timestamp') or ''
+                    agent_time = fmt_time(created) if created else ''
+                    exchanges.append({
+                        'users':      pending[:],
+                        'agent_turn': agent_turn,
+                        'agent_time': agent_time,
+                    })
+                    pending  = []
+                    in_agent = True
+
+    return exchanges
+
+
+# ─── Response Files ───────────────────────────────────────────────────────────
+
+def load_agent_response(history_dir: Path, turn_n: int) -> str:
+    """Load agent response markdown for turn N (history/turn_N.md)."""
+    path = history_dir / f'turn_{turn_n}.md'
+    if path.exists():
+        return path.read_text().strip()
+    return '*(response not recorded)*'
+
+
+def next_turn_number(history_dir: Path) -> int:
+    """Return the next available turn number (max existing + 1, or 1)."""
+    existing = list(history_dir.glob('turn_*.md'))
+    if not existing:
+        return 1
+    nums = []
+    for p in existing:
+        m = re.match(r'turn_(\d+)\.md', p.name)
+        if m:
+            nums.append(int(m.group(1)))
+    return max(nums) + 1 if nums else 1
+
+
+# ─── HTML Generation ──────────────────────────────────────────────────────────
+
+def escape_h4(text: str) -> str:
+    """Escape HTML special chars for <h4>, but preserve intentional <br> tags."""
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;').replace('>', '&gt;')
+    text = text.replace('&lt;br&gt;', '<br>')
+    return text
+
+
+def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str:
+    """Render one exchange (1+ user messages + 1 agent response) as HTML table(s)."""
+    tables = []
+    for i, u in enumerate(users):
+        is_steer  = (i < len(users) - 1)
+        agent_col = '*(steer — see next message)*' if is_steer else agent_content
+        a_time    = '' if is_steer else agent_time
+        prompt    = escape_h4(u['prompt'])
+
+        tables.append(f"""<table width="100%" border="0" frame="void" rules="none">
+  <tr>
+    <td width="1%" align="right">
+   \t<br>
+<h3><strong>🧔 You</strong></h3>
+{u['time']}
+  <small>{STRUT}</small>
+  <br>
+  <br>
+</td>
+    <td width="99%" colspan="3">
+    \t<br>
+      <h4>{prompt}</h4>
+      <br>
+      <br>
+    </td>
+  </tr>
+  <tr>
+    <td width="99%" colspan="3">
+    <br>
+
+{agent_col}
+
+<br>
+<br>
+    </td>
+    <td width="1%" align="left">
+    <br>
+    <br>
+      <h3><strong>🤖 Agent</strong></h3>
+{a_time}
+      <small>{STRUT}</small>
+    </td>
+  </tr>
+</table>""")
+
+    return '\n\n<br>\n\n'.join(tables)
+
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+
+def generate(conv_id: str, title: str, app_data_dir: Path):
+    base            = app_data_dir / 'brain' / conv_id
+    transcript_path = base / '.system_generated/logs/transcript.jsonl'
+    history_dir     = base / 'history'
+    output_path     = base / 'conversation_response.md'
+
+    history_dir.mkdir(exist_ok=True)
+
+    if not transcript_path.exists():
+        print(f"ERROR: Transcript not found: {transcript_path}", file=sys.stderr)
+        sys.exit(1)
+
+    exchanges = parse_exchanges(transcript_path)
+    if not exchanges:
+        print("ERROR: No exchanges found in transcript.", file=sys.stderr)
+        sys.exit(1)
+
+    for ex in exchanges:
+        ex['agent_content'] = load_agent_response(history_dir, ex['agent_turn'])
+
+    history = exchanges[:-1][-15:]
+    current = exchanges[-1]
+
+    history_block = '\n\n<br>\n\n'.join(
+        make_exchange_block(ex['users'], ex['agent_content'], ex['agent_time'])
+        for ex in history
+    ) if history else '*(no history yet)*'
+
+    current_block = make_exchange_block(
+        current['users'], current['agent_content'], current['agent_time']
+    )
+
+    doc = f"""# <strong>Thread: {title}</strong>
+
+<details>
+<summary><strong>&nbsp;&#x21BB;&nbsp; VIEW THREAD HISTORY</strong></summary>
+
+<hr>
+{history_block}
+<br>
+<hr>
+<br>
+</details>
+<hr>
+<br>
+{current_block}
+"""
+
+    output_path.write_text(doc)
+    print(f"Written: {output_path}")
+    print(f"  {len(exchanges)} total exchanges | {len(history)} in history | 1 current")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Generate conversation_response.md from transcript + turn response files.'
+    )
+    parser.add_argument('conv_id',        help='Conversation ID (UUID)')
+    parser.add_argument('--title',        default='Conversation', help='Thread title')
+    parser.add_argument('--app-data-dir', default=str(APP_DATA_DIR))
+    args = parser.parse_args()
+    generate(args.conv_id, args.title, Path(args.app_data_dir))
