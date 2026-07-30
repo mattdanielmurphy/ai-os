@@ -79,6 +79,10 @@ These are notable tools installed on the Mac that should be favored or respected
 * **Typora** (Markdown editor)
 * **Obsidian** (Notes application, syncs personal documents via `com.user.notesync.plist`)
 
+### Media Playback
+* **IINA** (primary video player, built on mpv — config at `~/.config/mpv/`)
+
+
 ---
 
 ## Developer Tooling & Languages (Brew & FNM)
@@ -106,3 +110,32 @@ Preferred CLI tools available on the path:
      sudo chown -R matt:staff /Applications/Raycast.app
      ```
   5. Restore a clean backup database if journal/wal lock files were corrupted during failed launch attempts.
+
+---
+
+## IINA / mpv Subtitle Configuration
+
+IINA is configured to use a shared mpv config directory at `~/.config/mpv/`. **Do not use the IINA Advanced preferences table to set mpv options** — use the config file directly.
+
+* **Config file**: [`~/.config/mpv/mpv.conf`](file:///Users/matt/.config/mpv/mpv.conf)
+* **IINA pref**: Preferences → Advanced → "Use config directory" → `~/.config/mpv/`
+
+### Subtitle Filtering (`~/.config/mpv/mpv.conf`)
+
+Multiple layers of subtitle filtering are active:
+
+| Setting | Value | Purpose |
+| :--- | :--- | :--- |
+| `sub-filter-sdh` | `yes` | Strips SDH (Subtitles for the Deaf/Hard-of-Hearing) markers via mpv's built-in SDH filter |
+| `sub-filter-sdh-harder` | `yes` | More aggressive SDH stripping (catches edge cases the standard filter misses) |
+| `sub-filter-regex-enable` | `yes` | Enables the regex-based line filter pipeline |
+| `sub-filter-regex-append` | `\[.*?\]` | Strips bracketed descriptions, e.g. `[Audio Description]`, `[cheering]` |
+| `sub-filter-regex-append` | `\(.*?\)` | Strips parenthetical stage directions, e.g. `(whispering)` |
+| `sub-filter-regex-append` | `[♪♫]` | Strips musical lyric lines (any line containing a musical note character) |
+
+> [!NOTE]
+> `sub-filter-regex-append` removes the **entire subtitle cue** if the pattern matches anywhere in the line. Multiple `sub-filter-regex-append` entries are additive — each one registers an additional filter in mpv's pipeline.
+
+> [!TIP]
+> To temporarily disable all regex filters without removing them, set `sub-filter-regex-enable=no` in `mpv.conf` (or pass `--no-sub-filter-regex-enable` as a runtime flag).
+
