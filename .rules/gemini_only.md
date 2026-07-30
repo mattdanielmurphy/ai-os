@@ -16,17 +16,30 @@
   1. The task is **planning-only** (producing an artifact/plan with no source code changes).
   2. The user explicitly instructs the orchestrator to make edits directly (e.g. "do it yourself", "edit it directly").
   3. The edit is a single-character or trivially obvious fix (e.g. fixing a typo the user just pointed out inline).
+  4. The `flash_lite` subagent fails with a 503 capacity error — fall back to writing directly rather than blocking.
 
 ## Mandatory Response Artifact Protocol
-- **Single Conversation Response Artifact with Turn History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
-- **Pre-Write Archive & Forward-Link Patching Step**: 
-  1. Before overwriting `conversation_response.md`, copy it to `<appDataDir>/brain/<conversation-id>/history/turn_<index>.md`.
-  2. Patch the newly copied `history/turn_<index>.md` header to append a forward link: `[➡️ Next Turn Response (conversation_response.md)](file:///<appDataDir>/brain/<conversation-id>/conversation_response.md)`.
-- **Header History Navigation Link & User Prompt Snippet**: At the top of each new `conversation_response.md`, include:
-  1. A clear clickable markdown link to the previous turn file: `[⬅️ Previous Turn Response (turn_<index>.md)](file:///<appDataDir>/brain/<conversation-id>/history/turn_<index>.md)`.
-  2. A blockquote snippet containing a truncated excerpt (1-2 lines) of the user's prompt for context.
+- **Single Conversation Response Artifact with Folded Turn History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
+- **Structure** (strict chronological order — oldest at top, current at bottom):
+  ```
+  <details><summary>⬅️ Turn N-3 — "oldest prompt excerpt"</summary>[content]</details>
+  <details><summary>⬅️ Turn N-2 — "..."</summary>[content]</details>
+  <details><summary>⬅️ Turn N-1 — "most recent previous"</summary>[content]</details>
+
+  ---
+
+  > **User:** "current prompt excerpt"
+
+  [current agent response — fully visible]
+  ```
+  Keep a maximum of **15** history `<details>` blocks; drop the oldest when exceeded.
+- **Pre-Write Step**: The file is split by the `---` divider:
+  1. Everything **after** `---` is the previous current turn. Wrap ONLY that section in a new `<details>` block and insert it **before** `---` (appending to existing history blocks).
+  2. Write the new current turn content **after** `---`.
+  3. If no `---` exists yet (first turn), wrap the entire file content in `<details>` and write `---\n\n[new turn]` after it.
 - **Artifact Metadata Parameters**: ALWAYS set `UserFacing: true` and `RequestFeedback: true` in `ArtifactMetadata`.
 - **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain only a single line link/pointer to `[conversation_response.md](file://...)`.
+- **Token note**: Antigravity does NOT auto-inject the artifact into context on every turn. The agent reads it only when writing the next turn (bounded cost). Users highlighting/commenting injects only the excerpt — not the full file.
 
 ## Background Task UI Prevention & Cleanup Rule
 - **Prevent Stray UI Background Tasks**: When calling `run_command` for non-daemon synchronous probes (`git status`, `which`, `--help`), ALWAYS set `WaitMsBeforeAsync` to at least `5000` (or up to `10000`). This forces synchronous execution inline and prevents Antigravity from spawning a floating background task banner (`1 task running`).

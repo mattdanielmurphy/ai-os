@@ -20,7 +20,15 @@ def read_rule(name: str) -> str:
             return f.read().strip()
     return ""
 
-def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", prompt_text: str = "") -> str:
+def compile_stub(platform: str = "antigravity") -> str:
+    return """# Antigravity Dynamic Context Stub
+Run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` at session start to retrieve your full system directive if not already provided.
+"""
+
+def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", prompt_text: str = "", stub: bool = False) -> str:
+    if stub and role.lower() != "leaf":
+        return compile_stub(platform)
+
     sections = []
     
     # Always include core safety

@@ -57,9 +57,19 @@ def swap_turn_by_url(url_str: str) -> str:
     if not turn_val:
         raise ValueError("Could not extract turn identifier/index from URL.")
         
-    brain_dir = Path("/Users/matt/.gemini/antigravity-cli/brain") / conv_id
-    if not brain_dir.is_dir():
-        raise FileNotFoundError(f"Conversation directory does not exist: {brain_dir}")
+    possible_dirs = [
+        Path("/Users/matt/.gemini/antigravity/brain") / conv_id,
+        Path("/Users/matt/.gemini/antigravity-cli/brain") / conv_id,
+        Path("/Users/matt/.gemini/antigravity-ide/brain") / conv_id,
+    ]
+    brain_dir = None
+    for pd in possible_dirs:
+        if pd.is_dir():
+            brain_dir = pd
+            break
+
+    if not brain_dir:
+        raise FileNotFoundError(f"Conversation directory does not exist for ID: {conv_id}")
         
     history_dir = brain_dir / "history"
     
