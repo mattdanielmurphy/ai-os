@@ -22,23 +22,64 @@
 - **Single Conversation Response Artifact with Folded Turn History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
 - **Structure** (strict chronological order — oldest at top, current at bottom):
   ```
-  <details><summary>⬅️ Turn N-3 — "oldest prompt excerpt"</summary>[content]</details>
-  <details><summary>⬅️ Turn N-2 — "..."</summary>[content]</details>
-  <details><summary>⬅️ Turn N-1 — "most recent previous"</summary>[content]</details>
-
-  ---
-
-  > **User:** "current prompt excerpt"
-
-  [current agent response — fully visible]
+  <details><summary><strong>&nbsp;↻&nbsp; VIEW THREAD HISTORY</strong></summary>
+  <hr>
+  [exchange tables — oldest first]
+  <br><hr><br>
+  </details>
+  <hr>
+  <br>
+  [current turn exchange table — always visible]
   ```
-  Keep a maximum of **15** history `<details>` blocks; drop the oldest when exceeded.
-- **Pre-Write Step**: The file is split by the `---` divider:
-  1. Everything **after** `---` is the previous current turn. Wrap ONLY that section in a new `<details>` block and insert it **before** `---` (appending to existing history blocks).
-  2. Write the new current turn content **after** `---`.
-  3. If no `---` exists yet (first turn), wrap the entire file content in `<details>` and write `---\n\n[new turn]` after it.
+  Keep a maximum of **15** history exchanges; drop the oldest when exceeded.
+- **Agent Workflow (SCRIPTED — do NOT manually manage HTML):**
+  1. Write your response as **plain markdown** (no HTML tables) to `brain/<conv-id>/history/turn_<N>.md`, where N = next available number (`ls brain/<conv-id>/history/turn_*.md | wc -l + 1`).
+  2. Run: `python3 /Users/matt/projects/ai-os/scripts/gen_conversation_md.py <conv-id> --title "Thread Title"`
+  3. The script auto-reads the transcript for ALL user messages/timestamps and generates the full HTML-table `conversation_response.md`. The agent NEVER touches the HTML directly.
+  4. In chat: output ONLY the single-line link `[conversation_response.md](file://...)`.
+- **Exchange Table Format** — each turn (user + agent) uses one table:
+  ```html
+  <table width="100%" border="0" frame="void" rules="none">
+    <tr>
+      <td width="1%" align="right">
+        <br>
+  <h3><strong>🧔 You</strong></h3>
+  [H:MMam/pm]
+    <small>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</small>
+    <br>
+    <br>
+  </td>
+      <td width="99%" colspan="3">
+        <br>
+        <h4>[Full user prompt text — no truncation unless extremely long]</h4>
+        <br>
+        <br>
+      </td>
+    </tr>
+    <tr>
+      <td width="99%" colspan="3">
+      <br>
+
+  # <strong>[Agent response title]</strong>
+  [Agent response body — full markdown, # and ## headings, lists, code, etc.]
+
+  <br>
+  <br>
+      </td>
+      <td width="1%" align="left">
+      <br>
+      <br>
+        <h3><strong>🤖 Agent</strong></h3>
+  [H:MMam/pm]
+        <small>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</small>
+      </td>
+    </tr>
+  </table>
+  ```
+- **Thread Header**: Begin the file with `# <strong>Thread: [Descriptive Title]</strong>`
+- **Steer messages**: Include ALL user messages from the conversation, including steers sent while the agent was working. Mark pure steers with `*(steer — [brief context])*` in the agent cell.
 - **Artifact Metadata Parameters**: ALWAYS set `UserFacing: true` and `RequestFeedback: true` in `ArtifactMetadata`.
-- **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain only a single line link/pointer to `[conversation_response.md](file://...)`.
+- **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain ONLY a single line link/pointer to `[conversation_response.md](file://...)`. NO response text outside the artifact.
 - **Token note**: Antigravity does NOT auto-inject the artifact into context on every turn. The agent reads it only when writing the next turn (bounded cost). Users highlighting/commenting injects only the excerpt — not the full file.
 
 ## Background Task UI Prevention & Cleanup Rule
