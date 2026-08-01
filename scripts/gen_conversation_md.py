@@ -160,24 +160,43 @@ def escape_h4(text: str) -> str:
 
 # ─── Markdown Generation ──────────────────────────────────────────────────────
 
-def make_markdown_block(users: list, agent_content: str, agent_time: str) -> str:
+def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str:
     user_blocks = []
     for u in users:
         p = u['prompt']
-        t = f" *(at {u['time']})*" if u['time'] else ""
-        user_blocks.append(f"### 🧔 **You**{t}\n\n{p}")
-    
-    user_section = "\n\n".join(user_blocks) if user_blocks else "*(No user prompt recording)*"
-    a_t = f" *(at {agent_time})*" if agent_time else ""
-    
-    return f"""---
+        # Restore double newlines with <br> if needed
+        p_formatted = p.replace('\n\n', '\n<br>')
+        t = f" — *{u['time']}*" if u['time'] else ""
+        user_blocks.append(f"""<table width="100%" border="0" frame="void" rules="none">
+  <tr>
+    <td>
 
-{user_section}
+### 🧔 **You**{t}
+<br><!-- Leading <br> for top padding -->
+{p_formatted}
+<br>
+<br>
+    </td>
+  </tr>
+</table>""")
 
-### 🤖 **Agent**{a_t}
+    user_html = "\n\n".join(user_blocks) if user_blocks else ""
+    a_time = f" — *{agent_time}*" if agent_time else ""
+    
+    agent_html = f"""<table width="100%" border="0" frame="void" rules="none">
+<tr>
+<td>
+
+### 🤖 **Agent**{a_time}
 
 {agent_content}
-"""
+
+<br> <!-- Trailing <br> for bottom padding -->
+</td>
+</tr>
+</table>"""
+
+    return f"{user_html}\n\n{agent_html}"
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -206,11 +225,12 @@ def generate(conv_id: str, title: str, app_data_dir: Path):
     reversed_exchanges = list(reversed(exchanges))
 
     exchange_blocks = [
-        make_markdown_block(ex['users'], ex['agent_content'], ex['agent_time'])
+        make_exchange_block(ex['users'], ex['agent_content'], ex['agent_time'])
         for ex in reversed_exchanges
     ]
 
-    doc = f"# **Thread: {title}**\n\n" + "\n\n".join(exchange_blocks) + "\n"
+    separator = "\n\n\n<br>\n<br>\n<br>\n<br>\n\n---\n<br>\n<br>\n<br>\n<br>\n<br>\n\n"
+    doc = separator.join(exchange_blocks) + "\n"
 
     output_path.write_text(doc)
     print(f"Written: {output_path}")

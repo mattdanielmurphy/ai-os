@@ -21,8 +21,8 @@
 ## Mandatory Response Artifact Protocol
 - **Single Conversation Response Artifact with Reverse-Chronological History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
 - **Structure** (Reverse-Chronological: Most recent turn at the VERY TOP, older turns below):
-  - On each turn, the agent prepends its entry (the user prompt + agent response) directly to the top of `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
-  - No HTML `<table>`, `<details>`, `<summary>`, or complex formatting required—just clean, plain Markdown headings and blocks.
+  - On each turn, the script prepends the newest exchange (user prompt + agent response) to the top of `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
+  - Format uses clean HTML tables per entry (`<table width="100%" border="0" frame="void" rules="none">`) separated by vertical `<br>` padding and horizontal dividers (`---`).
 - **Agent Workflow (SCRIPTED)**:
   1. Generate your response by passing your plain markdown text via standard input to the python script:
      ```bash
@@ -31,7 +31,7 @@
      [Agent response body...]
      EOF
      ```
-  2. The script auto-reads the turn input, prepends the latest turn to the top of `conversation_response.md` in reverse-chronological order, and saves the file.
+  2. The script auto-reads the turn input, formats user/agent tables, prepends the latest turn to the top of `conversation_response.md` in reverse-chronological order, and saves the file.
   3. In chat: output ONLY the single-line link `[conversation_response.md](file://...)`.
 - **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain ONLY a single line link/pointer to `[conversation_response.md](file://...)`. NO response text outside the artifact.
 
