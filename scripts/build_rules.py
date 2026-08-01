@@ -53,17 +53,22 @@ def main():
     # hermes_only = read_file(HERMES_ONLY_PATH)
 
     # Build CLAUDE.md
-    claude_content = compile_prompt(role="orchestrator", platform="claude", stub=True)
+    claude_content = compile_prompt(role="orchestrator", platform="claude", stub=False)
     write_file(CLAUDE_TARGET, claude_content)
 
     # Build GEMINI.md
-    gemini_content = compile_prompt(role="orchestrator", platform="antigravity", stub=True)
+    gemini_content = compile_prompt(role="orchestrator", platform="antigravity", stub=False)
     write_file(GEMINI_TARGET, gemini_content)
 
     # Build HERMES.md
-    hermes_content = compile_prompt(role="orchestrator", platform="hermes", stub=True)
+    hermes_content = compile_prompt(role="orchestrator", platform="hermes", stub=False)
     write_file(HERMES_TARGET_PROJECT, hermes_content)
     write_file(HERMES_TARGET_GLOBAL, hermes_content)
+
+    # Build LEAF.md for Subagents
+    leaf_target = PROJECT_ROOT / "LEAF.md"
+    leaf_content = compile_prompt(role="leaf", platform="antigravity", stub=False)
+    write_file(leaf_target, leaf_content)
 
     # Sync skills across Hermes, Claude, Antigravity, agy, Codex
     sync_skills_script = PROJECT_ROOT / "scripts" / "sync_skills.py"
