@@ -72,15 +72,17 @@ def step_jules_quota():
         return f"Jules Quota: OK - {status['total_remaining']}/{status['total_limit']} total sessions remaining ({acct_summary})"
     return f"Jules Quota: {status['status']} - {status.get('message', '')}"
 
-def step_triage():
+def step_triage(role="orchestrator"):
     from triage_task import evaluate_triage
-    decision = evaluate_triage(prompt="preflight check")
+    decision = evaluate_triage(prompt="preflight check", role=role)
     output = [f"Recommended Engine: {decision['engine'].upper()} ({decision['recommended_model']})",
               f"Use Jules: {decision['use_jules']}"]
     if decision["reasoning"]:
         output.append("Reasoning:")
         for r in decision["reasoning"]:
             output.append(f"  - {r}")
+    prompt_out = f"\n=== INJECTED SYSTEM DIRECTIVE ===\n{decision.get('compiled_system_prompt', '')}\n================================="
+    output.append(prompt_out)
     return "\n".join(output)
 
 def step_litellm():
@@ -105,13 +107,18 @@ def step_git():
     return "Git pull skipped"
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--role", default="orchestrator", choices=["orchestrator", "leaf"], help="Agent role")
+    args = parser.parse_args()
+
     log_preflight("STARTED")
     print("=== PRE-FLIGHT CHECK ===")
     
     steps = [
         ("Quota", step_quota),
         ("Jules Quota", step_jules_quota),
-        ("Task Triager", step_triage),
+        ("Task Triager", lambda: step_triage(args.role)),
         ("LiteLLM", step_litellm),
         ("Rules", step_rules),
         ("Thread Bloat", step_bloat),

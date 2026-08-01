@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from jules_quota import get_jules_status
 from compile_dynamic_prompt import compile_prompt
 
-def evaluate_triage(prompt, files=None):
+def evaluate_triage(prompt, files=None, role="orchestrator"):
     prompt_lower = prompt.lower()
     files = files or []
 
@@ -39,7 +39,7 @@ def evaluate_triage(prompt, files=None):
     is_quick_task = any(kw in prompt_lower for kw in keywords_quick) and len(files) <= 1
 
     # 3. Decision Matrix
-    compiled_prompt = compile_prompt(role="orchestrator", platform="antigravity", prompt_text=prompt)
+    compiled_prompt = compile_prompt(role=role, platform="antigravity", prompt_text=prompt)
     decision = {
         "engine": "local",
         "recommended_model": "muse-spark-1.1",

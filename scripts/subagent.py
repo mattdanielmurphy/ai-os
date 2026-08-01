@@ -469,18 +469,6 @@ def main():
     # no AGENTS.md delegation rules, no memory bleed. Just its task.
     final_prompt = ANTI_RECURSION_PREAMBLE + final_prompt
 
-    # Context hiding setup — temporarily move GEMINI.md and CLAUDE.md aside
-    gemini_md = Path.home() / ".gemini" / "GEMINI.md"
-    claude_md = Path.home() / ".claude" / "CLAUDE.md"
-
-    for md_path in [gemini_md, claude_md]:
-        bak_path = md_path.with_name(md_path.name + ".bak")
-        if bak_path.exists() and not md_path.exists():
-            bak_path.rename(md_path)
-            print(f"[Subagent] Recovered {bak_path} \u2192 {md_path}", flush=True)
-
-    renamed_files = []
-
     # Read ONLY ANTHROPIC_API_KEY from .zshrc for claude auth.
     # DO NOT source the full .zshrc — that leaks orchestrator env into subagent.
     zshrc_path = Path.home() / ".zshrc"
@@ -490,29 +478,16 @@ def main():
             if line.startswith("export ANTHROPIC_API_KEY="):
                 os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip('"').strip("'")
 
-    try:
-        if gemini_md.exists():
-            gemini_md.rename(gemini_md.with_name(gemini_md.name + ".bak"))
-            renamed_files.append(gemini_md)
-        if claude_md.exists():
-            claude_md.rename(claude_md.with_name(claude_md.name + ".bak"))
-            renamed_files.append(claude_md)
-
-        if args.no_tmux:
-            cli = "agy" if args.use_agy else "claude"
-            print(f"[Direct] Backend: {cli}, Model: {args.model}", file=sys.stderr)
-            cmd = [cli, "--dangerously-skip-permissions", "--model", args.model, "-p", final_prompt] if cli == "agy" else \
-                  [cli, "--model", args.model, "--dangerously-skip-permissions", "-p", final_prompt]
-            ret_code = subprocess.run(cmd).returncode
-            sys.exit(ret_code)
-        else:
-            active_cwd = args.cwd if args.cwd else os.getcwd()
-            sys.exit(run_in_tmux(model=args.model, prompt=final_prompt, cwd=active_cwd, use_agy=args.use_agy))
-    finally:
-        for original_path in renamed_files:
-            bak_path = original_path.with_name(original_path.name + ".bak")
-            if bak_path.exists():
-                bak_path.rename(original_path)
+    if args.no_tmux:
+        cli = "agy" if args.use_agy else "claude"
+        print(f"[Direct] Backend: {cli}, Model: {args.model}", file=sys.stderr)
+        cmd = [cli, "--dangerously-skip-permissions", "--model", args.model, "-p", final_prompt] if cli == "agy" else \
+              [cli, "--model", args.model, "--dangerously-skip-permissions", "-p", final_prompt]
+        ret_code = subprocess.run(cmd).returncode
+        sys.exit(ret_code)
+    else:
+        active_cwd = args.cwd if args.cwd else os.getcwd()
+        sys.exit(run_in_tmux(model=args.model, prompt=final_prompt, cwd=active_cwd, use_agy=args.use_agy))
 
 
 if __name__ == "__main__":
