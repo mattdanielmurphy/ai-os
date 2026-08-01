@@ -104,15 +104,6 @@ def main():
     args = parser.parse_args()
     decision = evaluate_triage(args.prompt, args.files)
 
-    if args.json:
-        print(json.dumps(decision, indent=2))
-    else:
-        print("=== TASK TRIAGE DECISION ===")
-        print(f"Recommended Engine: {decision['engine'].upper()} ({decision['recommended_model']})")
-        print(f"Use Jules: {decision['use_jules']} (Fan-out: {decision['jules_fanout']})")
-        if decision["auto_context_files"]:
-            print(f"Auto-Injected Context: {', '.join([os.path.basename(f) for f in decision['auto_context_files']])}")
-        print("Reasoning:")
         for r in decision["reasoning"]:
             print(f"  - {r}")
 
