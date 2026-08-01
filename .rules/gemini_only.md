@@ -19,73 +19,21 @@
   4. The `flash_lite` subagent fails with a 503 capacity error — fall back to writing directly rather than blocking.
 
 ## Mandatory Response Artifact Protocol
-- **Single Conversation Response Artifact with Folded Turn History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
-- **Structure** (strict chronological order — oldest at top, current at bottom):
-  ```
-  <details><summary><strong>&nbsp;↻&nbsp; VIEW THREAD HISTORY</strong></summary>
-  <hr>
-  [exchange tables — oldest first]
-  <br><hr><br>
-  </details>
-  <hr>
-  <br>
-  [current turn exchange table — always visible]
-  ```
-  Keep a maximum of **15** history exchanges; drop the oldest when exceeded.
-- **Agent Workflow (SCRIPTED — do NOT manually manage HTML):**
-  1. Generate your response by passing your plain markdown text (no HTML tables) via standard input to the python script:
+- **Single Conversation Response Artifact with Reverse-Chronological History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
+- **Structure** (Reverse-Chronological: Most recent turn at the VERY TOP, older turns below):
+  - On each turn, the agent prepends its entry (the user prompt + agent response) directly to the top of `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
+  - No HTML `<table>`, `<details>`, `<summary>`, or complex formatting required—just clean, plain Markdown headings and blocks.
+- **Agent Workflow (SCRIPTED)**:
+  1. Generate your response by passing your plain markdown text via standard input to the python script:
      ```bash
      cat << 'EOF' | python3 /Users/matt/projects/ai-os/scripts/gen_conversation_md.py <conv-id> --title "Thread Title" --save-turn
      # [Agent response title]
      [Agent response body...]
      EOF
      ```
-  2. The script auto-reads the transcript for user messages, writes your turn_N.md, and generates the full HTML-table `conversation_response.md`.
+  2. The script auto-reads the turn input, prepends the latest turn to the top of `conversation_response.md` in reverse-chronological order, and saves the file.
   3. In chat: output ONLY the single-line link `[conversation_response.md](file://...)`.
-- **Exchange Table Format** — each turn (user + agent) uses one table:
-  ```html
-  <table width="100%" border="0" frame="void" rules="none">
-    <tr>
-      <td width="1%" align="right">
-        <br>
-  <h3><strong>🧔 You</strong></h3>
-  [H:MMam/pm]
-    <small>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</small>
-    <br>
-    <br>
-  </td>
-      <td width="99%" colspan="3">
-        <br>
-        <h4>[Full user prompt text — no truncation unless extremely long]</h4>
-        <br>
-        <br>
-      </td>
-    </tr>
-    <tr>
-      <td width="99%" colspan="3">
-      <br>
-
-  # <strong>[Agent response title]</strong>
-  [Agent response body — full markdown, # and ## headings, lists, code, etc.]
-
-  <br>
-  <br>
-      </td>
-      <td width="1%" align="left">
-      <br>
-      <br>
-        <h3><strong>🤖 Agent</strong></h3>
-  [H:MMam/pm]
-        <small>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</small>
-      </td>
-    </tr>
-  </table>
-  ```
-- **Thread Header**: Begin the file with `# <strong>Thread: [Descriptive Title]</strong>`
-- **Steer messages**: Include ALL user messages from the conversation, including steers sent while the agent was working. Mark pure steers with `*(steer — [brief context])*` in the agent cell.
-- **Artifact Metadata Parameters**: ALWAYS set `UserFacing: true` and `RequestFeedback: true` in `ArtifactMetadata`.
 - **Pure Artifact Output**: The entire substantive content of the turn MUST live inside `conversation_response.md`. The chat response should contain ONLY a single line link/pointer to `[conversation_response.md](file://...)`. NO response text outside the artifact.
-- **Token note**: Antigravity does NOT auto-inject the artifact into context on every turn. The agent reads it only when writing the next turn (bounded cost). Users highlighting/commenting injects only the excerpt — not the full file.
 
 ## Background Task UI Prevention & Cleanup Rule
 - **Prevent Stray UI Background Tasks**: When calling `run_command` for non-daemon synchronous probes (`git status`, `which`, `--help`), ALWAYS set `WaitMsBeforeAsync` to at least `5000` (or up to `10000`). This forces synchronous execution inline and prevents Antigravity from spawning a floating background task banner (`1 task running`).

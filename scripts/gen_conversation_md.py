@@ -158,53 +158,26 @@ def escape_h4(text: str) -> str:
     text = text.replace('&lt;br&gt;', '<br>')
     return text
 
+# ─── Markdown Generation ──────────────────────────────────────────────────────
 
-def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str:
-    """Render one exchange (1+ user messages + 1 agent response) as HTML table(s)."""
-    tables = []
-    for i, u in enumerate(users):
-        is_steer  = (i < len(users) - 1)
-        agent_col = '*(steer — see next message)*' if is_steer else agent_content
-        a_time    = '' if is_steer else agent_time
-        prompt    = escape_h4(u['prompt'])
+def make_markdown_block(users: list, agent_content: str, agent_time: str) -> str:
+    user_blocks = []
+    for u in users:
+        p = u['prompt']
+        t = f" *(at {u['time']})*" if u['time'] else ""
+        user_blocks.append(f"### 🧔 **You**{t}\n\n{p}")
+    
+    user_section = "\n\n".join(user_blocks) if user_blocks else "*(No user prompt recording)*"
+    a_t = f" *(at {agent_time})*" if agent_time else ""
+    
+    return f"""---
 
-        tables.append(f"""<table width="100%" border="0" frame="void" rules="none">
-  <tr>
-    <td width="1%" align="right">
-   \t<br>
-<h3><strong>🧔 You</strong></h3>
-{u['time']}
-  <small>{STRUT}</small>
-  <br>
-  <br>
-</td>
-    <td width="99%" colspan="3">
-    \t<br>
-      <h4>{prompt}</h4>
-      <br>
-      <br>
-    </td>
-  </tr>
-  <tr>
-    <td width="99%" colspan="3">
-    <br>
+{user_section}
 
-{agent_col}
+### 🤖 **Agent**{a_t}
 
-<br>
-<br>
-    </td>
-    <td width="1%" align="left">
-    <br>
-    <br>
-      <h3><strong>🤖 Agent</strong></h3>
-{a_time}
-      <small>{STRUT}</small>
-    </td>
-  </tr>
-</table>""")
-
-    return '\n\n<br>\n\n'.join(tables)
+{agent_content}
+"""
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -229,37 +202,19 @@ def generate(conv_id: str, title: str, app_data_dir: Path):
     for ex in exchanges:
         ex['agent_content'] = load_agent_response(history_dir, ex['agent_turn'])
 
-    history = exchanges[:-1][-15:]
-    current = exchanges[-1]
+    # Reverse chronological order: newest exchange at top, older below
+    reversed_exchanges = list(reversed(exchanges))
 
-    history_block = '\n\n<br>\n\n'.join(
-        make_exchange_block(ex['users'], ex['agent_content'], ex['agent_time'])
-        for ex in history
-    ) if history else '*(no history yet)*'
+    exchange_blocks = [
+        make_markdown_block(ex['users'], ex['agent_content'], ex['agent_time'])
+        for ex in reversed_exchanges
+    ]
 
-    current_block = make_exchange_block(
-        current['users'], current['agent_content'], current['agent_time']
-    )
-
-    doc = f"""# <strong>Thread: {title}</strong>
-
-<details>
-<summary><strong>&nbsp;&#x21BB;&nbsp; VIEW THREAD HISTORY</strong></summary>
-
-<hr>
-{history_block}
-<br>
-<hr>
-<br>
-</details>
-<hr>
-<br>
-{current_block}
-"""
+    doc = f"# **Thread: {title}**\n\n" + "\n\n".join(exchange_blocks) + "\n"
 
     output_path.write_text(doc)
     print(f"Written: {output_path}")
-    print(f"  {len(exchanges)} total exchanges | {len(history)} in history | 1 current")
+    print(f"  {len(exchanges)} total exchanges rendered in reverse chronological order")
 
 
 if __name__ == '__main__':
