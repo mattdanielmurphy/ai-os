@@ -17,6 +17,14 @@
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: ALWAYS translate paths containing `/Users/matthewmurphy/` to `/Users/matt/` (or use relative paths or `~/`).
 
+# Antigravity Dynamic Context Stub & Global Directives
+
+## Preflight Requirement
+Run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` at session start to retrieve system status and quota.
+
+## Main Thread Response Protocol (Orchestrator Only)
+When acting as the main thread orchestrator, you MUST format all non-trivial conversation responses by running `python3 /Users/matt/projects/ai-os/scripts/gen_conversation_md.py <conversation-id> --title "<Title>" --save-turn` and referring the user to [conversation_response.md](file:///Users/matt/.gemini/antigravity/brain/<conversation-id>/conversation_response.md).
+Subagents (leaf workers) MUST IGNORE this response artifact protocol and reply directly.
+
 # Git Protocol Rules
-- **Pre-Flight:** Agents must run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` at session start.
 - **Auto-Commit:** Run `python3 /Users/matt/projects/ai-os/scripts/auto_commit.py` for auto-commits.
