@@ -106,6 +106,14 @@ def parse_exchanges(transcript_path: Path) -> list:
                     pending  = []
                     in_agent = True
 
+    if pending:
+        agent_turn += 1
+        exchanges.append({
+            'users': pending[:],
+            'agent_turn': agent_turn,
+            'agent_time': '',
+        })
+
     return exchanges
 
 
@@ -116,6 +124,15 @@ def load_agent_response(history_dir: Path, turn_n: int) -> str:
     path = history_dir / f'turn_{turn_n}.md'
     if path.exists():
         return path.read_text().strip()
+    
+    # Fallback to highest numbered turn if turn_n doesn't exist
+    existing = list(history_dir.glob('turn_*.md'))
+    if existing:
+        nums = [int(p.stem.split('_')[1]) for p in existing if p.stem.split('_')[1].isdigit()]
+        if nums:
+            highest_path = history_dir / f'turn_{max(nums)}.md'
+            return highest_path.read_text().strip()
+            
     return '*(response not recorded)*'
 
 
@@ -252,5 +269,18 @@ if __name__ == '__main__':
     parser.add_argument('conv_id',        help='Conversation ID (UUID)')
     parser.add_argument('--title',        default='Conversation', help='Thread title')
     parser.add_argument('--app-data-dir', default=str(APP_DATA_DIR))
+    parser.add_argument('--save-turn',    action='store_true', help='Read markdown from stdin and save as next turn_N.md before generating')
     args = parser.parse_args()
-    generate(args.conv_id, args.title, Path(args.app_data_dir))
+    
+    app_dir = Path(args.app_data_dir)
+    history_dir = app_dir / 'brain' / args.conv_id / 'history'
+    
+    if args.save_turn:
+        history_dir.mkdir(parents=True, exist_ok=True)
+        n = next_turn_number(history_dir)
+        content = sys.stdin.read().strip()
+        if content:
+            (history_dir / f'turn_{n}.md').write_text(content)
+            print(f"Saved turn_{n}.md")
+            
+    generate(args.conv_id, args.title, app_dir)

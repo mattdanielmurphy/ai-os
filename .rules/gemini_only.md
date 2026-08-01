@@ -33,10 +33,15 @@
   ```
   Keep a maximum of **15** history exchanges; drop the oldest when exceeded.
 - **Agent Workflow (SCRIPTED — do NOT manually manage HTML):**
-  1. Write your response as **plain markdown** (no HTML tables) to `brain/<conv-id>/history/turn_<N>.md`, where N = next available number (`ls brain/<conv-id>/history/turn_*.md | wc -l + 1`).
-  2. Run: `python3 /Users/matt/projects/ai-os/scripts/gen_conversation_md.py <conv-id> --title "Thread Title"`
-  3. The script auto-reads the transcript for ALL user messages/timestamps and generates the full HTML-table `conversation_response.md`. The agent NEVER touches the HTML directly.
-  4. In chat: output ONLY the single-line link `[conversation_response.md](file://...)`.
+  1. Generate your response by passing your plain markdown text (no HTML tables) via standard input to the python script:
+     ```bash
+     cat << 'EOF' | python3 /Users/matt/projects/ai-os/scripts/gen_conversation_md.py <conv-id> --title "Thread Title" --save-turn
+     # [Agent response title]
+     [Agent response body...]
+     EOF
+     ```
+  2. The script auto-reads the transcript for user messages, writes your turn_N.md, and generates the full HTML-table `conversation_response.md`.
+  3. In chat: output ONLY the single-line link `[conversation_response.md](file://...)`.
 - **Exchange Table Format** — each turn (user + agent) uses one table:
   ```html
   <table width="100%" border="0" frame="void" rules="none">
