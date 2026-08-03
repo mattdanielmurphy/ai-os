@@ -18,6 +18,11 @@
   3. The edit is a single-character or trivially obvious fix (e.g. fixing a typo the user just pointed out inline).
   4. The `flash_lite` subagent fails with a 503 capacity error — fall back to writing directly rather than blocking.
 
+## Pro Model Escalation for Recurring/Stuck Bugs
+- **Rule:** If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the main orchestrator MUST immediately escalate planning and root cause analysis to a Pro reasoning model (`Gemini 3.1 Pro (High)` / `pro` or `Claude Sonnet 5`).
+- **How:** Invoke `/planner 3.1 pro high` via `agymcp:agy_start` or `agymcp:agy` with complete context, error logs, and prior failed attempt diffs. Do NOT attempt additional iterative Flash fixes without first obtaining a Pro model architecture plan.
+
+
 ## Mandatory Response Artifact Protocol
 - **Single Conversation Response Artifact with Reverse-Chronological History**: Every turn response MUST update the single persistent artifact at `<appDataDir>/brain/<conversation-id>/conversation_response.md`.
 - **Structure** (Reverse-Chronological: Most recent turn at the VERY TOP, older turns below):
