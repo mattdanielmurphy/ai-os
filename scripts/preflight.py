@@ -106,6 +106,31 @@ def step_git():
         return f"Git pull finished: {out[:50]}"
     return "Git pull skipped"
 
+def step_conversation_response():
+    brain_dir = os.path.expanduser("~/.gemini/antigravity/brain")
+    if not os.path.exists(brain_dir):
+        return "Conversation Response: Skipped (no brain dir)"
+    
+    recent_convs = []
+    now = datetime.datetime.now().timestamp()
+    for entry in os.listdir(brain_dir):
+        t_path = os.path.join(brain_dir, entry, ".system_generated", "logs", "transcript.jsonl")
+        if os.path.exists(t_path):
+            mtime = os.path.getmtime(t_path)
+            if (now - mtime) < 7200: # updated in last 2h
+                recent_convs.append(entry)
+    
+    if not recent_convs:
+        return "Conversation Response: OK (No recent active threads)"
+    
+    updated = []
+    for conv_id in recent_convs:
+        out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/gen_conversation_md.py"), conv_id])
+        if code == 0:
+            updated.append(conv_id[:8])
+            
+    return f"Conversation Response: Updated ({', '.join(updated)})"
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
@@ -122,7 +147,8 @@ def main():
         ("LiteLLM", step_litellm),
         ("Rules", step_rules),
         ("Thread Bloat", step_bloat),
-        ("Git", step_git)
+        ("Git", step_git),
+        ("Conversation Response", step_conversation_response)
     ]
     
     results = {}
