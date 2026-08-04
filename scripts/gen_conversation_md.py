@@ -56,12 +56,13 @@ def extract_user_input(content: str):
     cleaned = re.sub(r'<ADDITIONAL_METADATA>.*?</ADDITIONAL_METADATA>', '', content, flags=re.DOTALL)
     
     # Extract artifact comments if present
-    # Pattern matching "Selection:\n>...\n\nComment: ..."
+    # Pattern matching "Comments on artifact URI: ... Selection:\n>...\n\nComment: ..."
     comment_blocks = []
-    for match in re.finditer(r'Selection:\s*\n(>.*?)(?=\n\nComment:|\n<USER_REQUEST>|\Z)\s*(?:\n\nComment:\s*(.*?))?(?=\n\n|\n<USER_REQUEST>|\Z)', cleaned, re.DOTALL):
-        sel = match.group(1).strip()
-        cmt = match.group(2).strip() if match.group(2) else ''
-        # Clean quotes around comment if any
+    # Match from Selection:\n up to Comment:
+    comment_match = re.search(r'Selection:\s*\n(.*?)(?=\n\nComment:|\n<USER_REQUEST>|\Z)\s*(?:\n\nComment:\s*(.*?))?(?=\n<USER_REQUEST>|\Z)', cleaned, re.DOTALL)
+    if comment_match:
+        sel = comment_match.group(1).strip()
+        cmt = comment_match.group(2).strip() if comment_match.group(2) else ''
         if cmt.startswith('"') and cmt.endswith('"'):
             cmt = cmt[1:-1].strip()
         comment_blocks.append((sel, cmt))
