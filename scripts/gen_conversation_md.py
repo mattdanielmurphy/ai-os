@@ -73,6 +73,7 @@ def parse_exchanges(transcript_path: Path) -> list:
     pending    = []    # USER_INPUT entries since last closed exchange
     agent_turn = 0
     in_agent   = False # True once we've seen a PLANNER_RESPONSE for current group
+    last_planner_content = ''
 
     with open(transcript_path) as f:
         for raw in f:
@@ -83,26 +84,35 @@ def parse_exchanges(transcript_path: Path) -> list:
                 obj = json.loads(raw)
             except json.JSONDecodeError:
                 continue
-
+            
+            # Reset last_planner_content on each turn
+            
             t   = obj.get('type', '')
             idx = obj.get('step_index', 0)
+            content = obj.get('content', '')
 
             if t == 'USER_INPUT':
                 if in_agent:
                     in_agent = False  # new user message starts a new group
-                prompt, ts = extract_user_input(obj.get('content', ''))
+                    last_planner_content = ''
+                prompt, ts = extract_user_input(content)
                 if prompt:
                     pending.append({'prompt': prompt, 'time': ts, 'step': idx})
 
             elif t == 'PLANNER_RESPONSE':
+                last_planner_content = content
                 if pending and not in_agent:
                     agent_turn += 1
                     created    = obj.get('created_at') or obj.get('timestamp') or ''
                     agent_time = fmt_time(created) if created else ''
+                    
+                    agent_text = obj.get('content', '') or obj.get('text', '')
+                    
                     exchanges.append({
                         'users':      pending[:],
                         'agent_turn': agent_turn,
                         'agent_time': agent_time,
+                        'agent_text': agent_text,
                     })
                     pending  = []
                     in_agent = True
@@ -113,6 +123,7 @@ def parse_exchanges(transcript_path: Path) -> list:
             'users': pending[:],
             'agent_turn': agent_turn,
             'agent_time': '',
+            'agent_text': '',
         })
 
     return exchanges
@@ -120,11 +131,17 @@ def parse_exchanges(transcript_path: Path) -> list:
 
 # ─── Response Files ───────────────────────────────────────────────────────────
 
-def load_agent_response(history_dir: Path, turn_n: int) -> str:
+def load_agent_response(history_dir: Path, turn_n: int, fallback_text: str = '') -> str:
     """Load agent response markdown for turn N (history/turn_N.md)."""
     path = history_dir / f'turn_{turn_n}.md'
     if path.exists():
-        return path.read_text().strip()
+        content = path.read_text().strip()
+        if content:
+            return content
+    
+    if fallback_text and fallback_text.strip():
+        return fallback_text.strip()
+    
     return '*(response in progress or not recorded)*'
 
 
@@ -208,7 +225,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path):
         sys.exit(1)
 
     for ex in exchanges:
-        ex['agent_content'] = load_agent_response(history_dir, ex['agent_turn'])
+        ex['agent_content'] = load_agent_response(history_dir, ex['agent_turn'], ex.get('agent_text', ''))
 
     # Reverse chronological order: newest exchange at top, older below
     reversed_exchanges = list(reversed(exchanges))
