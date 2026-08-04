@@ -74,24 +74,24 @@ def extract_user_input(content: str):
         req_prompt = re.sub(r'Comments on artifact URI:.*', '', cleaned, flags=re.DOTALL)
         req_prompt = re.sub(r'</?USER_REQUEST>', '', req_prompt).strip()
 
-    # Format elegant comment quotes while stripping any raw HTML <td> / </td> remnants selected from rendered markdown tables
+    # Format elegant comment quotes safely using html.escape so selections like `</td>` render cleanly in blockquotes without breaking table cells
     formatted_parts = []
     for sel, cmt in comment_blocks:
-        # Strip leading '>' and any stray <td> / </td> / <tr> / </tr> tags from the selection quote
         quote_lines = []
         for line in sel.split('\n'):
             line_clean = line.lstrip('>').strip()
-            line_clean = re.sub(r'</?(?:td|tr|table)[^>]*>', '', line_clean, flags=re.IGNORECASE).strip()
             if line_clean:
-                quote_lines.append(line_clean)
+                # Escape HTML special chars so raw HTML/tag text in selections (like `</td>`) renders cleanly as text inside the blockquote
+                quote_lines.append(html.escape(line_clean))
         
         quote_body = "\n".join([f"> {line}" for line in quote_lines])
         
         if cmt:
+            cmt_escaped = html.escape(cmt)
             if quote_body:
-                formatted_parts.append(f"{quote_body}\n>\n> 💬 **Comment**: {cmt}")
+                formatted_parts.append(f"{quote_body}\n>\n> 💬 **Comment**: {cmt_escaped}")
             else:
-                formatted_parts.append(f"💬 **Comment**: {cmt}")
+                formatted_parts.append(f"💬 **Comment**: {cmt_escaped}")
         elif quote_body:
             formatted_parts.append(quote_body)
 
