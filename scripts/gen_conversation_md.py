@@ -77,16 +77,20 @@ def extract_user_input(content: str):
     # Format elegant comment quotes
     formatted_parts = []
     for sel, cmt in comment_blocks:
-        # Limit selection quote length if massive
-        sel_clean = sel
-        if len(sel_clean) > 200:
-            sel_clean = sel_clean[:200] + '...'
-        formatted_parts.append(f"{sel_clean}\n\n💬 **Comment**: {cmt}")
+        # Strip leading '>' lines to re-format nicely as a Markdown blockquote
+        quote_lines = [line.lstrip('>').strip() for line in sel.split('\n')]
+        quote_body = "\n".join([f"> {line}" for line in quote_lines if line])
+        
+        if cmt:
+            formatted_parts.append(f"{quote_body}\n>\n> 💬 **Comment**: {cmt}")
+        else:
+            formatted_parts.append(quote_body)
 
     if req_prompt:
         formatted_parts.append(req_prompt)
 
-    prompt = "\n\n".join(formatted_parts).strip()
+    # Join comment blocks and user prompt with clear newline spacing
+    prompt = "\n\n---\n\n".join(formatted_parts).strip() if len(formatted_parts) > 1 else "\n\n".join(formatted_parts).strip()
     return prompt, time
 
 
