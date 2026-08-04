@@ -52,17 +52,33 @@ def extract_user_input(content: str):
     ts = re.search(r'current local time is:\s*([^\n<]+)', content)
     time = fmt_time(ts.group(1)) if ts else ''
 
-    # Clean out metadata block first
+    # Clean out metadata block
     cleaned = re.sub(r'<ADDITIONAL_METADATA>.*?</ADDITIONAL_METADATA>', '', content, flags=re.DOTALL)
     
-    # Extract inside USER_REQUEST if present
+    # Extract artifact comment header if present before <USER_REQUEST>
+    artifact_comment = ''
+    comment_match = re.search(r'(Comments on artifact URI:.*?)(?=<USER_REQUEST>|\Z)', cleaned, re.DOTALL)
+    if comment_match:
+        artifact_comment = comment_match.group(1).strip()
+
+    # Extract prompt inside <USER_REQUEST>
     req = re.search(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, re.DOTALL)
     if req:
-        prompt = req.group(1).strip()
+        req_prompt = req.group(1).strip()
     else:
-        prompt = re.sub(r'</?USER_REQUEST>', '', cleaned).strip()
+        req_prompt = re.sub(r'Comments on artifact URI:.*', '', cleaned, flags=re.DOTALL)
+        req_prompt = re.sub(r'</?USER_REQUEST>', '', req_prompt).strip()
 
-    # Strip any remaining raw tags
+    # Combine artifact comment (if any) and request prompt
+    if artifact_comment:
+        if req_prompt:
+            prompt = f"{artifact_comment}\n\n{req_prompt}"
+        else:
+            prompt = artifact_comment
+    else:
+        prompt = req_prompt
+
+    # Clean any residual tags
     prompt = re.sub(r'</?USER_REQUEST>', '', prompt).strip()
 
     return prompt, time
