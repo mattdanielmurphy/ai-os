@@ -47,7 +47,7 @@ def main():
     parser.add_argument("--once", action="store_true", help="Run once and exit")
     args = parser.parse_args()
 
-    last_mtimes = get_active_convs()
+    last_mtimes = {}
 
     if args.once:
         process_updates(last_mtimes)
