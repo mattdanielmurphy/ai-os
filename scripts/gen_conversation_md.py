@@ -118,8 +118,11 @@ def parse_exchanges(transcript_path: Path) -> list:
                 
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
-                    # Filter out raw tool pointer text if any
-                    current_agent_content.append(content.strip())
+                    stripped = content.strip()
+                    # Skip pure artifact link pointers (e.g. "[conversation_response.md](file://...)")
+                    if not (stripped.startswith('[conversation_response.md](') and stripped.endswith(')')):
+                        if not current_agent_content or current_agent_content[-1] != stripped:
+                            current_agent_content.append(stripped)
 
     if pending_users:
         agent_text = "\n\n".join([c for c in current_agent_content if c.strip()]).strip()
