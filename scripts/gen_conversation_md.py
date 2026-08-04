@@ -55,13 +55,18 @@ def extract_user_input(content: str):
     # Clean out metadata block
     cleaned = re.sub(r'<ADDITIONAL_METADATA>.*?</ADDITIONAL_METADATA>', '', content, flags=re.DOTALL)
     
-    # Extract artifact comment header if present before <USER_REQUEST>
-    artifact_comment = ''
-    comment_match = re.search(r'(Comments on artifact URI:.*?)(?=<USER_REQUEST>|\Z)', cleaned, re.DOTALL)
-    if comment_match:
-        artifact_comment = comment_match.group(1).strip()
+    # Extract artifact comments if present
+    # Pattern matching "Selection:\n>...\n\nComment: ..."
+    comment_blocks = []
+    for match in re.finditer(r'Selection:\s*\n(>.*?)(?=\n\nComment:|\n<USER_REQUEST>|\Z)\s*(?:\n\nComment:\s*(.*?))?(?=\n\n|\n<USER_REQUEST>|\Z)', cleaned, re.DOTALL):
+        sel = match.group(1).strip()
+        cmt = match.group(2).strip() if match.group(2) else ''
+        # Clean quotes around comment if any
+        if cmt.startswith('"') and cmt.endswith('"'):
+            cmt = cmt[1:-1].strip()
+        comment_blocks.append((sel, cmt))
 
-    # Extract prompt inside <USER_REQUEST>
+    # Extract user request prompt inside <USER_REQUEST>
     req = re.search(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, re.DOTALL)
     if req:
         req_prompt = req.group(1).strip()
@@ -69,18 +74,19 @@ def extract_user_input(content: str):
         req_prompt = re.sub(r'Comments on artifact URI:.*', '', cleaned, flags=re.DOTALL)
         req_prompt = re.sub(r'</?USER_REQUEST>', '', req_prompt).strip()
 
-    # Combine artifact comment (if any) and request prompt
-    if artifact_comment:
-        if req_prompt:
-            prompt = f"{artifact_comment}\n\n{req_prompt}"
-        else:
-            prompt = artifact_comment
-    else:
-        prompt = req_prompt
+    # Format elegant comment quotes
+    formatted_parts = []
+    for sel, cmt in comment_blocks:
+        # Limit selection quote length if massive
+        sel_clean = sel
+        if len(sel_clean) > 200:
+            sel_clean = sel_clean[:200] + '...'
+        formatted_parts.append(f"{sel_clean}\n\n💬 **Comment**: {cmt}")
 
-    # Clean any residual tags
-    prompt = re.sub(r'</?USER_REQUEST>', '', prompt).strip()
+    if req_prompt:
+        formatted_parts.append(req_prompt)
 
+    prompt = "\n\n".join(formatted_parts).strip()
     return prompt, time
 
 
@@ -107,7 +113,6 @@ def parse_exchanges(transcript_path: Path) -> list:
             idx = obj.get('step_index', 0)
 
             if t == 'USER_INPUT':
-                # If we were building an exchange, close it now
                 if pending_users:
                     agent_text = "\n\n".join([c for c in current_agent_content if c.strip()]).strip()
                     exchanges.append({
@@ -132,7 +137,6 @@ def parse_exchanges(transcript_path: Path) -> list:
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
                     stripped = content.strip()
-                    # Skip pure artifact link pointers (e.g. "[conversation_response.md](file://...)")
                     if not (stripped.startswith('[conversation_response.md](') and stripped.endswith(')')):
                         if not current_agent_content or current_agent_content[-1] != stripped:
                             current_agent_content.append(stripped)
@@ -180,21 +184,16 @@ def next_turn_number(history_dir: Path) -> int:
 
 # ─── HTML Generation ──────────────────────────────────────────────────────────
 
-def escape_h4(text: str) -> str:
-    """Escape HTML special chars for <h4>, but preserve intentional <br> tags."""
-    text = text.replace('&', '&amp;')
-    text = text.replace('<', '&lt;').replace('>', '&gt;')
-    text = text.replace('&lt;br&gt;', '<br>')
-    return text
-
 def format_prompt(raw_prompt: str) -> str:
+    # Safely escape HTML characters
     escaped = html.escape(raw_prompt.strip())
     lines = escaped.split('\n')
     
-    if len(escaped) > 300 or len(lines) > 4:
-        summary_text = escaped[:250]
+    # Only collapse into <details><summary> if truly massive (> 800 chars or > 12 lines)
+    if len(escaped) > 800 or len(lines) > 12:
+        summary_text = escaped[:350]
         if '\n' in summary_text:
-            summary_text = '\n'.join(summary_text.split('\n')[:3])
+            summary_text = '\n'.join(summary_text.split('\n')[:5])
         
         remainder = escaped[len(summary_text):]
         return f"<details><summary>{summary_text.strip()}...</summary>\n\n{remainder.strip()}\n</details>"
