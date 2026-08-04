@@ -65,9 +65,6 @@ def extract_user_input(content: str):
     # Strip any remaining raw tags
     prompt = re.sub(r'</?USER_REQUEST>', '', prompt).strip()
 
-    # Escape HTML special characters for clean rendering inside <td> cells
-    prompt = html.escape(prompt)
-
     return prompt, time
 
 
@@ -174,12 +171,25 @@ def escape_h4(text: str) -> str:
     text = text.replace('&lt;br&gt;', '<br>')
     return text
 
-# ─── Markdown Generation ──────────────────────────────────────────────────────
+def format_prompt(raw_prompt: str) -> str:
+    escaped = html.escape(raw_prompt.strip())
+    lines = escaped.split('\n')
+    
+    if len(escaped) > 300 or len(lines) > 4:
+        summary_text = escaped[:250]
+        if '\n' in summary_text:
+            summary_text = '\n'.join(summary_text.split('\n')[:3])
+        
+        remainder = escaped[len(summary_text):]
+        return f"<details><summary>{summary_text.strip()}...</summary>\n\n{remainder.strip()}\n</details>"
+    
+    return escaped
+
 
 def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str:
     user_blocks = []
     for u in users:
-        p = u['prompt']
+        p = format_prompt(u['prompt'])
         t = f" — *{u['time']}*" if u['time'] else ""
         user_blocks.append(f"""<table width="100%" border="0" frame="void" rules="none">
   <tr>
