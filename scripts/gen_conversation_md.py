@@ -25,6 +25,7 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
+import html
 
 APP_DATA_DIR = Path.home() / '.gemini/antigravity'
 STRUT = '&nbsp;' * 28
@@ -124,16 +125,7 @@ def load_agent_response(history_dir: Path, turn_n: int) -> str:
     path = history_dir / f'turn_{turn_n}.md'
     if path.exists():
         return path.read_text().strip()
-    
-    # Fallback to highest numbered turn if turn_n doesn't exist
-    existing = list(history_dir.glob('turn_*.md'))
-    if existing:
-        nums = [int(p.stem.split('_')[1]) for p in existing if p.stem.split('_')[1].isdigit()]
-        if nums:
-            highest_path = history_dir / f'turn_{max(nums)}.md'
-            return highest_path.read_text().strip()
-            
-    return '*(response not recorded)*'
+    return '*(response in progress or not recorded)*'
 
 
 def next_turn_number(history_dir: Path) -> int:
@@ -164,18 +156,15 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     user_blocks = []
     for u in users:
         p = u['prompt']
-        # Restore double newlines with <br> if needed
-        p_formatted = p.replace('\n\n', '\n<br>')
         t = f" — *{u['time']}*" if u['time'] else ""
         user_blocks.append(f"""<table width="100%" border="0" frame="void" rules="none">
   <tr>
     <td>
 
 ### 🧔 **You**{t}
-<br><!-- Leading <br> for top padding -->
-{p_formatted}
-<br>
-<br>
+
+{p}
+
     </td>
   </tr>
 </table>""")
