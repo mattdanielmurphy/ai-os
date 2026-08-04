@@ -48,10 +48,26 @@ def fmt_time(iso_str: str) -> str:
 
 def extract_user_input(content: str):
     """Extract (prompt_text, local_timestamp_str) from a USER_INPUT step content."""
-    req = re.search(r'<USER_REQUEST>(.*?)</USER_REQUEST>', content, re.DOTALL)
-    ts  = re.search(r'current local time is:\s*([^\n<]+)', content)
-    prompt = req.group(1).strip() if req else content[:600].strip()
-    time   = fmt_time(ts.group(1)) if ts else ''
+    # Find timestamp if present
+    ts = re.search(r'current local time is:\s*([^\n<]+)', content)
+    time = fmt_time(ts.group(1)) if ts else ''
+
+    # Clean out metadata block first
+    cleaned = re.sub(r'<ADDITIONAL_METADATA>.*?</ADDITIONAL_METADATA>', '', content, flags=re.DOTALL)
+    
+    # Extract inside USER_REQUEST if present
+    req = re.search(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, re.DOTALL)
+    if req:
+        prompt = req.group(1).strip()
+    else:
+        prompt = re.sub(r'</?USER_REQUEST>', '', cleaned).strip()
+
+    # Strip any remaining raw tags
+    prompt = re.sub(r'</?USER_REQUEST>', '', prompt).strip()
+
+    # Escape HTML special characters for clean rendering inside <td> cells
+    prompt = html.escape(prompt)
+
     return prompt, time
 
 
