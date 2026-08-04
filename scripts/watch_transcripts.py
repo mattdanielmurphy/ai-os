@@ -10,16 +10,19 @@ BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
 GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 
 def get_active_convs():
-    """Finds all conversation IDs with a transcript.jsonl file."""
+    """Finds active conversation IDs with a transcript.jsonl file updated in the last 2 hours."""
     active_convs = {}
     if not BRAIN_DIR.exists():
         return active_convs
 
+    now = time.time()
     for conv_dir in BRAIN_DIR.iterdir():
         if conv_dir.is_dir():
             transcript_path = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
             if transcript_path.exists():
-                active_convs[conv_dir.name] = transcript_path.stat().st_mtime
+                mtime = transcript_path.stat().st_mtime
+                if (now - mtime) < 7200:
+                    active_convs[conv_dir.name] = mtime
     return active_convs
 
 def process_updates(last_mtimes):
