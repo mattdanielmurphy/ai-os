@@ -58,22 +58,11 @@ def extract_user_input(content: str):
 def parse_exchanges(transcript_path: Path) -> list:
     """
     Parse transcript.jsonl into a list of exchanges.
-
-    Each exchange:
-      {
-        'users':      [{'prompt': str, 'time': str, 'step': int}, ...],
-        'agent_turn': int,   # 1-indexed; matches history/turn_N.md filename
-        'agent_time': str,
-      }
-
-    Multiple USER_INPUT steps before a PLANNER_RESPONSE -> steers.
-    Each PLANNER_RESPONSE group closes one exchange and increments agent_turn.
     """
-    exchanges  = []
-    pending    = []    # USER_INPUT entries since last closed exchange
-    agent_turn = 0
-    in_agent   = False # True once we've seen a PLANNER_RESPONSE for current group
-    last_planner_content = ''
+    exchanges = []
+    pending_users = []
+    current_agent_time = ''
+    current_agent_content = []
 
     with open(transcript_path) as f:
         for raw in f:
@@ -84,46 +73,45 @@ def parse_exchanges(transcript_path: Path) -> list:
                 obj = json.loads(raw)
             except json.JSONDecodeError:
                 continue
-            
-            # Reset last_planner_content on each turn
-            
-            t   = obj.get('type', '')
+
+            t = obj.get('type', '')
             idx = obj.get('step_index', 0)
-            content = obj.get('content', '')
 
             if t == 'USER_INPUT':
-                if in_agent:
-                    in_agent = False  # new user message starts a new group
-                    last_planner_content = ''
-                prompt, ts = extract_user_input(content)
+                # If we were building an exchange, close it now
+                if pending_users:
+                    agent_text = "\n\n".join([c for c in current_agent_content if c.strip()]).strip()
+                    exchanges.append({
+                        'users': pending_users[:],
+                        'agent_turn': len(exchanges) + 1,
+                        'agent_time': current_agent_time,
+                        'agent_text': agent_text
+                    })
+                    pending_users = []
+                    current_agent_content = []
+                    current_agent_time = ''
+
+                prompt, ts = extract_user_input(obj.get('content', ''))
                 if prompt:
-                    pending.append({'prompt': prompt, 'time': ts, 'step': idx})
+                    pending_users.append({'prompt': prompt, 'time': ts, 'step': idx})
 
             elif t == 'PLANNER_RESPONSE':
-                last_planner_content = content
-                if pending and not in_agent:
-                    agent_turn += 1
-                    created    = obj.get('created_at') or obj.get('timestamp') or ''
-                    agent_time = fmt_time(created) if created else ''
-                    
-                    agent_text = obj.get('content', '') or obj.get('text', '')
-                    
-                    exchanges.append({
-                        'users':      pending[:],
-                        'agent_turn': agent_turn,
-                        'agent_time': agent_time,
-                        'agent_text': agent_text,
-                    })
-                    pending  = []
-                    in_agent = True
+                created = obj.get('created_at') or obj.get('timestamp') or ''
+                if created and not current_agent_time:
+                    current_agent_time = fmt_time(created)
+                
+                content = obj.get('content', '') or obj.get('text', '')
+                if content and isinstance(content, str) and content.strip():
+                    # Filter out raw tool pointer text if any
+                    current_agent_content.append(content.strip())
 
-    if pending:
-        agent_turn += 1
+    if pending_users:
+        agent_text = "\n\n".join([c for c in current_agent_content if c.strip()]).strip()
         exchanges.append({
-            'users': pending[:],
-            'agent_turn': agent_turn,
-            'agent_time': '',
-            'agent_text': '',
+            'users': pending_users[:],
+            'agent_turn': len(exchanges) + 1,
+            'agent_time': current_agent_time,
+            'agent_text': agent_text
         })
 
     return exchanges
