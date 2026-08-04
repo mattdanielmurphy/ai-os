@@ -111,6 +111,28 @@ def step_conversation_response():
     if not os.path.exists(brain_dir):
         return "Conversation Response: Skipped (no brain dir)"
     
+    # Check if watcher daemon is already running
+    out, _ = run_cmd(["pgrep", "-f", "watch_transcripts.py"])
+    # 1. Check/Start watch_transcripts.py
+    watch_script = "/Users/matt/projects/ai-os/scripts/watch_transcripts.py"
+    # pgrep -f watch_transcripts.py returns 0 if found
+    _, pgrep_code = run_cmd(["pgrep", "-f", "watch_transcripts.py"])
+    if pgrep_code != 0:
+        # Not running, launch
+        subprocess.Popen(
+            f"nohup python3 {watch_script} --daemon > /dev/null 2>&1 &",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True
+        )
+
+    # 2. Perform initial one-pass sync via gen_conversation_md.py
+    brain_dir = os.path.expanduser("~/.gemini/antigravity/brain")
+    if not os.path.exists(brain_dir):
+        return "Conversation Response: Skipped (no brain dir)"
+    
     recent_convs = []
     now = datetime.datetime.now().timestamp()
     for entry in os.listdir(brain_dir):
