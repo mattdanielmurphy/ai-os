@@ -29,6 +29,10 @@
   1. Respond as you normally would in the chat interface. You NO LONGER need to run the `gen_conversation_md.py` script.
   2. In your response to the user, ensure you include a reference link to the thread artifact: `[thread.md](file://<appDataDir>/brain/<conversation-id>/thread.md)` (substituting the correct path). This allows the user to click the artifact for easier highlighting and commenting on specific passages.
 
+## Subagent Concurrency & Immediate Cleanup Rule
+- **No Duplicate/Overlapping Subagents**: The orchestrator MUST NEVER spawn a new subagent while an existing subagent of the same type is actively running. ALWAYS wait for the current subagent to report back before launching any follow-up subagent.
+- **Mandatory Post-Subagent Cleanup**: Before concluding a turn after subagent calls, inspect active subagents via `manage_subagents(Action='list')`. If any finished or lingering subagents remain open, call `manage_subagents(Action='kill_all')` to keep the background subagent process state clear.
+
 ## Background Task UI Prevention & Cleanup Rule
 - **Prevent Stray UI Background Tasks**: When calling `run_command` for non-daemon synchronous probes (`git status`, `which`, `--help`), ALWAYS set `WaitMsBeforeAsync` to at least `5000` (or up to `10000`). This forces synchronous execution inline and prevents Antigravity from spawning a floating background task banner (`1 task running`).
 - **Post-Flight & Periodic Task Cleanup**: Before concluding a turn after major calls or multi-step tool sequences, check for active background tasks via `manage_task(Action='list')`. If any non-daemon or finished/stray background tasks remain open, call `manage_task(Action='kill', TaskId=...)` to clean them up and keep the UI task bar clear.
