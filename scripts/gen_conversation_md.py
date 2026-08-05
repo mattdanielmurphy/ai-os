@@ -31,6 +31,10 @@ def clean_agent_content(text: str) -> str:
     if not text:
         return text
 
+    # Strip transient status wait lines (e.g., "Wait for subagent...", "Wait for task...")
+    status_pattern = re.compile(r'^\s*Wait\s+for\s+(?:subagent|task|auto\s+commit|timer|command|background)[^\n]*$', flags=re.IGNORECASE | re.MULTILINE)
+    text = status_pattern.sub('', text)
+
     link_pattern = re.compile(
         r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)|'
         r'\[[^\]]*\]\([^\)]*?/(?:thread|conversation_response)\.md(?:#[^\)]*)?\)',
@@ -207,6 +211,25 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
     if not transcript_path.exists():
         return []
 
+    def flush_current_turn():
+        nonlocal pending_users, current_agent_content, current_agent_time, active_items
+        if pending_users:
+            agent_text = '\n\n'.join(c for c in current_agent_content if c.strip()).strip()
+            min_step = pending_users[0]['step']
+            max_step = pending_users[-1]['step']
+            active_items.append({
+                'type': 'exchange',
+                'users': pending_users[:],
+                'agent_turn': len([i for i in active_items if i['type'] == 'exchange']) + 1,
+                'agent_content': agent_text,
+                'agent_time': current_agent_time,
+                'min_step': min_step,
+                'max_step': max_step
+            })
+            pending_users = []
+            current_agent_time = ''
+            current_agent_content = []
+
     with open(transcript_path) as f:
         for raw in f:
             raw = raw.strip()
@@ -221,13 +244,16 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
             idx = obj.get('step_index', 0)
 
             if t == 'USER_INPUT':
+                # Flush prior turn ONLY if agent activity (response text or timestamp) occurred for it
+                if pending_users and (current_agent_content or current_agent_time):
+                    flush_current_turn()
+
                 # Check for Undo/Rewind
                 undone = [
                     item for item in active_items
                     if item.get('min_step', 0) >= idx or item.get('max_step', 0) >= idx
                 ]
                 if undone:
-                    # Sort by step, filter and move to fork
                     undone.sort(key=lambda x: x.get('min_step', 0))
                     if conv_id and app_data_dir:
                         fork_dir = app_data_dir / 'brain' / conv_id / 'forks'
@@ -252,9 +278,6 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                     pending_users.append({'prompt': prompt, 'time': ts, 'step': idx})
 
             elif t == 'PLANNER_RESPONSE':
-                if not pending_users and not current_agent_content:
-                    continue
-                
                 created = obj.get('created_at') or obj.get('timestamp') or ''
                 if created and not current_agent_time:
                     current_agent_time = fmt_time(created)
@@ -262,28 +285,12 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
                     cleaned = clean_agent_content(content.strip())
-                    if not cleaned:
-                        continue
-                    if not current_agent_content or current_agent_content[-1] != cleaned:
-                        current_agent_content.append(cleaned)
+                    if cleaned:
+                        if not current_agent_content or current_agent_content[-1] != cleaned:
+                            current_agent_content.append(cleaned)
 
-                # If we have content and it ends a turn, flush to active
-                if pending_users:
-                    agent_text = '\n\n'.join(c for c in current_agent_content if c.strip()).strip()
-                    min_step = pending_users[0]['step']
-                    max_step = pending_users[-1]['step']
-                    active_items.append({
-                        'type': 'exchange',
-                        'users': pending_users[:],
-                        'agent_turn': len([i for i in active_items if i['type'] == 'exchange']) + 1,
-                        'agent_content': agent_text,
-                        'agent_time': current_agent_time,
-                        'min_step': min_step,
-                        'max_step': max_step
-                    })
-                    pending_users = []
-                    current_agent_time = ''
-                    current_agent_content = []
+    # Flush final turn at EOF
+    flush_current_turn()
 
     return active_items
 
