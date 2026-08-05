@@ -61,6 +61,35 @@ def clean_agent_content(text: str) -> str:
     return result
 
 
+def clean_agent_response(text: str) -> str:
+    """
+    1. Clean agent content (links/status lines).
+    2. Demote headings # -> #####, ## -> ######, ### -> ######.
+    """
+    text = clean_agent_content(text)
+    
+    # Demote headings
+    # # -> #####
+    text = re.sub(r'^#\s+', '##### ', text, flags=re.MULTILINE)
+    # ## -> ######
+    text = re.sub(r'^##\s+', '###### ', text, flags=re.MULTILINE)
+    # ### -> ######
+    text = re.sub(r'^###\s+', '###### ', text, flags=re.MULTILINE)
+    
+    # Strip orphan status/context lines
+    lines = []
+    orphan_pattern = re.compile(
+        r'^(?:Thread\s+context\s+logged\s+at:|Thread\s+artifact:|Thread\s+logged\s+at:|Reference\s+link:)',
+        flags=re.IGNORECASE
+    )
+    for line in text.splitlines():
+        if orphan_pattern.match(line.strip()):
+            continue
+        lines.append(line)
+        
+    return '\n'.join(lines).strip()
+
+
 APP_DATA_DIR = Path.home() / '.gemini/antigravity'
 
 
@@ -71,7 +100,7 @@ def render_fork_file(items: list, output_path: Path):
     exchange_blocks = []
     for item in items:
         if item['type'] == 'exchange':
-            exchange_blocks.append(make_exchange_block(item['users'], item['agent_content'], item['agent_time']))
+            exchange_blocks.append(make_exchange_block(item['users'], clean_agent_response(item['agent_content']), item['agent_time']))
     
     separator = '\n\n---\n\n'
     doc = separator.join(exchange_blocks) + '\n'
@@ -365,7 +394,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
 
     user_md = '\n\n'.join(user_blocks)
     a_time = f" — *{agent_time}*" if agent_time else ''
-    agent_text = clean_agent_content(agent_content)
+    agent_text = clean_agent_response(agent_content)
     if not agent_text:
         agent_text = '*(response in progress or not recorded)*'
     agent_md = f"#### 🤖 Agent{a_time}\n\n{agent_text}"

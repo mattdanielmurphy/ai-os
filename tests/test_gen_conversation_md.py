@@ -13,7 +13,7 @@ from gen_conversation_md import (
     fmt_time, strip_html_tags, decode_html_entities,
     extract_user_input, parse_exchanges, load_agent_response,
     next_turn_number, format_prompt, make_exchange_block, generate,
-    clean_agent_content
+    clean_agent_content, clean_agent_response
 )
 
 class TestGenConversationMd(unittest.TestCase):
@@ -213,6 +213,18 @@ Comment: "bar"
         self.assertEqual(clean_agent_content("text\n[thread.md](file://...)\nmore"), "text\nmore")
         # Transient wait messages
         self.assertEqual(clean_agent_content("Wait for subagent x to finish.\nHello"), "Hello")
+
+    def test_clean_agent_response(self):
+        content = "# H1\n## H2\n### H3\nThread context logged at: link\nThread artifact: link\nThread logged at: link\nReference link: link\nSome text"
+        cleaned = clean_agent_response(content)
+        self.assertIn("##### H1", cleaned)
+        self.assertIn("###### H2", cleaned)
+        self.assertIn("###### H3", cleaned)
+        self.assertNotIn("Thread context logged at:", cleaned)
+        self.assertNotIn("Thread artifact:", cleaned)
+        self.assertNotIn("Thread logged at:", cleaned)
+        self.assertNotIn("Reference link:", cleaned)
+        self.assertIn("Some text", cleaned)
 
 if __name__ == '__main__':
     unittest.main()
