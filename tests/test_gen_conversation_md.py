@@ -12,7 +12,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../scripts'))
 from gen_conversation_md import (
     fmt_time, strip_html_tags, decode_html_entities,
     extract_user_input, parse_exchanges, load_agent_response,
-    next_turn_number, format_prompt, make_exchange_block, generate
+    next_turn_number, format_prompt, make_exchange_block, generate,
+    clean_agent_content
 )
 
 class TestGenConversationMd(unittest.TestCase):
@@ -194,6 +195,22 @@ Comment: "bar"
         # Test content rendering
         content = items[1]['fork_path'].read_text()
         self.assertIn('r2', content)
+
+    def test_clean_agent_content(self):
+        # Standalone
+        self.assertEqual(clean_agent_content("[thread.md](file:///brain/123/thread.md)"), "")
+        # Backticked
+        self.assertEqual(clean_agent_content("[`thread.md`](file:///brain/123/thread.md#L1-L10)"), "")
+        # Bullet point
+        self.assertEqual(clean_agent_content("- [thread.md](file://...)"), "")
+        # Prefixed
+        self.assertEqual(clean_agent_content("Reference link to the thread artifact: [thread.md](file://...)"), "")
+        # Conversation response
+        self.assertEqual(clean_agent_content("[conversation_response.md](file://...)"), "")
+        # Normal
+        self.assertEqual(clean_agent_content("[app.py](file:///app.py)"), "[app.py](file:///app.py)")
+        # Mixed
+        self.assertEqual(clean_agent_content("text\n[thread.md](file://...)\nmore"), "text\nmore")
 
 if __name__ == '__main__':
     unittest.main()
