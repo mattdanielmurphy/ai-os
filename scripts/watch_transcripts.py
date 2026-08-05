@@ -2,7 +2,7 @@
 """watch_transcripts.py — Watch conversation transcripts and auto-render markdown.
 
 Runs as a daemon that polls transcript.jsonl files for changes and
-re-runs gen_conversation_md.py to keep conversation_response.md up to date.
+re-runs gen_conversation_md.py to keep thread.md up to date.
 
 Fixes vs. original:
 - Pre-seeds last_mtimes on startup to avoid re-rendering all conversations.

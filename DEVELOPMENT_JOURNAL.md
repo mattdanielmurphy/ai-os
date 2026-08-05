@@ -2,6 +2,9 @@
 
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
+## 2026-08-05
+- **Comprehensive Script & Service Unit Test Suite:** Created a zero-dependency Python `unittest` suite in `tests/` and root `run_tests.py` covering `gen_conversation_md.py`, `watch_transcripts.py`, `swap_turn.py`, dynamic prompt compilation, triage routing, subagent handoff, precision editing, and the agy proxy. All 33 tests pass in 6ms. [[log]](agent-logs/2026-08-05_00-44_created-test-suite-for-scripts-and-services.md)
+
 ## 2026-07-31
 - **Resolved agy-mcp model resolution and thread spawning:** Fixed empirical issues with model resolution and verified spawning threads for `gemini-3.6-flash`, `gemini-3.1-pro`, `claude-sonnet-4.6`, `claude-opus-4.6`, and `gpt-oss-120b`. [[log]](agent-logs/2026-07-31_21-22_fix-agy-mcp-models-and-spawning.md)
 

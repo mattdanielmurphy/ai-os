@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gen_conversation_md.py — Generate conversation_response.md from transcript + agent response files.
+gen_conversation_md.py — Generate thread.md from transcript + agent response files.
 
 ARCHITECTURE:
   Each turn, the agent:
@@ -13,7 +13,7 @@ ARCHITECTURE:
     - transcript.jsonl  -> all user messages + timestamps (auto-extracted)
     - history/turn_N.md -> agent response content per turn (agent writes this)
 
-  And generates a pure-markdown conversation_response.md (no HTML tables).
+  And generates a pure-markdown thread.md (no HTML tables).
 
 USAGE:
   python3 gen_conversation_md.py <conversation-id> [--title "Thread Title"] [--app-data-dir PATH]
@@ -192,7 +192,7 @@ def parse_exchanges(transcript_path: Path) -> list:
                 if content and isinstance(content, str) and content.strip():
                     stripped = content.strip()
                     # Filter out the artifact pointer link itself
-                    if stripped.startswith('[conversation_response.md](') and stripped.endswith(')'):
+                    if stripped.startswith('[thread.md](') and stripped.endswith(')'):
                         continue
                     # Deduplicate consecutive identical content
                     if not current_agent_content or current_agent_content[-1] != stripped:
@@ -251,6 +251,12 @@ def format_prompt(raw_prompt: str) -> str:
     Long prompts get wrapped in a <details> collapsible.
     """
     text = raw_prompt.strip()
+    
+    # Ensure code blocks are on their own lines to prevent markdown bleed
+    text = text.replace('```', '\n```\n')
+    import re
+    text = re.sub(r'\n{3,}', '\n\n', text).strip()
+    
     lines = text.split('\n')
 
     # Only collapse into <details> if truly massive (> 800 chars or > 12 lines)
@@ -286,7 +292,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path):
     base            = app_data_dir / 'brain' / conv_id
     transcript_path = base / '.system_generated/logs/transcript.jsonl'
     history_dir     = base / 'history'
-    output_path     = base / 'conversation_response.md'
+    output_path     = base / 'thread.md'
 
     history_dir.mkdir(exist_ok=True)
 
@@ -322,7 +328,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Generate conversation_response.md from transcript + turn response files.'
+        description='Generate thread.md from transcript + turn response files.'
     )
     parser.add_argument('conv_id',        help='Conversation ID (UUID)')
     parser.add_argument('--title',        default='Conversation', help='Thread title')
