@@ -3,6 +3,7 @@
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-08-05
+- **Robust thread.md Transcript Engine & Test Suite Expansion:** Fixed multi-USER_INPUT turn fragmentation and system tag leaks in `gen_conversation_md.py`, added in-process rendering in `watch_transcripts.py`, resolved syntax error in `triage_task.py`, and expanded unit test suite to 38 tests (all passing in 0.2s). [[log]](agent-logs/2026-08-05_01-13_robust-thread-md-and-unit-tests.md)
 - **Comprehensive Script & Service Unit Test Suite:** Created a zero-dependency Python `unittest` suite in `tests/` and root `run_tests.py` covering `gen_conversation_md.py`, `watch_transcripts.py`, `swap_turn.py`, dynamic prompt compilation, triage routing, subagent handoff, precision editing, and the agy proxy. All 33 tests pass in 6ms. [[log]](agent-logs/2026-08-05_00-44_created-test-suite-for-scripts-and-services.md)
 
 ## 2026-07-31
