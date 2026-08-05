@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+export AI_OS_HOME="/Users/matt/projects/ai-os"
+echo "[ai-os wiki] Starting Quartz Wiki web server on http://localhost:3333..."
+cd "$AI_OS_HOME/wiki-engine" || exit 1
+exec npx tsx quartz/bootstrap-cli.mjs build --serve --port 3333
