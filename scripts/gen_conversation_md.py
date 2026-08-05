@@ -26,37 +26,40 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+def is_transient_status_line(line: str) -> bool:
+    """Check if a line is a transient progress/status update from tool execution."""
+    s = line.strip()
+    if not s:
+        return False
+    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+have\s+(?:launched|requested|dispatched))[^\n]*$', s, re.IGNORECASE):
+        return True
+    if re.match(r'^\s*\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
+        return True
+    return False
+
+
 def clean_agent_content(text: str) -> str:
-    """Strip out thread.md / conversation_response.md artifact links and associated clutter lines from agent response text."""
+    """Strip out thread.md / conversation_response.md artifact links, transient status lines, and clutter."""
     if not text:
         return text
 
-    # Strip transient status wait lines (e.g., "Wait for subagent...", "Wait for task...")
-    status_pattern = re.compile(r'^\s*Wait\s+for\s+(?:subagent|task|auto\s+commit|timer|command|background)[^\n]*$', flags=re.IGNORECASE | re.MULTILINE)
-    text = status_pattern.sub('', text)
-
-    link_pattern = re.compile(
-        r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)|'
-        r'\[[^\]]*\]\([^\)]*?/(?:thread|conversation_response)\.md(?:#[^\)]*)?\)',
-        flags=re.IGNORECASE
-    )
-
-    text = link_pattern.sub('', text)
-
-    prefix_pattern = re.compile(
-        r'^\s*(?:[-*+]\s*|\d+\.\s*)?'
-        r'(?:reference\s+link(?:\s+to(?:\s+the)?\s+thread\s+artifact)?|thread(?:\s+artifact)?(?:\s+link)?|thread\.md|conversation_response\.md)?'
-        r'\s*:?\s*$',
-        flags=re.IGNORECASE
-    )
-
-    cleaned_lines = []
+    lines = []
     for line in text.splitlines():
-        if prefix_pattern.match(line):
+        # First remove link patterns from line
+        line = re.sub(r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)', '', line, flags=re.IGNORECASE).rstrip()
+        
+        if is_transient_status_line(line):
             continue
-        cleaned_lines.append(line.rstrip())
+            
+        cleaned_str = line.strip()
+        if re.match(r'^(?:(?:[-*+]\s*|\d+\.\s*)?reference\s+link(?:\s+to(?:\s+the)?\s+thread\s+artifact)?|thread(?:\s+artifact)?(?:\s+logged\s+at)?|conversation_response\.md)\s*:?\s*$', cleaned_str, re.IGNORECASE):
+            continue
+        
+        if not line.strip() or line.strip() in ('-', '*', '+'):
+            continue
+        lines.append(line)
 
-    result = '\n'.join(cleaned_lines)
+    result = '\n'.join(lines)
     result = re.sub(r'\n{3,}', '\n\n', result).strip()
     return result
 
@@ -65,17 +68,17 @@ def clean_agent_response(text: str) -> str:
     """
     1. Clean agent content (links/status lines).
     2. Demote headings # -> #####, ## -> ######, ### -> ######.
+    3. Strip orphan status/context lines.
     """
     text = clean_agent_content(text)
-    
+    if not text:
+        return ''
+
     # Demote headings
-    # # -> #####
     text = re.sub(r'^#\s+', '##### ', text, flags=re.MULTILINE)
-    # ## -> ######
     text = re.sub(r'^##\s+', '###### ', text, flags=re.MULTILINE)
-    # ### -> ######
     text = re.sub(r'^###\s+', '###### ', text, flags=re.MULTILINE)
-    
+
     # Strip orphan status/context lines
     lines = []
     orphan_pattern = re.compile(
@@ -86,7 +89,7 @@ def clean_agent_response(text: str) -> str:
         if orphan_pattern.match(line.strip()):
             continue
         lines.append(line)
-        
+
     return '\n'.join(lines).strip()
 
 
@@ -194,8 +197,7 @@ def extract_user_input(content: str):
             line_clean = strip_html_tags(line)
             line_clean = decode_html_entities(line_clean)
             line_clean = line_clean.lstrip('>').strip()
-            if line_clean:
-                quote_lines.append(line_clean)
+            quote_lines.append(line_clean)
 
         # Decode entities in comment text too
         cmt_clean = strip_html_tags(cmt_raw)
@@ -203,7 +205,7 @@ def extract_user_input(content: str):
 
         # Format as markdown blockquote
         if quote_lines:
-            quote_body = '\n'.join(f'> {line}' for line in quote_lines)
+            quote_body = '\n'.join(f'> {line}' if line else '>' for line in quote_lines)
             if cmt_clean:
                 formatted_parts.append(f"{quote_body}\n>\n> 💬 **Comment**: {cmt_clean}")
             else:
@@ -358,8 +360,8 @@ def next_turn_number(history_dir: Path) -> int:
 def format_prompt(raw_prompt: str) -> str:
     """Format a user prompt for display in pure markdown.
     
-    No HTML escaping — the content is plain text rendered as markdown.
-    Long prompts get wrapped in a <details> collapsible.
+    Preserves exact newlines, multiline formatting, and code blocks.
+    No HTML escaping, no <details> wrapping.
     """
     text = raw_prompt.strip()
     
@@ -370,17 +372,6 @@ def format_prompt(raw_prompt: str) -> str:
     text = re.sub(r'```([^\n]*)\n([^\n])', r'```\1\n\n\2', text)
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
     
-    lines = text.split('\n')
-
-    # Only collapse into <details> if truly massive (> 800 chars or > 12 lines)
-    if len(text) > 800 or len(lines) > 12:
-        summary_lines = lines[:5]
-        summary_text = '\n'.join(summary_lines)
-        if len(summary_text) > 350:
-            summary_text = summary_text[:350]
-        remainder = text[len(summary_text):].strip()
-        return f"<details>\n<summary>\n\n{summary_text.strip()}...\n\n</summary>\n\n{remainder}\n\n</details>"
-
     return text
 
 
