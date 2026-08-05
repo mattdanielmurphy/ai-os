@@ -50,7 +50,7 @@ class TestGenConversationMd(unittest.TestCase):
         short = "short"
         self.assertEqual(format_prompt(short), short)
         long = "a" * 900
-        self.assertIn("<details>", format_prompt(long))
+        self.assertNotIn("<details>", format_prompt(long))
 
     def test_extract_user_input(self):
         content = """<ADDITIONAL_METADATA>meta</ADDITIONAL_METADATA>
@@ -195,6 +195,28 @@ Comment: "bar"
         # Test content rendering
         content = items[1]['fork_path'].read_text()
         self.assertIn('r2', content)
+
+    def test_format_prompt_no_details(self):
+        long_prompt = "Line 1\nLine 2\nLine 3\n" + ("a" * 900) + "\nLine 5"
+        formatted = format_prompt(long_prompt)
+        self.assertNotIn("<details>", formatted)
+        self.assertNotIn("<summary>", formatted)
+        self.assertIn("Line 1\nLine 2\nLine 3", formatted)
+
+    def test_transient_status_filtering(self):
+        transcript = Path(self.test_dir.name) / 'transcript.jsonl'
+        with open(transcript, 'w') as f:
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>Line 1\nLine 2\nLine 3</USER_REQUEST>'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Completed task-75. Waiting for timer notification...'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Waiting for subagent to complete...'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Actual final agent response output'}) + '\n')
+        
+        items = parse_exchanges(transcript)
+        ex = [i for i in items if i['type'] == 'exchange'][0]
+        self.assertIn("Line 1\nLine 2\nLine 3", ex['users'][0]['prompt'])
+        self.assertNotIn("Completed task-75", ex['agent_content'])
+        self.assertNotIn("Waiting for subagent", ex['agent_content'])
+        self.assertIn("Actual final agent response output", ex['agent_content'])
 
     def test_clean_agent_content(self):
         # Standalone
