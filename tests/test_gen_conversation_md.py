@@ -76,9 +76,12 @@ Comment: "bar"
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': '[thread.md](...)'}) + '\n') # Should skip
         
         exchanges = parse_exchanges(transcript)
-        self.assertEqual(len(exchanges), 1)
-        self.assertEqual(exchanges[0]['users'][0]['prompt'], 'hi')
-        self.assertEqual(exchanges[0]['agent_text'], 'hello')
+        # Note: older tests return items in active_items list format now
+        # Filtering for exchanges
+        ex_items = [i for i in exchanges if i['type'] == 'exchange']
+        self.assertEqual(len(ex_items), 1)
+        self.assertEqual(ex_items[0]['users'][0]['prompt'], 'hi')
+        self.assertEqual(ex_items[0]['agent_content'], 'hello')
 
     def test_load_agent_response(self):
         turn_file = self.history_dir / 'turn_1.md'
@@ -108,6 +111,9 @@ Comment: "bar"
         (base / 'history').mkdir()
         (base / 'history' / 'turn_1.md').write_text('manual response')
         
+        # The generate function now loads from history/turn_1.md 
+        # But the transcript response 'hello' is now an exchange content.
+        # It should override 'hello' with 'manual response'.
         generate(conv_id, 'Title', Path(self.test_dir.name))
         
         output = base / 'thread.md'
@@ -127,9 +133,10 @@ Comment: "bar"
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'reply'}) + '\n')
         
         exchanges = parse_exchanges(transcript)
-        self.assertEqual(len(exchanges), 1)
-        self.assertEqual(len(exchanges[0]['users']), 2)
-        self.assertEqual(exchanges[0]['users'][1]['prompt'], '2')
+        ex_items = [i for i in exchanges if i['type'] == 'exchange']
+        self.assertEqual(len(ex_items), 1)
+        self.assertEqual(len(ex_items[0]['users']), 2)
+        self.assertEqual(ex_items[0]['users'][1]['prompt'], '2')
 
     def test_format_prompt_fenced_code(self):
         prompt = "test ```python\ndef f():\n  pass\n```"
@@ -156,6 +163,37 @@ Comment: "bar"
         custom_out = Path(self.test_dir.name) / 'custom.md'
         generate(conv_id, 'Title', Path(self.test_dir.name), output_path_override=custom_out)
         self.assertTrue(custom_out.exists())
+
+
+    def test_parse_exchanges_with_undo(self):
+        transcript = Path(self.test_dir.name) / 'transcript.jsonl'
+        with open(transcript, 'w') as f:
+            # Turn 1
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>1</USER_REQUEST>', 'step_index': 1}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'r1'}) + '\n')
+            # Turn 2
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>2</USER_REQUEST>', 'step_index': 2}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'r2'}) + '\n')
+            # Undo Turn 2
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>3</USER_REQUEST>', 'step_index': 2}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'r3'}) + '\n')
+        
+        items = parse_exchanges(transcript, 'test_conv', Path(self.test_dir.name))
+        
+        # After turn 1 (min 1, max 1), turn 2 (min 2, max 2).
+        # When turn 3 (step 2) arrives:
+        # 1. Turn 2 (min 2) is undone.
+        # 2. Fork notice (fork_step 2) is added.
+        # 3. Turn 3 (step 2) is added as an exchange.
+        # Items should be: [Turn 1 exchange, Fork notice, Turn 3 exchange]
+        self.assertEqual(len(items), 3)
+        self.assertEqual(items[1]['type'], 'fork_notice')
+        self.assertEqual(items[2]['type'], 'exchange')
+        self.assertTrue(items[1]['fork_path'].exists())
+        
+        # Test content rendering
+        content = items[1]['fork_path'].read_text()
+        self.assertIn('r2', content)
 
 if __name__ == '__main__':
     unittest.main()

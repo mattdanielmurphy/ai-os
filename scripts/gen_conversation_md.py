@@ -29,7 +29,28 @@ from pathlib import Path
 APP_DATA_DIR = Path.home() / '.gemini/antigravity'
 
 
-# ─── Timestamp ────────────────────────────────────────────────────────────────
+# ─── Forking ──────────────────────────────────────────────────────────────────
+
+def render_fork_file(items: list, output_path: Path):
+    """Render a forked thread.md for undone exchanges."""
+    exchange_blocks = []
+    for item in items:
+        if item['type'] == 'exchange':
+            exchange_blocks.append(make_exchange_block(item['users'], item['agent_content'], item['agent_time']))
+    
+    separator = '\n\n---\n\n'
+    doc = separator.join(exchange_blocks) + '\n'
+    output_path.write_text(doc)
+
+
+def make_fork_notice_block(fork_path: Path, undone_count: int) -> str:
+    """Render a fork notice block."""
+    return (
+        f"> [!NOTE]\n"
+        f"> 🔀 **Undone Branch**: {undone_count} turn(s) were undone at this point. "
+        f"View the [forked thread](file://{fork_path})."
+    )
+
 
 def fmt_time(iso_str: str) -> str:
     """Convert ISO8601 timestamp string to '2:05pm' format."""
@@ -142,15 +163,18 @@ def extract_user_input(content: str):
     return prompt, time
 
 
-def parse_exchanges(transcript_path: Path) -> list:
+def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path = None) -> list:
     """
-    Parse transcript.jsonl into a list of exchanges.
-    Each exchange = one or more user messages followed by agent response(s).
+    Parse transcript.jsonl into a list of exchanges, handling undos.
     """
     exchanges = []
+    active_items = []
     pending_users = []
     current_agent_time = ''
     current_agent_content = []
+
+    if not transcript_path.exists():
+        return []
 
     with open(transcript_path) as f:
         for raw in f:
@@ -166,13 +190,37 @@ def parse_exchanges(transcript_path: Path) -> list:
             idx = obj.get('step_index', 0)
 
             if t == 'USER_INPUT':
+                # Check for Undo/Rewind
+                undone = [
+                    item for item in active_items
+                    if item.get('min_step', 0) >= idx or item.get('max_step', 0) >= idx
+                ]
+                if undone:
+                    # Sort by step, filter and move to fork
+                    undone.sort(key=lambda x: x.get('min_step', 0))
+                    if conv_id and app_data_dir:
+                        fork_dir = app_data_dir / 'brain' / conv_id / 'forks'
+                        fork_dir.mkdir(parents=True, exist_ok=True)
+                        fork_path = fork_dir / f'fork_step_{idx}.md'
+                        count = 1
+                        while fork_path.exists():
+                            fork_path = fork_dir / f'fork_step_{idx}_{count}.md'
+                            count += 1
+                        
+                        render_fork_file(undone, fork_path)
+                        active_items = [i for i in active_items if i not in undone]
+                        active_items.append({
+                            'type': 'fork_notice',
+                            'fork_step': idx,
+                            'fork_path': fork_path,
+                            'undone_count': len(undone)
+                        })
+
                 prompt, ts = extract_user_input(obj.get('content', ''))
                 if prompt:
                     pending_users.append({'prompt': prompt, 'time': ts, 'step': idx})
 
             elif t == 'PLANNER_RESPONSE':
-                # Only process if we have pending users to start an exchange, 
-                # or if we are already building an exchange content
                 if not pending_users and not current_agent_content:
                     continue
                 
@@ -188,19 +236,25 @@ def parse_exchanges(transcript_path: Path) -> list:
                     if not current_agent_content or current_agent_content[-1] != stripped:
                         current_agent_content.append(stripped)
 
-    # Flush final exchange
-    if pending_users:
-        agent_text = '\n\n'.join(
-            c for c in current_agent_content if c.strip()
-        ).strip()
-        exchanges.append({
-            'users': pending_users[:],
-            'agent_turn': len(exchanges) + 1,
-            'agent_time': current_agent_time,
-            'agent_text': agent_text,
-        })
+                # If we have content and it ends a turn, flush to active
+                if pending_users:
+                    agent_text = '\n\n'.join(c for c in current_agent_content if c.strip()).strip()
+                    min_step = pending_users[0]['step']
+                    max_step = pending_users[-1]['step']
+                    active_items.append({
+                        'type': 'exchange',
+                        'users': pending_users[:],
+                        'agent_turn': len([i for i in active_items if i['type'] == 'exchange']) + 1,
+                        'agent_content': agent_text,
+                        'agent_time': current_agent_time,
+                        'min_step': min_step,
+                        'max_step': max_step
+                    })
+                    pending_users = []
+                    current_agent_time = ''
+                    current_agent_content = []
 
-    return exchanges
+    return active_items
 
 
 # ─── Response Files ───────────────────────────────────────────────────────────
@@ -297,25 +351,28 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     if not transcript_path.exists():
         return []
 
-    exchanges = parse_exchanges(transcript_path)
+    exchanges = parse_exchanges(transcript_path, conv_id, app_data_dir)
     if not exchanges:
         return output_path
 
-    for ex in exchanges:
-        ex['agent_content'] = load_agent_response(
-            history_dir, ex['agent_turn'], ex.get('agent_text', '')
-        )
+    # No longer needed to load here
+    # agent_content = load_agent_response(...)
+    # The loading moved into the generation loop
 
     # Reverse chronological order: newest exchange at top
-    reversed_exchanges = list(reversed(exchanges))
+    reversed_items = list(reversed(exchanges))
 
-    exchange_blocks = [
-        make_exchange_block(ex['users'], ex['agent_content'], ex['agent_time'])
-        for ex in reversed_exchanges
-    ]
+    content_blocks = []
+    for item in reversed_items:
+        if item['type'] == 'exchange':
+            # Need to reload response in case of updates
+            agent_content = load_agent_response(history_dir, item.get('agent_turn', 0), item.get('agent_content', ''))
+            content_blocks.append(make_exchange_block(item['users'], agent_content, item['agent_time']))
+        elif item['type'] == 'fork_notice':
+            content_blocks.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
 
     separator = '\n\n---\n\n'
-    doc = separator.join(exchange_blocks) + '\n'
+    doc = separator.join(content_blocks) + '\n'
 
     output_path.write_text(doc)
     print(f"Written: {output_path}")
