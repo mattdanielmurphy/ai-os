@@ -11,7 +11,7 @@ PORT = 8649
 def swap_turn_by_url(url_str: str) -> str:
     """
     Parses ai-os-turn:// URL arguments and copies the specified history/turn_XX.md
-    file over conversation_response.md in-place.
+    file over thread.md in-place.
     Returns a status message.
     """
     print(f"Processing URL: {url_str}")
@@ -105,7 +105,7 @@ def swap_turn_by_url(url_str: str) -> str:
     if not target_file:
         raise FileNotFoundError(f"Could not find turn file matching '{turn_val}' in {history_dir} (candidates: {candidates})")
         
-    dest_file = brain_dir / "conversation_response.md"
+    dest_file = brain_dir / "thread.md"
     shutil.copy2(target_file, dest_file)
     msg = f"Successfully swapped {target_file.name} to {dest_file}"
     print(msg)
