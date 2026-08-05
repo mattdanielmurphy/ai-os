@@ -211,6 +211,8 @@ Comment: "bar"
         self.assertEqual(clean_agent_content("[app.py](file:///app.py)"), "[app.py](file:///app.py)")
         # Mixed
         self.assertEqual(clean_agent_content("text\n[thread.md](file://...)\nmore"), "text\nmore")
+        # Transient wait messages
+        self.assertEqual(clean_agent_content("Wait for subagent x to finish.\nHello"), "Hello")
 
 if __name__ == '__main__':
     unittest.main()
