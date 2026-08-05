@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 import urllib.parse
+import json
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -123,7 +124,7 @@ class TurnSwapHandler(BaseHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
-                    self.wfile.write(f'{{"status": "success", "message": "{msg}"}}'.encode())
+                    self.wfile.write(json.dumps({"status": "success", "message": msg}).encode('utf-8'))
                     return
                 except Exception as e:
                     self.send_response(500)
@@ -141,7 +142,7 @@ class TurnSwapHandler(BaseHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
-                    self.wfile.write(f'{{"status": "success", "message": "{msg}"}}'.encode())
+                    self.wfile.write(json.dumps({"status": "success", "message": msg}).encode('utf-8'))
                     return
                 except Exception as e:
                     self.send_response(500)

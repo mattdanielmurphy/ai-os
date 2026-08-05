@@ -104,7 +104,14 @@ def main():
     args = parser.parse_args()
     decision = evaluate_triage(args.prompt, args.files)
 
-        for r in decision["reasoning"]:
+    if args.json:
+        print(json.dumps(decision, indent=4))
+    else:
+        print(f"Recommended Model: {decision.get('recommended_model', 'N/A')}")
+        print(f"Engine: {decision.get('engine', 'N/A')}")
+        print(f"Use Jules: {decision.get('use_jules', False)}")
+        print("Reasoning:")
+        for r in decision.get("reasoning", []):
             print(f"  - {r}")
 
 if __name__ == "__main__":

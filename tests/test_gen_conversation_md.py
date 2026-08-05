@@ -114,5 +114,48 @@ Comment: "bar"
         self.assertTrue(output.exists())
         self.assertIn('manual response', output.read_text())
 
+    def test_strip_system_tags(self):
+        content = "<system>hidden</system><user_rules>rule</user_rules><USER_REQUEST>hi</USER_REQUEST>"
+        prompt, _ = extract_user_input(content)
+        self.assertEqual(prompt, "hi")
+
+    def test_multi_user_input(self):
+        transcript = Path(self.test_dir.name) / 'transcript.jsonl'
+        with open(transcript, 'w') as f:
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>1</USER_REQUEST>'}) + '\n')
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>2</USER_REQUEST>'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'reply'}) + '\n')
+        
+        exchanges = parse_exchanges(transcript)
+        self.assertEqual(len(exchanges), 1)
+        self.assertEqual(len(exchanges[0]['users']), 2)
+        self.assertEqual(exchanges[0]['users'][1]['prompt'], '2')
+
+    def test_format_prompt_fenced_code(self):
+        prompt = "test ```python\ndef f():\n  pass\n```"
+        formatted = format_prompt(prompt)
+        lines = formatted.split('\n')
+        self.assertIn("```python", lines)
+        self.assertIn("```", lines)
+        self.assertTrue(lines.index("```python") > 0)
+        self.assertTrue(lines.index("```") > lines.index("```python"))
+
+    def test_generate_output_path(self):
+        conv_id = 'test_conv_out'
+        base = Path(self.test_dir.name) / 'brain' / conv_id
+        base.mkdir(parents=True)
+        sys_logs = base / '.system_generated/logs'
+        sys_logs.mkdir(parents=True)
+        (base / 'history').mkdir()
+        
+        transcript = sys_logs / 'transcript.jsonl'
+        with open(transcript, 'w') as f:
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>hi</USER_REQUEST>'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'hello'}) + '\n')
+            
+        custom_out = Path(self.test_dir.name) / 'custom.md'
+        generate(conv_id, 'Title', Path(self.test_dir.name), output_path_override=custom_out)
+        self.assertTrue(custom_out.exists())
+
 if __name__ == '__main__':
     unittest.main()

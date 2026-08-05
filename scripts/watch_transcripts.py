@@ -10,11 +10,13 @@ Fixes vs. original:
 - Debounces rapid writes with a 1s cooldown per conversation.
 """
 
+import sys
 import argparse
 import subprocess
 import time
 from pathlib import Path
 
+SCRIPTS_DIR = Path(__file__).resolve().parent
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
 GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 
@@ -22,17 +24,17 @@ GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 COOLDOWN = 1.0
 
 
-def get_active_convs(max_age_secs: int = 7200) -> dict:
+def get_active_convs(brain_dir: Path, max_age_secs: int = 7200) -> dict:
     """Find conversation IDs with transcript.jsonl updated within max_age_secs.
     
     Returns {conv_id: (mtime, size)} for active conversations.
     """
     active = {}
-    if not BRAIN_DIR.exists():
+    if not brain_dir.exists():
         return active
 
     now = time.time()
-    for conv_dir in BRAIN_DIR.iterdir():
+    for conv_dir in brain_dir.iterdir():
         if not conv_dir.is_dir():
             continue
         transcript = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
@@ -43,11 +45,22 @@ def get_active_convs(max_age_secs: int = 7200) -> dict:
     return active
 
 
-def render(conv_id: str) -> bool:
+def render(conv_id: str, brain_dir: Path) -> bool:
     """Run gen_conversation_md.py for a conversation. Returns True on success."""
+    # Attempt in-process import
+    try:
+        sys.path.append(str(SCRIPTS_DIR))
+        from gen_conversation_md import generate
+        app_data_dir = brain_dir.parent
+        generate(conv_id, "Conversation", app_data_dir=app_data_dir)
+        return True
+    except Exception as e:
+        print(f"In-process render failed: {e}. Falling back to subprocess.")
+
+    # Fallback to subprocess
     try:
         subprocess.run(
-            ["python3", str(GEN_SCRIPT), conv_id],
+            [sys.executable, str(SCRIPTS_DIR / "gen_conversation_md.py"), conv_id, "--app-data-dir", str(brain_dir.parent.parent.parent)],
             check=True,
             capture_output=True,
             text=True,
@@ -60,9 +73,9 @@ def render(conv_id: str) -> bool:
         return False
 
 
-def process_updates(last_state: dict, last_render_time: dict):
+def process_updates(last_state: dict, last_render_time: dict, brain_dir: Path):
     """Check for transcript changes and trigger re-rendering."""
-    current = get_active_convs()
+    current = get_active_convs(brain_dir)
     now = time.time()
 
     for conv_id, (mtime, size) in current.items():
@@ -74,7 +87,7 @@ def process_updates(last_state: dict, last_render_time: dict):
                 continue  # Skip, will catch on next poll
 
             print(f"Update detected: {conv_id[:12]}... Re-rendering.")
-            if render(conv_id):
+            if render(conv_id, brain_dir):
                 print(f"  OK.")
             last_state[conv_id] = (mtime, size)
             last_render_time[conv_id] = now
@@ -90,6 +103,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Watch conversation transcripts and auto-render markdown."
     )
+    parser.add_argument("--brain-dir", type=Path, default=BRAIN_DIR, help="Brain directory path")
     parser.add_argument("--daemon", action="store_true", help="Run in continuous loop")
     parser.add_argument("--once", action="store_true", help="Run once and exit")
     parser.add_argument(
@@ -101,15 +115,15 @@ def main():
     if args.once:
         last_state = {}
         last_render_time = {}
-        process_updates(last_state, last_render_time)
+        process_updates(last_state, last_render_time, args.brain_dir)
     elif args.daemon:
         # Pre-seed: record current state so we don't re-render everything on startup
-        last_state = get_active_convs()
+        last_state = get_active_convs(args.brain_dir)
         last_render_time = {}
-        print(f"Watching {BRAIN_DIR} for changes... ({len(last_state)} active conversations)")
+        print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
-                process_updates(last_state, last_render_time)
+                process_updates(last_state, last_render_time, args.brain_dir)
                 time.sleep(args.interval)
         except KeyboardInterrupt:
             print("Stopping.")
