@@ -67,8 +67,10 @@ def extract_user_input(content: str):
     ts = re.search(r'current local time is:\s*([^\n<]+)', content)
     time = fmt_time(ts.group(1)) if ts else ''
 
-    # Clean out metadata block
-    cleaned = re.sub(r'<ADDITIONAL_METADATA>.*?</ADDITIONAL_METADATA>', '', content, flags=re.DOTALL)
+    # Clean out internal IDE system tags
+    for tag in ['USER_SETTINGS_CHANGE', 'user_rules', 'context', 'system', 'workflows', 'skills', 'ADDITIONAL_METADATA']:
+        cleaned = re.sub(fr'<{tag}>.*?</{tag}>', '', content, flags=re.DOTALL)
+    cleaned = content if 'cleaned' not in locals() else cleaned
 
     # Extract artifact comments if present
     # The IDE sends: "Comments on artifact URI: ...\n\nSelection:\n>...\n\nComment: \"...\""
@@ -85,10 +87,10 @@ def extract_user_input(content: str):
             cmt_raw = cmt_raw[1:-1].strip()
         comment_blocks.append((sel_raw, cmt_raw))
 
-    # Extract user request prompt inside <USER_REQUEST>
-    req = re.search(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, re.DOTALL)
-    if req:
-        req_prompt = req.group(1).strip()
+    # Extract user request prompts
+    user_requests = re.findall(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, flags=re.DOTALL)
+    if user_requests:
+        req_prompt = '\n\n---\n\n'.join(r.strip() for r in user_requests)
     else:
         # Fallback: strip comment/artifact URI prefix and tags
         req_prompt = re.sub(r'Comments on artifact URI:.*', '', cleaned, flags=re.DOTALL)
@@ -164,26 +166,16 @@ def parse_exchanges(transcript_path: Path) -> list:
             idx = obj.get('step_index', 0)
 
             if t == 'USER_INPUT':
-                # Flush previous exchange if we have pending users
-                if pending_users:
-                    agent_text = '\n\n'.join(
-                        c for c in current_agent_content if c.strip()
-                    ).strip()
-                    exchanges.append({
-                        'users': pending_users[:],
-                        'agent_turn': len(exchanges) + 1,
-                        'agent_time': current_agent_time,
-                        'agent_text': agent_text,
-                    })
-                    pending_users = []
-                    current_agent_content = []
-                    current_agent_time = ''
-
                 prompt, ts = extract_user_input(obj.get('content', ''))
                 if prompt:
                     pending_users.append({'prompt': prompt, 'time': ts, 'step': idx})
 
             elif t == 'PLANNER_RESPONSE':
+                # Only process if we have pending users to start an exchange, 
+                # or if we are already building an exchange content
+                if not pending_users and not current_agent_content:
+                    continue
+                
                 created = obj.get('created_at') or obj.get('timestamp') or ''
                 if created and not current_agent_time:
                     current_agent_time = fmt_time(created)
@@ -191,10 +183,8 @@ def parse_exchanges(transcript_path: Path) -> list:
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
                     stripped = content.strip()
-                    # Filter out the artifact pointer link itself
-                    if stripped.startswith('[thread.md](') and stripped.endswith(')'):
+                    if re.match(r'^\s*\[(thread|conversation_response)\.md\]\([^\)]+\)\s*$', stripped):
                         continue
-                    # Deduplicate consecutive identical content
                     if not current_agent_content or current_agent_content[-1] != stripped:
                         current_agent_content.append(stripped)
 
@@ -253,8 +243,10 @@ def format_prompt(raw_prompt: str) -> str:
     text = raw_prompt.strip()
     
     # Ensure code blocks are on their own lines to prevent markdown bleed
-    text = text.replace('```', '\n```\n')
-    import re
+    # Pad fenced backticks with a leading newline if preceded by text
+    text = re.sub(r'([^\n])```', r'\1\n```', text)
+    # Pad ending backticks with a trailing newline if followed by text
+    text = re.sub(r'```([^\n]*)\n([^\n])', r'```\1\n\n\2', text)
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
     
     lines = text.split('\n')
@@ -288,22 +280,26 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
-def generate(conv_id: str, title: str, app_data_dir: Path):
+def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override: Path = None):
     base            = app_data_dir / 'brain' / conv_id
     transcript_path = base / '.system_generated/logs/transcript.jsonl'
     history_dir     = base / 'history'
-    output_path     = base / 'thread.md'
+    
+    if output_path_override:
+        output_path = output_path_override
+    else:
+        output_path = base / 'thread.md'
 
-    history_dir.mkdir(exist_ok=True)
+    history_dir.mkdir(parents=True, exist_ok=True)
+    if output_path.parent:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     if not transcript_path.exists():
-        print(f"ERROR: Transcript not found: {transcript_path}", file=sys.stderr)
-        sys.exit(1)
+        return []
 
     exchanges = parse_exchanges(transcript_path)
     if not exchanges:
-        print("ERROR: No exchanges found in transcript.", file=sys.stderr)
-        sys.exit(1)
+        return output_path
 
     for ex in exchanges:
         ex['agent_content'] = load_agent_response(
@@ -324,6 +320,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path):
     output_path.write_text(doc)
     print(f"Written: {output_path}")
     print(f"  {len(exchanges)} total exchanges rendered in reverse chronological order")
+    return output_path
 
 
 if __name__ == '__main__':
@@ -333,6 +330,7 @@ if __name__ == '__main__':
     parser.add_argument('conv_id',        help='Conversation ID (UUID)')
     parser.add_argument('--title',        default='Conversation', help='Thread title')
     parser.add_argument('--app-data-dir', default=str(APP_DATA_DIR))
+    parser.add_argument('--output',       type=Path, help='Custom output path')
     parser.add_argument('--save-turn',    action='store_true',
                         help='Read markdown from stdin and save as next turn_N.md before generating')
     args = parser.parse_args()
@@ -348,4 +346,4 @@ if __name__ == '__main__':
             (history_dir / f'turn_{n}.md').write_text(content)
             print(f"Saved turn_{n}.md")
 
-    generate(args.conv_id, args.title, app_dir)
+    generate(args.conv_id, args.title, app_dir, args.output)
