@@ -26,6 +26,37 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+def clean_agent_content(text: str) -> str:
+    """Strip out thread.md / conversation_response.md artifact links and associated clutter lines from agent response text."""
+    if not text:
+        return text
+
+    link_pattern = re.compile(
+        r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)|'
+        r'\[[^\]]*\]\([^\)]*?/(?:thread|conversation_response)\.md(?:#[^\)]*)?\)',
+        flags=re.IGNORECASE
+    )
+
+    text = link_pattern.sub('', text)
+
+    prefix_pattern = re.compile(
+        r'^\s*(?:[-*+]\s*|\d+\.\s*)?'
+        r'(?:reference\s+link(?:\s+to(?:\s+the)?\s+thread\s+artifact)?|thread(?:\s+artifact)?(?:\s+link)?|thread\.md|conversation_response\.md)?'
+        r'\s*:?\s*$',
+        flags=re.IGNORECASE
+    )
+
+    cleaned_lines = []
+    for line in text.splitlines():
+        if prefix_pattern.match(line):
+            continue
+        cleaned_lines.append(line.rstrip())
+
+    result = '\n'.join(cleaned_lines)
+    result = re.sub(r'\n{3,}', '\n\n', result).strip()
+    return result
+
+
 APP_DATA_DIR = Path.home() / '.gemini/antigravity'
 
 
@@ -230,11 +261,11 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
-                    stripped = content.strip()
-                    if re.match(r'^\s*\[(thread|conversation_response)\.md\]\([^\)]+\)\s*$', stripped):
+                    cleaned = clean_agent_content(content.strip())
+                    if not cleaned:
                         continue
-                    if not current_agent_content or current_agent_content[-1] != stripped:
-                        current_agent_content.append(stripped)
+                    if not current_agent_content or current_agent_content[-1] != cleaned:
+                        current_agent_content.append(cleaned)
 
                 # If we have content and it ends a turn, flush to active
                 if pending_users:
@@ -265,10 +296,10 @@ def load_agent_response(history_dir: Path, turn_n: int, fallback_text: str = '')
     if path.exists():
         content = path.read_text().strip()
         if content:
-            return content
+            return clean_agent_content(content)
 
     if fallback_text and fallback_text.strip():
-        return fallback_text.strip()
+        return clean_agent_content(fallback_text.strip())
 
     return '*(response in progress or not recorded)*'
 
@@ -327,7 +358,10 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
 
     user_md = '\n\n'.join(user_blocks)
     a_time = f" — *{agent_time}*" if agent_time else ''
-    agent_md = f"#### 🤖 Agent{a_time}\n\n{agent_content}"
+    agent_text = clean_agent_content(agent_content)
+    if not agent_text:
+        agent_text = '*(response in progress or not recorded)*'
+    agent_md = f"#### 🤖 Agent{a_time}\n\n{agent_text}"
 
     return f"{user_md}\n\n{agent_md}"
 
