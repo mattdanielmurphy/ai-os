@@ -90,7 +90,7 @@ Preferred CLI tools available on the path:
 * **Node.js**: Managed with `fnm` and `nvm`.
 * **Python**: `python@3.14` and `uv` package manager.
 * **Deno** & **Go** & **Rust** (via `rqbit` etc).
-* **CLI Utilities**: `ripgrep` (`rg`), `fzf`, `fd`, `ffmpeg`, `yt-dlp`, `tmux`.
+* **CLI Utilities**: `ripgrep` (`rg`), `fzf`, `fd`, `ffmpeg`, `yt-dlp`, `tmux`, `zellij` (modern Rust-based terminal multiplexer workspace; alternative to tmux with out-of-the-box mouse, floating panes, and KDL layout templates).
 
 
 ## Troubleshooting & Post-Migration Fixes
