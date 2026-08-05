@@ -51,6 +51,7 @@ show_help() {
     echo "  --agy           Run the Agy orchestrator agent in the current terminal"
     echo "  --claude        Run the native Claude Code agent in the current terminal"
     echo "  --handover      Compile thread context and spawn a fresh thread with process replacement"
+    echo "  wiki | --wiki   Launch Quartz Wiki web server at http://localhost:3333"
     echo "  -h, --help      Show this help message"
     echo ""
     echo "All other arguments and flags are forwarded to the selected agent."
@@ -83,6 +84,9 @@ while [[ $# -gt 0 ]]; do
         --cli|--no-gui|--terminal)
             LAUNCH_GUI=false
             shift
+            ;;
+        wiki|--wiki)
+            exec "$AI_OS_HOME/bin/ai-os-wiki"
             ;;
         *)
             # Forward everything else to agent (only applicable if running non-GUI)
