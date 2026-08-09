@@ -230,8 +230,9 @@ def extract_user_input(content: str):
             formatted_parts.append(f"💬 **Comment**: {cmt_clean}")
 
     if req_prompt:
-        # Clean any stray HTML tags from the prompt itself
-        req_prompt_clean = strip_html_tags(req_prompt).strip()
+        # User prompt can contain arbitrary HTML and Markdown, so we DO NOT strip HTML tags.
+        # Just clean up the prompt extraction and decode entities.
+        req_prompt_clean = req_prompt.strip()
         # Decode any HTML entities that leaked in
         req_prompt_clean = decode_html_entities(req_prompt_clean).strip()
         if req_prompt_clean:
@@ -409,19 +410,19 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
 
     # CRITICAL: Separate each div block with double newlines (\n\n) so markdown parses them as separate block elements!
     # CRITICAL: Put \n after opening <div...> and \n before closing </div>!
-    user_span = (
-        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n'
+    user_div = (
+        f'<div title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n'
         f'{user_md}\n'
-        f'</span>'
+        f'</div>'
     )
     
-    agent_span = (
-        f'<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; white-space: pre-wrap; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+    agent_div = (
+        f'<div title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; white-space: pre-wrap; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
-        f'</span>'
+        f'</div>'
     )
 
-    return f"{user_span}\n\n{agent_span}"
+    return f"{user_div}\n\n{agent_div}"
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
@@ -511,11 +512,11 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         return output_path
 
     doc_content = []
-    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
+    doc_content.append(f'<div style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
     
     # Requirement 2: Thread Started Banner
     # Placed INSIDE the first (oldest) exchange block
-    banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
+    banner = f'<div style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</div>'
 
     for i, item in enumerate(exchanges):
         if item['type'] == 'exchange':
@@ -537,7 +538,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         elif item['type'] == 'fork_notice':
             doc_content.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
     
-    doc_content.append('</span>')
+    doc_content.append('</div>')
 
     output_path.write_text('\n\n'.join(doc_content))
     print(f"Written: {output_path}")

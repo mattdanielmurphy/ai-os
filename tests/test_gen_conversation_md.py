@@ -92,13 +92,23 @@ Comment: "bar"
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        # Expect span layout with specific newlines
-        self.assertIn('span', block)
+        # Expect div layout
+        self.assertIn('div', block)
         self.assertIn('Sent at 2:00pm', block)
         self.assertIn('>\nhi\n<', block)
         self.assertIn('Responded at 2:01pm', block)
         self.assertIn('>\n\nhello\n\n<', block)
-        self.assertIn('\n\n<span', block) # Separation between user/agent spans
+        self.assertIn('\n\n<div', block) # Separation between user/agent divs
+
+    def test_user_input_preserves_html(self):
+        content = '<USER_REQUEST><div>hello <span>world</span></div></USER_REQUEST>'
+        prompt, _ = extract_user_input(content)
+        self.assertEqual(prompt, '<div>hello <span>world</span></div>')
+
+    def test_make_exchange_block_div_container(self):
+        block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
+        self.assertIn('<div', block)
+        self.assertNotIn('<span', block)
 
     def test_generate(self):
         conv_id = 'test_conv'
