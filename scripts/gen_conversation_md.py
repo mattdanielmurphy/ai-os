@@ -407,15 +407,21 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     if not agent_text:
         agent_text = '*(response in progress or not recorded)*'
 
-    # Requirements 3-5: Format user/agent bubbles
-    return (
+    # CRITICAL: Separate each span block with double newlines (\n\n) so markdown parses them as separate block elements!
+    # CRITICAL: Put \n after opening <span...> and \n before closing </span>!
+    user_span = (
         f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n'
         f'{user_md}\n'
-        f'</span>\n\n'
+        f'</span>'
+    )
+    
+    agent_span = (
         f'<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; white-space: pre-wrap; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>'
     )
+
+    return f"{user_span}\n\n{agent_span}"
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
