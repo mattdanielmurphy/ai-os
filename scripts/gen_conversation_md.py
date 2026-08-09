@@ -520,6 +520,8 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     # Placed INSIDE the first (oldest) exchange block
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
+    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
+
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
         if item['type'] == 'exchange':
