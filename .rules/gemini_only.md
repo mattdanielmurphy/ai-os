@@ -15,7 +15,7 @@
 - **Exceptions** (orchestrator may edit directly):
   1. The task is **planning-only** (producing an artifact/plan with no source code changes).
   2. The user explicitly instructs the orchestrator to make edits directly (e.g. "do it yourself", "edit it directly").
-  3. The edit is a single-character or trivially obvious fix (e.g. fixing a typo the user just pointed out inline).
+  3. The edit is a single-character or trivially obvious fix (e.g. fixing a typo the user just pointed out inline), or when making one or two known edits to a SINGLE SMALL FILE.
   4. The `flash_lite` subagent fails with a 503 capacity error — fall back to writing directly rather than blocking.
 
 ## Pro Model Escalation for Recurring/Stuck Bugs

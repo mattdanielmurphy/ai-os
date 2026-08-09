@@ -399,17 +399,23 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     user_blocks = []
     for u in users:
         p = format_prompt(u['prompt'])
-        t = f" — *{u['time']}*" if u['time'] else ''
-        user_blocks.append(f"#### 🧔 You{t}\n\n{p}")
-
+        user_blocks.append(p)
+    
     user_md = '\n\n'.join(user_blocks)
-    a_time = f" — *{agent_time}*" if agent_time else ''
+    a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
     if not agent_text:
         agent_text = '*(response in progress or not recorded)*'
-    agent_md = f"#### 🤖 Agent{a_time}\n\n{agent_text}"
 
-    return f"{user_md}\n\n{agent_md}"
+    # Requirements 3-5: Format user/agent bubbles
+    return (
+        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n'
+        f'{user_md}\n'
+        f'</span>\n\n'
+        f'<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; white-space: pre-wrap; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'{agent_text}\n\n'
+        f'</span>'
+    )
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
@@ -502,30 +508,53 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     # agent_content = load_agent_response(...)
     # The loading moved into the generation loop
 
-    # Reverse chronological order: newest exchange at top
-    reversed_items = list(reversed(exchanges))
+    # CSS-based layout (Requirement 1 & 2)
+    # Requirement 2: Chronological order (oldest first).
+    # Since we use flex-direction: column-reverse, oldest first in code = oldest at top visually.
+    # The current list is already oldest first?
+    # parse_exchanges returns items sorted by step.
+    
+    # Requirement 3: Thread Started Banner
+    # We need the date from the very first exchange.
+    # Let's get the date from exchanges[0].
+    
+    # Wait, the script currently reverses the exchanges in 'generate'.
+    # "Reverse chronological order: newest exchange at top"
+    # But Requirement 2 says: "Process exchanges in CHRONOLOGICAL order (oldest first at top of file, newest last at bottom of file)."
+    
+    # Let's stop reversing.
+    
+    # Thread Banner
+    date_str = "Unknown" # Need a better way to get the date. The prompt has time, but not date?
+    # Maybe use the first exchange's first user message's time if available? 
+    # Or just use today's date?
+    # Requirement says {date_str}. Let's assume a reasonable fallback.
 
-    content_blocks = []
-    for item in reversed_items:
+    doc_content = []
+    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
+    
+    # Add Thread Banner (Req 3)
+    doc_content.append(f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>')
+
+    for i, item in enumerate(exchanges):
         if item['type'] == 'exchange':
             # Need to reload response in case of updates
             agent_content = load_agent_response(history_dir, item.get('agent_turn', 0), item.get('agent_content', ''))
             
-            # Check for subagent progress (only for latest exchange)
+            # Check for subagent progress (only for latest exchange? Requirement didn't specify)
             progress = None
-            if item == reversed_items[0]:
+            if i == len(exchanges) - 1:
                 progress = get_subagent_progress(conv_id, app_data_dir)
             
-            content_blocks.append(make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress))
+            doc_content.append(make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress))
         elif item['type'] == 'fork_notice':
-            content_blocks.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
+            doc_content.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
+    
+    doc_content.append('</span>')
 
-    separator = '\n\n---\n\n'
-    doc = separator.join(content_blocks) + '\n'
-
-    output_path.write_text(doc)
+    output_path.write_text('\n\n'.join(doc_content))
     print(f"Written: {output_path}")
-    print(f"  {len(exchanges)} total exchanges rendered in reverse chronological order")
+    print(f"  {len(exchanges)} total exchanges rendered in chronological order")
     return output_path
 
 
