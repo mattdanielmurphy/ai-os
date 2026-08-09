@@ -48,14 +48,14 @@ def clean_agent_content(text: str) -> str:
     for line in text.splitlines():
         # First remove link patterns from line
         line = re.sub(r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)', '', line, flags=re.IGNORECASE).rstrip()
-        
+
         if is_transient_status_line(line):
             continue
-            
+
         cleaned_str = line.strip()
         if re.match(r'^(?:(?:[-*+]\s*|\d+\.\s*)?reference\s+link(?:\s+to(?:\s+the)?\s+thread\s+artifact)?|thread(?:\s+artifact)?(?:\s+logged\s+at)?|conversation_response\.md)\s*:?\s*$', cleaned_str, re.IGNORECASE):
             continue
-        
+
         if not line.strip() or line.strip() in ('-', '*', '+'):
             continue
         lines.append(line)
@@ -70,10 +70,10 @@ def filter_transient_lines(text: str) -> str:
     """
     lines = text.splitlines()
     non_transient = [l for l in lines if not is_transient_status_line(l)]
-    
+
     if non_transient:
         return '\n'.join(non_transient)
-    
+
     transient = [l for l in lines if is_transient_status_line(l)]
     if transient:
         return transient[-1]
@@ -121,7 +121,7 @@ def render_fork_file(items: list, output_path: Path):
     for item in items:
         if item['type'] == 'exchange':
             exchange_blocks.append(make_exchange_block(item['users'], clean_agent_response(item['agent_content']), item['agent_time']))
-    
+
     separator = '\n\n---\n\n'
     doc = separator.join(exchange_blocks) + '\n'
     output_path.write_text(doc)
@@ -169,7 +169,7 @@ def decode_html_entities(text: str) -> str:
 
 def extract_user_input(content: str):
     """Extract (prompt_text, local_timestamp_str) from a USER_INPUT step content.
-    
+
     Returns the user's prompt as clean plain text (no HTML escaping, no HTML tags).
     Artifact comments are formatted as markdown blockquotes + comment text.
     """
@@ -271,7 +271,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
             # Joined with \n\n to maintain paragraph separation
             agent_text = '\n\n'.join(c for c in current_agent_content if c.strip()).strip()
             agent_text = filter_transient_lines(agent_text)
-            
+
             min_step = pending_users[0]['step']
             max_step = pending_users[-1]['step']
             active_items.append({
@@ -320,7 +320,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                         while fork_path.exists():
                             fork_path = fork_dir / f'fork_step_{idx}_{count}.md'
                             count += 1
-                        
+
                         render_fork_file(undone, fork_path)
                         active_items = [i for i in active_items if i not in undone]
                         active_items.append({
@@ -385,19 +385,19 @@ def next_turn_number(history_dir: Path) -> int:
 
 def format_prompt(raw_prompt: str) -> str:
     """Format a user prompt for display in pure markdown.
-    
+
     Preserves exact newlines, multiline formatting, and code blocks.
     No HTML escaping, no <details> wrapping.
     """
     text = raw_prompt.strip()
-    
+
     # Ensure code blocks are on their own lines to prevent markdown bleed
     # Pad fenced backticks with a leading newline if preceded by text
     text = re.sub(r'([^\n])```', r'\1\n```', text)
     # Pad ending backticks with a trailing newline if followed by text
     text = re.sub(r'```([^\n]*)\n([^\n])', r'```\1\n\n\2', text)
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
-    
+
     return text
 
 
@@ -407,7 +407,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     for u in users:
         p = format_prompt(u['prompt'])
         user_blocks.append(p)
-    
+
     user_md = '\n\n'.join(user_blocks)
     a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
@@ -419,9 +419,9 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
         f'{user_md}\n\n'
         f'</span>'
     )
-    
+
     agent_span = (
-        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>\n\n'
     )
@@ -457,12 +457,12 @@ def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
         sub_transcript = app_data_dir / 'brain' / sub_id / '.system_generated/logs/transcript.jsonl'
         if not sub_transcript.exists():
             continue
-        
+
         # Read last few lines to check for activity
         try:
             # Using tail command to get latest lines
             lines = subprocess.check_output(['tail', '-n', '20', str(sub_transcript)], text=True).splitlines()
-            
+
             latest_thought = None
             for line in reversed(lines):
                 if 'PLANNER_RESPONSE' in line or 'toolAction' in line:
@@ -480,7 +480,7 @@ def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
             if latest_thought:
                 return latest_thought
         except: continue
-        
+
     return None
 
 
@@ -498,7 +498,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     base            = app_data_dir / 'brain' / conv_id
     transcript_path = base / '.system_generated/logs/transcript.jsonl'
     history_dir     = base / 'history'
-    
+
     if output_path_override:
         output_path = output_path_override
     else:
@@ -527,24 +527,24 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         if item['type'] == 'exchange':
             # Need to reload response in case of updates
             agent_content = load_agent_response(history_dir, item.get('agent_turn', 0), item.get('agent_content', ''))
-            
+
             # Check for subagent progress
             progress = None
             # Requirement: pass progress to the NEWEST exchange (first in reversed list)
             if i == 0:
                 progress = get_subagent_progress(conv_id, app_data_dir)
-            
+
             block = make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress)
-            
+
             # Prepend banner to the first exchange block
             # Requirement: Thread Started banner to the OLDEST exchange (which is the last in the reversed list)
             if i == len(reversed_exchanges) - 1:
                 block = f"{banner}\n\n{block}"
-                
+
             doc_content.append(block)
         elif item['type'] == 'fork_notice':
             doc_content.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
-    
+
     doc_content.append('</span>')
 
     output_path.write_text('\n\n'.join(doc_content))
