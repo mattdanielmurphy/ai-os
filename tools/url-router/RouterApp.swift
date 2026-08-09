@@ -16,18 +16,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if urlString.hasPrefix("http://127.0.0.1:8643") || urlString.hasPrefix("http://localhost:8643") {
-            // Append a random cache-buster parameter if not present to force OS/webview to send request fresh every click
-            var fetchURL = urlString
-            let nonce = String(Int.random(in: 100000...999999))
-            if fetchURL.contains("?") {
-                fetchURL += "&_nonce=\(nonce)"
-            } else {
-                fetchURL += "?_nonce=\(nonce)"
-            }
-            
             let task = Process()
             task.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-            task.arguments = ["-s", fetchURL]
+            task.arguments = ["-s", urlString]
             try? task.run()
             task.waitUntilExit()
             exit(0)
