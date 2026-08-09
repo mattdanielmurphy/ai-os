@@ -521,20 +521,23 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     # Placed INSIDE the first (oldest) exchange block
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
-    for i, item in enumerate(exchanges):
+    reversed_exchanges = list(reversed(exchanges))
+    for i, item in enumerate(reversed_exchanges):
         if item['type'] == 'exchange':
             # Need to reload response in case of updates
             agent_content = load_agent_response(history_dir, item.get('agent_turn', 0), item.get('agent_content', ''))
             
             # Check for subagent progress
             progress = None
-            if i == len(exchanges) - 1:
+            # Requirement: pass progress to the NEWEST exchange (first in reversed list)
+            if i == 0:
                 progress = get_subagent_progress(conv_id, app_data_dir)
             
             block = make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress)
             
             # Prepend banner to the first exchange block
-            if i == 0:
+            # Requirement: Thread Started banner to the OLDEST exchange (which is the last in the reversed list)
+            if i == len(reversed_exchanges) - 1:
                 block = f"{banner}\n\n{block}"
                 
             doc_content.append(block)
