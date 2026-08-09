@@ -13,7 +13,7 @@ from gen_conversation_md import (
     fmt_time, strip_html_tags, decode_html_entities,
     extract_user_input, parse_exchanges, load_agent_response,
     next_turn_number, format_prompt, make_exchange_block, generate,
-    clean_agent_content, clean_agent_response
+    clean_agent_content, clean_agent_response, escape_content_spans
 )
 
 class TestGenConversationMd(unittest.TestCase):
@@ -92,23 +92,31 @@ Comment: "bar"
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        # Expect div layout
-        self.assertIn('div', block)
+        # Expect span layout
+        self.assertIn('span', block)
         self.assertIn('Sent at 2:00pm', block)
-        self.assertIn('>\nhi\n<', block)
+        self.assertIn('>\n\nhi\n\n<', block)
         self.assertIn('Responded at 2:01pm', block)
         self.assertIn('>\n\nhello\n\n<', block)
-        self.assertIn('\n\n<div', block) # Separation between user/agent divs
+        self.assertIn('\n\n<span', block) # Separation between user/agent spans
 
-    def test_user_input_preserves_html(self):
-        content = '<USER_REQUEST><div>hello <span>world</span></div></USER_REQUEST>'
-        prompt, _ = extract_user_input(content)
-        self.assertEqual(prompt, '<div>hello <span>world</span></div>')
+    def test_escape_content_spans(self):
+        content = '<div>hello <span>world</span></div>'
+        # Should become &lt;div&gt;hello &lt;span&gt;world&lt;/span&gt;&lt;/div&gt;
+        escaped = escape_content_spans(content)
+        self.assertIn('&lt;div', escaped)
+        self.assertIn('&lt;span', escaped)
+        self.assertIn('&lt;/span&gt;', escaped)
+        self.assertIn('&lt;/div&gt;', escaped)
+        self.assertNotIn('<span', escaped)
+        self.assertNotIn('<div>', escaped)
 
-    def test_make_exchange_block_div_container(self):
+    def test_make_exchange_block_span_container(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        self.assertIn('<div', block)
-        self.assertNotIn('<span', block)
+        self.assertIn('<span', block)
+        self.assertNotIn('<div', block)
+        self.assertIn('Sent at 2:00pm', block)
+        self.assertIn('Responded at 2:01pm', block)
 
     def test_generate(self):
         conv_id = 'test_conv'
