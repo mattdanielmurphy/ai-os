@@ -91,10 +91,7 @@ def clean_agent_response(text: str) -> str:
         return ''
 
     # Demote headings
-    text = re.sub(r'^#\s+', '### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^##\s+', '#### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^###\s+', '##### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^####\s+', '###### ', text, flags=re.MULTILINE)
+    text = re.sub(r'^#{1,6}\s+', '### ', text, flags=re.MULTILINE)
 
     # Ensure blank lines before headings
     text = re.sub(r'([^\n])\n(#{1,6}\s+)', r'\1\n\n\2', text)
@@ -418,13 +415,13 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
         agent_text = '*(response in progress or not recorded)*'
 
     user_span = (
-        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
+        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.65; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
         f'{user_md}\n\n'
         f'</span>'
     )
     
     agent_span = (
-        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.75; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>\n\n'
     )
