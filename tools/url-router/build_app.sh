@@ -2,22 +2,21 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_PATH="$SCRIPT_DIR/AIOSURLRouter.app"
+APP_PATH="/Applications/AIOSURLRouter.app"
 
 rm -rf "$APP_PATH"
 osacompile -o "$APP_PATH" "$SCRIPT_DIR/router.applescript"
 
-# Update Info.plist to register as URL handler and run as UIElement (background app)
 PLIST="$APP_PATH/Contents/Info.plist"
 
-plutil -insert LSUIElement -bool true "$PLIST" 2>/dev/null || plutil -replace LSUIElement -bool true "$PLIST"
-
-# Add HTTP and HTTPS URL Schemes
+# Add HTTP and HTTPS URL Schemes & Role
 plutil -insert CFBundleURLTypes -xml '
 <array>
   <dict>
     <key>CFBundleURLName</key>
-    <string>com.aios.urlrouter</string>
+    <string>Web site URL</string>
+    <key>CFBundleURLRole</key>
+    <string>Viewer</string>
     <key>CFBundleURLSchemes</key>
     <array>
       <string>http</string>
@@ -26,7 +25,27 @@ plutil -insert CFBundleURLTypes -xml '
   </dict>
 </array>' "$PLIST"
 
-# Force register with LaunchServices
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_PATH"
+# Add Document Types for HTML files so macOS recognizes it as a browser app
+plutil -insert CFBundleDocumentTypes -xml '
+<array>
+  <dict>
+    <key>CFBundleTypeName</key>
+    <string>HTML Document</string>
+    <key>CFBundleTypeRole</key>
+    <string>Viewer</string>
+    <key>LSItemContentTypes</key>
+    <array>
+      <string>public.html</string>
+      <string>public.xhtml</string>
+    </array>
+  </dict>
+</array>' "$PLIST"
 
-echo "Successfully built and registered AIOSURLRouter.app at $APP_PATH"
+# Re-sign app bundle
+codesign --force --deep --sign - "$APP_PATH"
+
+# Force register with LaunchServices
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f -r -ui "$APP_PATH"
+killall SystemSettings 2>/dev/null || true
+
+echo "Successfully built, configured, and registered AIOSURLRouter.app at $APP_PATH"
