@@ -251,11 +251,12 @@ Comment: "bar"
         self.assertEqual(clean_agent_content("Wait for subagent x to finish.\nHello"), "Hello")
 
     def test_clean_agent_response(self):
-        content = "# H1\n## H2\n### H3\nThread context logged at: link\nThread artifact: link\nThread logged at: link\nReference link: link\nSome text"
+        content = "# H1\n## H2\n### H3\n#### H4\nThread context logged at: link\nThread artifact: link\nThread logged at: link\nReference link: link\nSome text"
         cleaned = clean_agent_response(content)
-        self.assertIn("##### H1", cleaned)
-        self.assertIn("###### H2", cleaned)
-        self.assertIn("###### H3", cleaned)
+        self.assertIn("### H1", cleaned)
+        self.assertIn("#### H2", cleaned)
+        self.assertIn("##### H3", cleaned)
+        self.assertIn("###### H4", cleaned)
         self.assertNotIn("Thread context logged at:", cleaned)
         self.assertNotIn("Thread artifact:", cleaned)
         self.assertNotIn("Thread logged at:", cleaned)

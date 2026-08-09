@@ -91,9 +91,13 @@ def clean_agent_response(text: str) -> str:
         return ''
 
     # Demote headings
-    text = re.sub(r'^#\s+', '##### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^##\s+', '###### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^###\s+', '###### ', text, flags=re.MULTILINE)
+    text = re.sub(r'^#\s+', '### ', text, flags=re.MULTILINE)
+    text = re.sub(r'^##\s+', '#### ', text, flags=re.MULTILINE)
+    text = re.sub(r'^###\s+', '##### ', text, flags=re.MULTILINE)
+    text = re.sub(r'^####\s+', '###### ', text, flags=re.MULTILINE)
+
+    # Ensure blank lines before headings
+    text = re.sub(r'([^\n])\n(#{1,6}\s+)', r'\1\n\n\2', text)
 
     # Strip orphan status/context lines
     lines = []
@@ -420,9 +424,9 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     )
     
     agent_span = (
-        f'<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
-        f'</span>'
+        f'</span>\n\n'
     )
 
     return f'<span style="display: block; width: 100%; margin-top: 8px;">\n\n{user_span}\n\n{agent_span}\n\n</span>'
