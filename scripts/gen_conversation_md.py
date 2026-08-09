@@ -155,13 +155,7 @@ def strip_html_tags(text: str) -> str:
     return re.sub(r'<[^>]+>', '', text)
 
 
-def escape_content_spans(text: str) -> str:
-    """Escape <span, </span>, <div, and </div> in user/agent content so they cannot collide with template tags."""
-    text = re.sub(r'<span\b', '&lt;span', text, flags=re.IGNORECASE)
-    text = re.sub(r'</span\s*>', '&lt;/span&gt;', text, flags=re.IGNORECASE)
-    text = re.sub(r'<div\b', '&lt;div', text, flags=re.IGNORECASE)
-    text = re.sub(r'</div\s*>', '&lt;/div&gt;', text, flags=re.IGNORECASE)
-    return text
+
 
 
 def decode_html_entities(text: str) -> str:
@@ -413,9 +407,9 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
         p = format_prompt(u['prompt'])
         user_blocks.append(p)
     
-    user_md = escape_content_spans('\n\n'.join(user_blocks))
+    user_md = '\n\n'.join(user_blocks)
     a_time = agent_time if agent_time else ''
-    agent_text = escape_content_spans(clean_agent_response(agent_content))
+    agent_text = clean_agent_response(agent_content)
     if not agent_text:
         agent_text = '*(response in progress or not recorded)*'
 
@@ -426,7 +420,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     )
     
     agent_span = (
-        f'<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; white-space: pre-wrap; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>'
     )
