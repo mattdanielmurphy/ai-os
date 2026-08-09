@@ -49,6 +49,9 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - **Implemented Zero-Fork Hermes Triage Interceptor** (`aios_hermes_wrapper.py`) — monkey-patches `chat_completion_helpers.interruptible_api_call` to inject fake `agy_start` tool calls for coding prompts. TUI works. [[agent-log]](agent-logs/2026-07-19_18-36_implemented-zero-fork-hermes-triage-interceptor.md)
 - **Fixed WebUI triage** — the WebUI runs as a separate Python process that never touches the wrapper. Had to create `webui-patches/sitecustomize.py` and set `PYTHONPATH` in hermes-webui `.env` to get the same interception working. This complexity is what triggered the July 20 pivot. [[agent-log]](agent-logs/2026-07-19_22-54_webui-triage-sitecustomize-fix.md)
 
+## 2026-08-09
+- **Fix Infinite Span Nesting Bug:** Refactored `gen_conversation_md.py` layout elements from `<span>` to `<div>` and fixed HTML stripping in `extract_user_input` to allow raw HTML/Markdown in prompts. Expanded unit tests in `tests/test_gen_conversation_md.py`. [[log]](agent-logs/2026-08-09_02-57_fix-infinite-span-nesting-bug.md)
+
 - **Phase 2: Cut dead complexity** — Removed prepare_spare_engine, elaborate lsof-based pause/resume loop, execution staging/payload system, hardcoded skills API, browser context, gemini dispatch, thread notes, and recent workspaces. Backend down from ~3,578 to 3,018 lines. All cuts verified against frontend invoke() calls. Phase 3 bugfix prompt saved to .devtool/features/. [[log]](agent-logs/2026-07-20_01-30_phase-2-cut-complexity.md)
 
 ## 2026-07-18
