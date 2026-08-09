@@ -516,16 +516,6 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         return output_path
 
     doc_content = []
-    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
-    doc_content.append(f'''
-<style>
-  span[title^="Responded at"] p, span[title^="Sent at"] p {{ margin-top: 0.6rem; margin-bottom: 0.6rem; }}
-  span[title^="Responded at"] ul, span[title^="Responded at"] ol {{ margin-top: 0.6rem; margin-bottom: 0.6rem; padding-left: 1.25rem; }}
-  span[title^="Responded at"] li {{ margin-top: 0.35rem; margin-bottom: 0.35rem; }}
-  span[title^="Responded at"] h3 {{ margin-top: 1.1rem; margin-bottom: 0.4rem; }}
-</style>
-''')
-    
     # Requirement 2: Thread Started Banner
     # Placed INSIDE the first (oldest) exchange block
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'

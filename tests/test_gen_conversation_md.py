@@ -110,23 +110,6 @@ Comment: "bar"
         self.assertIn('Sent at 2:00pm', block)
         self.assertIn('Responded at 2:01pm', block)
 
-    def test_generate_includes_style(self):
-        conv_id = 'test_conv_style'
-        base = Path(self.test_dir.name) / 'brain' / conv_id
-        base.mkdir(parents=True)
-        sys_logs = base / '.system_generated/logs'
-        sys_logs.mkdir(parents=True)
-        transcript = sys_logs / 'transcript.jsonl'
-        with open(transcript, 'w') as f:
-            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>hi</USER_REQUEST>'}) + '\n')
-            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'hello'}) + '\n')
-        (base / 'history').mkdir()
-        
-        generate(conv_id, 'Title', Path(self.test_dir.name))
-        output = base / 'thread.md'
-        self.assertTrue(output.exists())
-        self.assertIn('<style>', output.read_text())
-        self.assertIn('span[title^="Responded at"] p', output.read_text())
 
     def test_strip_system_tags(self):
         content = "<system>hidden</system><user_rules>rule</user_rules><USER_REQUEST>hi</USER_REQUEST>"
