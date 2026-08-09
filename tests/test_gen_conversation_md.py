@@ -209,6 +209,7 @@ Comment: "bar"
             f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>Line 1\nLine 2\nLine 3</USER_REQUEST>'}) + '\n')
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Completed task-75. Waiting for timer notification...'}) + '\n')
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Waiting for subagent to complete...'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Gemini 3.1 Pro (High) model is streaming its reasoning'}) + '\n')
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Actual final agent response output'}) + '\n')
         
         items = parse_exchanges(transcript)
@@ -216,6 +217,7 @@ Comment: "bar"
         self.assertIn("Line 1\nLine 2\nLine 3", ex['users'][0]['prompt'])
         self.assertNotIn("Completed task-75", ex['agent_content'])
         self.assertNotIn("Waiting for subagent", ex['agent_content'])
+        self.assertNotIn("Gemini 3.1 Pro", ex['agent_content'])
         self.assertIn("Actual final agent response output", ex['agent_content'])
 
     def test_clean_agent_content(self):
@@ -247,6 +249,40 @@ Comment: "bar"
         self.assertNotIn("Thread logged at:", cleaned)
         self.assertNotIn("Reference link:", cleaned)
         self.assertIn("Some text", cleaned)
+
+    def test_transient_filtering_with_final_output(self):
+        # Issue 1: Transient lines stripped when final output is present
+        from gen_conversation_md import filter_transient_lines
+        text = "Streaming reasoning...\nGemini 3.1 Pro is finishing its detailed architectural proposal...\nFinal answer here."
+        self.assertEqual(filter_transient_lines(text), "Final answer here.")
+
+    def test_transient_filtering_streaming_mode(self):
+        # Issue 1: Streaming mode: only latest transient line kept
+        from gen_conversation_md import filter_transient_lines
+        text = "Gemini 3.1 Pro is streaming its reasoning...\nWaiting for subagent...\nI'm still waiting."
+        self.assertEqual(filter_transient_lines(text), "I'm still waiting.")
+
+    def test_paragraph_separation(self):
+        # Issue 2: PLANNER_RESPONSE merged into single paragraph without breaks
+        # The fix is in parse_exchanges: '\n\n'.join(chunks)
+        transcript = Path(self.test_dir.name) / 'transcript_paragraphs.jsonl'
+        with open(transcript, 'w') as f:
+            f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>hi</USER_REQUEST>'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Para 1'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Para 2'}) + '\n')
+        
+        items = parse_exchanges(transcript)
+        ex = [i for i in items if i['type'] == 'exchange'][0]
+        self.assertEqual(ex['agent_content'], 'Para 1\n\nPara 2')
+
+    def test_subagent_thought_rendering(self):
+        # Issue 3: Sub-agent thoughts rendered
+        from gen_conversation_md import make_exchange_block_with_progress
+        base = "#### 🤖 Agent\n\nFinal output"
+        progress = "🔄 **Subagent Activity**: Running test"
+        block = make_exchange_block_with_progress([], "Final output", "", progress)
+        self.assertIn(progress, block)
+        self.assertIn("> 🔄 **Subagent Activity**: Running test", block)
 
 if __name__ == '__main__':
     unittest.main()

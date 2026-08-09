@@ -32,7 +32,7 @@ def is_transient_status_line(line: str) -> bool:
     s = line.strip()
     if not s:
         return False
-    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+have\s+(?:launched|requested|dispatched))[^\n]*$', s, re.IGNORECASE):
+    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+have\s+(?:launched|requested|dispatched)|gemini\s+3\.1\s+pro|streaming\s+its\s+reasoning|actively\s+processing|completing\s+its\s+reasoning|finishing\s+its\s+detailed\s+architectural|will\tagy|delegated\s+the\s+task\s+to|i\'ll\s+fetch\s+the\s+full\s+output|i\'ll\s+present\s+its\s+complete|i\s+will\s+retrieve\s+and\s+display)[^\n]*$', s, re.IGNORECASE):
         return True
     if re.match(r'^\s*\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
         return True
@@ -63,6 +63,21 @@ def clean_agent_content(text: str) -> str:
     result = '\n'.join(lines)
     result = re.sub(r'\n{3,}', '\n\n', result).strip()
     return result
+
+def filter_transient_lines(text: str) -> str:
+    """If text contains non-transient content, strip ALL transient lines.
+    If text contains ONLY transient content, retain ONLY the latest.
+    """
+    lines = text.splitlines()
+    non_transient = [l for l in lines if not is_transient_status_line(l)]
+    
+    if non_transient:
+        return '\n'.join(non_transient)
+    
+    transient = [l for l in lines if is_transient_status_line(l)]
+    if transient:
+        return transient[-1]
+    return text
 
 
 def clean_agent_response(text: str) -> str:
@@ -246,7 +261,10 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
     def flush_current_turn():
         nonlocal pending_users, current_agent_content, current_agent_time, active_items
         if pending_users:
+            # Joined with \n\n to maintain paragraph separation
             agent_text = '\n\n'.join(c for c in current_agent_content if c.strip()).strip()
+            agent_text = filter_transient_lines(agent_text)
+            
             min_step = pending_users[0]['step']
             max_step = pending_users[-1]['step']
             active_items.append({
@@ -425,16 +443,25 @@ def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
         
         # Read last few lines to check for activity
         try:
-            lines = subprocess.check_output(['tail', '-n', '5', str(sub_transcript)], text=True).splitlines()
+            # Using tail command to get latest lines
+            lines = subprocess.check_output(['tail', '-n', '20', str(sub_transcript)], text=True).splitlines()
+            
+            latest_thought = None
             for line in reversed(lines):
                 if 'PLANNER_RESPONSE' in line or 'toolAction' in line:
                     try:
                         obj = json.loads(line)
                         if 'toolAction' in obj:
-                            return f"Subagent `{sub_id[:8]}...` is executing: {obj['toolAction']}"
-                        if 'PLANNER_RESPONSE' in obj:
-                             return f"Subagent `{sub_id[:8]}...` is processing..."
+                            latest_thought = f"🔄 **Subagent Activity**: {obj['toolAction']}"
+                            break
+                        elif 'PLANNER_RESPONSE' in obj:
+                            content = obj['PLANNER_RESPONSE'].get('content', '') or obj.get('content', '')
+                            if content and not is_transient_status_line(content):
+                                latest_thought = f"💭 **Subagent Thought**: {content[:100]}..."
+                                break
                     except: continue
+            if latest_thought:
+                return latest_thought
         except: continue
         
     return None

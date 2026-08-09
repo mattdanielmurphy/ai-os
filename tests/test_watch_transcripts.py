@@ -31,7 +31,7 @@ class TestWatchTranscripts(unittest.TestCase):
         transcript = conv_dir / ".system_generated/logs/transcript.jsonl"
         transcript.write_text("{}")
         
-        active = get_active_convs(self.brain_dir)
+        active, _ = get_active_convs(self.brain_dir)
         self.assertIn(conv_id, active)
 
     def test_render(self):
