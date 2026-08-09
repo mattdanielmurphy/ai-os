@@ -23,6 +23,7 @@ import argparse
 import json
 import re
 import sys
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -393,6 +394,60 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     return f"{user_md}\n\n{agent_md}"
 
 
+def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
+    """Check if this conversation has active subagents and return their status."""
+    transcript_path = app_data_dir / 'brain' / conv_id / '.system_generated/logs/transcript.jsonl'
+    if not transcript_path.exists():
+        return None
+
+    subagent_ids = set()
+    try:
+        with open(transcript_path) as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                    content = obj.get('content', '')
+                    # Detect common subagent start patterns
+                    if re.search(r'(?:invoke_subagent|agy_start|agy)\b', content):
+                        # Simple heuristic to extract UUID-like IDs
+                        matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', content)
+                        for m in matches:
+                            if m != conv_id:
+                                subagent_ids.add(m)
+                except: continue
+    except: return None
+
+    # Check for active subagent activity
+    for sub_id in subagent_ids:
+        sub_transcript = app_data_dir / 'brain' / sub_id / '.system_generated/logs/transcript.jsonl'
+        if not sub_transcript.exists():
+            continue
+        
+        # Read last few lines to check for activity
+        try:
+            lines = subprocess.check_output(['tail', '-n', '5', str(sub_transcript)], text=True).splitlines()
+            for line in reversed(lines):
+                if 'PLANNER_RESPONSE' in line or 'toolAction' in line:
+                    try:
+                        obj = json.loads(line)
+                        if 'toolAction' in obj:
+                            return f"Subagent `{sub_id[:8]}...` is executing: {obj['toolAction']}"
+                        if 'PLANNER_RESPONSE' in obj:
+                             return f"Subagent `{sub_id[:8]}...` is processing..."
+                    except: continue
+        except: continue
+        
+    return None
+
+
+def make_exchange_block_with_progress(users: list, agent_content: str, agent_time: str, subagent_progress: str | None) -> str:
+    """Build a single exchange block with potential subagent progress."""
+    base_block = make_exchange_block(users, agent_content, agent_time)
+    if subagent_progress:
+        return f"{base_block}\n\n> [!NOTE]\n> 🔄 **Subagent Active**: {subagent_progress}"
+    return base_block
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override: Path = None):
@@ -428,7 +483,13 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         if item['type'] == 'exchange':
             # Need to reload response in case of updates
             agent_content = load_agent_response(history_dir, item.get('agent_turn', 0), item.get('agent_content', ''))
-            content_blocks.append(make_exchange_block(item['users'], agent_content, item['agent_time']))
+            
+            # Check for subagent progress (only for latest exchange)
+            progress = None
+            if item == reversed_items[0]:
+                progress = get_subagent_progress(conv_id, app_data_dir)
+            
+            content_blocks.append(make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress))
         elif item['type'] == 'fork_notice':
             content_blocks.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
 

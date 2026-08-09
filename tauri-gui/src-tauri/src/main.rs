@@ -1,13 +1,13 @@
-mod types;
 mod pty;
-mod threads;
 mod server;
 mod session;
+mod threads;
+mod types;
 
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use tauri::Manager;
+use std::sync::{Arc, Mutex};
 use tauri::GlobalShortcutManager;
+use tauri::Manager;
 
 use crate::types::AppState;
 
@@ -27,7 +27,9 @@ fn main() {
     std::panic::set_hook(Box::new(|panic_info| {
         let backtrace = std::backtrace::Backtrace::capture();
         let home = std::env::var("HOME").unwrap_or_default();
-        let log_dir = std::path::Path::new(&home).join(".ai-os").join("crash_logs");
+        let log_dir = std::path::Path::new(&home)
+            .join(".ai-os")
+            .join("crash_logs");
         let _ = std::fs::create_dir_all(&log_dir);
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -38,7 +40,8 @@ fn main() {
         let _ = std::fs::write(&file_path, &msg);
         eprintln!("[AI-OS CRASH LOG WRITTEN] {}", file_path.display());
     }));
-    let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
+    let path =
+        std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin:/usr/sbin:/sbin".to_string());
     let home = std::env::var("HOME").unwrap_or_default();
     let new_path = format!(
         "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:{}/.local/bin:{}/.cargo/bin:{}/.gemini/antigravity-cli/bin:{}/.nvm/versions/node/v18.17.0/bin:{}/.nvm/versions/node/v26.3.0/bin:{}/bin:{}",
@@ -50,7 +53,10 @@ fn main() {
     let app_name = &context.package_info().name;
 
     let app_menu = tauri::Menu::new()
-        .add_native_item(tauri::MenuItem::About(app_name.to_string(), tauri::AboutMetadata::default()))
+        .add_native_item(tauri::MenuItem::About(
+            app_name.to_string(),
+            tauri::AboutMetadata::default(),
+        ))
         .add_native_item(tauri::MenuItem::Separator)
         .add_native_item(tauri::MenuItem::Services)
         .add_native_item(tauri::MenuItem::Separator)
@@ -78,25 +84,48 @@ fn main() {
 
     let view_menu = tauri::Menu::new()
         .add_item(tauri::CustomMenuItem::new("reload", "Reload Page").accelerator("Cmd+R"))
-        .add_item(tauri::CustomMenuItem::new("toggle_devtools", "Toggle Developer Tools").accelerator("Cmd+Alt+I"))
+        .add_item(
+            tauri::CustomMenuItem::new("toggle_devtools", "Toggle Developer Tools")
+                .accelerator("Cmd+Alt+I"),
+        )
         .add_native_item(tauri::MenuItem::Separator)
         .add_native_item(tauri::MenuItem::EnterFullScreen);
 
     let actions_menu = tauri::Menu::new()
-        .add_item(tauri::CustomMenuItem::new("new_engine", "Spawn Fresh Engine").accelerator("Cmd+Shift+N"))
-        .add_item(tauri::CustomMenuItem::new("switch_project", "Switch Active Project...").accelerator("Cmd+O"))
-        .add_item(tauri::CustomMenuItem::new("search_threads", "Search AI Threads...").accelerator("Cmd+Shift+F"));
+        .add_item(
+            tauri::CustomMenuItem::new("new_engine", "Spawn Fresh Engine")
+                .accelerator("Cmd+Shift+N"),
+        )
+        .add_item(
+            tauri::CustomMenuItem::new("switch_project", "Switch Active Project...")
+                .accelerator("Cmd+O"),
+        )
+        .add_item(
+            tauri::CustomMenuItem::new("search_threads", "Search AI Threads...")
+                .accelerator("Cmd+Shift+F"),
+        );
 
     let window_menu = tauri::Menu::new()
         .add_native_item(tauri::MenuItem::Minimize)
         .add_native_item(tauri::MenuItem::Zoom)
         .add_native_item(tauri::MenuItem::Separator)
         .add_item(tauri::CustomMenuItem::new("focus_gemini", "Gemini Window").accelerator("Cmd+1"))
-        .add_item(tauri::CustomMenuItem::new("focus_coding", "Coding Harness Window").accelerator("Cmd+2"))
-        .add_item(tauri::CustomMenuItem::new("toggle_quick_prompt", "Toggle Quick Prompt Floating Window").accelerator("Cmd+Alt+Space"));
+        .add_item(
+            tauri::CustomMenuItem::new("focus_coding", "Coding Harness Window")
+                .accelerator("Cmd+2"),
+        )
+        .add_item(
+            tauri::CustomMenuItem::new(
+                "toggle_quick_prompt",
+                "Toggle Quick Prompt Floating Window",
+            )
+            .accelerator("Cmd+Alt+Space"),
+        );
 
-    let help_menu = tauri::Menu::new()
-        .add_item(tauri::CustomMenuItem::new("help_docs", "AI-OS Documentation"));
+    let help_menu = tauri::Menu::new().add_item(tauri::CustomMenuItem::new(
+        "help_docs",
+        "AI-OS Documentation",
+    ));
 
     let menu = tauri::Menu::new()
         .add_submenu(tauri::Submenu::new(app_name, app_menu))
@@ -361,7 +390,12 @@ fn main() {
                 })();
             "#;
 
-            let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini.js").unwrap_or_default();
+            // NOTE: This is a symlink to the GENERATED file
+            // ~/projects/userscript-bundler/compiled/gemini-enhancements.user.js.
+            // Do NOT edit it directly — edit the source modules in
+            // ~/projects/userscript-bundler/userscripts/gemini-enhancements/ and
+            // rebuild with `cd ~/projects/userscript-bundler && node bundler.cjs`.
+            let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js").unwrap_or_default();
 
             // 1. Expanded Normal Gemini Window (App Launch Target)
             let gemini_main_window = tauri::WindowBuilder::new(
@@ -526,8 +560,8 @@ fn main() {
                     if (e.metaKey && (e.code === 'KeyT' || e.key === 't' || e.key === 'T')) {
                         e.preventDefault();
                         e.stopPropagation();
-                        const btn = document.querySelector('[data-test-id="new-chat-button"] a') || 
-                                    document.querySelector('[data-test-id="new-chat-button"]') || 
+                        const btn = document.querySelector('[data-test-id="new-chat-button"] a') ||
+                                    document.querySelector('[data-test-id="new-chat-button"]') ||
                                     document.querySelector('a[aria-label="New chat"]');
                         if (btn) {
                             btn.click();
