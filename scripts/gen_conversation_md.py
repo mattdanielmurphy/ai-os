@@ -415,13 +415,13 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
         agent_text = '*(response in progress or not recorded)*'
 
     user_span = (
-        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.65; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
+        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
         f'{user_md}\n\n'
         f'</span>'
     )
     
     agent_span = (
-        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.75; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: rgba(113, 100, 175, 0.08); border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>\n\n'
     )
@@ -517,6 +517,14 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
     doc_content = []
     doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
+    doc_content.append(f'''
+<style>
+  span[title^="Responded at"] p, span[title^="Sent at"] p {{ margin-top: 0.6rem; margin-bottom: 0.6rem; }}
+  span[title^="Responded at"] ul, span[title^="Responded at"] ol {{ margin-top: 0.6rem; margin-bottom: 0.6rem; padding-left: 1.25rem; }}
+  span[title^="Responded at"] li {{ margin-top: 0.35rem; margin-bottom: 0.35rem; }}
+  span[title^="Responded at"] h3 {{ margin-top: 1.1rem; margin-bottom: 0.4rem; }}
+</style>
+''')
     
     # Requirement 2: Thread Started Banner
     # Placed INSIDE the first (oldest) exchange block
