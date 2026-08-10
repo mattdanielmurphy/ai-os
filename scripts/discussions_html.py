@@ -22,8 +22,20 @@ If --conv-id is given, the transcript is resolved to:
 import argparse
 import json
 import re
+import html as html_mod
 from datetime import datetime
 from pathlib import Path
+
+# ─── Constants and Path Helpers ───────────────────────────────────────────
+
+def get_project_root() -> Path:
+    """Auto-detect project root by looking for common markers."""
+    cwd = Path.cwd()
+    for parent in [cwd] + list(cwd.parents):
+        if (parent / '.git').exists() or (parent / 'package.json').exists() or (parent / 'AG_CONTEXT.md').exists():
+            return parent
+    return cwd
+
 
 # ─── Token/verbosity helpers ──────────────────────────────────────────────
 
@@ -42,6 +54,26 @@ def is_transient_status_line(line: str) -> bool:
     if re.match(r'^\s*\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
         return True
     return False
+
+
+def escape_html(text: str) -> str:
+    """Safely escape text, avoiding double-escaping."""
+    return html_mod.escape(text, quote=True)
+
+
+def parse_inline_markdown(text: str) -> str:
+    """Parse basic markdown inline formatting to HTML."""
+    # Escape everything first
+    text = escape_html(text)
+    # **bold**
+    text = re.sub(r'&amp;&amp;(.+?)&amp;&amp;', r'<b>\1</b>', text)
+    # *italic*
+    text = re.sub(r'(?<!\*)\*([^*\n]+)\*(?!\*)', r'<i>\1</i>', text)
+    # `code`
+    text = re.sub(r'&grave;([^&]+)&grave;', r'<code>\1</code>', text)
+    # links [text](url)
+    text = re.sub(r'\[([^\]]+)\]\((https?://[^)\s]+|file://[^)\s]+)\)', r'<a href="\2">\1</a>', text)
+    return text
 
 
 def strip_html_tags(text: str) -> str:
@@ -173,9 +205,9 @@ def parse_exchanges(transcript_path: Path) -> list:
                 if created and not agent_time:
                     agent_time = fmt_time(created)
                 content = obj.get('content', '') or obj.get('text', '')
-                if content and isinstance(content, str) and content.strip():
+                if content and isinstance(content, str):
                     c = content.strip()
-                    if not agent_content or agent_content[-1] != c:
+                    if c:
                         agent_content.append(c)
 
     flush()
@@ -200,43 +232,37 @@ def render_code_folded(code_text: str, lang: str = '') -> str:
 
 
 def render_paragraphs(text: str) -> str:
-    """Render markdown-ish text as HTML with folding of big <pre>/fenced code blocks.
-
-    Fenced ``` blocks are extracted and folded. Non-code text is escaped and rendered
-    as paragraphs (best-effort, no full markdown parser to keep it dependency-free).
-    """
-    # Split into fenced code and normal text segments
-    parts = []
+    """Render markdown-ish text as HTML with folding of big <pre>/fenced code blocks."""
+    # Pre-process: temporary placeholders for markdown syntax to survive HTML escaping
+    text = text.replace('**', '&&')
+    text = text.replace('`', '`') # Using &grave; would be better in escaping
+    # Actually, the simplest is just handling it after escaping.
+    # Modified: escape_html is done in parse_inline_markdown, let's rethink.
+    
+    # 1. Extract and fold code
+    segments = []
     pos = 0
     pattern = re.compile(r'```([\w+-]*)\n(.*?)```', re.DOTALL)
     for m in pattern.finditer(text):
         if m.start() > pos:
-            parts.append(('text', text[pos:m.start()]))
-        parts.append(('code', m.group(2), m.group(1)))
+            segments.append(('text', text[pos:m.start()]))
+        segments.append(('code', m.group(2), m.group(1)))
         pos = m.end()
     if pos < len(text):
-        parts.append(('text', text[pos:]))
+        segments.append(('text', text[pos:]))
 
     out = []
-    for part in parts:
-        if part[0] == 'code':
-            out.append(render_code_folded(part[1], part[2]))
+    for seg in segments:
+        if seg[0] == 'code':
+            out.append(render_code_folded(seg[1], seg[2]))
         else:
-            txt = escape_html(part[1]).strip()
-            if not txt:
-                continue
-            # basic bold/italic/code inline
-            txt = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', txt)
-            txt = re.sub(r'(?<!\*)\*([^*\n]+)\*(?!\*)', r'<i>\1</i>', txt)
-            txt = re.sub(r'`([^`\n]+)`', r'<code>\1</code>', txt)
-            # links
-            txt = re.sub(r'\[([^\]]+)\]\((https?://[^)\s]+|file://[^)\s]+)\)',
-                         r'<a href="\2">\1</a>', txt)
-            for para in txt.split('\n\n'):
+            # text segment: process paragraphs
+            for para in seg[1].split('\n\n'):
                 para = para.strip()
-                if not para:
-                    continue
-                out.append(f'<p>{para}</p>')
+                if not para: continue
+                # Inline parsing
+                para_html = parse_inline_markdown(para)
+                out.append(f'<p>{para_html}</p>')
     return '\n'.join(out)
 
 
@@ -426,8 +452,9 @@ def main():
     parser.add_argument('transcript', nargs='?', help='Path to transcript.jsonl')
     parser.add_argument('--conv-id', help='Antigravity conversation UUID (resolves via --app-data-dir)')
     parser.add_argument('--app-data-dir', default='~/.gemini/antigravity')
-    parser.add_argument('--output', '-o', default='Discussions.html', help='Output file path')
-    parser.add_argument('--title', default=None, help='Thread title (defaults to transcript dir name)')
+    parser.add_argument('--output', '-o', default=None, help='Output file path')
+    parser.add_argument('--project-dir', help='Project root directory')
+    parser.add_argument('--title', default=None, help='Thread title')
     args = parser.parse_args()
 
     transcript_path = resolve_transcript(args)
@@ -438,10 +465,15 @@ def main():
     if not exchanges:
         raise SystemExit("No exchanges parsed from transcript.")
 
-    title = args.title or transcript_path.parent.parent.name
+    title = args.title or (transcript_path.parent.parent.name if transcript_path.parent.parent.name != 'logs' else 'Conversation')
     html = build_document(title, exchanges)
 
-    out = Path(args.output).expanduser()
+    project_dir = Path(args.project_dir).expanduser() if args.project_dir else get_project_root()
+    if args.output:
+        out = Path(args.output).expanduser()
+    else:
+        out = project_dir / 'Discussions.html'
+        
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
     print(f"Written: {out}")
