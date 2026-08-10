@@ -318,6 +318,28 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
+                # 1. Check for auth login / verification URL keywords
+                if "auth login" in line.lower() or "accounts.google.com/o/oauth2" in line.lower() or "enter code" in line.lower():
+                    try:
+                        cmd_warp = "tell application \"Warp\" to activate"
+                        subprocess.run(["osascript", "-e", cmd_warp], capture_output=True)
+                        cmd_term = "tell application \"Terminal\" to do script \"/Users/matt/.local/bin/agy auth login\""
+                        subprocess.run(["osascript", "-e", cmd_term], capture_output=True)
+                    except Exception as ex:
+                        logger.error(f"Failed to open terminal for auth: {ex}")
+
+                    # 2. Stream notification
+                    auth_msg = (
+                        "⚠️ **`agy` OAuth re-authorization required!**\n"
+                        "Opening Terminal with `agy auth login` to enter code...\n\n"
+                    )
+                    payload = {
+                        "id": request_id, "object": "chat.completion.chunk",
+                        "created": created_time, "model": model_name,
+                        "choices": [{"index": 0, "delta": {"reasoning_content": auth_msg}, "finish_reason": None}]
+                    }
+                    yield f"data: {json.dumps(payload)}\n\n"
+
                 payload = {"id": request_id, "object": "chat.completion.chunk",
                            "created": created_time, "model": model_name,
                            "choices": [{"index": 0, "delta": {"content": line},
