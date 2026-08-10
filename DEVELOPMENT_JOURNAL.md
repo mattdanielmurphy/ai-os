@@ -1,5 +1,9 @@
 # Development Journal
 
+## 2026-08-09
+- **Fixed agy-proxy Real-time Streaming & Timeout Bugs:** Rewrote `_proxy_to_litellm_stream` in `services/agy-proxy/proxy.py` to use `httpx.AsyncClient` with live SSE line-by-line yielding instead of blocking `urllib` in-memory buffering that caused 120s `[Proxy Error]: timed out` crashes. Added model name normalization (`@custom:agy:` / `agy/`), synchronized full lean coding model stack in `~/.hermes/config.yaml`, and verified all 13 unit tests pass. [[log]](agent-logs/2026-08-09_19-22_fix-agy-proxy-streaming-timeout.md)
+
+
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-08-05
