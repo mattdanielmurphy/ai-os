@@ -448,12 +448,51 @@ def build_document(title: str, exchanges: list) -> str:
 # ─── Main ─────────────────────────────────────────────────────────────────
 
 def resolve_transcript(args) -> Path:
+    if args.hermes_session_id:
+        return None
     if args.transcript:
         return Path(args.transcript).expanduser()
     if args.conv_id:
         base = Path(args.app_data_dir).expanduser() / 'brain' / args.conv_id
         return base / '.system_generated/logs/transcript.jsonl'
-    raise SystemExit("Error: provide --transcript or --conv-id")
+    raise SystemExit("Error: provide --transcript, --conv-id, or --hermes-session-id")
+
+
+def format_hermes_timestamp(ts):
+    if isinstance(ts, (int, float)):
+        dt = datetime.fromtimestamp(ts)
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%I:%M%p").lstrip("0").lower()
+    else:
+        dt = datetime.fromisoformat(ts.strip())
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%I:%M%p").lstrip("0").lower()
+
+def parse_hermes_session(session_id: str) -> list:
+    import sqlite3
+    import os
+    db_path = os.path.expanduser("~/.hermes/state.db")
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT role, content, timestamp FROM messages WHERE session_id=? AND role IN ('user','assistant') ORDER BY id", (session_id,))
+    hermes_msgs = cursor.fetchall()
+    conn.close()
+
+    exchanges = []
+    pending_user = None
+    for role, content, ts in hermes_msgs:
+        if role == 'user':
+            pending_user = {'text': content, 'time': ts}
+        elif role == 'assistant' and pending_user:
+            user_date, user_time = format_hermes_timestamp(pending_user['time'])
+            agent_date, agent_time = format_hermes_timestamp(ts)
+            exchanges.append({
+                'user': pending_user['text'],
+                'time': user_time,
+                'agent': content,
+                'agent_time': agent_time,
+                'date_iso': agent_date
+            })
+            pending_user = None
+    return exchanges
 
 
 def main():
@@ -464,17 +503,22 @@ def main():
     parser.add_argument('--output', '-o', default=None, help='Output file path')
     parser.add_argument('--project-dir', help='Project root directory')
     parser.add_argument('--title', default=None, help='Thread title')
+    parser.add_argument('--hermes-session-id', help='Optional Hermes session ID to ingest')
     args = parser.parse_args()
 
     transcript_path = resolve_transcript(args)
-    if not transcript_path.exists():
+    
+    if args.hermes_session_id:
+        exchanges = parse_hermes_session(args.hermes_session_id)
+    elif transcript_path and transcript_path.exists():
+        exchanges = parse_exchanges(transcript_path)
+    else:
         raise SystemExit(f"Error: transcript not found: {transcript_path}")
 
-    exchanges = parse_exchanges(transcript_path)
     if not exchanges:
-        raise SystemExit("No exchanges parsed from transcript.")
+        raise SystemExit("No exchanges parsed.")
 
-    title = args.title or (transcript_path.parent.parent.name if transcript_path.parent.parent.name != 'logs' else 'Conversation')
+    title = args.title or (args.hermes_session_id if args.hermes_session_id else (transcript_path.parent.parent.name if transcript_path and transcript_path.parent.parent.name != 'logs' else 'Conversation'))
     html = build_document(title, exchanges)
 
     project_dir = Path(args.project_dir).expanduser() if args.project_dir else get_project_root()
