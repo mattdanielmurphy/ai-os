@@ -46,7 +46,7 @@ def run_link_formatter():
     try:
         from link_formatter import enrich_file_links
         sample = enrich_file_links("[test.md](file:///path/test.md)")
-        if "http://127.0.0.1:8643/open_zed" in sample and "[⚡]" in sample:
+        if "http://127.0.0.1:8643/open_zed" in sample and "[✏️]" in sample:
             print("Link formatter check passed.")
             return True
         print("Link formatter returned unexpected output.")
@@ -59,7 +59,7 @@ def main():
     if not check_syntax():
         print("Syntax check failed. Fix errors before proceeding.")
         sys.exit(1)
-    
+
     if not check_docs():
         print("Documentation check failed.")
         sys.exit(1)

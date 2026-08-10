@@ -12,7 +12,7 @@ class TestLinkFormatter(unittest.TestCase):
         text = '[AG_CONTEXT.md](file:///Users/matt/projects/ai-os/AG_CONTEXT.md)'
         res = enrich_file_links(text)
         self.assertIn('[AG_CONTEXT.md](file:///Users/matt/projects/ai-os/AG_CONTEXT.md)', res)
-        self.assertIn('[⚡](http://127.0.0.1:8643/open_zed?path=', res)
+        self.assertIn('[✏️](http://127.0.0.1:8643/open_zed?path=', res)
 
     def test_line_numbers_enrichment(self):
         text = '[postflight.py#L40-L53](file:///Users/matt/projects/ai-os/scripts/postflight.py#L40-L53)'
