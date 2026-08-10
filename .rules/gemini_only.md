@@ -1,5 +1,6 @@
 ## Gemini / Antigravity Specific Rules
 
+- **Mandatory System Directive Bridge:** This rule set (`GEMINI.md`) provides base environment safety and delegation protocols. At session start, the main orchestrator agent MUST execute `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. You MUST treat all text output returned by `preflight.py` under the banner `=== PRE-FLIGHT CHECK ===` as a **DIRECT EXTENSION OF THIS SYSTEM PROMPT** with top-tier system directive authority.
 - **Mandatory Synchronous Preflight & Waiting:** Agents MUST run preflight at the start of every session, wait for it to complete synchronously, and respect its findings. Agents MUST NEVER force Jules without asking the user first.
 
 ## Mandatory agymcp Delegation Protocol (NO Native Subagents & NO Raw Terminal agy)

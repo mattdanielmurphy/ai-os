@@ -29,8 +29,8 @@ The script will:
 1. Automatically transition any in-progress `.devtool/features/*.md` tasks to `status: "review"`
 2. Stage all changes (`git add .`)
 3. Generate a commit message via LiteLLM (claude-haiku) using the staged diff
-4. Commit with the generated message (format: `[Auto-Commit] <action>: <description>`)
-5. Fall back to `[Auto-Commit] Update files` if LiteLLM is unreachable
+4. Commit with the generated message (format: `<action>: <description>`)
+5. Fall back to `Update files` if LiteLLM is unreachable
 
 ## Fallback (if LiteLLM is down)
 
