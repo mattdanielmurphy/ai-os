@@ -49,7 +49,10 @@ def is_transient_status_line(line: str) -> bool:
     s = line.strip()
     if not s:
         return False
-    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+have\s+(?:launched|requested|dispatched)|gemini\s+3\.1\s+pro|streaming\s+its\s+reasoning|actively\s+processing|completing\s+its\s+reasoning|finishing\s+its\s+detailed\s+architectural|will\s+agy|delegated\s+the\s+task\s+to|i\'ll\s+fetch\s+the\s+full\s+output|i\'ll\s+present\s+its\s+complete|i\s+will\s+retrieve\s+and\s+display)', s, re.IGNORECASE):
+    # Filter out single-word prompts, status noise, and transient traces
+    if re.match(r'^(?:continue|status|ok|yes|no|done|thanks|please\s+proceed)$', s, re.IGNORECASE):
+        return True
+    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+have\s+(?:launched|requested|dispatched)|gemini\s+3\.1\s+pro|streaming\s+its\s+reasoning|actively\s+processing|completing\s+its\s+reasoning|finishing\s+its\s+detailed\s+architectural|will\s+agy|delegated\s+the\s+task\s+to|i\'ll\s+fetch\s+the\s+full\s+output|i\'ll\s+present\s+its\s+complete|i\s+will\s+retrieve\s+and\s+display|traceback|error|exception|stack\s+trace)', s, re.IGNORECASE):
         return True
     if re.match(r'^\s*\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
         return True
@@ -143,7 +146,12 @@ def extract_user_input(content: str):
         prompt = '\n\n---\n\n'.join(formatted_parts).strip()
     else:
         prompt = '\n\n'.join(formatted_parts).strip()
-    return prompt, time
+    # Simple title extraction: first 60 chars of prompt, remove markdown/directives
+    title = ""
+    if req_prompt:
+        first_line = req_prompt.split('\n')[0].strip()
+        title = re.sub(r'[\[\]\(\)\*`#]', '', first_line)[:60].strip()
+    return prompt, time, title
 
 
 def parse_exchanges(transcript_path: Path) -> list:
@@ -192,10 +200,11 @@ def parse_exchanges(transcript_path: Path) -> list:
 
             if t == 'USER_INPUT':
                 if pending_user is not None: flush()
-                prompt, ts = extract_user_input(obj.get('content', ''))
+                prompt, ts, title = extract_user_input(obj.get('content', ''))
                 if prompt:
                     pending_user = prompt
                     pending_time = ts
+                    pending_title = title
                     if created:
                         try: pending_date = datetime.fromisoformat(created.strip()).strftime("%Y-%m-%d")
                         except: pass
@@ -253,40 +262,43 @@ def render_paragraphs(text: str) -> str:
         if seg[0] == 'code':
             out.append(render_code_folded(seg[1], seg[2]))
         else:
-            # text segment: process paragraphs
-            for para in seg[1].split('\n\n'):
-                para = para.strip()
-                if not para: continue
-                # Inline parsing
-                para_html = parse_inline_markdown(para)
-                out.append(f'<p>{para_html}</p>')
+            # text segment: process paragraphs and headings
+            lines = seg[1].splitlines()
+            current_p = []
+            def flush_p():
+                if current_p:
+                    out.append(f'<p>{parse_inline_markdown(" ".join(current_p))}</p>')
+                    current_p.clear()
+
+            for line in lines:
+                stripped = line.strip()
+                if not stripped:
+                    flush_p()
+                    continue
+                # Heading detection
+                if stripped.startswith('#'):
+                    flush_p()
+                    level = min(len(re.match(r'#+', stripped).group(0)), 6)
+                    heading_text = stripped[level:].strip()
+                    out.append(f'<h{level}>{parse_inline_markdown(heading_text)}</h{level}>')
+                else:
+                    current_p.append(stripped)
+            flush_p()
     return '\n'.join(out)
 
 
 def summarize_agent(text: str, max_chars: int = 500) -> tuple:
-    """Return (summary_text, is_truncated). Heuristic: first non-empty sentence(s)."""
+    """Return (summary_text, is_truncated). Distillation engine: clean text only."""
     if not text:
         return '', False
-    stripped = text.strip()
-    # Try to grab a lead sentence, dropping code fences
-    plain = re.sub(r'```.*?```', ' ', stripped, flags=re.DOTALL)
-    plain = re.sub(r'\s+', ' ', plain).strip()
-    # Take first meaningful sentence up to max_chars
-    if len(plain) <= max_chars:
-        return stripped, False
-    # Find a sentence boundary near the cap
-    cut = plain[max_chars // 2:max_chars]
-    boundary = cut.rfind('. ')
-    if boundary == -1:
-        boundary = cut.rfind(' ')
-    idx = max_chars // 2 + (boundary + 1 if boundary != -1 else max_chars // 2)
-    summary = plain[:idx].strip()
-    # keep at sentence boundary
-    if '.' not in summary[-3:]:
-        last = summary.rfind('. ')
-        if last != -1:
-            summary = summary[:last + 1]
-    return summary, True
+    # Distillation: Strip code blocks, raw attachments, and CLI output
+    clean = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    clean = re.sub(r'\[.*?\]\(.*?\)', '', clean) # Links
+    clean = re.sub(r'\n+', ' ', clean).strip()
+    
+    if len(clean) <= max_chars:
+        return clean, False
+    return (clean[:max_chars] + "..."), True
 
 
 def agent_to_html(text: str) -> str:
@@ -344,42 +356,42 @@ def exchange_html(ex) -> str:
   </div>
 </div>"""
 
-
 PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Discussions</title>
+<title>{project_name} Discussions</title>
 <style>
   :root {{
     --bg:#0f1115; --panel:#161a22; --panel2:#1b202b;
     --text:#e6e8ee; --muted:#9aa3b5;
     --user:#2b2350; --user-border:#6d56d9;
     --agent:#1c2130; --agent-border:#4a4a5e;
-    --accent:#8b7cf6; --code-bg:#0a0c12;
+    --accent: {accent}; --code-bg:#0a0c12;
     --sidebar-w: 320px;
   }}
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {{ width: 8px; height: 8px; }}
+  ::-webkit-scrollbar-track {{ background: transparent; }}
+  ::-webkit-scrollbar-thumb {{ background: rgba(255,255,255,0.2); border-radius: 4px; }}
+  ::-webkit-scrollbar-thumb:hover {{ background: var(--accent); }}
+
   * {{ box-sizing:border-box; }}
   body {{ margin:0; background:var(--bg); color:var(--text);
          font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
          display: flex; height: 100vh; overflow: hidden; }}
   
   #sidebar {{ width: var(--sidebar-w); background: var(--panel); border-right: 1px solid #262b38;
-             overflow-y: auto; display: flex; flex-direction: column; }}
-  #sidebar-header {{ padding: 20px; font-weight: bold; border-bottom: 1px solid #262b38; }}
-  .thread-item {{ padding: 15px 20px; border-bottom: 1px solid #262b38; cursor: pointer; }}
-  .thread-item:hover {{ background: var(--panel2); }}
-  .thread-item.active {{ border-left: 4px solid var(--accent); background: var(--panel2); }}
-  .thread-item .title {{ font-weight: 500; margin-bottom: 4px; }}
-  .thread-item .meta {{ font-size: 11px; color: var(--muted); }}
-  
-  #detail-pane {{ flex: 1; overflow-y: auto; display: flex; flex-direction: column; }}
+             display: flex; flex-direction: column; }}
   .toolbar {{ padding: 10px 32px; display:flex; gap:14px; align-items:center;
-              border-bottom:1px solid #262b38; background:var(--panel); position:sticky; top:0;
+              border-bottom:1px solid #262b38; background:var(--panel); position:sticky; top:0; z-index: 100;
               font-size:12px; color:var(--muted); }}
+  #sidebar-header {{ padding: 20px; font-weight: bold; border-bottom: 1px solid #262b38; 
+                     display: flex; justify-content: space-between; align-items: center;
+                     position: sticky; top: 0; background: var(--panel); z-index: 100; }}
   
-  main {{ max-width:860px; margin:0 auto; padding:24px 32px 80px; width: 100%; }}
+  main {{ flex: 1; overflow-y: auto; max-width:860px; margin:0 auto; padding:24px 32px 80px; width: 100%; }}
   
   .exchange {{ margin-bottom:20px; }}
   .msg {{ border-radius:14px; padding:14px 18px; position:relative; }}
@@ -398,12 +410,12 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
               font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }}
   details.code-fold {{ margin:6px 0; }}
   details.code-fold summary {{ cursor:pointer; color:var(--accent); font-size:12px;
-                               user-select:none; }}
+                                user-select:none; }}
   details.full-reply summary {{ cursor:pointer; color:var(--accent); font-size:12px;
                                 margin:10px 0 4px; user-select:none; }}
   .lead b {{ color:#cfc7ff; }}
 
-  a {{ color:#a99bff; text-decoration:none; }}
+  a {{ color:var(--accent); text-decoration:none; }}
   a:hover {{ text-decoration:underline; }}
   .date-header {{ text-align:center; margin:40px 0 20px; font-weight:600; color:var(--muted);
                   font-size:13px; letter-spacing:0.05em; text-transform:uppercase;
@@ -412,8 +424,13 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 <aside id="sidebar">
-  <div id="sidebar-header">Discussions</div>
-  <div id="thread-list"></div>
+  <div id="sidebar-header">
+    {project_name}
+    <div class="links">
+        <a href="{zed_url}">Zed</a> · <a href="{finder_url}">Finder</a>
+    </div>
+  </div>
+  <div id="thread-list" style="overflow-y:auto; flex: 1;"></div>
 </aside>
 <section id="detail-pane">
   <div class="toolbar">
@@ -441,7 +458,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     const div = document.createElement('div');
     div.className = 'thread-item';
     div.id = 'item-' + id;
-    div.innerHTML = `<div class="title">${{t.title}}</div><div class="meta">${{t.date}} · ${{t.count}} exchanges · ${{t.source}}</div>`;
+    div.innerHTML = `<div class=\"title\">${{t.title}}</div><div class=\"meta\">${{t.date}} · ${{t.count}} exchanges · ${{t.source}}</div>`;
     div.onclick = () => renderThread(id);
     list.appendChild(div);
   }});
@@ -456,19 +473,15 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 </script>
 </body>
 </html>
+  document.body.classList.add('folded');
+
+  if (Object.keys(threads).length > 0) {{
+      renderThread(Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp)[0]);
+  }}
+</script>
+</body>
+</html>
 """
-
-def build_document(threads: dict) -> str:
-    return PAGE_TEMPLATE.format(threads_json=json.dumps(threads))
-
-    
-    now = datetime.now().strftime("%B %d, %Y %I:%M%p").replace(" 0", " ").lower()
-    return PAGE_TEMPLATE.format(
-        title=title,
-        exchange_count=len(exchanges),
-        generated=now,
-        body='\n'.join(body),
-    )
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────
@@ -521,6 +534,21 @@ def parse_hermes_session(session_id: str) -> list:
     return exchanges
 
 
+def build_document(threads: dict, project_name: str, project_root: Path) -> str:
+    import hashlib
+    themes = ['#a855f7', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e', '#6366f1']
+    color_idx = int(hashlib.md5(str(project_root).encode()).hexdigest(), 16) % len(themes)
+    accent_color = themes[color_idx]
+
+    return PAGE_TEMPLATE.format(
+        threads_json=json.dumps(threads),
+        project_name=project_name,
+        accent=accent_color,
+        zed_url=f"zed://file/{project_root}",
+        finder_url=f"file://{project_root}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate a self-contained Discussions.html from a transcript.")
     parser.add_argument('transcript', nargs='?', help='Path to transcript.jsonl')
@@ -544,8 +572,10 @@ def main():
     if not exchanges:
         raise SystemExit("No exchanges parsed.")
 
-    # Assume 'threads' is a dict: {id: {'title': str, 'date': str, 'timestamp': float, 'count': int, 'source': str, 'html': str}}
-    title = args.title or (args.hermes_session_id if args.hermes_session_id else (transcript_path.parent.parent.name if transcript_path and transcript_path.parent.parent.name != 'logs' else 'Conversation'))
+    # Extract main title from first exchange
+    first_title = exchanges[0].get('title') if exchanges else None
+    title = args.title or first_title or (transcript_path.parent.parent.name if transcript_path and transcript_path.parent.parent.name != 'logs' else 'Conversation')
+    
     threads = {
         'default': {
             'title': title,
@@ -557,9 +587,9 @@ def main():
         }
     }
     
-    html = build_document(threads)
-
     project_dir = Path(args.project_dir).expanduser() if args.project_dir else get_project_root()
+    html = build_document(threads, project_dir.name, project_dir)
+
     if args.output:
         out = Path(args.output).expanduser()
     else:
