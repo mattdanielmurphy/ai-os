@@ -62,30 +62,31 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 7200) -> tuple[dict, d
 
 
 def render(conv_id: str, brain_dir: Path) -> bool:
-    """Run gen_conversation_md.py for a conversation. Returns True on success."""
-    # Attempt in-process import
+    """Run gen_conversation_md.py AND discussions_html.py for a conversation."""
+    app_data_dir = brain_dir.parent.parent.parent
+    
+    # 1. Render Markdown thread
     try:
         sys.path.append(str(SCRIPTS_DIR))
         from gen_conversation_md import generate
-        app_data_dir = brain_dir.parent
         generate(conv_id, "Conversation", app_data_dir=app_data_dir)
+    except Exception as e:
+        print(f"gen_conversation_md failed: {e}")
+        return False
+        
+    # 2. Render Discussions.html
+    try:
+        from discussions_html import build_document, parse_exchanges
+        transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
+        if transcript.exists():
+            exchanges = parse_exchanges(transcript)
+            html = build_document(f"Conversation {conv_id[:8]}", exchanges)
+            # Save at project root
+            out_file = SCRIPTS_DIR.parent / 'Discussions.html'
+            out_file.write_text(html)
         return True
     except Exception as e:
-        print(f"In-process render failed: {e}. Falling back to subprocess.")
-
-    # Fallback to subprocess
-    try:
-        subprocess.run(
-            [sys.executable, str(SCRIPTS_DIR / "gen_conversation_md.py"), conv_id, "--app-data-dir", str(brain_dir.parent.parent.parent)],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Error re-rendering {conv_id}: {e}")
-        if e.stderr:
-            print(f"  stderr: {e.stderr.strip()[:200]}")
+        print(f"discussions_html failed: {e}")
         return False
 
 
