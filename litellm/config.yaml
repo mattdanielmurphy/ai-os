@@ -43,8 +43,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *flash_prices
       allow_fallbacks: true
@@ -55,8 +59,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *flash_prices
       allow_fallbacks: true
@@ -67,8 +75,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *flash_prices
       allow_fallbacks: true
@@ -79,8 +91,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *flash_prices
       allow_fallbacks: true
@@ -91,8 +107,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-pro
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *pro_prices
       allow_fallbacks: true
@@ -103,8 +123,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-pro
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *pro_prices
       allow_fallbacks: true
@@ -115,8 +139,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-pro
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *pro_prices
       allow_fallbacks: true
@@ -381,8 +409,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
     provider:
-      sort: throughput
+      order:
+        - DeepSeek
       max_price:
         <<: *flash_prices
       allow_fallbacks: true
