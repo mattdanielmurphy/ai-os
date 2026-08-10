@@ -303,7 +303,8 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
     )
 
     conv_id = None
-    streamed_response = False
+    has_emitted_any_tool = False
+    streamed_final_content = False
 
     try:
         loop = asyncio.get_event_loop()
@@ -329,25 +330,48 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                 conv_id = event.get("conversation_id")
                 if conv_id:
                     _save_session(session_key, conv_id)
-                    logger.info(f"[agy-session] init: saved {session_key} -> {conv_id}")
             elif ev == "step_update":
                 s = event.get("step_update", {})
                 s_type = s.get("step_type")
-                if s_type == "agent_response" and s.get("text_delta"):
+                state = s.get("state")
+
+                if s_type == "tool" and state == "ACTIVE":
+                    has_emitted_any_tool = True
+                    tool_name = s.get("tool_name") or "tool"
+                    tool_info = s.get("tool_info") or {}
+                    tool_call_id = f"call_{uuid.uuid4().hex[:8]}"
+
+                    tc_payload = {
+                        "id": request_id,
+                        "object": "chat.completion.chunk",
+                        "created": created_time,
+                        "model": model_name,
+                        "choices": [{
+                            "index": 0,
+                            "delta": {
+                                "tool_calls": [{
+                                    "id": tool_call_id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool_name,
+                                        "arguments": json.dumps(tool_info) if isinstance(tool_info, dict) else str(tool_info)
+                                    }
+                                }]
+                            },
+                            "finish_reason": None
+                        }]
+                    }
+                    yield f"data: {json.dumps(tc_payload)}\n\n"
+
+                elif s_type == "agent_response" and s.get("text_delta"):
                     text_delta = s["text_delta"]
-                    # If this is the very first text chunk in the response, check formatting
-                    if not streamed_response:
-                        # Ensure headers or plain text start on a new line if not already
-                        if text_delta.lstrip().startswith("#") and not text_delta.startswith("\n"):
-                            text_delta = "\n" + text_delta
-                        elif not text_delta.startswith("\n"):
-                            text_delta = "\n\n" + text_delta
-                        streamed_response = True
-                    
-                    payload = {"id": request_id, "object": "chat.completion.chunk",
-                               "created": created_time, "model": model_name,
-                               "choices": [{"index": 0, "delta": {"content": text_delta},
-                                            "finish_reason": None}]}
+                    delta = {"reasoning_content": text_delta}
+
+                    payload = {
+                        "id": request_id, "object": "chat.completion.chunk",
+                        "created": created_time, "model": model_name,
+                        "choices": [{"index": 0, "delta": delta, "finish_reason": None}]
+                    }
                     yield f"data: {json.dumps(payload)}\n\n"
 
             elif ev == "result":
@@ -355,34 +379,36 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                     conv_id = event.get("conversation_id")
                     if conv_id:
                         _save_session(session_key, conv_id)
-                _log_usage(event.get("usage") or {}, session_key)
-                if streamed_response:
-                    continue
+                
+                # Always process the final result to emit content
                 import ast
-                content = ""
                 raw = event.get("result")
-                if raw:
-                    if isinstance(raw, str):
-                        try:
-                            result_dict = ast.literal_eval(raw)
-                            if isinstance(result_dict, dict):
-                                content = result_dict.get("response", "")
-                        except (ValueError, SyntaxError):
-                            content = raw
-                    elif isinstance(raw, dict):
-                        content = raw.get("response", "")
+                content = ""
+                if isinstance(raw, dict):
+                    content = raw.get("response", "")
+                elif isinstance(raw, str):
+                    try:
+                        res_dict = ast.literal_eval(raw)
+                        if isinstance(res_dict, dict):
+                            content = res_dict.get("response", "")
+                    except Exception:
+                        content = raw
                 if content:
-                    payload = {"id": request_id, "object": "chat.completion.chunk",
-                               "created": created_time, "model": model_name,
-                               "choices": [{"index": 0, "delta": {"content": content},
-                                            "finish_reason": None}]}
+                    if conv_id:
+                        content = content + f"\n\n---\n[`agy --conversation {conv_id}`](file:///Users/matt/.gemini/antigravity-cli/brain/{conv_id}/thread.md)"
+                    payload = {
+                        "id": request_id, "object": "chat.completion.chunk",
+                        "created": created_time, "model": model_name,
+                        "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}]
+                    }
                     yield f"data: {json.dumps(payload)}\n\n"
+
+                _log_usage(event.get("usage") or {}, session_key)
 
         await loop.run_in_executor(_executor, proc.wait)
 
         if conv_id:
             _save_session(session_key, conv_id)
-            logger.info(f"[agy-session] Saved session {session_key} -> {conv_id}")
 
         payload = {"id": request_id, "object": "chat.completion.chunk",
                    "created": created_time, "model": model_name,
