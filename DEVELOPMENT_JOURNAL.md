@@ -1,6 +1,9 @@
 # Development Journal
 
 ## 2026-08-10
+- Re-architected Discussions.html into a Milestone & Suggestion tracker focused on user requests, context summaries, and decision resolutions.
+- Fixed macOS Finder open link handler and styled clean dark-mode typography.
+- Integrated automatic Discussions.html generation into auto_commit.py post-flight pipeline.
 - **Production-Ready Discussions.html Generator & Watcher:** Completed `scripts/discussions_html.py` with inline markdown formatting, code folding, agent reply summarization heuristics, and project auto-detection. Integrated HTML rendering into `scripts/watch_transcripts.py` alongside `thread.md`. [[log]](agent-logs/2026-08-10_00-48_discussions-html-production-ready.md)
 
 ## 2026-08-09
