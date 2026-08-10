@@ -293,6 +293,26 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
 
     logger.info(f"agy stream cmd: {' '.join(cmd[:4])}...")
 
+    sessions = _load_sessions()
+    conv_id = sessions.get(session_key)
+    badge_emitted = False
+
+    if conv_id:
+        badge_text = f"agy --conversation {conv_id} --dangerously-skip-permissions\n\n"
+        badge_payload = {
+            "id": request_id,
+            "object": "chat.completion.chunk",
+            "created": created_time,
+            "model": model_name,
+            "choices": [{
+                "index": 0,
+                "delta": {"reasoning_content": badge_text},
+                "finish_reason": None
+            }]
+        }
+        yield f"data: {json.dumps(badge_payload)}\n\n"
+        badge_emitted = True
+
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.DEVNULL,
@@ -302,7 +322,6 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
         bufsize=1,
     )
 
-    conv_id = None
     has_emitted_any_tool = False
     streamed_response = False
     streamed_final_content = False
@@ -353,20 +372,21 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                 conv_id = event.get("conversation_id")
                 if conv_id:
                     _save_session(session_key, conv_id)
-                    # Emit reasoning_content badge RIGHT AWAY
-                    badge_text = f"agy --conversation {conv_id} --dangerously-skip-permissions\n\n"
-                    badge_payload = {
-                        "id": request_id,
-                        "object": "chat.completion.chunk",
-                        "created": created_time,
-                        "model": model_name,
-                        "choices": [{
-                            "index": 0,
-                            "delta": {"reasoning_content": badge_text},
-                            "finish_reason": None
-                        }]
-                    }
-                    yield f"data: {json.dumps(badge_payload)}\n\n"
+                    if not badge_emitted:
+                        badge_text = f"agy --conversation {conv_id} --dangerously-skip-permissions\n\n"
+                        badge_payload = {
+                            "id": request_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_time,
+                            "model": model_name,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {"reasoning_content": badge_text},
+                                "finish_reason": None
+                            }]
+                        }
+                        yield f"data: {json.dumps(badge_payload)}\n\n"
+                        badge_emitted = True
             elif ev == "step_update":
                 s = event.get("step_update", {})
                 s_type = s.get("step_type")
