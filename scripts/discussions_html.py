@@ -147,24 +147,21 @@ def extract_user_input(content: str):
 
 
 def parse_exchanges(transcript_path: Path) -> list:
-    """Parse transcript.jsonl into a list of {user, time, agent, agent_time} exchanges.
-
-    Agent content comes from PLANNER_RESPONSE content (no dependency on history/turn_N.md).
-    """
+    """Parse transcript.jsonl into a list of {user, time, agent, agent_time, date_iso} exchanges."""
     exchanges = []
     pending_user = None
     pending_time = ''
     agent_content = []
     agent_time = ''
+    pending_date = datetime.now().strftime("%Y-%m-%d")
 
     if not transcript_path.exists():
         return exchanges
 
     def flush():
-        nonlocal pending_user, pending_time, agent_content, agent_time
+        nonlocal pending_user, pending_time, agent_content, agent_time, pending_date
         if pending_user is not None:
             text = '\n\n'.join(c for c in agent_content if c.strip()).strip()
-            # Filter transient lines: keep last transient if nothing else, else drop transients
             lines = text.splitlines()
             non_trans = [l for l in lines if not is_transient_status_line(l)]
             if non_trans:
@@ -176,6 +173,7 @@ def parse_exchanges(transcript_path: Path) -> list:
                 'time': pending_time,
                 'agent': text,
                 'agent_time': agent_time,
+                'date_iso': pending_date
             })
         pending_user = None
         pending_time = ''
@@ -185,30 +183,29 @@ def parse_exchanges(transcript_path: Path) -> list:
     with open(transcript_path) as f:
         for raw in f:
             raw = raw.strip()
-            if not raw:
-                continue
+            if not raw: continue
             try:
                 obj = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
+            except json.JSONDecodeError: continue
             t = obj.get('type', '')
+            created = obj.get('created_at') or obj.get('timestamp') or ''
 
             if t == 'USER_INPUT':
-                if pending_user is not None:
-                    flush()
+                if pending_user is not None: flush()
                 prompt, ts = extract_user_input(obj.get('content', ''))
                 if prompt:
                     pending_user = prompt
                     pending_time = ts
+                    if created:
+                        try: pending_date = datetime.fromisoformat(created.strip()).strftime("%Y-%m-%d")
+                        except: pass
             elif t == 'PLANNER_RESPONSE':
-                created = obj.get('created_at') or obj.get('timestamp') or ''
                 if created and not agent_time:
                     agent_time = fmt_time(created)
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str):
                     c = content.strip()
-                    if c:
-                        agent_content.append(c)
+                    if c: agent_content.append(c)
 
     flush()
     return exchanges
@@ -400,6 +397,9 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   body.folded details.code-fold .code {{ display:none; }}
   a {{ color:#a99bff; text-decoration:none; }}
   a:hover {{ text-decoration:underline; }}
+  .date-header {{ text-align:center; margin:40px 0 20px; font-weight:600; color:var(--muted);
+                  font-size:13px; letter-spacing:0.05em; text-transform:uppercase;
+                  border-top:1px solid #262b38; padding-top:20px; }}
 </style>
 </head>
 <body>
@@ -426,13 +426,22 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 
 
 def build_document(title: str, exchanges: list) -> str:
-    body = '\n'.join(exchange_html(ex) for ex in exchanges)
+    body = []
+    last_date = None
+    for ex in exchanges:
+        if ex['date_iso'] != last_date:
+            last_date = ex['date_iso']
+            dt = datetime.strptime(last_date, "%Y-%m-%d")
+            header_date = dt.strftime("%B %d, %Y")
+            body.append(f'<div class="date-header">{header_date}</div>')
+        body.append(exchange_html(ex))
+    
     now = datetime.now().strftime("%B %d, %Y %I:%M%p").replace(" 0", " ").lower()
     return PAGE_TEMPLATE.format(
         title=title,
         exchange_count=len(exchanges),
         generated=now,
-        body=body,
+        body='\n'.join(body),
     )
 
 
