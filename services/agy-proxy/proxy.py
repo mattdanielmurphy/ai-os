@@ -330,6 +330,20 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                 conv_id = event.get("conversation_id")
                 if conv_id:
                     _save_session(session_key, conv_id)
+                    # Emit reasoning_content badge RIGHT AWAY
+                    badge_text = f"⌛ **`agy --conversation {conv_id}`**\n\n"
+                    badge_payload = {
+                        "id": request_id,
+                        "object": "chat.completion.chunk",
+                        "created": created_time,
+                        "model": model_name,
+                        "choices": [{
+                            "index": 0,
+                            "delta": {"reasoning_content": badge_text},
+                            "finish_reason": None
+                        }]
+                    }
+                    yield f"data: {json.dumps(badge_payload)}\n\n"
             elif ev == "step_update":
                 s = event.get("step_update", {})
                 s_type = s.get("step_type")
@@ -394,8 +408,6 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                     except Exception:
                         content = raw
                 if content:
-                    if conv_id:
-                        content = content + f"\n\n---\n[`agy --conversation {conv_id}`](file:///Users/matt/.gemini/antigravity-cli/brain/{conv_id}/thread.md)"
                     payload = {
                         "id": request_id, "object": "chat.completion.chunk",
                         "created": created_time, "model": model_name,
