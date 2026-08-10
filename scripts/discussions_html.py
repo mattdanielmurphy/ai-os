@@ -471,13 +471,6 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
       renderThread(Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp)[0]);
   }}
 </script>
-</body>
-</html>
-  document.body.classList.add('folded');
-
-  if (Object.keys(threads).length > 0) {{
-      renderThread(Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp)[0]);
-  }}
 </script>
 </body>
 </html>
