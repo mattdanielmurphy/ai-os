@@ -369,7 +369,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     --user: #1b2230; --user-border: #2e384e;
     --agent:#1c2130; --agent-border:#4a4a5e;
     --accent: {accent}; --code-bg:#0a0c12;
-    --sidebar-w: 320px;
+    --sidebar-w: 380px;
   }}
   /* Custom Scrollbar */
   ::-webkit-scrollbar {{ width: 8px; height: 8px; }}
@@ -383,13 +383,12 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
          display: flex; height: 100vh; overflow: hidden; }}
   
   #sidebar {{ width: var(--sidebar-w); background: var(--panel); border-right: 1px solid #262b38;
-             display: flex; flex-direction: column; }}
-  .toolbar {{ padding: 10px 32px; display:flex; gap:14px; align-items:center;
+             display: flex; flex-direction: column; overflow: hidden; }}
+  .toolbar {{ padding: 10px 20px; display:flex; gap:14px; align-items:center;
               border-bottom:1px solid #262b38; background:var(--panel); position:sticky; top:0; z-index: 100;
               font-size:12px; color:var(--muted); }}
   #sidebar-header {{ padding: 20px; font-weight: bold; border-bottom: 1px solid #262b38; 
-                     display: flex; justify-content: space-between; align-items: center;
-                     position: sticky; top: 0; background: var(--panel); z-index: 100; }}
+                     display: flex; justify-content: space-between; align-items: center; }}
   
   #detail-pane {{ flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); }}
   #thread-content {{ flex: 1; overflow-y: auto; padding: 24px 32px 80px; width: 100%; max-width: 860px; margin: 0 auto; }}
@@ -428,7 +427,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   <div id="sidebar-header">
     {project_name}
     <div class="links">
-        <a href="{zed_url}">Zed</a> · <a href="{finder_url}">Finder</a>
+        <a href="{zed_url}">Zed</a> · <a href="javascript:void(0)" onclick="openFinder('{finder_url}')" title="Click to open in Finder">Finder</a>
     </div>
   </div>
   <div id="thread-list" style="overflow-y:auto; flex: 1;"></div>
@@ -447,11 +446,30 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   const list = document.getElementById('thread-list');
   const content = document.getElementById('thread-content');
   
+  function openFinder(url) {{
+    // macOS file URL handler trick: use a hidden iframe to prevent browser navigation
+    const iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    setTimeout(() => document.body.removeChild(iframe), 1000);
+  }}
+
   function renderThread(id) {{
     const thread = threads[id];
     document.querySelectorAll('.thread-item').forEach(el => el.classList.remove('active'));
     document.getElementById('item-' + id).classList.add('active');
-    content.innerHTML = thread.html;
+    
+    // Milestone View Layout
+    content.innerHTML = `
+      <div style="margin-bottom:30px; padding:20px; background:var(--panel2); border-radius:12px;">
+        <h2 style="margin-top:0;">${{thread.title}}</h2>
+        <p><strong>Context & Discussion Summary:</strong><br>${{thread.summary || '<i>No summary available.</i>'}}</p>
+        <p><strong>Agent Actions:</strong><br>${{thread.actions || '<i>No specific actions logged.</i>'}}</p>
+        <a href="thread.md" style="display:inline-block; margin-top:10px; padding:8px 16px; background:var(--accent); color:var(--bg); border-radius:6px; font-weight:600;">Open Full Raw Thread</a>
+      </div>
+      ${{thread.html}}
+    `;
   }}
 
   Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp).forEach(id => {{
@@ -459,14 +477,10 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     const div = document.createElement('div');
     div.className = 'thread-item';
     div.id = 'item-' + id;
-    div.innerHTML = `<div class=\"title\">${{t.title}}</div><div class=\"meta\">${{t.date}} · ${{t.count}} exchanges · ${{t.source}}</div>`;
+    div.innerHTML = `<div class="title">${{t.title}}</div><div class="meta">${{t.date}} · ${{t.source}}</div>`;
     div.onclick = () => renderThread(id);
     list.appendChild(div);
   }});
-
-  const t = document.getElementById('foldToggle');
-  t.addEventListener('change', () => document.body.classList.toggle('folded', t.checked));
-  document.body.classList.add('folded');
 
   if (Object.keys(threads).length > 0) {{
       renderThread(Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp)[0]);
