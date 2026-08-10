@@ -1,5 +1,9 @@
 # Web Design & Anti-Slop Policy
 
+## Mandatory Proactive Generator Rule
+- **Default Behavior:** Whenever starting a new web project, creating an HTML artifact, or implementing a new UI surface, agents MUST run `python3 /Users/matt/projects/ai-os/scripts/generate_design_brief.py` FIRST to receive a randomized, visually harmonized design brief.
+- **Exception:** Only skip running the design brief generator if the user explicitly specifies a specific brand palette or visual style (e.g. "make it look like Stripe" or "use parchment theme").
+
 ## Permanently Banned Aesthetics ("AI Slop")
 1. **Aggressive Tech Gradients:** Banned. Do NOT use purple-to-pink, blue-to-violet, or neon gloss gradients on text, buttons, hero elements, or card borders.
 2. **Generic Tech Hues:** Avoid default unthinking indigo/violet/purple accents unless explicitly specified by a brand design system.
