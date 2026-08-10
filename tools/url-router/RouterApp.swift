@@ -15,19 +15,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             exit(0)
         }
 
-        // STRICT MATCH: Only intercept requests explicitly targeted to our loopback action server port (8643)
-        // AND containing known action endpoints (e.g. open_zed, set_delegation).
         let isLocalAction = urlString.hasPrefix("http://127.0.0.1:8643/") || urlString.hasPrefix("http://localhost:8643/")
 
         if isLocalAction {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-            task.arguments = ["-s", urlString]
-            try? task.run()
-            task.waitUntilExit()
+            // Parse query parameters directly inside the Swift Router
+            if let components = URLComponents(string: urlString),
+               let queryItems = components.queryItems {
+                let action = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                
+                if action == "open_zed", let rawPath = queryItems.first(where: { $0.name == "path" })?.value {
+                    let task = Process()
+                    task.executableURL = URL(fileURLWithPath: "/usr/local/bin/zed")
+                    if !FileManager.default.fileExists(atPath: "/usr/local/bin/zed") {
+                        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                        task.arguments = ["-a", "Zed", rawPath]
+                    } else {
+                        task.arguments = [rawPath]
+                    }
+                    try? task.run()
+                    task.waitUntilExit()
+                }
+            }
             exit(0)
         } else {
-            // Unmatched external URL -> Pass along directly to Chrome without intercepting
             var targetURLString = urlString
             if !targetURLString.lowercased().hasPrefix("http://") && !targetURLString.lowercased().hasPrefix("https://") {
                 targetURLString = "https://" + targetURLString
