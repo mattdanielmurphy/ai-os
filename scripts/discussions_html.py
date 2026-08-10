@@ -350,7 +350,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
+<title>Discussions</title>
 <style>
   :root {{
     --bg:#0f1115; --panel:#161a22; --panel2:#1b202b;
@@ -358,18 +358,29 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     --user:#2b2350; --user-border:#6d56d9;
     --agent:#1c2130; --agent-border:#4a4a5e;
     --accent:#8b7cf6; --code-bg:#0a0c12;
+    --sidebar-w: 320px;
   }}
   * {{ box-sizing:border-box; }}
   body {{ margin:0; background:var(--bg); color:var(--text);
-         font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }}
-  header {{ padding:28px 32px 16px; border-bottom:1px solid #262b38; }}
-  header h1 {{ margin:0 0 4px; font-size:20px; }}
-  header .meta {{ color:var(--muted); font-size:12px; }}
-  .toolbar {{ padding:10px 32px; display:flex; gap:14px; align-items:center;
+         font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         display: flex; height: 100vh; overflow: hidden; }}
+  
+  #sidebar {{ width: var(--sidebar-w); background: var(--panel); border-right: 1px solid #262b38;
+             overflow-y: auto; display: flex; flex-direction: column; }}
+  #sidebar-header {{ padding: 20px; font-weight: bold; border-bottom: 1px solid #262b38; }}
+  .thread-item {{ padding: 15px 20px; border-bottom: 1px solid #262b38; cursor: pointer; }}
+  .thread-item:hover {{ background: var(--panel2); }}
+  .thread-item.active {{ border-left: 4px solid var(--accent); background: var(--panel2); }}
+  .thread-item .title {{ font-weight: 500; margin-bottom: 4px; }}
+  .thread-item .meta {{ font-size: 11px; color: var(--muted); }}
+  
+  #detail-pane {{ flex: 1; overflow-y: auto; display: flex; flex-direction: column; }}
+  .toolbar {{ padding: 10px 32px; display:flex; gap:14px; align-items:center;
               border-bottom:1px solid #262b38; background:var(--panel); position:sticky; top:0;
               font-size:12px; color:var(--muted); }}
-  .toolbar label {{ display:flex; align-items:center; gap:6px; cursor:pointer; }}
-  main {{ max-width:860px; margin:0 auto; padding:24px 32px 80px; }}
+  
+  main {{ max-width:860px; margin:0 auto; padding:24px 32px 80px; width: 100%; }}
+  
   .exchange {{ margin-bottom:20px; }}
   .msg {{ border-radius:14px; padding:14px 18px; position:relative; }}
   .msg.user {{ background:var(--user); border:1.5px solid var(--user-border);
@@ -391,7 +402,6 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   details.full-reply summary {{ cursor:pointer; color:var(--accent); font-size:12px;
                                 margin:10px 0 4px; user-select:none; }}
   .lead b {{ color:#cfc7ff; }}
-  /* "Summary mode" — hide full replies and code bodies when the toolbar toggle is on */
   body.folded details.full-reply summary {{ display:block; }}
   body.folded details.full-reply .full {{ display:none; }}
   body.folded details.code-fold .code {{ display:none; }}
@@ -403,38 +413,56 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<header>
-  <h1>{title}</h1>
-  <div class="meta">{exchange_count} exchanges · generated {generated}</div>
-</header>
-<div class="toolbar">
-  <label><input type="checkbox" id="foldToggle" checked> Fold long replies &amp; code</label>
-</div>
-<main>
-{body}
-</main>
+<aside id="sidebar">
+  <div id="sidebar-header">Discussions</div>
+  <div id="thread-list"></div>
+</aside>
+<section id="detail-pane">
+  <div class="toolbar">
+    <label><input type="checkbox" id="foldToggle" checked> Fold long replies &amp; code</label>
+  </div>
+  <main id="thread-content"></main>
+</section>
+<script id="threads-data" type="application/json">
+{threads_json}
+</script>
 <script>
+  const threads = JSON.parse(document.getElementById('threads-data').textContent);
+  const list = document.getElementById('thread-list');
+  const content = document.getElementById('thread-content');
+  
+  function renderThread(id) {{
+    const thread = threads[id];
+    document.querySelectorAll('.thread-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('item-' + id).classList.add('active');
+    content.innerHTML = thread.html;
+  }}
+
+  Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp).forEach(id => {{
+    const t = threads[id];
+    const div = document.createElement('div');
+    div.className = 'thread-item';
+    div.id = 'item-' + id;
+    div.innerHTML = `<div class="title">${{t.title}}</div><div class="meta">${{t.date}} · ${{t.count}} exchanges · ${{t.source}}</div>`;
+    div.onclick = () => renderThread(id);
+    list.appendChild(div);
+  }});
+
   const t = document.getElementById('foldToggle');
-  const B = document.body;
-  function apply(v) {{ B.classList.toggle('folded', v); }}
-  t.addEventListener('change', () => apply(t.checked));
-  apply(true);
+  t.addEventListener('change', () => document.body.classList.toggle('folded', t.checked));
+  document.body.classList.add('folded');
+
+  if (Object.keys(threads).length > 0) {{
+      renderThread(Object.keys(threads).sort((a,b) => threads[b].timestamp - threads[a].timestamp)[0]);
+  }}
 </script>
 </body>
 </html>
 """
 
+def build_document(threads: dict) -> str:
+    return PAGE_TEMPLATE.format(threads_json=json.dumps(threads))
 
-def build_document(title: str, exchanges: list) -> str:
-    body = []
-    last_date = None
-    for ex in exchanges:
-        if ex['date_iso'] != last_date:
-            last_date = ex['date_iso']
-            dt = datetime.strptime(last_date, "%Y-%m-%d")
-            header_date = dt.strftime("%B %d, %Y")
-            body.append(f'<div class="date-header">{header_date}</div>')
-        body.append(exchange_html(ex))
     
     now = datetime.now().strftime("%B %d, %Y %I:%M%p").replace(" 0", " ").lower()
     return PAGE_TEMPLATE.format(
@@ -518,8 +546,20 @@ def main():
     if not exchanges:
         raise SystemExit("No exchanges parsed.")
 
+    # Assume 'threads' is a dict: {id: {'title': str, 'date': str, 'timestamp': float, 'count': int, 'source': str, 'html': str}}
     title = args.title or (args.hermes_session_id if args.hermes_session_id else (transcript_path.parent.parent.name if transcript_path and transcript_path.parent.parent.name != 'logs' else 'Conversation'))
-    html = build_document(title, exchanges)
+    threads = {
+        'default': {
+            'title': title,
+            'date': datetime.now().strftime("%Y-%m-%d"),
+            'timestamp': datetime.now().timestamp(),
+            'count': len(exchanges),
+            'source': 'Antigravity',
+            'html': build_thread_html(exchanges)
+        }
+    }
+    
+    html = build_document(threads)
 
     project_dir = Path(args.project_dir).expanduser() if args.project_dir else get_project_root()
     if args.output:
@@ -530,7 +570,19 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html)
     print(f"Written: {out}")
-    print(f"  {len(exchanges)} exchanges · {len(html):,} bytes")
+    print(f"  {len(threads)} threads generated.")
+
+def build_thread_html(exchanges: list) -> str:
+    body = []
+    last_date = None
+    for ex in exchanges:
+        if ex['date_iso'] != last_date:
+            last_date = ex['date_iso']
+            dt = datetime.strptime(last_date, "%Y-%m-%d")
+            header_date = dt.strftime("%B %d, %Y")
+            body.append(f'<div class="date-header">{header_date}</div>')
+        body.append(exchange_html(ex))
+    return '\n'.join(body)
 
 
 if __name__ == '__main__':
