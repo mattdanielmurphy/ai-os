@@ -309,7 +309,7 @@ def agent_to_html(text: str) -> str:
         )
     # Verbose: show summarized lead, then a details to expand the full reply.
     detail = (
-        '<details class="full-reply" open>'
+        '<details class="full-reply">'
         f'<summary>Full reply from agent ({"{:,}".format(words)} words)</summary>'
         f'<div class="full">{full_body}</div>'
         '</details>'
@@ -402,9 +402,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   details.full-reply summary {{ cursor:pointer; color:var(--accent); font-size:12px;
                                 margin:10px 0 4px; user-select:none; }}
   .lead b {{ color:#cfc7ff; }}
-  body.folded details.full-reply summary {{ display:block; }}
-  body.folded details.full-reply .full {{ display:none; }}
-  body.folded details.code-fold .code {{ display:none; }}
+
   a {{ color:#a99bff; text-decoration:none; }}
   a:hover {{ text-decoration:underline; }}
   .date-header {{ text-align:center; margin:40px 0 20px; font-weight:600; color:var(--muted);
