@@ -19,45 +19,18 @@ logger = logging.getLogger("agy-proxy")
 
 LITELLM_URL = "http://127.0.0.1:8082"
 
-AVAILABLE_MODELS = [
-    "deepseek-v4-flash",
-    "deepseek-v4-flash-high",
-    "deepseek-v4-flash-medium",
-    "deepseek-v4-flash-low",
-    "deepseek-v4-pro",
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash-lite-high",
-    "gemini-3.5-flash-lite-medium",
-    "gemini-3.5-flash-lite-low",
-    "muse-spark-1.1",
-    "muse-spark-1.1-high",
-    "muse-spark-1.1-medium",
-    "muse-spark-1.1-low",
-    "grok-4.5",
-    "grok-4.5-high",
-    "grok-4.5-medium",
-    "grok-4.5-low",
-    "gemini-3.1-pro",
-    "gemini-3.1-pro-high",
-    "gemini-3.1-pro-medium",
-    "gemini-3.1-pro-low",
-    "claude-sonnet-5",
-    "claude-sonnet-5-high",
-    "claude-sonnet-5-medium",
-    "claude-sonnet-5-low",
-    "gemini-3.6-flash",
-    "gemini-3.6-flash-high",
-    "gemini-3.6-flash-medium",
-    "gemini-3.6-flash-low",
-    "claude-opus-5",
-    "claude-opus-5-high",
-    "claude-opus-5-medium",
-    "claude-opus-5-low",
-    "claude-fable-5",
-    "claude-fable-5-high",
-    "claude-fable-5-medium",
-    "claude-fable-5-low",
+AGY_MODELS = [
+    {"id": "gemini-3.6-flash-low", "name": "Gemini 3.6 Flash (Low)"},
+    {"id": "gemini-3.6-flash-medium", "name": "Gemini 3.6 Flash (Medium)"},
+    {"id": "gemini-3.6-flash-high", "name": "Gemini 3.6 Flash (High)"},
+    {"id": "gemini-3.1-pro-low", "name": "Gemini 3.1 Pro (Low)"},
+    {"id": "gemini-3.1-pro-high", "name": "Gemini 3.1 Pro (High)"},
+    {"id": "claude-sonnet-4.6", "name": "Claude Sonnet 4.6 (Thinking)"},
+    {"id": "claude-opus-4.6", "name": "Claude Opus 4.6 (Thinking)"},
+    {"id": "gpt-oss-120b", "name": "GPT-OSS 120B (Medium)"},
 ]
+
+AVAILABLE_MODELS = [m["id"] for m in AGY_MODELS]
 
 MODEL_ALIAS_MAP = {
     "agy-flash-low": "gemini-3.6-flash-low",
@@ -65,12 +38,9 @@ MODEL_ALIAS_MAP = {
     "agy-flash-high": "gemini-3.6-flash-high",
     "agy-pro-low": "gemini-3.1-pro-low",
     "agy-pro-high": "gemini-3.1-pro-high",
-    "agy-sonnet": "claude-sonnet-5",
-    "agy-opus": "claude-opus-5",
-    "agy-fable": "claude-fable-5",
-    "claude-sonnet-4-6": "claude-sonnet-5",
-    "claude-opus-4-6-thinking": "claude-opus-5",
-    "gpt-oss-120b-medium": "deepseek-v4-flash",
+    "claude-sonnet-4-6": "claude-sonnet-4.6",
+    "claude-opus-4-6-thinking": "claude-opus-4.6",
+    "gpt-oss-120b-medium": "gpt-oss-120b",
 }
 
 app = FastAPI()
@@ -197,8 +167,21 @@ def _build_cmd_and_prompt(messages: List[Message], model_name: str,
         logger.info(f"[agy-session] Starting fresh session {session_key} (no conversation yet)")
 
     resolved_model = normalize_model_name(model_name)
-    if resolved_model and resolved_model not in ("agy", "subagent"):
-        cmd.extend(["--model", resolved_model])
+    if resolved_model in ("agy", "subagent", ""):
+        resolved_model = "gemini-3.6-flash-low"
+
+    effort = None
+    base_model = resolved_model
+    for eff in ("-low", "-medium", "-high"):
+        if resolved_model.endswith(eff):
+            effort = eff[1:]
+            base_model = resolved_model[:-len(eff)]
+            break
+
+    if base_model:
+        cmd.extend(["--model", base_model])
+    if effort:
+        cmd.extend(["--effort", effort])
     if output_format:
         cmd.extend(["--output-format", output_format])
     return cmd, session_key
@@ -534,22 +517,17 @@ async def chat_completions(request: ChatCompletionRequest):
 @app.get("/v1/models")
 @app.get("/models")
 async def list_models():
-    # Attempt to fetch live models from LiteLLM
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            resp = await client.get(f"{LITELLM_URL}/v1/models")
-            if resp.status_code == 200:
-                data = resp.json()
-                if "data" in data and isinstance(data["data"], list):
-                    return data
-    except Exception:
-        pass
-
     return {
         "object": "list",
         "data": [
-            {"id": m, "object": "model", "created": 1700000000, "owned_by": "agy"}
-            for m in AVAILABLE_MODELS
+            {
+                "id": m["id"],
+                "name": m["name"],
+                "object": "model",
+                "created": 1700000000,
+                "owned_by": "antigravity",
+            }
+            for m in AGY_MODELS
         ],
     }
 

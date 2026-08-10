@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-08-09
+- **Fix agy Antigravity Models, Labels, and Resolution:** Cleaned `services/agy-proxy/proxy.py` and `~/.hermes/config.yaml` to strictly expose the 8 actual Antigravity models with human-friendly labels (fixing "LOW" capitalization and removing Claude 5 / DeepSeek / Muse Spark / Grok / 3.5 Flash Lite from agy's catalog). Updated `_build_cmd_and_prompt()` to cleanly split base model and `--effort` flags for the `agy` CLI. All 13 tests pass and Hermes WebUI models list is clean without modifying `hermes-webui` source code. [[log]](agent-logs/2026-08-09_19-58_fix-agy-models-and-labels.md)
 - **Fixed agy-proxy Real-time Streaming & Timeout Bugs:** Rewrote `_proxy_to_litellm_stream` in `services/agy-proxy/proxy.py` to use `httpx.AsyncClient` with live SSE line-by-line yielding instead of blocking `urllib` in-memory buffering that caused 120s `[Proxy Error]: timed out` crashes. Added model name normalization (`@custom:agy:` / `agy/`), synchronized full lean coding model stack in `~/.hermes/config.yaml`, and verified all 13 unit tests pass. [[log]](agent-logs/2026-08-09_19-22_fix-agy-proxy-streaming-timeout.md)
 
 
