@@ -11,7 +11,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -69,7 +69,7 @@ class ToolCall(BaseModel):
 
 class Message(BaseModel):
     role: str
-    content: Optional[str] = None
+    content: Optional[Union[str, List[Dict[str, Any]]]] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None
 
@@ -157,11 +157,26 @@ def _build_cmd_and_prompt(messages: List[Message], model_name: str,
     sessions = _load_sessions()
     conv_id = sessions.get(session_key)
 
-    last_user = None
+    last_user_parts = []
     for m in reversed(messages):
         if m.role == "user" and m.content:
-            last_user = m.content
-            break
+            if isinstance(m.content, str):
+                last_user_parts.append(m.content)
+            elif isinstance(m.content, list):
+                for part in m.content:
+                    if part.get("type") == "text":
+                        last_user_parts.append(part.get("text", ""))
+                    elif part.get("type") in ("image_url", "image"):
+                        img_info = part.get("image_url", part.get("image"))
+                        if isinstance(img_info, dict):
+                            url = img_info.get("url")
+                        else:
+                            url = img_info
+                        if url:
+                            last_user_parts.append(f"[Attached Image: {url}]")
+            if last_user_parts:
+                last_user = "\n".join(reversed(last_user_parts))
+                break
 
     resume = bool(conv_id and len(messages) > 1 and last_user is not None)
 
@@ -217,10 +232,40 @@ def _resolve_model(messages: List[Message], model_name: str) -> str:
 
 def _build_agy_prompt(messages: List[Message]) -> str:
     parts = []
+    upload_dir = "./tmp/agy_uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    import base64
+    
     for msg in messages:
         role = msg.role.upper()
-        content = msg.content or ""
-        parts.append(f"{role}: {content}")
+        content = msg.content
+        
+        if isinstance(content, str):
+            parts.append(f"{role}: {content}")
+        elif isinstance(content, list):
+            block_texts = []
+            for part in content:
+                if part.get("type") == "text":
+                    block_texts.append(part.get("text", ""))
+                elif part.get("type") in ("image_url", "image"):
+                    img_info = part.get("image_url", part.get("image"))
+                    url = img_info.get("url") if isinstance(img_info, dict) else img_info
+                    
+                    if url and url.startswith("data:image/"):
+                        try:
+                            header, b64 = url.split(",", 1)
+                            ext = header.split(";")[0].split("/")[1]
+                            fname = f"{uuid.uuid4()}.{ext}"
+                            fpath = os.path.join(upload_dir, fname)
+                            with open(fpath, "wb") as f:
+                                f.write(base64.b64decode(b64))
+                            block_texts.append(f"[Attached Image: {fpath}]")
+                        except Exception as e:
+                            logger.error(f"Failed to process image attachment: {e}")
+                            block_texts.append(f"[Attached Image: (error)]")
+                    elif url:
+                        block_texts.append(f"[Attached Image: {url}]")
+            parts.append(f"{role}: {' '.join(block_texts)}")
     return "\n\n".join(parts)
 
 
