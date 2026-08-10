@@ -5,10 +5,9 @@ import json
 import uuid
 import time
 import logging
-import urllib.request
-import urllib.error
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -21,17 +20,58 @@ logger = logging.getLogger("agy-proxy")
 LITELLM_URL = "http://127.0.0.1:8082"
 
 AVAILABLE_MODELS = [
-    "agy",
-    "subagent",
-    "gemini-3.6-flash-low",
-    "gemini-3.6-flash-medium",
-    "gemini-3.6-flash-high",
-    "gemini-3.1-pro-low",
+    "deepseek-v4-flash",
+    "deepseek-v4-flash-high",
+    "deepseek-v4-flash-medium",
+    "deepseek-v4-flash-low",
+    "deepseek-v4-pro",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash-lite-high",
+    "gemini-3.5-flash-lite-medium",
+    "gemini-3.5-flash-lite-low",
+    "muse-spark-1.1",
+    "muse-spark-1.1-high",
+    "muse-spark-1.1-medium",
+    "muse-spark-1.1-low",
+    "grok-4.5",
+    "grok-4.5-high",
+    "grok-4.5-medium",
+    "grok-4.5-low",
+    "gemini-3.1-pro",
     "gemini-3.1-pro-high",
-    "claude-sonnet-4-6",
-    "claude-opus-4-6-thinking",
-    "gpt-oss-120b-medium",
+    "gemini-3.1-pro-medium",
+    "gemini-3.1-pro-low",
+    "claude-sonnet-5",
+    "claude-sonnet-5-high",
+    "claude-sonnet-5-medium",
+    "claude-sonnet-5-low",
+    "gemini-3.6-flash",
+    "gemini-3.6-flash-high",
+    "gemini-3.6-flash-medium",
+    "gemini-3.6-flash-low",
+    "claude-opus-5",
+    "claude-opus-5-high",
+    "claude-opus-5-medium",
+    "claude-opus-5-low",
+    "claude-fable-5",
+    "claude-fable-5-high",
+    "claude-fable-5-medium",
+    "claude-fable-5-low",
 ]
+
+MODEL_ALIAS_MAP = {
+    "agy-flash-low": "gemini-3.6-flash-low",
+    "agy-flash-med": "gemini-3.6-flash-medium",
+    "agy-flash-high": "gemini-3.6-flash-high",
+    "agy-pro-low": "gemini-3.1-pro-low",
+    "agy-pro-high": "gemini-3.1-pro-high",
+    "agy-sonnet": "claude-sonnet-5",
+    "agy-opus": "claude-opus-5",
+    "agy-fable": "claude-fable-5",
+    "claude-sonnet-4-6": "claude-sonnet-5",
+    "claude-opus-4-6-thinking": "claude-opus-5",
+    "gpt-oss-120b-medium": "deepseek-v4-flash",
+}
 
 app = FastAPI()
 _executor = ThreadPoolExecutor(max_workers=4)
@@ -75,6 +115,20 @@ class ChatCompletionRequest(BaseModel):
     user: Optional[str] = None
 
 
+def normalize_model_name(model_name: str) -> str:
+    """Normalize model string by stripping provider prefixes and expanding aliases."""
+    m = model_name.strip()
+    if m.startswith("@custom:agy:"):
+        m = m[len("@custom:agy:"):]
+    elif m.startswith("agy/"):
+        m = m[len("agy/"):]
+    elif m.startswith("custom/"):
+        m = m[len("custom/"):]
+    elif m.startswith("custom:"):
+        m = m[len("custom:"):]
+    return MODEL_ALIAS_MAP.get(m, m)
+
+
 # ---------------------------------------------------------------------------
 # agy CLI path (no tools — uses Matt's paid Google quota)
 # ---------------------------------------------------------------------------
@@ -108,15 +162,7 @@ def _save_session(key: str, conv_id: str):
 
 
 def _get_session_key(messages: List[Message], user_tag: Optional[str] = None) -> str:
-    """Stable per-conversation identity.
-
-    Priority:
-    1. `user` field of the OpenAI request, when present (best — Hermes may
-       tag sessions with it; truly unique per conversation).
-    2. messages[0] (system prompt) — stable across turns within a session.
-       messages[1] is NOT included: it can appear/disappear as history grows
-       (1 message on turn 1, 3+ later), which would silently change the key.
-    """
+    """Stable per-conversation identity."""
     import hashlib
     if user_tag:
         return hashlib.sha256(f"user:{user_tag}".encode("utf-8")).hexdigest()[:16]
@@ -130,13 +176,7 @@ def _get_session_key(messages: List[Message], user_tag: Optional[str] = None) ->
 def _build_cmd_and_prompt(messages: List[Message], model_name: str,
                           output_format: Optional[str] = None,
                           user_tag: Optional[str] = None) -> tuple:
-    """Build the agy CLI invocation.
-
-    CRITICAL flag order: `--print` consumes the NEXT argument as the prompt
-    text, so the prompt must come immediately after `--print` and ALL other
-    flags (--conversation/--model/--output-format) must follow it. Putting
-    flags before the prompt makes agy treat them as the prompt text.
-    """
+    """Build the agy CLI invocation."""
     session_key = _get_session_key(messages, user_tag)
     sessions = _load_sessions()
     conv_id = sessions.get(session_key)
@@ -149,15 +189,16 @@ def _build_cmd_and_prompt(messages: List[Message], model_name: str,
     else:
         prompt = _build_agy_prompt(messages)
 
-    cmd = ["/Users/matt/.local/bin/agy", "--print", prompt, "--dangerously-skip-permissions"]
+    cmd = ["/Users/matt/.local/bin/agy", "--print", prompt, "--dangerously-skip-permissions", "--print-timeout", "10m"]
     if resume and conv_id:
         cmd.extend(["--conversation", conv_id])
         logger.info(f"[agy-session] Resuming session {session_key} -> conversation {conv_id}")
     else:
         logger.info(f"[agy-session] Starting fresh session {session_key} (no conversation yet)")
 
-    if model_name and model_name != "agy":
-        cmd.extend(["--model", model_name])
+    resolved_model = normalize_model_name(model_name)
+    if resolved_model and resolved_model not in ("agy", "subagent"):
+        cmd.extend(["--model", resolved_model])
     if output_format:
         cmd.extend(["--output-format", output_format])
     return cmd, session_key
@@ -166,19 +207,15 @@ def _build_cmd_and_prompt(messages: List[Message], model_name: str,
 def _resolve_model(messages: List[Message], model_name: str) -> str:
     """Scan messages (first match wins) for {MODEL=alias}, strip the tag in-place,
     and return the alias. Falls back to model_name if no tag found.
-
-    Pitfall: if model_name is the 'subagent' placeholder and no tag is found,
-    this returns 'subagent' — callers must guard against that.
     """
     for msg in messages:
         if msg.content and MODEL_OVERRIDE_RE.search(msg.content):
             match = MODEL_OVERRIDE_RE.search(msg.content)
             override = match.group(1).strip()
-            # Strip tag from ALL messages so nothing leaks to the LLM
             for m in messages:
                 if m.content:
                     m.content = MODEL_OVERRIDE_RE.sub("", m.content).strip()
-            logger.info(f"[model-override] {model_name!r} \u2192 {override!r}")
+            logger.info(f"[model-override] {model_name!r} → {override!r}")
             return override
     return model_name
 
@@ -193,7 +230,6 @@ def _build_agy_prompt(messages: List[Message]) -> str:
 
 
 def _log_usage(usage: dict, session_key: str):
-    """Log token/cache metrics so we can verify session resume actually hits KV cache."""
     if not usage:
         return
     logger.info(
@@ -203,11 +239,10 @@ def _log_usage(usage: dict, session_key: str):
     )
 
 
-def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[str] = None):
+async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[str] = None):
     model_name = _resolve_model(messages, model_name)
-    if model_name == "subagent":
-        logger.warning("[model-override] No {MODEL=...} tag found; falling back to agy default")
-        model_name = "agy"
+    if model_name in ("subagent", "agy"):
+        model_name = "gemini-3.6-flash-low"
 
     cmd, session_key = _build_cmd_and_prompt(
         messages, model_name, output_format="stream-json", user_tag=user_tag)
@@ -228,18 +263,20 @@ def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[
     )
 
     conv_id = None
-    saw_result = False
-    streamed_response = False  # True once agent_response text_delta has been streamed
+    streamed_response = False
 
     try:
-        for line in proc.stdout:
+        loop = asyncio.get_event_loop()
+        while True:
+            line = await loop.run_in_executor(_executor, proc.stdout.readline)
+            if not line:
+                break
             line = line.strip()
             if not line:
                 continue
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
-                # Non-JSON output — forward raw (defensive fallback)
                 payload = {"id": request_id, "object": "chat.completion.chunk",
                            "created": created_time, "model": model_name,
                            "choices": [{"index": 0, "delta": {"content": line},
@@ -258,14 +295,13 @@ def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[
                 s_type = s.get("step_type")
                 if s_type == "tool" and SHOW_TOOL_MARKERS:
                     tool = s.get("tool_name", "tool")
-                    markers = "\n`⚙️ running {tool}`\n".format(tool=tool) if s.get("state") == "ACTIVE" else f"`✅ {tool} done`"
+                    markers = f"\n`⚙️ running {tool}`\n" if s.get("state") == "ACTIVE" else f"`✅ {tool} done`"
                     payload = {"id": request_id, "object": "chat.completion.chunk",
                                "created": created_time, "model": model_name,
                                "choices": [{"index": 0, "delta": {"content": markers},
                                             "finish_reason": None}]}
                     yield f"data: {json.dumps(payload)}\n\n"
                 elif s_type == "agent_response" and s.get("text_delta"):
-                    # True incremental response streaming
                     streamed_response = True
                     payload = {"id": request_id, "object": "chat.completion.chunk",
                                "created": created_time, "model": model_name,
@@ -273,16 +309,13 @@ def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[
                                             "finish_reason": None}]}
                     yield f"data: {json.dumps(payload)}\n\n"
             elif ev == "result":
-                saw_result = True
                 if not conv_id:
                     conv_id = event.get("conversation_id")
                     if conv_id:
                         _save_session(session_key, conv_id)
                 _log_usage(event.get("usage") or {}, session_key)
                 if streamed_response:
-                    continue  # text_delta deltas already covered the response
-                # result is a repr()'d Python dict, e.g.
-                # "{'conversation_id': ..., 'status': 'SUCCESS', 'response': '...'}"
+                    continue
                 import ast
                 content = ""
                 raw = event.get("result")
@@ -303,7 +336,7 @@ def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[
                                             "finish_reason": None}]}
                     yield f"data: {json.dumps(payload)}\n\n"
 
-        proc.wait()
+        await loop.run_in_executor(_executor, proc.wait)
 
         if conv_id:
             _save_session(session_key, conv_id)
@@ -329,9 +362,8 @@ def run_agy_stream(messages: List[Message], model_name: str, user_tag: Optional[
 
 def run_agy_sync(messages: List[Message], model_name: str, user_tag: Optional[str] = None) -> dict:
     model_name = _resolve_model(messages, model_name)
-    if model_name == "subagent":
-        logger.warning("[model-override] No {MODEL=...} tag found; falling back to agy default")
-        model_name = "agy"
+    if model_name in ("subagent", "agy"):
+        model_name = "gemini-3.6-flash-low"
 
     cmd, session_key = _build_cmd_and_prompt(
         messages, model_name, output_format="json", user_tag=user_tag)
@@ -340,7 +372,6 @@ def run_agy_sync(messages: List[Message], model_name: str, user_tag: Optional[st
     result = subprocess.run(cmd, capture_output=True, text=True)
     out = result.stdout or ""
 
-    # Parse JSON envelope: {conversation_id, status, response, usage}
     conv_id = None
     content = out
     usage = None
@@ -375,99 +406,86 @@ def run_agy_sync(messages: List[Message], model_name: str, user_tag: Optional[st
 
 
 # ---------------------------------------------------------------------------
-# LiteLLM proxy path (supports tools)
+# LiteLLM proxy path (supports tools and real-time streaming)
 # ---------------------------------------------------------------------------
-def _urllib_post(url: str, data: dict) -> dict:
-    """Synchronous POST with urllib — returns parsed JSON."""
-    payload = json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
 async def _proxy_to_litellm(payload: dict) -> dict:
-    """Forward a non-streaming request to the real LiteLLM proxy."""
-    loop = asyncio.get_event_loop()
-    try:
-        return await loop.run_in_executor(
-            _executor,
-            _urllib_post,
-            f"{LITELLM_URL}/v1/chat/completions",
-            payload,
-        )
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"LiteLLM HTTP {e.code}: {body}") from e
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"LiteLLM connection failed: {e.reason}") from e
+    """Forward a non-streaming request to LiteLLM."""
+    normalized_model = normalize_model_name(payload.get("model", "gemini-3.6-flash-low"))
+    payload["model"] = normalized_model
+    timeout = httpx.Timeout(timeout=600.0, connect=30.0, read=300.0, write=60.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(f"{LITELLM_URL}/v1/chat/completions", json=payload)
+        if resp.status_code != 200:
+            raise RuntimeError(f"LiteLLM HTTP {resp.status_code}: {resp.text}")
+        return resp.json()
 
 
 async def _proxy_to_litellm_stream(payload: dict, request_model: str):
-    """Stream a tool-enabled request from the real LiteLLM proxy using
-    urllib in a thread (non-blocking via run_in_executor)."""
+    """Stream a tool-enabled request from LiteLLM using true real-time async chunk streaming."""
     request_id = f"chatcmpl-{uuid.uuid4()}"
     created_time = int(time.time())
 
-    stream_payload = {**payload, "stream": True}
-    body = json.dumps(stream_payload).encode("utf-8")
-    req = urllib.request.Request(
-        f"{LITELLM_URL}/v1/chat/completions",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    normalized_model = normalize_model_name(request_model)
+    stream_payload = {**payload, "stream": True, "model": normalized_model}
 
-    loop = asyncio.get_event_loop()
+    # Connect with generous timeout and no read timeout during streaming
+    timeout = httpx.Timeout(timeout=600.0, connect=30.0, read=None, write=60.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream(
+                "POST",
+                f"{LITELLM_URL}/v1/chat/completions",
+                json=stream_payload,
+            ) as resp:
+                if resp.status_code != 200:
+                    err_text = await resp.aread()
+                    err_msg = f"[Proxy Error]: LiteLLM returned {resp.status_code}: {err_text.decode('utf-8', errors='replace')}"
+                    logger.error(err_msg)
+                    payload_err = {
+                        "id": request_id,
+                        "object": "chat.completion.chunk",
+                        "created": created_time,
+                        "model": request_model,
+                        "choices": [{"index": 0, "delta": {"content": err_msg}, "finish_reason": "error"}],
+                    }
+                    yield f"data: {json.dumps(payload_err)}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
 
-    def _stream_lines():
-        """Generator that yields SSE lines from LiteLLM."""
-        try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                while True:
-                    line = resp.readline()
-                    if not line:
-                        break
-                    decoded = line.decode("utf-8", errors="replace").strip()
-                    if decoded:
-                        yield decoded
-        except Exception as e:
-            yield f"data: {json.dumps({'id': request_id, 'object': 'chat.completion.chunk', 'created': created_time, 'model': request_model, 'choices': [{'index': 0, 'delta': {'content': f'[Proxy Error]: {e}'}, 'finish_reason': 'error'}]})}"
-            yield "data: [DONE]"
+                async for raw_line in resp.aiter_lines():
+                    if not raw_line:
+                        continue
+                    if raw_line.startswith("data: "):
+                        data_str = raw_line[6:].strip()
+                    else:
+                        data_str = raw_line.strip()
 
-    def _iterate():
-        for line_data in _stream_lines():
-            if not line_data.startswith("data: "):
-                continue
-            yield line_data + "\n"
+                    if data_str == "[DONE]":
+                        yield "data: [DONE]\n\n"
+                        return
 
-    # Run the blocking generator in a thread, yielding chunks asynchronously
-    it = iter([])
-    # Use a simple approach: collect all lines, then yield them
-    all_lines = await loop.run_in_executor(_executor, lambda: list(_stream_lines()))
+                    try:
+                        chunk = json.loads(data_str)
+                        chunk["model"] = request_model
+                        if "id" not in chunk:
+                            chunk["id"] = request_id
+                        if "created" not in chunk:
+                            chunk["created"] = created_time
+                        yield f"data: {json.dumps(chunk)}\n\n"
+                    except json.JSONDecodeError:
+                        yield f"{raw_line}\n\n"
 
-    for raw_line in all_lines:
-        if raw_line.startswith("data: "):
-            data_str = raw_line[6:].strip()
-        else:
-            data_str = raw_line.strip()
-
-        if data_str == "[DONE]":
-            yield "data: [DONE]\n\n"
-            return
-
-        try:
-            chunk = json.loads(data_str)
-            chunk["model"] = request_model
-            chunk["id"] = request_id
-            chunk["created"] = created_time
-            yield f"data: {json.dumps(chunk)}\n\n"
-        except json.JSONDecodeError:
-            continue
+    except Exception as e:
+        logger.error(f"LiteLLM stream exception: {e}")
+        payload_err = {
+            "id": request_id,
+            "object": "chat.completion.chunk",
+            "created": created_time,
+            "model": request_model,
+            "choices": [{"index": 0, "delta": {"content": f"[Proxy Error]: {e}"}, "finish_reason": "error"}],
+        }
+        yield f"data: {json.dumps(payload_err)}\n\n"
+        yield "data: [DONE]\n\n"
 
 
 # ---------------------------------------------------------------------------
@@ -482,7 +500,6 @@ async def chat_completions(request: ChatCompletionRequest):
     )
 
     if has_tools:
-        # Tools present — must route through real LiteLLM (agy can't handle tools)
         payload = request.model_dump(exclude_none=True)
         if request.stream:
             return StreamingResponse(
@@ -505,7 +522,6 @@ async def chat_completions(request: ChatCompletionRequest):
                     },
                 )
 
-    # No tools — use agy CLI path (preserves paid Google quota)
     if request.stream:
         return StreamingResponse(
             run_agy_stream(request.messages, request.model, user_tag=request.user),
@@ -516,7 +532,19 @@ async def chat_completions(request: ChatCompletionRequest):
 
 
 @app.get("/v1/models")
+@app.get("/models")
 async def list_models():
+    # Attempt to fetch live models from LiteLLM
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{LITELLM_URL}/v1/models")
+            if resp.status_code == 200:
+                data = resp.json()
+                if "data" in data and isinstance(data["data"], list):
+                    return data
+    except Exception:
+        pass
+
     return {
         "object": "list",
         "data": [
@@ -524,6 +552,27 @@ async def list_models():
             for m in AVAILABLE_MODELS
         ],
     }
+
+
+@app.get("/v1/models/{model_id:path}")
+@app.get("/models/{model_id:path}")
+async def get_model(model_id: str):
+    normalized = normalize_model_name(model_id)
+    return {
+        "id": model_id,
+        "object": "model",
+        "created": 1700000000,
+        "owned_by": "agy",
+        "parent": normalized,
+    }
+
+
+@app.get("/v1/props")
+@app.get("/props")
+@app.get("/version")
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": "1.3.0", "provider": "agy-proxy"}
 
 
 if __name__ == "__main__":
