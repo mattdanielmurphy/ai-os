@@ -27,7 +27,7 @@ Matt has a custom CLI tool `la` at `~/.local/bin/la` for managing macOS Launch A
 
 ## Known Agents
 
-All mapped by short name: `litellm`, `chrome-debug`, `irig-watcher`, `hermes-gateway`, `gemini-ingest`, `userscript-bundler`, `energy-monitor`, `rules-watcher`, `notesync`, `backup-agents`.
+All mapped by short name: `litellm`, `chrome-debug`, `irig-watcher`, `hermes-gateway`, `gemini-ingest`, `userscript-bundler`, `energy-monitor`, `rules-watcher`, `notesync`, `backup-agents`, `agy-proxy`, `turn-swap`, `hermes-webui`, `ai-os-wiki`.
 
 Also fuzzy-matches any other plist by partial label name.
 
