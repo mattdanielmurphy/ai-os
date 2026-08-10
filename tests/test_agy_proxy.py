@@ -124,6 +124,9 @@ class TestBuildCmdAndPrompt(unittest.TestCase):
         self.assertEqual(cmd[1], "--print")
         self.assertEqual(cmd[2], "USER: Hi")
         self.assertIn("--model", cmd)
+        self.assertEqual(cmd[cmd.index("--model") + 1], "gemini-3.6-flash")
+        self.assertIn("--effort", cmd)
+        self.assertEqual(cmd[cmd.index("--effort") + 1], "low")
         self.assertGreater(cmd.index("--model"), 2)
 
     def test_output_format_appended(self):
