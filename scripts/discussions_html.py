@@ -366,7 +366,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   :root {{
     --bg:#0f1115; --panel:#161a22; --panel2:#1b202b;
     --text:#e6e8ee; --muted:#9aa3b5;
-    --user:#2b2350; --user-border:#6d56d9;
+    --user: #1b2230; --user-border: #2e384e;
     --agent:#1c2130; --agent-border:#4a4a5e;
     --accent: {accent}; --code-bg:#0a0c12;
     --sidebar-w: 320px;
@@ -391,16 +391,17 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
                      display: flex; justify-content: space-between; align-items: center;
                      position: sticky; top: 0; background: var(--panel); z-index: 100; }}
   
-  main {{ flex: 1; overflow-y: auto; max-width:860px; margin:0 auto; padding:24px 32px 80px; width: 100%; }}
+  #detail-pane {{ flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); }}
+  #thread-content {{ flex: 1; overflow-y: auto; padding: 24px 32px 80px; width: 100%; max-width: 860px; margin: 0 auto; }}
   
-  .exchange {{ margin-bottom:20px; }}
-  .msg {{ border-radius:14px; padding:14px 18px; position:relative; }}
-  .msg.user {{ background:var(--user); border:1.5px solid var(--user-border);
-               max-width:82%; margin-left:auto; }}
-  .msg.agent {{ background:var(--agent); border:1.5px solid var(--agent-border);
-                max-width:92%; margin-top:10px; }}
-  .ts {{ display:block; font-size:10.5px; color:var(--muted); margin-bottom:6px;
-         text-transform:uppercase; letter-spacing:.5px; }}
+  .exchange {{ margin-bottom: 24px; }}
+  .msg {{ border-radius: 14px; padding: 16px 20px; position: relative; }}
+  .msg-meta {{ font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 8px; display: block; letter-spacing: 0.05em; }}
+  .msg.user {{ background: var(--user); border: 1px solid var(--user-border);
+               max-width: 82%; margin-left: auto; }}
+  .msg.agent {{ background: var(--agent); border: 1px solid var(--agent-border);
+                 max-width: 92%; }}
+  
   .msg p {{ margin:0 0 8px; }}
   .msg p:last-child {{ margin-bottom:0; }}
   .msg code {{ background:rgba(255,255,255,.07); padding:1px 5px; border-radius:4px;
