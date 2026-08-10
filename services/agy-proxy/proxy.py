@@ -132,15 +132,21 @@ def _save_session(key: str, conv_id: str):
 
 
 def _get_session_key(messages: List[Message], user_tag: Optional[str] = None) -> str:
-    """Stable per-conversation identity."""
+    """Stable per-conversation identity based on user tag or first system/user anchor message."""
     import hashlib
     if user_tag:
         return hashlib.sha256(f"user:{user_tag}".encode("utf-8")).hexdigest()[:16]
     if not messages:
         return "default"
-    first = messages[0]
-    anchor = first.content if first else ""
-    return hashlib.sha256(f"{first.role if first else ''}|{anchor}".encode("utf-8")).hexdigest()[:16]
+    # Find first system or user message as session anchor
+    anchor = ""
+    for msg in messages:
+        if msg.role in ("user", "system") and msg.content:
+            anchor = msg.content
+            break
+    if not anchor and messages[0].content:
+        anchor = messages[0].content
+    return hashlib.sha256(anchor.encode("utf-8")).hexdigest()[:16]
 
 
 def _build_cmd_and_prompt(messages: List[Message], model_name: str,
@@ -151,20 +157,26 @@ def _build_cmd_and_prompt(messages: List[Message], model_name: str,
     sessions = _load_sessions()
     conv_id = sessions.get(session_key)
 
-    last = messages[-1] if messages else None
-    resume = bool(conv_id and len(messages) > 1 and last is not None and last.role == "user")
+    last_user = None
+    for m in reversed(messages):
+        if m.role == "user" and m.content:
+            last_user = m.content
+            break
+
+    resume = bool(conv_id and len(messages) > 1 and last_user is not None)
 
     if resume:
-        prompt = last.content or ""
+        prompt = last_user or ""
     else:
         prompt = _build_agy_prompt(messages)
 
     cmd = ["/Users/matt/.local/bin/agy", "--print", prompt, "--dangerously-skip-permissions", "--print-timeout", "10m"]
     if resume and conv_id:
         cmd.extend(["--conversation", conv_id])
-        logger.info(f"[agy-session] Resuming session {session_key} -> conversation {conv_id}")
+        logger.info(f"[agy-session] RESUMING session {session_key} -> conversation {conv_id}")
     else:
-        logger.info(f"[agy-session] Starting fresh session {session_key} (no conversation yet)")
+        logger.info(f"[agy-session] STARTING FRESH session {session_key} (no previous conversation)")
+
 
     resolved_model = normalize_model_name(model_name)
     if resolved_model in ("agy", "subagent", ""):
@@ -276,64 +288,18 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
             elif ev == "step_update":
                 s = event.get("step_update", {})
                 s_type = s.get("step_type")
-                if s_type == "tool" and SHOW_TOOL_MARKERS:
-                    tool = s.get("tool_name", "tool")
-                    tool_id = f"call_{tool}_{int(time.time()*1000)}"
-                    
-                    if s.get("state") == "ACTIVE":
-                        payload = {
-                            "id": request_id,
-                            "object": "chat.completion.chunk",
-                            "created": created_time,
-                            "model": model_name,
-                            "choices": [{
-                                "index": 0,
-                                "delta": {
-                                    "tool_calls": [{
-                                        "index": 0,
-                                        "id": tool_id,
-                                        "type": "function",
-                                        "function": {
-                                            "name": tool,
-                                            "arguments": "{}"
-                                        }
-                                    }]
-                                },
-                                "finish_reason": None
-                            }]
-                        }
-                    else:
-                        # Send a finish chunk or empty delta to signify completion
-                        payload = {
-                            "id": request_id,
-                            "object": "chat.completion.chunk",
-                            "created": created_time,
-                            "model": model_name,
-                            "choices": [{
-                                "index": 0,
-                                "delta": {
-                                    "tool_calls": [{
-                                        "index": 0,
-                                        "id": tool_id,
-                                        "type": "function",
-                                        "function": {
-                                            "name": tool,
-                                            "arguments": "{}"
-                                        }
-                                    }]
-                                },
-                                "finish_reason": None
-                            }]
-                        }
-                    yield f"data: {json.dumps(payload)}\n\n"
-
-                elif s_type == "agent_response" and s.get("text_delta"):
+                if s_type == "agent_response" and s.get("text_delta"):
+                    text_delta = s["text_delta"]
+                    # If this is the start of a new step, prepend a double newline for clean paragraph separation
+                    if streamed_response and not text_delta.startswith("\n"):
+                        text_delta = "\n\n" + text_delta
                     streamed_response = True
                     payload = {"id": request_id, "object": "chat.completion.chunk",
                                "created": created_time, "model": model_name,
-                               "choices": [{"index": 0, "delta": {"content": s["text_delta"]},
+                               "choices": [{"index": 0, "delta": {"content": text_delta},
                                             "finish_reason": None}]}
                     yield f"data: {json.dumps(payload)}\n\n"
+
             elif ev == "result":
                 if not conv_id:
                     conv_id = event.get("conversation_id")
