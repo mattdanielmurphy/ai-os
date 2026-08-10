@@ -482,7 +482,19 @@ async def chat_completions(request: ChatCompletionRequest):
         f"tools={has_tools} messages={len(request.messages)}"
     )
 
-    if has_tools:
+    # STRICT AGY GUARANTEE:
+    # If request is an agy model (or default agy prefix), ALWAYS route to agy CLI directly.
+    # NEVER fall back to LiteLLM or paid Google / OpenRouter APIs.
+    norm_model = normalize_model_name(request.model)
+    is_agy_model = (
+        request.model.startswith("agy/")
+        or request.model.startswith("@custom:agy:")
+        or norm_model in AVAILABLE_MODELS
+        or norm_model in MODEL_ALIAS_MAP.values()
+        or norm_model in ("agy", "subagent")
+    )
+
+    if has_tools and not is_agy_model:
         payload = request.model_dump(exclude_none=True)
         if request.stream:
             return StreamingResponse(
@@ -512,6 +524,7 @@ async def chat_completions(request: ChatCompletionRequest):
         )
     else:
         return run_agy_sync(request.messages, request.model, user_tag=request.user)
+
 
 
 @app.get("/v1/models")
