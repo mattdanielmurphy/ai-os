@@ -44,23 +44,34 @@ def clean_agent_content(text: str) -> str:
     if not text:
         return text
 
-    lines = []
-    for line in text.splitlines():
-        # First remove link patterns from line
-        line = re.sub(r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)', '', line, flags=re.IGNORECASE).rstrip()
+    link_re = re.compile(r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)', re.IGNORECASE)
+    divider_re = re.compile(r'^\s*(?:-{3,}|\*{3,}|_{3,})\s*$')
+
+    lines = text.splitlines()
+    drop = [False] * len(lines)
+
+    for i, line in enumerate(lines):
+        # Any line containing a thread.md / conversation_response.md link is removed entirely.
+        if link_re.search(line):
+            drop[i] = True
+            # If the line directly above is a divider (---, ***, ___), remove that too.
+            if i > 0 and divider_re.match(lines[i - 1]):
+                drop[i - 1] = True
+            continue
 
         if is_transient_status_line(line):
+            drop[i] = True
             continue
 
         cleaned_str = line.strip()
         if re.match(r'^(?:(?:[-*+]\s*|\d+\.\s*)?reference\s+link(?:\s+to(?:\s+the)?\s+thread\s+artifact)?|thread(?:\s+artifact)?(?:\s+logged\s+at)?|conversation_response\.md)\s*:?\s*$', cleaned_str, re.IGNORECASE):
+            drop[i] = True
             continue
 
         if not line.strip() or line.strip() in ('-', '*', '+'):
-            continue
-        lines.append(line)
+            drop[i] = True
 
-    result = '\n'.join(lines)
+    result = '\n'.join(line for i, line in enumerate(lines) if not drop[i])
     result = re.sub(r'\n{3,}', '\n\n', result).strip()
     return result
 
