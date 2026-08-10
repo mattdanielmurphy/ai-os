@@ -43,6 +43,12 @@ def main():
         except Exception as e:
             print(f"Warning: Failed to auto-generate Discussions.html: {e}", file=sys.stderr)
 
+    # Post-flight step: Run post-flight verification
+    postflight_script = Path(__file__).parent / "postflight.py"
+    if postflight_script.exists():
+        print("Running post-flight verification...")
+        run_cmd([sys.executable, str(postflight_script)], check=True)
+
     # 1. Stage all changes
     print("Staging changes...")
     run_cmd(["git", "add", "."])
