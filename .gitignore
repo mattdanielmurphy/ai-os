@@ -12,3 +12,4 @@ src-tauri/target/
 
 # Agent logs: we do want to track these!
 #.agent-logs/ — REMOVED: migrated to agent-logs/
+.agy-mcp/worktrees/

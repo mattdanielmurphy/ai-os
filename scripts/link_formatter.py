@@ -5,10 +5,10 @@ import urllib.parse
 def enrich_file_links(text: str) -> str:
     """
     Enriches file links into clean, minimalist links with an optional Zed icon link:
-      [label](file:///path/to/file.ext#L10) [⚡](http://127.0.0.1:8643/open_zed?path=/path/to/file.ext:10)
+      [label](file:///path/to/file.ext#L10) [✏️](http://127.0.0.1:8643/open_zed?path=/path/to/file.ext:10)
 
     - Primary link: Standard [label](file:///path/to/file.ext) which opens in Antigravity.
-    - Zed action: A tiny ⚡ link pointing to http://127.0.0.1:8643/open_zed?path=...
+    - Zed action: A tiny ✏️ link pointing to http://127.0.0.1:8643/open_zed?path=...
       intercepted by AIOSURLRouter.app & url_action_listener.
     """
     pattern = r'\[([^\]]+)\]\((file:///[^\s\)]+)\)'
@@ -18,10 +18,10 @@ def enrich_file_links(text: str) -> str:
         label = match.group(1)
         url = match.group(2)
 
-        # Idempotency: skip if already appended with ⚡ link
+        # Idempotency: skip if already appended with ✏️ link
         end_pos = match.end()
         remainder = text[end_pos:end_pos + 60]
-        if remainder.startswith(' [⚡]') or 'open_zed' in remainder:
+        if remainder.startswith(' [✏️]') or 'open_zed' in remainder:
             return full_match
 
         clean_url = url
@@ -47,6 +47,6 @@ def enrich_file_links(text: str) -> str:
         encoded_path = urllib.parse.quote(full_zed_path)
         router_zed_url = f'http://127.0.0.1:8643/open_zed?path={encoded_path}'
 
-        return f'[{label}]({url}) [⚡]({router_zed_url})'
+        return f'[{label}]({url}) [✏️]({router_zed_url})'
 
     return re.sub(pattern, replacer, text)
