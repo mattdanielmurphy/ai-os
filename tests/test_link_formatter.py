@@ -8,24 +8,16 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from link_formatter import enrich_file_links
 
 class TestLinkFormatter(unittest.TestCase):
-    def test_markdown_file_enrichment(self):
+    def test_file_enrichment(self):
         text = '[AG_CONTEXT.md](file:///Users/matt/projects/ai-os/AG_CONTEXT.md)'
         res = enrich_file_links(text)
-        self.assertIn('file:///Users/matt/projects/ai-os/AG_CONTEXT.md', res)
-        self.assertIn('zed://file/Users/matt/projects/ai-os/AG_CONTEXT.md', res)
-        self.assertIn('ai-os://reveal?path=/Users/matt/projects/ai-os/AG_CONTEXT.md', res)
+        self.assertIn('[AG_CONTEXT.md](file:///Users/matt/projects/ai-os/AG_CONTEXT.md)', res)
+        self.assertIn('[⚡](http://127.0.0.1:8643/open_zed?path=', res)
 
-    def test_code_file_enrichment(self):
-        text = '[postflight.py](file:///Users/matt/projects/ai-os/scripts/postflight.py)'
+    def test_line_numbers_enrichment(self):
+        text = '[postflight.py#L40-L53](file:///Users/matt/projects/ai-os/scripts/postflight.py#L40-L53)'
         res = enrich_file_links(text)
-        self.assertIn('zed://file/Users/matt/projects/ai-os/scripts/postflight.py', res)
-        self.assertIn('ai-os://reveal?path=/Users/matt/projects/ai-os/scripts/postflight.py', res)
-        self.assertIn('file:///Users/matt/projects/ai-os/scripts/postflight.py', res)
-
-    def test_code_file_with_line_numbers(self):
-        text = '[postflight.py#L10-L20](file:///Users/matt/projects/ai-os/scripts/postflight.py#L10-L20)'
-        res = enrich_file_links(text)
-        self.assertIn('zed://file/Users/matt/projects/ai-os/scripts/postflight.py:10:20', res)
+        self.assertIn('postflight.py%3A40%3A53', res)
 
     def test_no_link_unchanged(self):
         text = 'Hello world with no links.'

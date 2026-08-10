@@ -1,7 +1,16 @@
 import re
 import os
+import urllib.parse
 
 def enrich_file_links(text: str) -> str:
+    """
+    Enriches file links into clean, minimalist links with an optional Zed icon link:
+      [label](file:///path/to/file.ext#L10) [⚡](http://127.0.0.1:8643/open_zed?path=/path/to/file.ext:10)
+
+    - Primary link: Standard [label](file:///path/to/file.ext) which opens in Antigravity.
+    - Zed action: A tiny ⚡ link pointing to http://127.0.0.1:8643/open_zed?path=...
+      intercepted by AIOSURLRouter.app & url_action_listener.
+    """
     pattern = r'\[([^\]]+)\]\((file:///[^\s\)]+)\)'
 
     def replacer(match):
@@ -9,9 +18,10 @@ def enrich_file_links(text: str) -> str:
         label = match.group(1)
         url = match.group(2)
 
+        # Idempotency: skip if already appended with ⚡ link
         end_pos = match.end()
         remainder = text[end_pos:end_pos + 60]
-        if remainder.startswith(' (⚡ [Zed]') or remainder.startswith(' (🔍 [Finder]') or 'ai-os://reveal' in remainder:
+        if remainder.startswith(' [⚡]') or 'open_zed' in remainder:
             return full_match
 
         clean_url = url
@@ -27,21 +37,16 @@ def enrich_file_links(text: str) -> str:
 
         system_path = clean_url[7:] if clean_url.startswith('file://') else clean_url
 
-        ext = os.path.splitext(system_path)[1].lower()
-        is_markdown = ext in ['.md', '.markdown']
-
         zed_line_suffix = ''
         if line_start:
             zed_line_suffix = f':{line_start}'
             if line_end:
                 zed_line_suffix = f':{line_start}:{line_end}'
 
-        zed_link = f'zed://file{system_path}{zed_line_suffix}'
-        finder_link = f'ai-os://reveal?path={system_path}'
+        full_zed_path = f'{system_path}{zed_line_suffix}'
+        encoded_path = urllib.parse.quote(full_zed_path)
+        router_zed_url = f'http://127.0.0.1:8643/open_zed?path={encoded_path}'
 
-        if is_markdown:
-            return f'[{label}]({url}) (⚡ [Zed]({zed_link}) | 🔍 [Finder]({finder_link}))'
-        else:
-            return f'[{label}]({zed_link}) (🔍 [Finder]({finder_link}) | 📄 [View]({url}))'
+        return f'[{label}]({url}) [⚡]({router_zed_url})'
 
     return re.sub(pattern, replacer, text)
