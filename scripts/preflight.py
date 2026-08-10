@@ -170,7 +170,8 @@ def main():
         ("Rules", step_rules),
         ("Thread Bloat", step_bloat),
         ("Git", step_git),
-        ("Conversation Response", step_conversation_response)
+        ("Conversation Response", step_conversation_response),
+        ("Discussions Skeleton", lambda: "Discussions.html already exists" if os.path.exists("Discussions.html") else (open("Discussions.html", "w").write("<!DOCTYPE html><html><head><title>Discussions</title></head><body></body></html>") and "Created Discussions.html" or "Created Discussions.html"))
     ]
     
     results = {}
