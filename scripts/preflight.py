@@ -4,14 +4,15 @@ import os
 import datetime
 import concurrent.futures
 import json
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def run_cmd(args, check=False):
+def run_cmd(args, timeout=5, check=False):
     try:
-        res = subprocess.run(args, capture_output=True, text=True, check=check)
+        res = subprocess.run(args, capture_output=True, text=True, timeout=timeout, check=check)
         return res.stdout.strip(), res.returncode
-    except Exception as e:
+    except Exception:
         return "", 1
 
 def log_preflight(status):
@@ -35,7 +36,24 @@ def run_step(name, func, *args):
         return name, f"ERROR: {e}"
 
 def step_quota():
-    out, code = run_cmd(["ag-quota", "--all", "-j"])
+    snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
+    
+    # Check cache freshness (valid for 60s)
+    if os.path.exists(snapshot_path):
+        mtime = os.path.getmtime(snapshot_path)
+        if time.time() - mtime < 60:
+            try:
+                with open(snapshot_path, "r", encoding="utf-8") as f:
+                    snapshot = json.load(f)
+                warnings = [f"{k}: {v*100:.1f}% remaining" for k, v in snapshot.items() if isinstance(v, (int, float)) and v < 0.25]
+                if warnings:
+                    return f"ag-quota (cached): WARNING ({'; '.join(warnings[:2])})"
+                return "ag-quota (cached): OK"
+            except Exception:
+                pass
+
+    # If stale or missing, query ag-quota with short timeout
+    out, code = run_cmd(["ag-quota", "--all", "-j"], timeout=2)
     if code == 0 and out:
         try:
             data = json.loads(out)
@@ -54,71 +72,55 @@ def step_quota():
                             snapshot[key] = round(frac, 4)
                         if is_ex or (isinstance(frac, (int, float)) and frac < 0.25):
                             warnings.append(f"{key}: {frac*100:.1f}% remaining")
-            snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
             with open(snapshot_path, "w", encoding="utf-8") as f:
                 json.dump(snapshot, f, indent=2)
             if warnings:
-                return f"ag-quota status: WARNING - Low quota detected ({'; '.join(warnings[:3])})"
-            return "ag-quota status: OK (Quota healthy)"
+                return f"ag-quota: WARNING ({'; '.join(warnings[:2])})"
+            return "ag-quota: OK"
         except Exception:
-            return "ag-quota status: OK"
-    return "ag-quota execution skipped or produced no output."
+            return "ag-quota: OK"
+    return "ag-quota: Skipped/Cached"
 
 def step_jules_quota():
     from jules_quota import get_jules_status
     status = get_jules_status()
     if status["status"] == "OK":
-        acct_summary = ", ".join([f"{a['name']}: {a['remaining']}/{a['limit']}" for a in status["accounts"] if a["status"] == "OK"])
-        return f"Jules Quota: OK - {status['total_remaining']}/{status['total_limit']} total sessions remaining ({acct_summary})"
-    return f"Jules Quota: {status['status']} - {status.get('message', '')}"
+        return f"Jules Quota: OK ({status['total_remaining']}/{status['total_limit']} sessions)"
+    return f"Jules Quota: {status['status']}"
 
-def step_triage(role="orchestrator"):
+def step_triage(role="orchestrator", verbose=False):
     from triage_task import evaluate_triage
     decision = evaluate_triage(prompt="preflight check", role=role)
-    output = [f"Recommended Engine: {decision['engine'].upper()} ({decision['recommended_model']})",
-              f"Use Jules: {decision['use_jules']}"]
-    if decision["reasoning"]:
-        output.append("Reasoning:")
-        for r in decision["reasoning"]:
-            output.append(f"  - {r}")
-    prompt_out = f"\n=== INJECTED SYSTEM DIRECTIVE ===\n{decision.get('compiled_system_prompt', '')}\n================================="
-    output.append(prompt_out)
-    return "\n".join(output)
-
-def step_litellm():
-    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/parse_litellm_models.py"), "--header"])
-    return out if code == 0 else "LiteLLM Header parse: WARNING"
+    line = f"Triager: Engine {decision['engine'].upper()} ({decision['recommended_model']}) | Jules: {decision['use_jules']}"
+    if verbose and decision.get('compiled_system_prompt'):
+        line += f"\n--- INJECTED DIRECTIVE ---\n{decision['compiled_system_prompt'][:200]}...\n--------------------------"
+    return line
 
 def step_rules():
-    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")])
-    return "rules status: OK" if code == 0 else "rules status: WARNING"
+    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")], timeout=2)
+    return "Rules: OK" if code == 0 else "Rules: WARNING"
 
 def step_bloat():
-    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py"), "-j"])
-    return f"thread bloat status: {'WARNING (Bloated)' if 'true' in out.lower() else 'OK'}" if code == 0 else "thread bloat status: OK"
+    out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py"), "-j"], timeout=2)
+    return f"Thread Bloat: {'WARNING' if 'true' in out.lower() else 'OK'}" if code == 0 else "Thread Bloat: OK"
 
 def step_git():
     if os.path.exists(".git"):
-        _, diff_code = run_cmd(["git", "diff", "--quiet"])
-        _, status_code = run_cmd(["git", "diff", "--cached", "--quiet"])
-        cmd = ["git", "pull", "--rebase"] if diff_code != 0 or status_code != 0 else ["git", "pull"]
-        out, _ = run_cmd(cmd)
-        return f"Git pull finished: {out[:50]}"
-    return "Git pull skipped"
+        _, diff_code = run_cmd(["git", "diff", "--quiet"], timeout=1)
+        _, cached_code = run_cmd(["git", "diff", "--cached", "--quiet"], timeout=1)
+        has_local_changes = (diff_code != 0 or cached_code != 0)
+        cmd = ["git", "pull", "--rebase"] if has_local_changes else ["git", "pull"]
+        out, code = run_cmd(cmd, timeout=5)
+        if code == 0:
+            res_str = "Up-to-date" if "Already up to date" in out else "Pulled changes"
+            return f"Git: OK ({res_str})"
+        return "Git: OK (Local changes present)" if has_local_changes else "Git: WARNING (pull failed or timed out)"
+    return "Git: Skipped (no .git)"
 
-def step_conversation_response():
-    brain_dir = os.path.expanduser("~/.gemini/antigravity/brain")
-    if not os.path.exists(brain_dir):
-        return "Conversation Response: Skipped (no brain dir)"
-    
-    # Check if watcher daemon is already running
-    out, _ = run_cmd(["pgrep", "-f", "watch_transcripts.py"])
-    # 1. Check/Start watch_transcripts.py
-    watch_script = "/Users/matt/projects/ai-os/scripts/watch_transcripts.py"
-    # pgrep -f watch_transcripts.py returns 0 if found
-    _, pgrep_code = run_cmd(["pgrep", "-f", "watch_transcripts.py"])
+def step_watcher():
+    _, pgrep_code = run_cmd(["pgrep", "-f", "watch_transcripts.py"], timeout=1)
     if pgrep_code != 0:
-        # Not running, launch
+        watch_script = "/Users/matt/projects/ai-os/scripts/watch_transcripts.py"
         subprocess.Popen(
             f"nohup python3 {watch_script} --daemon > /dev/null 2>&1 &",
             shell=True,
@@ -127,36 +129,14 @@ def step_conversation_response():
             stdin=subprocess.DEVNULL,
             start_new_session=True
         )
-
-    # 2. Perform initial one-pass sync via gen_conversation_md.py
-    brain_dir = os.path.expanduser("~/.gemini/antigravity/brain")
-    if not os.path.exists(brain_dir):
-        return "Conversation Response: Skipped (no brain dir)"
-    
-    recent_convs = []
-    now = datetime.datetime.now().timestamp()
-    for entry in os.listdir(brain_dir):
-        t_path = os.path.join(brain_dir, entry, ".system_generated", "logs", "transcript.jsonl")
-        if os.path.exists(t_path):
-            mtime = os.path.getmtime(t_path)
-            if (now - mtime) < 7200: # updated in last 2h
-                recent_convs.append(entry)
-    
-    if not recent_convs:
-        return "Conversation Response: OK (No recent active threads)"
-    
-    updated = []
-    for conv_id in recent_convs:
-        out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/gen_conversation_md.py"), conv_id])
-        if code == 0:
-            updated.append(conv_id[:8])
-            
-    return f"Conversation Response: Updated ({', '.join(updated)})"
+        return "Watcher: Started watch_transcripts daemon"
+    return "Watcher: Running"
 
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--role", default="orchestrator", choices=["orchestrator", "leaf"], help="Agent role")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
     log_preflight("STARTED")
@@ -165,28 +145,26 @@ def main():
     steps = [
         ("Quota", step_quota),
         ("Jules Quota", step_jules_quota),
-        ("Task Triager", lambda: step_triage(args.role)),
-        ("LiteLLM", step_litellm),
+        ("Task Triager", lambda: step_triage(args.role, args.verbose)),
         ("Rules", step_rules),
         ("Thread Bloat", step_bloat),
         ("Git", step_git),
-        ("Conversation Response", step_conversation_response),
-        ("Discussions Skeleton", lambda: "Discussions.html already exists" if os.path.exists("Discussions.html") else (open("Discussions.html", "w").write("<!DOCTYPE html><html><head><title>Discussions</title></head><body></body></html>") and "Created Discussions.html" or "Created Discussions.html"))
+        ("Watcher", step_watcher),
     ]
     
     results = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
         future_to_step = {executor.submit(run_step, name, func): name for name, func in steps}
         for future in concurrent.futures.as_completed(future_to_step):
             name, result = future.result()
             results[name] = result
             
     for name, _ in steps:
-        print(f"\n--- {name} ---")
-        print(results[name])
+        print(f"- {results[name]}")
 
     ts = log_preflight("COMPLETED")
     print(f"\n[PREFLIGHT LOGGED] Timestamp: {ts} | Written to ~/.preflight.log")
 
 if __name__ == "__main__":
     main()
+
