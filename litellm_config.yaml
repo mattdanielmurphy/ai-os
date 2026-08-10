@@ -28,11 +28,23 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      provider:
+        order:
+          - DeepSeek
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
 
   - model_name: deepseek-v4-pro
     litellm_params:
-      model: openrouter/deepseek/deepseek-v4-pro
+      model: openrouter/deepseek/deepseek-reasoner
       <<: *common_params
+      provider:
+        order:
+          - DeepSeek
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
 
   # 2. Gemini 3.5 Flash-Lite (Native + Fallback)
   - model_name: gemini-3.5-flash-lite
@@ -106,6 +118,12 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-flash
       <<: *common_params
+      provider:
+        order:
+          - DeepSeek
+      extra_headers:
+        HTTP-Referer: "https://ai-os.local"
+        X-Title: "AI-OS"
 
   - model_name: sonnet
     litellm_params:
