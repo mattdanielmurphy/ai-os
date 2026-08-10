@@ -68,7 +68,7 @@ def main():
     print("Generating commit message via LiteLLM...")
     prompt = (
         "You are a technical assistant. Generate a concise, clear git commit message (1-2 sentences max) summarizing the staged changes.\n"
-        "Format the commit message as: \"[Auto-Commit] <Action verb in present tense>: <Concise description of changes made>\"\n"
+        "Format the commit message as: \"<Action verb in present tense>: <Concise description of changes made>\"\n"
         "Do not include generic messages like 'updated files'. Be specific about what changed.\n"
         "Do not include any other text, markdown formatting, or surrounding quotes. Respond with ONLY the commit message itself.\n\n"
         f"Here is the diff:\n{diff}"
@@ -94,9 +94,9 @@ def main():
         files_summary = ", ".join(staged_files[:3])
         if len(staged_files) > 3:
             files_summary += f" and {len(staged_files) - 3} other file(s)"
-        commit_msg = f"[Auto-Commit] Update {files_summary}"
+        commit_msg = f"Update {files_summary}"
     else:
-        commit_msg = "[Auto-Commit] Update project files"
+        commit_msg = "Update project files"
 
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
@@ -111,6 +111,8 @@ def main():
                 if content.startswith("'") and content.endswith("'"):
                     content = content[1:-1].strip()
                 if content:
+                    if content.startswith("[Auto-Commit] "):
+                        content = content[len("[Auto-Commit] "):]
                     commit_msg = content
             else:
                 reasoning = message.get("reasoning_content") or message.get("reasoning")

@@ -30,6 +30,7 @@ No matching items found by AI. non-interactively in terminal. Supports URL pre-f
 - **Interactive Pre/Post-Flight Audit Protocol (`scripts/preflight.py` & `scripts/auto_commit.py`)**: Pre/postflight routines act as interactive quality gates that validate syntax, check rules, and enforce output standards before commits, returning non-zero codes to reject invalid changes.
 - **Distributed LLM Wiki Pattern (`llm-wiki` & Quartz Integration)**: Ingests project decisions and entity knowledge directly into interlinked markdown files (`[[wikilinks]]`) across project roots and `~/wiki`, connected via Quartz to navigate from any project file to the broader global knowledge graph.
 - **Service Reload Rule**: When modifying daemon/service files (e.g. `services/agy-proxy/proxy.py`, `litellm_config.yaml`, or Hermes services), you MUST restart the corresponding background services via `la restart <service-name>` (e.g. `la restart agy-proxy`, `la restart hermes-webui`, `la restart hermes-gateway`) to ensure changes actually apply to the running runtime environment.
+- **Preflight Speed & System Directive Bridge (2026-08-10)**: Optimized `preflight.py` to sub-500ms using 60s TTL caching (`~/.ag_quota_snapshot.json`). Enforced mandatory System Directive Bridge across `GEMINI.md` and `HERMES.md` elevating `preflight.py` output under `=== PRE-FLIGHT CHECK ===` to top-tier system directive authority. Added mandatory Wiki recording rule to `agent-logs.md`.
 
 
 
