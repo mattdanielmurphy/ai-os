@@ -304,6 +304,7 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
 
     conv_id = None
     has_emitted_any_tool = False
+    streamed_response = False
     streamed_final_content = False
 
     try:
@@ -353,7 +354,7 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                 if conv_id:
                     _save_session(session_key, conv_id)
                     # Emit reasoning_content badge RIGHT AWAY
-                    badge_text = f"⌛ **`agy --conversation {conv_id}`**\n\n"
+                    badge_text = f"agy --conversation {conv_id} --dangerously-skip-permissions\n\n"
                     badge_payload = {
                         "id": request_id,
                         "object": "chat.completion.chunk",
@@ -401,7 +402,8 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
 
                 elif s_type == "agent_response" and s.get("text_delta"):
                     text_delta = s["text_delta"]
-                    delta = {"reasoning_content": text_delta}
+                    delta = {"content": text_delta}
+                    streamed_response = True
 
                     payload = {
                         "id": request_id, "object": "chat.completion.chunk",
@@ -417,17 +419,12 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                         _save_session(session_key, conv_id)
                 
                 # Always process the final result to emit content
-                import ast
-                raw = event.get("result")
-                content = ""
-                if isinstance(raw, dict):
-                    content = raw.get("response", "")
-                elif isinstance(raw, str):
-                    try:
-                        res_dict = ast.literal_eval(raw)
-                        if isinstance(res_dict, dict):
-                            content = res_dict.get("response", "")
-                    except Exception:
+                if not streamed_response:
+                    raw = event.get("result")
+                    content = ""
+                    if isinstance(raw, dict):
+                        content = raw.get("response", "")
+                    elif isinstance(raw, str):
                         content = raw
                 if content:
                     payload = {
