@@ -548,6 +548,8 @@ async def chat_completions(request: ChatCompletionRequest):
     is_agy_model = (
         request.model.startswith("agy/")
         or request.model.startswith("@custom:agy:")
+        or request.model.startswith("custom/")
+        or request.model.startswith("custom:")
         or norm_model in AVAILABLE_MODELS
         or norm_model in MODEL_ALIAS_MAP.values()
         or norm_model in ("agy", "subagent")
