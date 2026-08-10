@@ -1,7 +1,7 @@
 import AppKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationWillFinishLaunching(_ notification: Notification) {
         NSAppleEventManager.shared().setEventHandler(
             self,
             andSelector: #selector(handleGetURL(_:withReplyEvent:)),
@@ -18,7 +18,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let isLocalAction = urlString.hasPrefix("http://127.0.0.1:8643/") || urlString.hasPrefix("http://localhost:8643/")
 
         if isLocalAction {
-            // Parse query parameters directly inside the Swift Router
             if let components = URLComponents(string: urlString),
                let queryItems = components.queryItems {
                 let action = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))

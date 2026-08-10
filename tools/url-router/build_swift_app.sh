@@ -23,6 +23,8 @@ cat << 'PLISTEOF' > "$APP_PATH/Contents/Info.plist"
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>AIOSURLRouter</string>
+	<key>LSUIElement</key>
+	<true/>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
