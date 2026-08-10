@@ -70,6 +70,13 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         sys.path.append(str(SCRIPTS_DIR))
         from gen_conversation_md import generate
         generate(conv_id, "Conversation", app_data_dir=app_data_dir)
+        try:
+            from link_formatter import enrich_file_links
+            thread_md = brain_dir / conv_id / "thread.md"
+            if thread_md.exists():
+                thread_md.write_text(enrich_file_links(thread_md.read_text()))
+        except Exception as e:
+            print(f"link_formatter enrichment on thread.md failed: {e}")
     except Exception as e:
         print(f"gen_conversation_md failed: {e}")
         return False
