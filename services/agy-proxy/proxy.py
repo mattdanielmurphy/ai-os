@@ -278,12 +278,55 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                 s_type = s.get("step_type")
                 if s_type == "tool" and SHOW_TOOL_MARKERS:
                     tool = s.get("tool_name", "tool")
-                    markers = f"\n`⚙️ running {tool}`\n" if s.get("state") == "ACTIVE" else f"`✅ {tool} done`"
-                    payload = {"id": request_id, "object": "chat.completion.chunk",
-                               "created": created_time, "model": model_name,
-                               "choices": [{"index": 0, "delta": {"content": markers},
-                                            "finish_reason": None}]}
+                    tool_id = f"call_{tool}_{int(time.time()*1000)}"
+                    
+                    if s.get("state") == "ACTIVE":
+                        payload = {
+                            "id": request_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_time,
+                            "model": model_name,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {
+                                    "tool_calls": [{
+                                        "index": 0,
+                                        "id": tool_id,
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool,
+                                            "arguments": "{}"
+                                        }
+                                    }]
+                                },
+                                "finish_reason": None
+                            }]
+                        }
+                    else:
+                        # Send a finish chunk or empty delta to signify completion
+                        payload = {
+                            "id": request_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_time,
+                            "model": model_name,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {
+                                    "tool_calls": [{
+                                        "index": 0,
+                                        "id": tool_id,
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool,
+                                            "arguments": "{}"
+                                        }
+                                    }]
+                                },
+                                "finish_reason": None
+                            }]
+                        }
                     yield f"data: {json.dumps(payload)}\n\n"
+
                 elif s_type == "agent_response" and s.get("text_delta"):
                     streamed_response = True
                     payload = {"id": request_id, "object": "chat.completion.chunk",
