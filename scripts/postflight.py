@@ -3,6 +3,10 @@ import subprocess
 import sys
 import os
 
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SCRIPTS_DIR)
+
 def run_command(command):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result
@@ -37,6 +41,20 @@ def run_wiki_ingest():
         return False
     return True
 
+def run_link_formatter():
+    print("Verifying link formatter module...")
+    try:
+        from link_formatter import enrich_file_links
+        sample = enrich_file_links("[test.md](file:///path/test.md)")
+        if "zed://" in sample and "ai-os://reveal" in sample:
+            print("Link formatter check passed.")
+            return True
+        print("Link formatter returned unexpected output.")
+        return False
+    except Exception as e:
+        print(f"Link formatter error: {e}")
+        return False
+
 def main():
     if not check_syntax():
         print("Syntax check failed. Fix errors before proceeding.")
@@ -48,6 +66,10 @@ def main():
 
     if not run_wiki_ingest():
         print("Wiki ingestion failed.")
+        sys.exit(1)
+
+    if not run_link_formatter():
+        print("Link formatter check failed.")
         sys.exit(1)
 
     print("Post-flight checks passed.")
