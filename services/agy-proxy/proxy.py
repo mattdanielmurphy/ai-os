@@ -335,10 +335,15 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                 s_type = s.get("step_type")
                 if s_type == "agent_response" and s.get("text_delta"):
                     text_delta = s["text_delta"]
-                    # If this is the start of a new step, prepend a double newline for clean paragraph separation
-                    if streamed_response and not text_delta.startswith("\n"):
-                        text_delta = "\n\n" + text_delta
-                    streamed_response = True
+                    # If this is the very first text chunk in the response, check formatting
+                    if not streamed_response:
+                        # Ensure headers or plain text start on a new line if not already
+                        if text_delta.lstrip().startswith("#") and not text_delta.startswith("\n"):
+                            text_delta = "\n" + text_delta
+                        elif not text_delta.startswith("\n"):
+                            text_delta = "\n\n" + text_delta
+                        streamed_response = True
+                    
                     payload = {"id": request_id, "object": "chat.completion.chunk",
                                "created": created_time, "model": model_name,
                                "choices": [{"index": 0, "delta": {"content": text_delta},
