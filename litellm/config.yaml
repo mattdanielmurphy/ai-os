@@ -58,6 +58,7 @@ model_list:
     litellm_params:
       model: openrouter/~deepseek/deepseek-v4-flash-latest
       <<: *common_params
+      reasoning_effort: high
       extra_headers:
         HTTP-Referer: "https://ai-os.local"
         X-Title: "AI-OS"
@@ -73,6 +74,7 @@ model_list:
     litellm_params:
       model: openrouter/~deepseek/deepseek-v4-flash-latest
       <<: *common_params
+      reasoning_effort: medium
       extra_headers:
         HTTP-Referer: "https://ai-os.local"
         X-Title: "AI-OS"
@@ -88,6 +90,7 @@ model_list:
     litellm_params:
       model: openrouter/~deepseek/deepseek-v4-flash-latest
       <<: *common_params
+      reasoning_effort: low
       extra_headers:
         HTTP-Referer: "https://ai-os.local"
         X-Title: "AI-OS"
@@ -118,6 +121,7 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-pro
       <<: *common_params
+      reasoning_effort: high
       extra_headers:
         HTTP-Referer: "https://ai-os.local"
         X-Title: "AI-OS"
@@ -133,6 +137,7 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-pro
       <<: *common_params
+      reasoning_effort: medium
       extra_headers:
         HTTP-Referer: "https://ai-os.local"
         X-Title: "AI-OS"
@@ -148,6 +153,7 @@ model_list:
     litellm_params:
       model: openrouter/deepseek/deepseek-v4-pro
       <<: *common_params
+      reasoning_effort: low
       extra_body:
         provider:
           order:

@@ -139,14 +139,31 @@ agy -p "hello world this is a test" --print-timeout 1m
 ```
 Expected: a relevant reply (not about permissions configuration — if it responds about permissions, the argument order was wrong and `--dangerously-skip-permissions` was eaten as the prompt text).
 
-## Agy Proxy Wrapper (OpenAI-Compatible Integration)
+### Agy Proxy Wrapper (OpenAI-Compatible Integration)
 
 For high-performance integration that supports streaming and standard `custom_providers` configuration without patching the Hermes core, use the **Agy Proxy Wrapper** pattern. This involves a tiny FastAPI server that translates OpenAI API requests into `agy --print` calls.
 
 ### Benefits
 - **Zero-patch integration**: Uses the standard `custom_providers` section in `config.yaml`.
 - **Streaming support**: Proxies line-by-line output from the CLI to the WebUI.
+- **Model routing**: The `request.model` field is passed through as `--model <name>` to agy, so switching models in Hermes routes to the right Antigravity tier.
 - **Persistent configuration**: Survives Hermes updates and `git pull`.
+
+### Available Models (via agy proxy)
+The proxy exposes these models for Antigravity routing:
+
+| Alias | Model Name | Description |
+|---|---|---|
+| `agy-flash-low` | `gemini-3.6-flash-low` | Default — cheapest Gemini tier |
+| `agy-flash-med` | `gemini-3.6-flash-medium` | Mid-tier Gemini flash |
+| `agy-flash-high` | `gemini-3.6-flash-high` | Best Gemini flash |
+| `agy-pro-low` | `gemini-3.1-pro-low` | Gemini 3.1 Pro (low cost) |
+| `agy-pro-high` | `gemini-3.1-pro-high` | Gemini 3.1 Pro (full) |
+| `agy-sonnet` | `claude-sonnet-4-6` | Claude Sonnet via agy |
+| `agy-opus` | `claude-opus-4-6-thinking` | Claude Opus via agy |
+| `agy-oss` | `gpt-oss-120b-medium` | Open-source model via agy |
+
+Use these with `hermes config set delegation.model <name>` or `/model agy-flash-low` in chat. The delegation config defaults to `gemini-3.6-flash-low`.
 
 ### Deployment (macOS)
 1. **Service Path**: Usually `/Users/matt/projects/ai-os/services/agy-proxy/proxy.py`.
@@ -174,7 +191,7 @@ See `references/agy-proxy-implementation.md` for the reference FastAPI code.
 9. **"Pass this to agy" means ZERO prep — not even file reads.** When the user says "pass this to agy", "hand this off to agy", or "you must pass this whole prompt off to agy": do NOTHING except dispatch. No read_file, no search_files, no terminal probes, no checking state, no "let me just look at X first." Every tool call you make before dispatching is wasted work the user explicitly routed to agy. Even if you think you're being helpful by gathering context first, you're burning tokens on the wrong model and frustrating the user. Dispatch verbatim, then report what agy produced. This rule applies even (especially) when you're running on a cheap triage model — the user's instruction to delegate overrides all efficiency heuristics.
 10. **User wants a raw prompt, not analysis.** When they say "give me a prompt that I'll run myself", they want exactly the prompt text — no explanation, no "here's what this does", no preamble. Just the prompt.
 11. **`include_hermes_prompt` MUST be `false` for MCP dispatches.** The default is `true`, which injects the full Hermes system prompt (~100KB including AGENTS.md, CLAUDE.md, memory, user profile) into agy's prompt. This wastes context, burns quota, and has caused worktree-mode jobs to hit context limits and fail after 48 minutes. Always set `include_hermes_prompt=false` on `mcp__agymcp__agy` and `mcp__agymcp__agy_start` unless you specifically need agy to follow Hermes rules.
-12. **`model` parameter on MCP tools is silently ignored.** agy uses its own tiered model routing regardless of what `model=` you pass. Dead model names (`gemini-1.5-pro-002`) produce zero output with exit code 0 — a silent failure with no error. Live model names are silently downgraded to the default tier (`Gemini 3.5 Flash (Low)` as of 2026-07). To verify the actual model used, read events with `agy_read(job_id=...)` and check the `init` event's `metadata.model` field. Do not rely on the `model` parameter to select a specific tier.
+12. **`model` parameter on agy MCP tools is silently ignored.** The agy MCP server (`agymcp`) uses its own tiered model routing regardless of what `model=` you pass. However, when using agy as a **custom provider** (via the agy-proxy at `http://127.0.0.1:8080/v1`), the `model` field IS passed through as `--model <name>` to agy — model selection works there. For MCP dispatches, dead model names (`gemini-1.5-pro-002`) produce zero output with exit code 0 — a silent failure with no error. Live model names are silently downgraded to the default tier (`Gemini 3.5 Flash (Low)` as of 2026-07). To verify the actual model used via MCP, read events with `agy_read(job_id=...)` and check the `init` event's `metadata.model` field. Do not rely on the `model` parameter to select a specific tier for MCP dispatches.
 13. **Live UI Streaming vs MCP:** Using MCP tools (`mcp__agymcp__agy`) or `terminal` to run agy means output goes into the Hermes *context window* as a hidden block after execution finishes. It does NOT stream live to the WebUI. For real-time streaming of agy's thoughts (`reasoning.delta`) and execution steps to the user interface, agy cannot be just a tool — it must be integrated natively into the Hermes backend event loop.
 
 ## Agy MCP Tool (Hermes Integration)
@@ -256,6 +273,24 @@ Three models route through OpenRouter's free tier: `hy3-free` (Tencent 295B MoE,
 The `gemini-2.5-flash` and `gemini-2.5-pro` models in LiteLLM route through `gemini/gemini-2.5-*` — this hits Google's API directly using `GEMINI_API_KEY`. This is a **separate quota bucket** from the Antigravity consumer OAuth free tier (`~/.gemini/oauth_creds.json`). Do not assume free Antigravity quota applies to LiteLLM Gemini models.
 
 Full routing table and comparison of approaches: `references/litellm-routing.md`.
+
+### Provider Label Semantics (what `custom:agy` actually means)
+
+The provider label in Hermes config determines where traffic goes, and **the label must be semantically honest**. Matt corrected `agy: deepseek-v4-flash` as wrong: `agy` means the agy MCP tool (Google-quota OAuth path), and deepseek actually goes through OpenRouter. Labeling an OpenRouter model `agy:` misleads everyone reading the config or UI.
+
+- `custom:agy` (`base_url: http://127.0.0.1:8080/v1`) = the **hybrid agy-proxy**: requests WITHOUT `tools` go to the agy CLI (paid Google quota); requests WITH `tools` forward to LiteLLM (8082) → OpenRouter/upstream.
+- A main-session agent (which always sends tool schemas) routed via `custom:agy` is therefore actually **OpenRouter via LiteLLM** — not agy at all. Labeling it `agy: deepseek-v4-flash` is doubly misleading.
+- **For OpenRouter-native models (deepseek, muse-spark, grok, etc.), use `provider: openrouter` directly** — Hermes has `OPENROUTER_API_KEY`, model IDs resolve on OpenRouter (verify with `curl https://openrouter.ai/api/v1/models`), and there's zero reason to bounce through 8080 → 8082. The UI label then reads `openrouter: deepseek/deepseek-v4-flash-latest` — honest. Also clear any stale `model.base_url` (the agy-proxy URL) when switching provider, or it can keep routing through the proxy.
+- Reserve `custom:agy` for sessions that should genuinely ride the agy CLI Google-quota path.
+- `delegation.model` / `delegation.provider` (agy for subagents) is a SEPARATE config from `model.default` (main session) — changing one does not change the other.
+
+### DeepSeek on OpenRouter — verified quirks
+
+- `~deepseek/deepseek-v4-flash-latest` IS listed on OpenRouter and is the rolling-latest alias (the `~` is REQUIRED; versionless `deepseek/deepseek-v4-flash-latest` returns 400). It resolves to the newest snapshot (e.g. `deepseek/deepseek-v4-flash-0731`). "I don't see it listed" usually means the `~` prefix was dropped.
+- `content: None` + `finish_reason: length` with a small `max_tokens` window is NOT a failure: DeepSeek emits `reasoning_content` before `content`, consuming the budget. Bump `max_tokens` to ~200 and re-request; content returns normally.
+- DeepSeek official cache-read pricing is ~$0.0028/M (flash) — ~90x cheaper than resellers (DigitalOcean $0.0168/M, up to $0.33/M). To pin official within OpenRouter via LiteLLM: model id `openrouter/~deepseek/deepseek-v4-flash-latest` + `extra_body: {provider: {order: ["DeepSeek"], allow_fallbacks: true}}` nested INSIDE `litellm_params` (6-space indent). Model-level `provider:` blocks are IGNORED by LiteLLM.
+
+See `references/deepseek-openrouter-quirks.md` for the full verification probe and transcripts.
 
 ## Rules for Hermes Agents
 

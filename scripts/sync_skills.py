@@ -1,26 +1,13 @@
 #!/usr/bin/env python3
-"""
-sync_skills.py - Universal Cross-Platform Skill Synchronizer for ai-os
-
-This script synchronizes skills FROM a single source of truth:
-~/projects/ai-os/skills/
-
-TO all target agent ecosystems:
-  - Hermes: ~/.hermes/skills/
-  - Claude: ~/.claude/skills/
-  - Codex / Agents: ~/.agents/skills/
-  - Gemini / Antigravity: ~/.gemini/config/skills/ & ~/.gemini/antigravity-cli/skills/
-  - agy: ~/.agy/skills/
-  - Antigravity: ~/.antigravity/skills/
-"""
-
 import os
 import shutil
+import json
+import subprocess
 from pathlib import Path
 
 HOME = Path.home()
-
 PRIMARY_SOURCE = HOME / "projects" / "ai-os" / "skills"
+STATE_FILE = Path("/Users/matt/projects/ai-os/scripts/.sync_skills_state.json")
 
 TARGET_DIRS = [
     HOME / ".hermes" / "skills",
@@ -32,49 +19,74 @@ TARGET_DIRS = [
     HOME / ".gemini" / "antigravity" / "skills",
 ]
 
-def sync_skill_directory(src_dir: Path, dest_dir: Path):
-    """
-    Copies skill files from src_dir to dest_dir, preserving subdirectories and files.
-    """
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    for root, dirs, files in os.walk(src_dir):
-        rel_path = Path(root).relative_to(src_dir)
-        target_root = dest_dir / rel_path
-        target_root.mkdir(parents=True, exist_ok=True)
-        for f in files:
-            src_file = Path(root) / f
-            dest_file = target_root / f
-            # Copy if missing or modified
-            if not dest_file.exists() or src_file.stat().st_mtime > dest_file.stat().st_mtime:
-                shutil.copy2(src_file, dest_file)
+def load_state():
+    if STATE_FILE.exists():
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+def git_checkpoint(rel_path):
+    try:
+        # Check if exists in primary source
+        if (PRIMARY_SOURCE / rel_path).exists():
+            subprocess.run(["git", "-C", str(PRIMARY_SOURCE.parent), "add", f"skills/{rel_path}"], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(PRIMARY_SOURCE.parent), "commit", "-m", f"Auto-checkpoint before skill deletion: {rel_path}"], check=True, capture_output=True)
+    except Exception:
+        pass
 
 def main():
-    print("=== UNIVERSAL SKILL SYNCHRONIZER ===")
+    state = load_state()
+    all_locations = [PRIMARY_SOURCE] + TARGET_DIRS
+    
+    # Discover all relative paths
+    all_rel_paths = set()
+    for loc in all_locations:
+        if loc.exists():
+            for root, _, files in os.walk(loc):
+                for f in files:
+                    full_path = Path(root) / f
+                    rel_path = full_path.relative_to(loc)
+                    all_rel_paths.add(str(rel_path))
 
-    if not PRIMARY_SOURCE.exists():
-        print(f"❌ Primary source directory not found: {PRIMARY_SOURCE}")
-        return
+    # Handle Deletions
+    for rel_path in list(state.keys()):
+        if rel_path not in all_rel_paths:
+            git_checkpoint(rel_path)
+            for loc in all_locations:
+                file_path = loc / rel_path
+                if file_path.exists():
+                    if file_path.is_file():
+                        file_path.unlink()
+            del state[rel_path]
 
-    # Find all skills in the primary source directory
-    skills = {}
-    for item in PRIMARY_SOURCE.iterdir():
-        if item.is_dir() and not item.name.startswith("."):
-            skills[item.name] = item
+    # Handle Additions/Updates
+    for rel_path in all_rel_paths:
+        max_mtime = 0.0
+        newest_file = None
+        
+        # Find newest
+        for loc in all_locations:
+            file_path = loc / rel_path
+            if file_path.exists():
+                mtime = file_path.stat().st_mtime
+                if mtime > max_mtime:
+                    max_mtime = mtime
+                    newest_file = file_path
+        
+        if newest_file and (rel_path not in state or state[rel_path] < max_mtime):
+            # Sync to all
+            for loc in all_locations:
+                target_path = loc / rel_path
+                if target_path != newest_file:
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(newest_file, target_path)
+            state[rel_path] = max_mtime
 
-    print(f"📦 Total unique custom skills in source: {len(skills)}")
-
-    synced_count = 0
-    # Sync every skill to all target platforms
-    for skill_name, src_path in skills.items():
-        for tdir in TARGET_DIRS:
-            target_skill_dir = tdir / skill_name
-            try:
-                sync_skill_directory(src_path, target_skill_dir)
-                synced_count += 1
-            except Exception as e:
-                print(f"⚠️ Error syncing {skill_name} to {tdir}: {e}")
-
-    print(f"✅ Skill sync complete across {len(TARGET_DIRS)} target directories!")
+    save_state(state)
 
 if __name__ == "__main__":
     main()
