@@ -1,6 +1,6 @@
 ---
 name: fast
-description:
+description: Respond to the user's next prompt under a strict efficiency constraint, bypassing multi-step planning and returning only the direct output or code diff.
 ---
 1. Analyze the user's next prompt under a strict efficiency constraint.
 2. Completely bypass multi-step internal planning, task lists, and file structure mapping.

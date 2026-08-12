@@ -35,7 +35,10 @@ def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", pr
     sections.append(read_rule("core_safety"))
 
     if role.lower() == "leaf":
-        sections.append(read_rule("subagent_leaf"))
+        leaf_path = Path("/Users/matt/.gemini/config/rules/03-subagent.md")
+        if leaf_path.exists():
+            with open(leaf_path, "r", encoding="utf-8") as f:
+                sections.append(f.read().strip())
         return "\n\n".join(sections)
 
     # Orchestrator mode: add protocols

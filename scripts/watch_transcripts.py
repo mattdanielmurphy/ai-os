@@ -14,6 +14,7 @@ import sys
 import argparse
 import subprocess
 import time
+import json
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -97,7 +98,7 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         return False
 
 
-def process_updates(last_state: dict, last_render_time: dict, brain_dir: Path):
+def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path):
     """Check for transcript changes and trigger re-rendering."""
     current, sub_map = get_active_convs(brain_dir)
     now = time.time()
@@ -134,6 +135,15 @@ def process_updates(last_state: dict, last_render_time: dict, brain_dir: Path):
         if conv_id not in current:
             del last_state[conv_id]
             last_render_time.pop(conv_id, None)
+            if conv_id in summarized_threads:
+                summarized_threads.remove(conv_id)
+
+    # Summarize idle threads
+    for conv_id, (mtime, size) in full_state.items():
+        if conv_id not in summarized_threads and (now - mtime) > 300:
+            print(f"Thread {conv_id[:8]} idle > 5m. Triggering summarize_thread.py...")
+            subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "summarize_thread.py"), conv_id])
+            summarized_threads.add(conv_id)
 
 
 def main():
@@ -152,16 +162,17 @@ def main():
     if args.once:
         last_state = {}
         last_render_time = {}
-        process_updates(last_state, last_render_time, args.brain_dir)
+        process_updates(last_state, last_render_time, set(), args.brain_dir)
     elif args.daemon:
         # Pre-seed: record current state
         active, _ = get_active_convs(args.brain_dir)
         last_state = {**active}
         last_render_time = {}
+        summarized_threads = set()
         print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
-                process_updates(last_state, last_render_time, args.brain_dir)
+                process_updates(last_state, last_render_time, summarized_threads, args.brain_dir)
                 time.sleep(args.interval)
         except KeyboardInterrupt:
             print("Stopping.")

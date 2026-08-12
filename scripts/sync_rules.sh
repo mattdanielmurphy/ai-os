@@ -44,3 +44,19 @@ else
     echo "✅ Rules are already identical and in sync."
 fi
 
+echo ""
+echo "🔄 Syncing modular config rules..."
+GLOBAL_RULES_DIR="/Users/matt/.gemini/config/rules/"
+LOCAL_RULES_DIR="/Users/matt/projects/ai-os/config/rules/"
+
+mkdir -p "$GLOBAL_RULES_DIR"
+mkdir -p "$LOCAL_RULES_DIR"
+
+# Rsync with --update (-u) will skip files that are newer on the receiver
+echo "📥 Syncing from global to local..."
+rsync -auv "$GLOBAL_RULES_DIR" "$LOCAL_RULES_DIR"
+echo "📤 Syncing from local to global..."
+rsync -auv "$LOCAL_RULES_DIR" "$GLOBAL_RULES_DIR"
+
+echo "✅ Modular rules sync complete."
+

@@ -141,6 +141,20 @@ def main():
 
     log_preflight("STARTED")
     print("=== PRE-FLIGHT CHECK ===")
+    try:
+        import json, os
+        summaries_path = os.path.expanduser("~/.gemini/antigravity/brain/thread_summaries.json")
+        if os.path.exists(summaries_path):
+            with open(summaries_path, "r") as f:
+                summaries = json.load(f)
+                if summaries:
+                    print("\n=== RECENT THREAD SUMMARIES ===")
+                    for cid, summ in list(summaries.items())[-3:]:
+                        print(f"- [{cid[:8]}] {summ}")
+                    print("===============================\n")
+    except Exception as e:
+        print(f"Failed to load thread summaries: {e}")
+
     
     steps = [
         ("Quota", step_quota),
@@ -153,7 +167,7 @@ def main():
     ]
     
     results = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         future_to_step = {executor.submit(run_step, name, func): name for name, func in steps}
         for future in concurrent.futures.as_completed(future_to_step):
             name, result = future.result()
