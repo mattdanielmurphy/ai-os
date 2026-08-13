@@ -1,7 +1,6 @@
-# Caddyfile for LLM Server HTTPS Reverse Proxy
+# Caddyfile for LightLLM / LiteLLM HTTPS Reverse Proxy
 
-# Expose HTTPS on localhost:8082
-https://localhost:8082 {
+macbook-pro.tail491454.ts.net:8082, https://127.0.0.1:8082, https://localhost:8082 {
     tls internal
     reverse_proxy 127.0.0.1:8000 {
         flush_interval -1
