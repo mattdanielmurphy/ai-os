@@ -4,13 +4,12 @@ import os
 import subprocess
 import re
 import argparse
+from pathlib import Path
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate planner context using repomix")
+    parser = argparse.ArgumentParser(description="Generate planner prompt for Perplexity")
     parser.add_argument("request", help="User request string")
-    parser.add_argument("--include", help="Comma separated glob patterns to include", default="")
     
-    # If no arguments provided, print help and exit
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
@@ -18,101 +17,64 @@ def main():
     args = parser.parse_args()
     user_request = args.request
     
-    os.makedirs("./tmp", exist_ok=True)
-    
-    print("Bundling codebase with repomix...")
-    
-    ignore_patterns = [
-        # Version Control & Dependencies
-        "**/.git/**", "**/.svn/**", "**/node_modules/**", "**/vendor/**", "**/packages/**", "**/bower_components/**", "**/Pods/**", "**/.cargo/registry/**", 
-        
-        # Build, Caches, & Outputs
-        "**/build/**", "**/dist/**", "**/out/**", "**/target/**", "**/bin/**", "**/obj/**",
-        "**/.next/**", "**/.nuxt/**", "**/.svelte-kit/**", "**/.angular/**", "**/.cache/**", "**/.webpack/**", "**/.vite/**", "**/.gradle/**", "**/.serverless/**", "**/.terraform/**",
-        "**/__pycache__/**", "**/.pytest_cache/**", "**/.mypy_cache/**", "**/.ruff_cache/**", "**/.venv/**", "**/venv/**", "**/env/**", "**/.eggs/**", "**/*.egg-info/**", 
-        
-        # IDE & OS
-        "**/.idea/**", "**/.vscode/**", "**/.fleet/**", "**/.DS_Store", "**/Thumbs.db",
-        
-        # Secrets & Environment
-        "**/.env", "**/.env.*", "**/*.pem", "**/*.key", "**/*.cert", "**/*.crt", "**/*.p12", "**/secrets.json", "**/credentials.json", "**/*.htpasswd", "**/id_rsa*", "**/id_ed25519*",
-        
-        # Lockfiles
-        "**/*.lock", "**/*-lock.json", "**/pnpm-lock.yaml", "**/bun.lockb", "**/Cargo.lock", "**/poetry.lock", "**/Gemfile.lock", "**/go.sum",
-        
-        # Coverage, Logs & Temp
-        "**/coverage/**", "**/.nyc_output/**", "**/logs/**", "**/*.log", "**/*.trace", "**/tmp/**", "**/temp/**"
-    ]
-    ignore_str = ",".join(ignore_patterns)
-
-    # run repomix
-    cmd = ["bunx", "repomix", "-o", "./tmp/context.md", "--style", "markdown", "--ignore", ignore_str]
-    if args.include:
-        cmd.extend(["--include", args.include])
-
-    try:
-        result = subprocess.run(
-            cmd, 
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running repomix: {e}")
-        print(e.stdout)
-        print(e.stderr)
+    # 1. Check Git repo & remote
+    if not os.path.exists(".git"):
+        print("❌ ERROR: No Git remote configured for this project.")
+        print("ACTION REQUIRED: Check if a GitHub remote exists or create one (e.g. via 'gh repo create --private'). Perplexity GitHub connector requires a synced GitHub repo.")
         sys.exit(1)
         
-    # Get remote github repo name if available
-    repo_name = ""
     try:
         remote_url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], text=True).strip()
-        # Parse github repo name e.g. owner/repo from https://github.com/owner/repo.git or git@github.com:owner/repo.git
-        m = re.search(r"github\.com[:/]([^/]+/[^/.]+)", remote_url)
-        if m:
-            repo_name = m.group(1)
-    except Exception:
-        pass
-
-    github_header = ""
-    if repo_name:
-        github_header = f"[IMPORTANT: Ensure all changes are committed and pushed to GitHub. Use the GitHub connector for repo '{repo_name}' to access live file context.]\n\n"
-
-    # write planner prompt
-    with open("./tmp/planner_prompt.txt", "w") as f:
-        f.write(github_header + user_request)
+        if not remote_url:
+            raise Exception("Empty remote URL")
         
-    with open("./tmp/context.md", "r") as f:
-        context_content = f.read()
-    
-    total_chars = len(user_request) + len(context_content)
-    
-    token_match = re.search(r"Total Tokens:\s*([\d,]+)\s*tokens", result.stdout, re.IGNORECASE)
-    if token_match:
-        token_str = token_match.group(1).replace(",", "")
-        total_tokens = int(token_str)
-        if total_tokens > 100000:
-            print(f"\n❌ ERROR: Context size is far too large ({total_tokens:,} tokens).")
-            print("ACTION REQUIRED:")
-            print("1. You MUST NOT attach this massive context.md file yet.")
-            print("2. You MUST use your tools (like grep_search, view_file, etc.) to figure out which specific directories or files are actually relevant to the task.")
-            print("3. Re-run this script with the --include flag to narrow down the scope. Example:")
-            print("   python3 ~/projects/ai-os/scripts/generate_planner_prompt.py \"<request>\" --include \"src/api/**,docs/**\"")
-            print("4. Keep re-running and refining until the context size is under 100,000 tokens.")
-            print("5. CRITICAL RULE: If you cannot successfully call proxima:ask_perplexity with a reasonable context size, you MUST STOP and explicitly tell the user. You are STRICTLY FORBIDDEN from thinking for yourself or attempting to do the planning work locally.")
-            return
+        m = re.search(r"github\.com[:/]([^/]+/[^/.]+)", remote_url)
+        repo_name = m.group(1) if m else "unknown"
+    except Exception:
+        print("❌ ERROR: No Git remote configured for this project.")
+        print("ACTION REQUIRED: Check if a GitHub remote exists or create one (e.g. via 'gh repo create --private'). Perplexity GitHub connector requires a synced GitHub repo.")
+        sys.exit(1)
 
-    print("\n✅ Context size is reasonable.")
-    if total_chars > 40000:
-        print(f"⚠️ Context length ({total_chars:,} chars) exceeds the 40,000 character prompt limit for Perplexity.")
-        print("ACTION REQUIRED: invoke proxima:ask_perplexity and attach ./tmp/context.md via the files parameter.")
-        print("ALTERNATIVE: If you are out of file uploads (you can check the Perplexity API), you MUST break the context into multiple prompts and send them in succession. Explain at the start of the first prompt that you are sending context in batches, and at the end of the last prompt instruct Perplexity to start working.")
-    else:
-        print(f"INFO: Context length ({total_chars:,} chars) is within the 40,000 character prompt limit.")
-        print("ACTION REQUIRED: invoke proxima:ask_perplexity using the contents of ./tmp/planner_prompt.txt. You MUST NOT attach ./tmp/context.md via the files parameter (to save file upload quota). Instead, include the context directly in your text prompt.")
-    print("Do NOT call `new_conversation` unless you are starting a completely unrelated topic or the context has become severely bloated. Default to resuming the existing thread so that follow-up context is preserved.")
-    print("CRITICAL RULE: If proxima:ask_perplexity fails for any reason, you MUST STOP and inform the user. You are STRICTLY FORBIDDEN from attempting to plan or execute the work yourself.")
+    # 2. Keyword match agent logs
+    log_context = ""
+    log_dir = Path("./agent-logs/")
+    if log_dir.exists():
+        keywords = [w for w in re.findall(r'\w+', user_request.lower()) if len(w) > 3]
+        matching_logs = []
+        
+        for log_file in log_dir.glob("*.log"):
+            content = log_file.read_text(errors='ignore')
+            if any(k in content.lower() for k in keywords):
+                matching_logs.append(log_file)
+                if len(matching_logs) >= 3:
+                    break
+        
+        if matching_logs:
+            log_context = "\n--- Relevant Agent Logs ---\n"
+            for log in matching_logs:
+                lines = log.read_text(errors='ignore').splitlines()
+                summary = "\n".join(lines[-10:])
+                log_context += f"\nFile: {log.name}\n{summary}\n"
+
+    # 3 & 4. Write final prompt
+    os.makedirs("./tmp", exist_ok=True)
+    prompt_content = f"""[IMPORTANT: Ensure all changes are committed and pushed to GitHub. Use the GitHub connector for repo '{repo_name}' to access live file context.]
+
+User Request: {user_request}
+{log_context}
+
+Please act as a senior planner. Analyze the request, check the provided GitHub repository, and output a detailed plan for the orchestrator."""
+
+    with open("./tmp/planner_prompt.txt", "w") as f:
+        f.write(prompt_content)
+        
+    # 5. Print execution instructions
+    print("✅ Planner prompt generated at ./tmp/planner_prompt.txt")
+    print("\n--- EXECUTION INSTRUCTIONS ---")
+    print("1. Read the contents of ./tmp/planner_prompt.txt")
+    print("2. Call `proxima:ask_perplexity` with the prompt content.")
+    print("3. Ensure the GitHub connector is active if the model needs live file context.")
+    print("4. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
 
 if __name__ == "__main__":
     main()
