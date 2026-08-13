@@ -1,0 +1,35 @@
+# Caddyfile for LightLLM HTTPS Reverse Proxy
+
+# Public domain example (replace with your actual domain if available):
+# llm.yourdomain.com {
+#     basic_auth {
+#         admin $2a$14$1234567890123456789012 # Replace with output of `caddy hash-password`
+#     }
+#     reverse_proxy 127.0.0.1:8000 {
+#         flush_interval -1
+#         transport http {
+#             read_timeout 300s
+#             write_timeout 300s
+#         }
+#         header_up Host {host}
+#         header_up X-Real-IP {remote_host}
+#         header_up X-Forwarded-For {remote_host}
+#         header_up X-Forwarded-Proto {scheme}
+#     }
+# }
+
+# Local development / LAN HTTPS setup:
+https://127.0.0.1:8443 {
+    tls internal
+    reverse_proxy 127.0.0.1:8000 {
+        flush_interval -1
+        transport http {
+            read_timeout 300s
+            write_timeout 300s
+        }
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
