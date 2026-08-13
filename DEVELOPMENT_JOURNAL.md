@@ -104,3 +104,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - **Flash Lite Recursion Fix:** Fixed an infinite subagent recursion loop by clarifying leaf agent delegation rules in gemini_only.md. Link to agent log: [2026-07-28_17-50_fix-flash-lite-recursion.md](agent-logs/2026-07-28_17-50_fix-flash-lite-recursion.md)
 - **Dynamic System Prompt & Unified Triage Gateway:** Implemented modular rule decomposition in `.rules/` and created `scripts/compile_dynamic_prompt.py`. Reduces system prompt token overhead from ~40k tokens to ~600-1,200 tokens per turn, and strips leaf subagent context of orchestrator bloat. [[log]](agent-logs/2026-07-28_21-07_dynamic-system-prompt-gateway.md)
 - Restarted LiteLLM proxy to apply DeepSeek official OpenRouter pin fix and verified live traffic.
+
+## 2026-08-13
+- **2026-08-13**: Configured Caddy reverse proxy as a macOS Launch Agent (`com.matt.agent.caddy`) providing HTTPS on `https://localhost:8082` for LLM backends.
