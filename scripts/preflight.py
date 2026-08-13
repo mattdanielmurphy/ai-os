@@ -108,13 +108,23 @@ def step_git():
     if os.path.exists(".git"):
         _, diff_code = run_cmd(["git", "diff", "--quiet"], timeout=1)
         _, cached_code = run_cmd(["git", "diff", "--cached", "--quiet"], timeout=1)
-        has_local_changes = (diff_code != 0 or cached_code != 0)
-        cmd = ["git", "pull", "--rebase"] if has_local_changes else ["git", "pull"]
-        out, code = run_cmd(cmd, timeout=5)
+        _, untracked_out = run_cmd(["git", "ls-files", "--others", "--exclude-standard"], timeout=1)
+        has_local_changes = (diff_code != 0 or cached_code != 0 or len(untracked_out) > 0)
+        
+        if has_local_changes:
+            # Count modified/untracked files
+            status_out, _ = run_cmd(["git", "status", "--porcelain"], timeout=1)
+            num_changes = len(status_out.strip().splitlines()) if status_out else 0
+            if num_changes > 10:
+                print(f"\n⚠️ WARNING: {num_changes} uncommitted file changes detected! Please review and commit changes via auto_commit.py or ask the user before proceeding.\n")
+                return f"Git: WARNING ({num_changes} uncommitted changes — commit required before Perplexity plan)"
+            return f"Git: OK ({num_changes} uncommitted changes present — commit before planning)"
+        
+        out, code = run_cmd(["git", "pull"], timeout=5)
         if code == 0:
             res_str = "Up-to-date" if "Already up to date" in out else "Pulled changes"
             return f"Git: OK ({res_str})"
-        return "Git: OK (Local changes present)" if has_local_changes else "Git: WARNING (pull failed or timed out)"
+        return "Git: WARNING (pull failed or timed out)"
     return "Git: Skipped (no .git)"
 
 def step_watcher():
