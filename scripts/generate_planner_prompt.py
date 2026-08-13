@@ -58,12 +58,10 @@ def main():
 
     # 3 & 4. Write final prompt
     os.makedirs("./tmp", exist_ok=True)
-    prompt_content = f"""[IMPORTANT: Ensure all changes are committed and pushed to GitHub. Use the GitHub connector for repo '{repo_name}' to access live file context.]
-
-User Request: {user_request}
+    prompt_content = f"""User Request: {user_request}
 {log_context}
 
-Please act as a senior planner. Analyze the request, check the provided GitHub repository, and output a detailed plan for the orchestrator."""
+Please act as a senior planner. Analyze the request and output a detailed architectural implementation plan for the orchestrator."""
 
     with open("./tmp/planner_prompt.txt", "w") as f:
         f.write(prompt_content)
@@ -73,8 +71,7 @@ Please act as a senior planner. Analyze the request, check the provided GitHub r
     print("\n--- EXECUTION INSTRUCTIONS ---")
     print("1. Read the contents of ./tmp/planner_prompt.txt")
     print("2. Call `proxima:ask_perplexity` with the prompt content.")
-    print("3. Ensure the GitHub connector is active if the model needs live file context.")
-    print("4. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
+    print("3. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
 
 if __name__ == "__main__":
     main()
