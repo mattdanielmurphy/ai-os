@@ -57,10 +57,14 @@ def main():
                 log_context += f"\nFile: {log.name}\n{summary}\n"
 
     # 3 & 4. Write final prompt
+    ag_context_str = ""
+    if os.path.exists("./AG_CONTEXT.md"):
+        ag_context_str = "\n--- AG_CONTEXT.md ---\n" + Path("./AG_CONTEXT.md").read_text() + "\n"
+
     os.makedirs("./tmp", exist_ok=True)
     repo_info = f"Target GitHub Repository: {repo_name}\nPlease query the GitHub connector for repository source code and documentation for repo '{repo_name}' if needed.\n" if repo_name != "unknown" else ""
     prompt_content = f"""User Request: {user_request}
-{repo_info}{log_context}
+{ag_context_str}{repo_info}{log_context}
 
 Please act as a senior planner. Analyze the request and output a detailed architectural implementation plan for the orchestrator."""
 
