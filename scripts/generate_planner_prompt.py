@@ -75,7 +75,7 @@ Please act as a senior planner. Analyze the request and output a detailed archit
     print("✅ Planner prompt generated at ./tmp/planner_prompt.txt")
     print("\n--- EXECUTION INSTRUCTIONS ---")
     print("1. Read the contents of ./tmp/planner_prompt.txt")
-    print("2. Call `proxima:ask_perplexity` with the prompt content.")
+    print("2. Read the entire text of ./tmp/planner_prompt.txt and pass it VERBATIM as the `query` parameter to `proxima:ask_perplexity`. Do NOT extract or pass only the user request.")
     print("3. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
 
 if __name__ == "__main__":
