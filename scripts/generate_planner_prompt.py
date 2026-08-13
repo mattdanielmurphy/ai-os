@@ -68,6 +68,11 @@ def main():
     with open("./tmp/planner_prompt.txt", "w") as f:
         f.write(user_request)
         
+    with open("./tmp/context.md", "r") as f:
+        context_content = f.read()
+    
+    total_chars = len(user_request) + len(context_content)
+    
     token_match = re.search(r"Total Tokens:\s*([\d,]+)\s*tokens", result.stdout, re.IGNORECASE)
     if token_match:
         token_str = token_match.group(1).replace(",", "")
@@ -84,7 +89,14 @@ def main():
             return
 
     print("\n✅ Context size is reasonable.")
-    print("ACTION REQUIRED: invoke proxima:ask_perplexity using the contents of ./tmp/planner_prompt.txt and attach ./tmp/context.md via the files parameter.")
+    if total_chars > 40000:
+        print(f"⚠️ Context length ({total_chars:,} chars) exceeds the 40,000 character prompt limit for Perplexity.")
+        print("ACTION REQUIRED: invoke proxima:ask_perplexity and attach ./tmp/context.md via the files parameter.")
+        print("ALTERNATIVE: If you are out of file uploads (you can check the Perplexity API), you MUST break the context into multiple prompts and send them in succession. Explain at the start of the first prompt that you are sending context in batches, and at the end of the last prompt instruct Perplexity to start working.")
+    else:
+        print(f"INFO: Context length ({total_chars:,} chars) is within the 40,000 character prompt limit.")
+        print("ACTION REQUIRED: invoke proxima:ask_perplexity using the contents of ./tmp/planner_prompt.txt. You MUST NOT attach ./tmp/context.md via the files parameter (to save file upload quota). Instead, include the context directly in your text prompt.")
+    print("Do NOT call `new_conversation` unless you are starting a completely unrelated topic or the context has become severely bloated. Default to resuming the existing thread so that follow-up context is preserved.")
     print("CRITICAL RULE: If proxima:ask_perplexity fails for any reason, you MUST STOP and inform the user. You are STRICTLY FORBIDDEN from attempting to plan or execute the work yourself.")
 
 if __name__ == "__main__":
