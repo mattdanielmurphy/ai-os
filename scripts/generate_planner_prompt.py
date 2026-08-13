@@ -64,9 +64,24 @@ def main():
         print(e.stderr)
         sys.exit(1)
         
+    # Get remote github repo name if available
+    repo_name = ""
+    try:
+        remote_url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], text=True).strip()
+        # Parse github repo name e.g. owner/repo from https://github.com/owner/repo.git or git@github.com:owner/repo.git
+        m = re.search(r"github\.com[:/]([^/]+/[^/.]+)", remote_url)
+        if m:
+            repo_name = m.group(1)
+    except Exception:
+        pass
+
+    github_header = ""
+    if repo_name:
+        github_header = f"[IMPORTANT: Ensure all changes are committed and pushed to GitHub. Use the GitHub connector for repo '{repo_name}' to access live file context.]\n\n"
+
     # write planner prompt
     with open("./tmp/planner_prompt.txt", "w") as f:
-        f.write(user_request)
+        f.write(github_header + user_request)
         
     with open("./tmp/context.md", "r") as f:
         context_content = f.read()
