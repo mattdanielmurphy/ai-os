@@ -152,6 +152,19 @@ def step_watcher():
         return "Watcher: Started watch_transcripts daemon"
     return "Watcher: Running"
 
+def step_hammerspoon_errors():
+    out, code = run_cmd(["osascript", "-e", 'tell application "Hammerspoon" to execute lua code "return hs.console.getConsole()"'], timeout=1)
+    if code != 0:
+        return "Hammerspoon: ERROR (could not query)"
+    
+    lines = [l for l in out.splitlines() if l.strip()]
+    last_15 = lines[-15:]
+    errors = [l for l in last_15 if "ERROR:" in l]
+    if errors:
+        excerpt = errors[-1].split("ERROR:")[1].strip()[:30]
+        return f"Hammerspoon: ERROR ({excerpt})"
+    return "Hammerspoon: OK"
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
@@ -185,6 +198,7 @@ def main():
         ("Thread Bloat", step_bloat),
         ("Git", step_git),
         ("Watcher", step_watcher),
+        ("Hammerspoon", step_hammerspoon_errors),
     ]
     
     results = {}
