@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 const PROXIMA_PATH = '/Users/matt/projects/external/Proxima';
 const { IPCClient, AIProvider } = await import(path.join(PROXIMA_PATH, 'src/mcp/ipc-bridge.js'));
@@ -14,6 +13,7 @@ async function main() {
     let outputPath = null;
     let inputFile = null;
     let timeoutMs = 600000; // 10 minutes default
+    let recoverMode = false;
 
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--provider' || args[i] === '-p') {
@@ -26,6 +26,8 @@ async function main() {
             outputPath = args[++i];
         } else if (args[i] === '--timeout' || args[i] === '-t') {
             timeoutMs = parseInt(args[++i], 10) * 1000;
+        } else if (args[i] === '--recover' || args[i] === '--wait-active') {
+            recoverMode = true;
         } else if (!message) {
             message = args[i];
         }
@@ -35,8 +37,8 @@ async function main() {
         message = fs.readFileSync(inputFile, 'utf8');
     }
 
-    if (!message) {
-        console.error('Usage: node query_proxima.js "<message>" [--provider <name>] [--input <file>] [--output <file>] [--timeout <sec>]');
+    if (!message && !recoverMode) {
+        console.error('Usage: node query_proxima.js "<message>" [--provider <name>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover]');
         process.exit(1);
     }
 
@@ -44,9 +46,44 @@ async function main() {
     const provider = new AIProvider(providerName, client, () => true);
 
     try {
-        console.error(`[query_proxima] Querying ${providerName} (timeout: ${timeoutMs / 1000}s)...`);
-        const response = await provider.chat(message, false, filePath);
+        console.error(`[query_proxima] Querying ${providerName} (timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
         
+        let response = '';
+        if (recoverMode) {
+            // Wait for active generation in webview or cache
+            const startTime = Date.now();
+            while (Date.now() - startTime < timeoutMs) {
+                try {
+                    const result = await provider.executeScript(`
+                        (function() {
+                            // Check if page is currently streaming or has completed answer
+                            var isStreaming = document.querySelector('.animate-pulse') || document.querySelector('[data-testid="loading"]');
+                            var markdownEl = document.querySelector('.prose') || document.querySelector('[data-testid="answer-content"]');
+                            return {
+                                streaming: !!isStreaming,
+                                text: markdownEl ? markdownEl.innerText : ''
+                            };
+                        })()
+                    `);
+                    if (result && result.text && !result.streaming) {
+                        response = result.text;
+                        break;
+                    }
+                } catch (e) { }
+                await new Promise(r => setTimeout(r, 2000));
+            }
+            if (!response && message) {
+                // Fallback to sending if recovery didn't find active text
+                response = await provider.chat(message, true, filePath);
+            }
+        } else {
+            response = await provider.chat(message, true, filePath);
+        }
+
+        if (!response) {
+            throw new Error('Empty response received from provider');
+        }
+
         if (outputPath) {
             fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
             fs.writeFileSync(outputPath, response, 'utf8');
