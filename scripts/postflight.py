@@ -81,7 +81,7 @@ def main():
         from pplx_quota import get_pplx_quota
         q = get_pplx_quota()
         if q and q.get("status") == "OK":
-            pplx_quota_str = f"{q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research, {q.get('remaining_uploads')} Uploads"
+            pplx_quota_str = f"{q.get('remaining_pro')} Pro, {q.get('remaining_research')} 🔬, {q.get('remaining_uploads')} 📤"
     except Exception:
         pass
 

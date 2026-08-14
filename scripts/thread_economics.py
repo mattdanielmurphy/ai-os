@@ -2,7 +2,7 @@
 import os
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 def get_last_activity_time(transcript_path: str = None) -> float:
