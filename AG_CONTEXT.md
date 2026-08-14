@@ -12,6 +12,7 @@
 - `/.devtool/features`: Features and user task specifications.
 
 ## Key Architecture & Domain Rules
+- **Universal Learning Protocol:** Implements 4-tier knowledge persistence (AG_CONTEXT.md, DEVELOPMENT_JOURNAL.md, Wiki Engine, custom-skills). Learn insights via `/Users/matt/projects/ai-os/scripts/learn_from_moment.py`.
 - **AI Clipboard Memory Tool (Usage: search-clipboard '<query>' [--pro])**: Agents can search macOS Alfred clipboard history using natural language by running ⚡ Flash model found no confident match. Auto-escalating to Gemini 2.5 Pro...
 
 === AI Search Results for '<query>' ===
