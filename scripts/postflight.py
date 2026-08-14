@@ -45,8 +45,9 @@ def main():
     token_display = "0"
     source = "error"
     cache_display = "1h"
-    rotation_str = "OK"
     breakeven_str = "0"
+    indicator = "🟢"
+    brief_str = ""
     
     try:
         from agent_tokens import get_tokens
@@ -67,10 +68,10 @@ def main():
             t_sys = int(min(25000, token_count // 2) if token_count > 0 else 25000)
         econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
         
-        cache_display = econ['cache_display']
-        status = econ['recommendation_status']
-        rotation_str = "OK" if status == "OK" else f"⚠️ {status}"
-        breakeven_str = format_tokens(econ['n_breakeven'])
+        cache_display = econ.get('cache_display', '1h')
+        indicator = econ.get('indicator', '🟢')
+        brief_str = f" ({econ['brief']})" if econ.get('brief') else ""
+        breakeven_str = format_tokens(econ.get('n_breakeven', 0))
     except Exception:
         pass
 
@@ -85,7 +86,7 @@ def main():
         pass
 
     headers = ["Total Tokens", "Cache Expiry", "Financial Rotation"]
-    values = [f"{token_display} ({source})", cache_display, f"{token_display} / Breakeven {breakeven_str} (Status: {rotation_str})"]
+    values = [f"~{token_display}", cache_display, f"~{token_display} / ~{breakeven_str} {indicator}{brief_str}"]
 
     if pplx_quota_str:
         headers.append("Perplexity Quota")
@@ -98,9 +99,11 @@ def main():
     metrics = f"\n\n**Thread Metrics:**\n\n{header_row}\n{separator_row}\n{value_row}"
 
     if content:
-        final_output = content + metrics
+        from link_formatter import enrich_file_links
+        final_output = enrich_file_links(content + metrics)
     else:
-        final_output = metrics
+        from link_formatter import enrich_file_links
+        final_output = enrich_file_links(metrics)
 
     print(final_output)
 

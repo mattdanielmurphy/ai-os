@@ -59,10 +59,13 @@ def calculate_thread_economics(t_current: int, t_sys: int, last_write_ts: float 
     is_cache_expired = now > cache_expires_at
     
     expiry_dt = datetime.fromtimestamp(cache_expires_at).astimezone()
-    expiry_str = expiry_dt.strftime("%-I:%M%p").lower()
+    minute = round(expiry_dt.minute / 5.0) * 5
+    delta_mins = minute - expiry_dt.minute
+    rounded_dt = (expiry_dt + timedelta(minutes=delta_mins)).replace(second=0, microsecond=0)
+    expiry_str = rounded_dt.strftime("%-I:%M%p").lower()
 
     if is_cache_expired:
-        cache_display = f"{expiry_str} (⚠️ Expired)"
+        cache_display = f"{expiry_str} 🔴 (expired)"
         cache_status = "EXPIRED"
     else:
         cache_display = f"{expiry_str}"
@@ -72,15 +75,18 @@ def calculate_thread_economics(t_current: int, t_sys: int, last_write_ts: float 
     is_hard_cap_breached = t_current >= n_hard_cap
     
     if is_hard_cap_breached:
+        indicator = "🔴"
+        brief = "reset now"
         recommendation_status = "DEFINITELY_NEW_THREAD"
         rotation_recommendation = f"🛑 Context cap reached ({t_current:,} >= {n_hard_cap:,}). Model reasoning degrades significantly. Definitely start a new thread!"
     elif is_past_breakeven:
+        indicator = "🟡"
+        brief = "rotate soon"
         recommendation_status = "CONSIDER_NEW_THREAD"
         rotation_recommendation = f"⚠️ Past financial breakeven ({t_current:,} >= {n_breakeven:,}). Marginal cost of continuing exceeds fresh thread initialization. Consider starting a new thread."
-    elif is_cache_expired:
-        recommendation_status = "CACHE_EXPIRED"
-        rotation_recommendation = f"⚠️ Token cache expired at {expiry_str}. Continuing will incur full cache-write charges. Consider starting a new thread."
     else:
+        indicator = "🟢"
+        brief = ""
         recommendation_status = "OK"
         rotation_recommendation = "OK"
         
@@ -98,4 +104,6 @@ def calculate_thread_economics(t_current: int, t_sys: int, last_write_ts: float 
         "is_cache_expired": is_cache_expired,
         "recommendation_status": recommendation_status,
         "rotation_recommendation": rotation_recommendation,
+        "indicator": indicator,
+        "brief": brief,
     }

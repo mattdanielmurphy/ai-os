@@ -23,6 +23,14 @@ class ActionHandler(http.server.BaseHTTPRequestHandler):
             target_path = params.get("path", ["/Users/matt/projects/ai-os"])[0]
             print(f"[URL Listener] Opening in Zed: {target_path}", flush=True)
             subprocess.Popen(["zed", target_path])
+        elif action == "open_finder":
+            target_path = params.get("path", ["/Users/matt/projects/ai-os"])[0]
+            clean_path = target_path.split(":")[0]
+            print(f"[URL Listener] Opening in Finder: {clean_path}", flush=True)
+            if os.path.exists(clean_path) and os.path.isfile(clean_path):
+                subprocess.Popen(["open", "-R", clean_path])
+            else:
+                subprocess.Popen(["open", clean_path])
         elif action == "set_delegation":
             mode = params.get("mode", ["light"])[0]
             print(f"[URL Listener] Setting delegation mode to: {mode}", flush=True)
