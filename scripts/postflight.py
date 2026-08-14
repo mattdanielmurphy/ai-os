@@ -62,14 +62,14 @@ def main():
             t_sys = int(min(25000, token_count // 2) if token_count > 0 else 25000)
         econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
         
-        token_metric = f"- Total Tokens: {token_display} (source: {source})"
-        cache_expiry = f"- Cache Expiry: {econ['cache_display']}"
+        token_metric = f"| **Total Tokens** | {token_display} ({source}) |"
+        cache_expiry = f"| **Cache Expiry** | {econ['cache_display']} |"
         status = econ['recommendation_status']
         if status == "OK":
             rotation_str = "OK"
         else:
             rotation_str = f"⚠️ {status}"
-        econ_rotation = f"- Financial Rotation: {token_display} / Breakeven {format_tokens(econ['n_breakeven'])} (Status: {rotation_str})"
+        econ_rotation = f"| **Financial Rotation** | {token_display} / Breakeven {format_tokens(econ['n_breakeven'])} (Status: {rotation_str}) |"
         econ_metric = f"\n{cache_expiry}\n{econ_rotation}"
     except Exception:
         token_metric = "- Total Tokens: 0 (source: error)"
@@ -80,11 +80,11 @@ def main():
         from pplx_quota import get_pplx_quota
         q = get_pplx_quota()
         if q.get("status") == "OK":
-            pplx_metric = f"\n- Perplexity Quota: {q.get('remaining_pro')} Pro remaining, {q.get('remaining_research')} Research remaining"
+            pplx_metric = f"\n| **Perplexity Quota** | {q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research |"
     except Exception:
         pass
 
-    metrics = f"\n\n**Thread Metrics:**\n{token_metric}{econ_metric}{pplx_metric}"
+    metrics = f"\n\n**Thread Metrics:**\n\n| Metric | Value |\n| :--- | :--- |\n{token_metric}{econ_metric}{pplx_metric}"
 
     if content:
         final_output = content + metrics

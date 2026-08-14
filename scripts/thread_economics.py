@@ -59,15 +59,13 @@ def calculate_thread_economics(t_current: int, t_sys: int, last_write_ts: float 
     is_cache_expired = now > cache_expires_at
     
     expiry_dt = datetime.fromtimestamp(cache_expires_at).astimezone()
-    expiry_str = expiry_dt.strftime("%H:%M %Z")
-    
+    expiry_str = expiry_dt.strftime("%-I:%M%p").lower()
+
     if is_cache_expired:
-        minutes_expired = int((now - cache_expires_at) / 60)
-        cache_display = f"⚠️ EXPIRED at {expiry_str} ({minutes_expired}m ago — start new thread to avoid full prefix re-write)"
+        cache_display = f"{expiry_str} (⚠️ Expired)"
         cache_status = "EXPIRED"
     else:
-        minutes_left = max(0, int((cache_expires_at - now) / 60))
-        cache_display = f"{expiry_str} ({minutes_left}m left)"
+        cache_display = f"{expiry_str}"
         cache_status = "ACTIVE"
         
     is_past_breakeven = t_current >= n_breakeven
