@@ -15,6 +15,7 @@ import argparse
 import subprocess
 import time
 import json
+import re
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -64,7 +65,7 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 7200) -> tuple[dict, d
 
 def render(conv_id: str, brain_dir: Path) -> bool:
     """Run gen_conversation_md.py AND discussions_html.py for a conversation."""
-    app_data_dir = brain_dir.parent.parent.parent
+    app_data_dir = brain_dir.parent
     
     # 1. Render Markdown thread
     try:
@@ -88,9 +89,10 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
         if transcript.exists():
             exchanges = parse_exchanges(transcript)
-            html = build_document(f"Conversation {conv_id[:8]}", exchanges)
-            # Save at project root
-            out_file = SCRIPTS_DIR.parent / 'Discussions.html'
+            project_root = SCRIPTS_DIR.parent
+            threads = {conv_id: {"title": f"Conversation {conv_id[:8]}", "exchanges": exchanges}}
+            html = build_document(threads, project_root.name, project_root)
+            out_file = project_root / 'Discussions.html'
             out_file.write_text(html)
         return True
     except Exception as e:
