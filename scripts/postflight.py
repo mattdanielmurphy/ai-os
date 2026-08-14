@@ -56,9 +56,10 @@ def main():
         last_ts = thread_economics.get_last_activity_time(transcript_path)
         
         try:
-            t_sys = get_sys_prompt_tokens(Path(os.getcwd()))
+            t_sys_val, _ = get_sys_prompt_tokens(Path(os.getcwd()))
+            t_sys = int(t_sys_val)
         except Exception:
-            t_sys = min(25000, token_count // 2) if token_count > 0 else 25000
+            t_sys = int(min(25000, token_count // 2) if token_count > 0 else 25000)
         econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
         
         token_metric = f"- Total Tokens: {token_display} (source: {source})"
