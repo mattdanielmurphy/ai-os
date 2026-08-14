@@ -61,15 +61,29 @@ def get_sys_prompt_tokens(project_root: Path):
     skills_tokens = 0
     skill_paths = set(glob.glob(str(home / ".gemini/config/skills/**/SKILL.md"), recursive=True))
     skill_paths.update(glob.glob(str(home / ".gemini/config/plugins/**/SKILL.md"), recursive=True))
+    skill_paths.update(glob.glob(str(home / ".gemini/antigravity/builtin/skills/**/SKILL.md"), recursive=True))
     for sp in skill_paths:
-        skills_tokens += count_file_tokens(Path(sp))
+        try:
+            content = Path(sp).read_bytes()[:2048].decode("utf-8", errors="ignore")
+            if "---" in content:
+                parts = content.split("---", 2)
+                if len(parts) >= 2:
+                    fm = parts[1]
+                    name = Path(sp).parent.name
+                    desc = ""
+                    for line in fm.split("\n"):
+                        l = line.strip()
+                        if l.startswith("name:"):
+                            name = l.split("name:", 1)[1].strip().strip("\"'")
+                        elif l.startswith("description:"):
+                            desc = l.split("description:", 1)[1].strip().strip("\"'")
+                    skills_tokens += estimate_tokens(f"- {name} ({sp}): {desc}\n")
+        except Exception:
+            pass
 
     # 3. MCP Schemas
-    mcp_tokens = 0
-    mcp_paths = glob.glob(str(home / ".gemini/antigravity/mcp/**/*.json"), recursive=True)
-    for mp in mcp_paths:
-        mcp_tokens += count_file_tokens(Path(mp))
-
+    mcp_tokens = 3200
+    
     # 4. AG_CONTEXT.md
     ag_context_tokens = 0
     ag_context_candidates = [project_root / "AG_CONTEXT.md", home / "projects/ai-os/AG_CONTEXT.md"]
@@ -77,10 +91,12 @@ def get_sys_prompt_tokens(project_root: Path):
         if ag_p.exists():
             ag_context_tokens = count_file_tokens(ag_p)
             break
-
-    t_sys = rules_tokens + skills_tokens + mcp_tokens + ag_context_tokens
+            
+    base_system_tokens = 3500
+    t_sys = base_system_tokens + rules_tokens + skills_tokens + mcp_tokens + ag_context_tokens
     
     breakdown = {
+        "base_system_tokens": base_system_tokens,
         "rules_tokens": rules_tokens,
         "skills_tokens": skills_tokens,
         "mcp_tokens": mcp_tokens,
@@ -201,10 +217,11 @@ def main():
         "T_hist": t_hist,
         "T_hist_threshold": t_hist_threshold,
         "breakdown": {
-            "sys_rules_tokens": sys_breakdown["rules_tokens"],
-            "sys_skills_tokens": sys_breakdown["skills_tokens"],
-            "sys_mcp_tokens": sys_breakdown["mcp_tokens"],
-            "sys_context_tokens": sys_breakdown["ag_context_tokens"],
+            "sys_base_tokens": sys_breakdown.get("base_system_tokens", 0),
+            "sys_rules_tokens": sys_breakdown.get("rules_tokens", 0),
+            "sys_skills_tokens": sys_breakdown.get("skills_tokens", 0),
+            "sys_mcp_tokens": sys_breakdown.get("mcp_tokens", 0),
+            "sys_context_tokens": sys_breakdown.get("ag_context_tokens", 0),
             "R": R,
             "S": S,
             "M": M
