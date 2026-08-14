@@ -312,8 +312,9 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
             idx = obj.get('step_index', 0)
 
             if t == 'USER_INPUT':
-                # Flush prior turn ONLY if agent activity (response text or timestamp) occurred for it
-                if pending_users and (current_agent_content or current_agent_time):
+                # Flush prior turn ONLY if substantive agent response text was produced
+                has_substantive = bool([c for c in current_agent_content if c.strip() and not is_transient_status_line(c)])
+                if pending_users and has_substantive:
                     flush_current_turn()
 
                 # Check for Undo/Rewind
@@ -353,9 +354,8 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
                     if not is_transient_status_line(content.strip()):
-                        # If this is non-transient, it's a "real" update - flush and replace
-                        # or just append as the primary content for this turn.
-                        current_agent_content = [content.strip()]
+                        # If this is non-transient, it's a "real" update - append to content
+                        current_agent_content.append(content.strip())
                     else:
                         # If it is transient, just append it if not already present
                         cleaned = clean_agent_content(content.strip())
@@ -371,18 +371,12 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
 # ─── Response Files ───────────────────────────────────────────────────────────
 
-def load_agent_response(history_dir: Path, turn_n: int, fallback_text: str = '') -> str:
+def load_agent_response(history_dir: Path, turn_n: int) -> str:
     """Load agent response markdown for turn N (history/turn_N.md)."""
     path = history_dir / f'turn_{turn_n}.md'
     if path.exists():
-        content = path.read_text().strip()
-        if content:
-            return clean_agent_content(content)
-
-    if fallback_text and fallback_text.strip():
-        return clean_agent_content(fallback_text.strip())
-
-    return '*(response in progress or not recorded)*'
+        return clean_agent_content(path.read_text().strip())
+    return ''
 
 
 def next_turn_number(history_dir: Path) -> int:
@@ -542,8 +536,11 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
         if item['type'] == 'exchange':
-            # Need to reload response in case of updates
-            agent_content = load_agent_response(history_dir, item.get('agent_turn', 0), item.get('agent_content', ''))
+            agent_content = item.get('agent_content', '').strip()
+            if not agent_content:
+                agent_content = '*(response in progress)*' if i == 0 else '*(no response recorded)*'
+            else:
+                agent_content = clean_agent_content(agent_content)
 
             # Check for subagent progress
             progress = None
