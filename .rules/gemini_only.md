@@ -57,3 +57,10 @@ When running under Gemini/Antigravity without Hermes' active daemon, you MUST em
 
 2. **Task Completion & Anti-Fabrication**:
    - Deliverables must be working artifacts backed by real tool execution output, not prose summaries.
+
+## Proxima & Perplexity Integration Guardrails
+- **Perplexity File Upload & Context Policy**:
+  - **Codebase & Text Files**: NEVER pass codebase or text files in the `files` argument to `proxima:ask_perplexity`. ALWAYS rely on the authenticated GitHub connector or embedded text.
+  - **Screenshots & Visual Assets**: Upload quota is 50/week on a rolling window. If remaining upload quota is > 25 AND a screenshot contains complex visual elements that cannot be easily/accurately transcribed into text, passing the image file to `proxima:ask_perplexity` is permitted. If quota is <= 25 or the visual content is easily describable, the orchestrator MUST act as the vision provider and describe it textually in the prompt instead of uploading.
+- **Disabled Proxima Providers**: NEVER call `proxima:ask_claude` or `proxima:ask_chatgpt`.
+- **Async Recovery on Timeout**: If `proxima:ask_perplexity` times out after 3 minutes, do NOT switch providers or abandon the query. Immediately run `node ~/projects/ai-os/scripts/query_proxima.js --provider perplexity --recover --output ./tmp/planner_output.txt --timeout 300` to retrieve the finished output.

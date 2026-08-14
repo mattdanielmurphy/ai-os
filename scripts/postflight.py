@@ -105,7 +105,12 @@ def main():
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
     value_row = "| " + " | ".join(values) + " |"
 
-    metrics = f"\n\n**Thread Metrics:**\n\n{header_row}\n{separator_row}\n{value_row}"
+    thread_link = ""
+    if conv_id:
+        thread_md_path = f"/Users/matt/.gemini/antigravity/brain/{conv_id}/thread.md"
+        thread_link = f"---\n\nCurrent Thread: [thread.md](file://{thread_md_path})\n\n"
+
+    metrics = f"\n\n\n{thread_link}**Thread Metrics:**\n\n{header_row}\n{separator_row}\n{value_row}\n"
 
     if content:
         from link_formatter import enrich_file_links

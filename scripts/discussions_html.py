@@ -45,6 +45,38 @@ def estimate_words(text: str) -> int:
 
 # ─── Transcript parsing (mirrors gen_conversation_md.py) ──────────────────
 
+def balance_code_fences(text: str) -> str:
+    """Ensure all open markdown fenced code blocks (backticks or tildes >= 3) are properly closed."""
+    if not text:
+        return text
+
+    fence_char = None
+    fence_len = 0
+    in_fence = False
+    fence_start_re = re.compile(r'^[ ]{0,3}(`{3,}|~{3,})')
+
+    for line in text.splitlines():
+        if not in_fence:
+            m = fence_start_re.match(line)
+            if m:
+                fence = m.group(1)
+                fence_char = fence[0]
+                fence_len = len(fence)
+                in_fence = True
+        else:
+            close_re = re.compile(rf'^[ ]{{0,3}}{re.escape(fence_char)}{{{fence_len},}}\s*$')
+            if close_re.match(line):
+                in_fence = False
+                fence_char = None
+                fence_len = 0
+
+    if in_fence and fence_char and fence_len:
+        closing = fence_char * fence_len
+        return text + f"\n{closing}\n"
+
+    return text
+
+
 def is_transient_status_line(line: str) -> bool:
     s = line.strip()
     if not s:
