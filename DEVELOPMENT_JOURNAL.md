@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-08-13
+- **Cost-Aware & Cache-Aware Thread Rotation System:** Implemented `scripts/thread_economics.py` calculating marginal financial breakeven against prompt cache write/read rates, hard context capacity caps (55% safety margin), and 1-hour cache TTL countdowns. Integrated live metrics into `scripts/postflight.py` and `scripts/check_thread_bloat.py`.
+
 ## 2026-08-10
 - Re-architected Discussions.html into a Milestone & Suggestion tracker focused on user requests, context summaries, and decision resolutions.
 - Fixed macOS Finder open link handler and styled clean dark-mode typography.
