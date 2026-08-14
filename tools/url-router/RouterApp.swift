@@ -33,6 +33,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                     try? task.run()
                     task.waitUntilExit()
+                } else if action == "open_finder", let rawPath = queryItems.first(where: { $0.name == "path" })?.value {
+                    let cleanPath = rawPath.components(separatedBy: ":").first ?? rawPath
+                    let task = Process()
+                    task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                    var isDir: ObjCBool = false
+                    if FileManager.default.fileExists(atPath: cleanPath, isDirectory: &isDir) && !isDir.boolValue {
+                        task.arguments = ["-R", cleanPath]
+                    } else {
+                        task.arguments = [cleanPath]
+                    }
+                    try? task.run()
+                    task.waitUntilExit()
                 }
             }
             exit(0)

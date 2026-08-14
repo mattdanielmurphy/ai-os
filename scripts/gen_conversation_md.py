@@ -558,7 +558,14 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
     doc_content.append('</span>')
 
-    output_path.write_text('\n\n'.join(doc_content))
+    rendered_doc = '\n\n'.join(doc_content)
+    try:
+        from link_formatter import enrich_file_links
+        rendered_doc = enrich_file_links(rendered_doc)
+    except Exception:
+        pass
+
+    output_path.write_text(rendered_doc)
     print(f"Written: {output_path}")
     print(f"  {len(exchanges)} total exchanges rendered in chronological order")
     return output_path
