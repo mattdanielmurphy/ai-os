@@ -40,6 +40,15 @@ def main():
         content = " ".join(unknown).strip()
 
     conv_id = args.conv_id or os.environ.get("CONVERSATION_ID") or os.environ.get("ANTIGRAVITY_CONVERSATION_ID")
+    if not conv_id:
+        try:
+            from check_thread_bloat import find_transcript_file
+            from pathlib import Path
+            t_path = find_transcript_file()
+            if t_path:
+                conv_id = Path(t_path).parent.parent.parent.name
+        except Exception:
+            pass
 
     # 1. Thread Tokens & Economics
     token_display = "0"
