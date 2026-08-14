@@ -11,6 +11,10 @@ def main():
     parser.add_argument("request", help="User request string")
     parser.add_argument("--image-desc", help="Description of attached image", default=None)
     
+    parser.add_argument("request", help="User request string")
+    parser.add_argument("--image-desc", help="Description of attached image", default=None)
+    parser.add_argument("--context", help="Context mode", default="full")
+    
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
@@ -19,11 +23,13 @@ def main():
     user_request = args.request
     
     # 1. Check Git repo & remote
-    if not os.path.exists(".git"):
-        print("❌ ERROR: No Git remote configured for this project.")
-        print("ACTION REQUIRED: Check if a GitHub remote exists or create one (e.g. via 'gh repo create --private'). Perplexity GitHub connector requires a synced GitHub repo.")
+    git_check = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True)
+    if git_check.returncode != 0:
+        print("❌ ERROR: No Git repository detected.")
         sys.exit(1)
-        
+    
+    git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
+    
     try:
         remote_url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], text=True).strip()
         if not remote_url:
@@ -38,29 +44,36 @@ def main():
 
     # 2. Keyword match agent logs
     log_context = ""
-    log_dir = Path("./agent-logs/")
-    if log_dir.exists():
-        keywords = [w for w in re.findall(r'\w+', user_request.lower()) if len(w) > 3]
-        matching_logs = []
-        
-        for log_file in log_dir.glob("*.log"):
-            content = log_file.read_text(errors='ignore')
-            if any(k in content.lower() for k in keywords):
-                matching_logs.append(log_file)
-                if len(matching_logs) >= 3:
-                    break
-        
-        if matching_logs:
-            log_context = "\n--- Relevant Agent Logs ---\n"
-            for log in matching_logs:
-                lines = log.read_text(errors='ignore').splitlines()
-                summary = "\n".join(lines[-10:])
-                log_context += f"\nFile: {log.name}\n{summary}\n"
+    log_dirs = [Path("./agent-logs/"), Path(git_root) / "agent-logs/"]
+    matching_logs = []
+    
+    keywords = [w for w in re.findall(r'\w+', user_request.lower()) if len(w) > 3]
+    
+    for log_dir in log_dirs:
+        if log_dir.exists():
+            for log_file in log_dir.glob("*.log"):
+                content = log_file.read_text(errors='ignore')
+                if any(k in content.lower() for k in keywords):
+                    matching_logs.append(log_file)
+                    if len(matching_logs) >= 3:
+                        break
+        if len(matching_logs) >= 3:
+            break
+            
+    if matching_logs:
+        log_context = "\n--- Relevant Agent Logs ---\n"
+        for log in matching_logs:
+            lines = log.read_text(errors='ignore').splitlines()
+            summary = "\n".join(lines[-10:])
+            log_context += f"\nFile: {log.name}\n{summary}\n"
 
     # 3 & 4. Write final prompt
     ag_context_str = ""
-    if os.path.exists("./AG_CONTEXT.md"):
-        ag_context_str = "\n--- AG_CONTEXT.md ---\n" + Path("./AG_CONTEXT.md").read_text() + "\n"
+    ag_context_paths = [Path("./AG_CONTEXT.md"), Path(git_root) / "AG_CONTEXT.md"]
+    for path in ag_context_paths:
+        if path.exists():
+            ag_context_str = "\n--- AG_CONTEXT.md ---\n" + path.read_text() + "\n"
+            break
 
     os.makedirs("./tmp", exist_ok=True)
     if repo_name != "unknown":
@@ -102,6 +115,7 @@ DO NOT provide full code implementations. Focus on structural details, signature
     print("1. Read the contents of ./tmp/planner_prompt.txt")
     print("2. Read the entire text of ./tmp/planner_prompt.txt and pass it VERBATIM as the `message` parameter to `proxima:ask_perplexity`. Do NOT extract or pass only the user request.")
     print("3. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
+    print("\nCRITICAL: Do NOT pass the 'files' parameter to `proxima:ask_perplexity`. Perplexity file upload quota is extremely limited. Context is provided via text and GitHub connector.")
 
 if __name__ == "__main__":
     main()
