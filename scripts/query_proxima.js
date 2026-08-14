@@ -4,6 +4,7 @@ import path from 'path';
 
 const PROXIMA_PATH = '/Users/matt/projects/external/Proxima';
 const { IPCClient, AIProvider } = await import(path.join(PROXIMA_PATH, 'src/mcp/ipc-bridge.js'));
+const { getAgentHubToken, getAgentHubPort } = await import(path.join(PROXIMA_PATH, 'src/mcp/helpers.js'));
 
 async function main() {
     const args = process.argv.slice(2);
@@ -42,7 +43,9 @@ async function main() {
         process.exit(1);
     }
 
-    const client = new IPCClient(19222);
+    const port = getAgentHubPort() || 19222;
+    const token = getAgentHubToken();
+    const client = new IPCClient(port, token);
     const provider = new AIProvider(providerName, client, () => true);
 
     try {
