@@ -107,3 +107,5 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-08-13
 - **2026-08-13**: Configured Caddy reverse proxy as a macOS Launch Agent (`com.matt.agent.caddy`) providing HTTPS on `https://localhost:8082` for LLM backends.
+- **Postflight Thread Size & Perplexity Quota Injection:** Fixed  non-blocking stdin handling and thread token metrics calculation. Created  to inject live Perplexity Pro/Research quota into  and . Documented userscript directory locations in  and . [[log]](agent-logs/2026-08-13_18-36_postflight-thread-size-and-perplexity-quota.md)
+- **Postflight Thread Size & Perplexity Quota Injection:** Fixed `postflight.py` non-blocking stdin handling and thread token metrics calculation. Created `scripts/pplx_quota.py` to inject live Perplexity Pro/Research quota into `postflight.py` and `preflight.py`. Documented userscript directory locations in `AG_CONTEXT.md` and `macOS Environment.md`. [[log]](agent-logs/2026-08-13_18-36_postflight-thread-size-and-perplexity-quota.md)
