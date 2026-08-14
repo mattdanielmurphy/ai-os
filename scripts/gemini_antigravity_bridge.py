@@ -5,6 +5,7 @@ import os
 import uuid
 import re
 import hashlib
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -87,6 +88,52 @@ def update_summaries(uuid_key, title):
     with open(SUMMARY_FILE, 'w') as f:
         json.dump(summaries, f, indent=2)
 
+SUMMARIES_DB = Path.home() / ".gemini/antigravity-cli/conversation_summaries.db"
+
+def register_sqlite_summary(conv_id: str, title: str, step_count: int, ts_iso: str, workspace_uri: str = "file:///Users/matt/projects/ai-os", project_id: str = "a01b1e37-2f5f-4f03-a7cc-e48d0e5c1b02"):
+    if not SUMMARIES_DB.exists():
+        return
+    try:
+        conn = sqlite3.connect(str(SUMMARIES_DB))
+        cur = conn.cursor()
+        
+        preview = f"[Gemini] {title}"
+        workspace_json = json.dumps([workspace_uri])
+        
+        cur.execute("""
+            INSERT INTO conversation_summaries (
+                conversation_id, title, preview, step_count, last_modified_time,
+                workspace_uris, status, source, project_id, agent_name,
+                parent_conversation_id, nesting_depth, battle_id, winning_conversation_id,
+                not_fully_idle, killed, last_user_input_time, last_user_input_step_index, app_data_dir
+            ) VALUES (
+                ?, '', ?, ?, ?,
+                ?, '', '', ?, '',
+                '', 0, '', '',
+                0, 0, ?, ?, 'antigravity'
+            ) ON CONFLICT(conversation_id) DO UPDATE SET
+                preview = excluded.preview,
+                step_count = excluded.step_count,
+                last_modified_time = excluded.last_modified_time,
+                workspace_uris = excluded.workspace_uris,
+                project_id = excluded.project_id,
+                last_user_input_time = excluded.last_user_input_time,
+                last_user_input_step_index = excluded.last_user_input_step_index;
+        """, (
+            conv_id,
+            preview,
+            step_count,
+            ts_iso,
+            workspace_json,
+            project_id,
+            ts_iso,
+            0
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[gemini-bridge] SQLite register error for {conv_id}: {e}")
+
 def get_file_date(file_path):
     # 1. Filename YYYY-MM-DD
     match = re.search(r'(\d{4}-\d{2}-\d{2})', file_path.name)
@@ -152,6 +199,11 @@ def process_file(file_path, sync_state, dry_run=False, quiet=False, force=False)
             f.write(f"## {msg['source']} ({msg['created_at']})\n\n{msg['content']}\n\n---\n")
 
     update_summaries(conv_id, title)
+    
+    ts_iso = datetime.now().isoformat()
+    if messages:
+        ts_iso = messages[-1]['created_at']
+    register_sqlite_summary(conv_id, title, len(messages), ts_iso)
     if not quiet: print(f"[gemini-bridge] Synced: {title} ({conv_id})")
     return file_hash
 
