@@ -9,6 +9,20 @@ SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 
+def format_tokens(tokens: int) -> str:
+    try:
+        tokens = int(tokens)
+    except (ValueError, TypeError):
+        return "0"
+    if tokens <= 0:
+        return "0"
+    if tokens >= 1_000_000:
+        val = tokens / 1_000_000
+        return f"{val:.1f}M" if (val % 1 >= 0.05 and val % 1 <= 0.95) else f"{round(val)}M"
+    if tokens >= 1_000:
+        return f"{round(tokens / 1_000)}k"
+    return str(tokens)
+
 def main():
     parser = argparse.ArgumentParser(description="Two-stage async postflight, token, and quota formatter.")
     parser.add_argument("--agent", choices=["claude", "hermes", "antigravity"], default="antigravity", help="Agent type reporting metrics.")
@@ -31,7 +45,8 @@ def main():
     try:
         from agent_tokens import get_tokens
         token_count, source = get_tokens(args.agent, conv_id=conv_id)
-        token_metric = f"- Total Tokens: {token_count} (source: {source})"
+        token_display = format_tokens(token_count)
+        token_metric = f"- Total Tokens: {token_display} (source: {source})"
     except Exception:
         token_metric = "- Total Tokens: 0 (source: error)"
 
