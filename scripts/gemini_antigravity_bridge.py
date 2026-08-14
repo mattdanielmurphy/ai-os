@@ -14,6 +14,8 @@ BRAIN_DIR = Path.home() / ".gemini/antigravity/brain"
 CONFIG_DIR = Path.home() / ".config/gemini-antigravity-bridge"
 SYNC_STATE_FILE = CONFIG_DIR / "sync_state.json"
 SUMMARY_FILE = BRAIN_DIR / "thread_summaries.json"
+DOCS_THREADS_DIR = Path("/Users/matt/projects/ai-os/docs/gemini-threads")
+
 
 def load_sync_state():
     if SYNC_STATE_FILE.exists():
@@ -193,12 +195,27 @@ def process_file(file_path, sync_state, dry_run=False, quiet=False, force=False)
         for msg in messages:
             f.write(json.dumps({**msg, "status": "DONE"}) + "\n")
             
-    with open(thread_dir / "thread.md", 'w') as f:
+    # Clean up and write markdown to docs/
+    DOCS_THREADS_DIR.mkdir(parents=True, exist_ok=True)
+    clean_md_path = DOCS_THREADS_DIR / f"{file_path.stem}.md"
+    
+    with open(clean_md_path, 'w') as f:
+        f.write(f"---\n")
+        f.write(f"title: \"{title}\"\n")
+        f.write(f"date: \"{datetime.now().date()}\"\n")
+        f.write(f"source: \"gemini.google.com\"\n")
+        f.write(f"conversation_id: \"{conv_id}\"\n")
+        f.write(f"url: \"{meta.get('url', '')}\"\n")
+        f.write(f"---\n\n")
         f.write(f"# {title}\n\n")
+        f.write(f"> [!NOTE]\n> Archived Gemini Thread: [{title}]({meta.get('url', '')}) | Date: {datetime.now().date()}\n\n")
+        
         for msg in messages:
-            f.write(f"## {msg['source']} ({msg['created_at']})\n\n{msg['content']}\n\n---\n")
+            role_header = "## User" if msg['source'] == "USER_EXPLICIT" else "## Gemini"
+            f.write(f"{role_header}\n{msg['content']}\n\n---\n\n")
 
     update_summaries(conv_id, title)
+
     
     ts_iso = datetime.now().isoformat()
     if messages:
