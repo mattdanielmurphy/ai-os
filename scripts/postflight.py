@@ -107,6 +107,21 @@ def main():
 
     print(final_output)
 
+    if conv_id and final_output:
+        try:
+            from pathlib import Path
+            app_data_dir = Path.home() / ".gemini/antigravity"
+            history_dir = app_data_dir / "brain" / conv_id / "history"
+            history_dir.mkdir(parents=True, exist_ok=True)
+            from gen_conversation_md import next_turn_number, generate
+            turn_n = next_turn_number(history_dir)
+            turn_file = history_dir / f"turn_{turn_n}.md"
+            turn_file.write_text(final_output)
+            
+            generate(conv_id, "Conversation", app_data_dir=app_data_dir)
+        except Exception:
+            pass
+
     async_script = os.path.join(SCRIPTS_DIR, "postflight_async.py")
     if os.path.exists(async_script):
         subprocess.Popen(
