@@ -110,6 +110,8 @@ def main():
     if conv_id and final_output:
         try:
             from pathlib import Path
+            import io
+            import contextlib
             app_data_dir = Path.home() / ".gemini/antigravity"
             history_dir = app_data_dir / "brain" / conv_id / "history"
             history_dir.mkdir(parents=True, exist_ok=True)
@@ -118,7 +120,8 @@ def main():
             turn_file = history_dir / f"turn_{turn_n}.md"
             turn_file.write_text(final_output)
             
-            generate(conv_id, "Conversation", app_data_dir=app_data_dir)
+            with contextlib.redirect_stdout(io.StringIO()):
+                generate(conv_id, "Conversation", app_data_dir=app_data_dir)
         except Exception:
             pass
 
