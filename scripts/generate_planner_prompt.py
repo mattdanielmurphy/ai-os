@@ -62,7 +62,16 @@ def main():
         ag_context_str = "\n--- AG_CONTEXT.md ---\n" + Path("./AG_CONTEXT.md").read_text() + "\n"
 
     os.makedirs("./tmp", exist_ok=True)
-    repo_info = f"Target GitHub Repository: {repo_name}\nPlease query the GitHub connector for repository source code and documentation for repo '{repo_name}' if needed.\n" if repo_name != "unknown" else ""
+    if repo_name != "unknown":
+        repo_info = (
+            f"\n--- GitHub Connector Context ---\n"
+            f"Target Private Repository: '{repo_name}'\n"
+            f"IMPORTANT: You have access to my authenticated GitHub account via your GitHub connector. "
+            f"Please use your GitHub connector to directly read, search, and inspect the codebase, files, and documentation "
+            f"in my repository '{repo_name}' (including private files and configs) as needed to construct this plan.\n"
+        )
+    else:
+        repo_info = ""
     prompt_content = f"""User Request: {user_request}
 {ag_context_str}{repo_info}{log_context}
 
@@ -75,7 +84,7 @@ Please act as a senior planner. Analyze the request and output a detailed archit
     print("✅ Planner prompt generated at ./tmp/planner_prompt.txt")
     print("\n--- EXECUTION INSTRUCTIONS ---")
     print("1. Read the contents of ./tmp/planner_prompt.txt")
-    print("2. Read the entire text of ./tmp/planner_prompt.txt and pass it VERBATIM as the `query` parameter to `proxima:ask_perplexity`. Do NOT extract or pass only the user request.")
+    print("2. Read the entire text of ./tmp/planner_prompt.txt and pass it VERBATIM as the `message` parameter to `proxima:ask_perplexity`. Do NOT extract or pass only the user request.")
     print("3. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
 
 if __name__ == "__main__":
