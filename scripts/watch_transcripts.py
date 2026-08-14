@@ -69,9 +69,12 @@ def render(conv_id: str, brain_dir: Path) -> bool:
     
     # 1. Render Markdown thread
     try:
-        sys.path.append(str(SCRIPTS_DIR))
-        from gen_conversation_md import generate
-        generate(conv_id, "Conversation", app_data_dir=app_data_dir)
+        subprocess.run(
+            [sys.executable, str(GEN_SCRIPT), conv_id, "--app-data-dir", str(app_data_dir)],
+            check=True,
+            capture_output=True,
+            text=True
+        )
         try:
             from link_formatter import enrich_file_links
             thread_md = brain_dir / conv_id / "thread.md"
@@ -89,7 +92,9 @@ def render(conv_id: str, brain_dir: Path) -> bool:
     # 2. Render Discussions.html
     try:
         from discussions_html import build_document, parse_exchanges
-        transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
+        transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript_full.jsonl"
+        if not transcript.exists() or transcript.stat().st_size == 0:
+            transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
         if transcript.exists():
             exchanges = parse_exchanges(transcript)
             project_root = SCRIPTS_DIR.parent

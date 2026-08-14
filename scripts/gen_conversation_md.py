@@ -27,14 +27,62 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+def balance_code_fences(text: str) -> str:
+    """Ensure all open markdown fenced code blocks (backticks or tildes >= 3) are properly closed."""
+    if not text:
+        return text
+
+    fence_char = None
+    fence_len = 0
+    in_fence = False
+    fence_start_re = re.compile(r'^[ ]{0,3}(`{3,}|~{3,})')
+
+    for line in text.splitlines():
+        if not in_fence:
+            m = fence_start_re.match(line)
+            if m:
+                fence = m.group(1)
+                fence_char = fence[0]
+                fence_len = len(fence)
+                in_fence = True
+        else:
+            close_re = re.compile(rf'^[ ]{{0,3}}{re.escape(fence_char)}{{{fence_len},}}\s*$')
+            if close_re.match(line):
+                in_fence = False
+                fence_char = None
+                fence_len = 0
+
+    if in_fence and fence_char and fence_len:
+        closing = fence_char * fence_len
+        return text + f"\n{closing}\n"
+
+    return text
+
+
+def escape_currency_dollar_signs(text: str) -> str:
+    """
+    Escape currency dollar signs (e.g. $500, $3,877.14, **$500**) so that
+    Markdown / KaTeX does not misinterpret pairs of currency values as LaTeX math delimiters.
+    Preserves fenced code blocks and inline code spans.
+    """
+    if not text:
+        return text
+
+    parts = re.split(r'(```[\s\S]*?```|`[^`\n]+`)', text)
+    for idx in range(0, len(parts), 2):
+        parts[idx] = re.sub(r'(?<!\\)\$(?=\d)', r'\\$', parts[idx])
+
+    return ''.join(parts)
+
+
 def is_transient_status_line(line: str) -> bool:
     """Check if a line is a transient progress/status update from tool execution."""
     s = line.strip()
     if not s:
         return False
-    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+(?:am\s+)?(?:waiting\s+for|waiting|have\s+(?:launched|requested|dispatched))|gemini\s+3\.1\s+pro|streaming\s+its\s+reasoning|actively\s+processing|completing\s+its\s+reasoning|finishing\s+its\s+detailed\s+architectural|will\s+agy|delegated\s+the\s+task\s+to|i\'ll\s+fetch\s+the\s+full\s+output|i\'ll\s+present\s+its\s+complete|i\s+will\s+(?:retrieve\s+and\s+display|wait))[^\n]*$', s, re.IGNORECASE):
+    if re.match(r'^(?:updating|running|checking|waiting|wait|verifying|restarting|generating|modifying|fetching|reading|analyzing|inspecting|cleaning|completed|subagent|i\s+(?:am\s+)?(?:waiting|have|will|just)|streaming|actively\s+processing|finishing|delegated|will\s+agy|please\s+edit|gemini\s+3\.1\s+pro)[^\n]*$', s, re.IGNORECASE):
         return True
-    if re.match(r'^\s*\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
+    if re.match(r'^\s*(?:[-*+]\s*)?(?:Reference\s+link(?:\s+to\s+(?:the\s+)?thread\s+artifact)?:\s*)?\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
         return True
     return False
 
@@ -44,17 +92,15 @@ def clean_agent_content(text: str) -> str:
     if not text:
         return text
 
-    link_re = re.compile(r'\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)', re.IGNORECASE)
+    footer_link_re = re.compile(r'^\s*(?:[-*+]\s*)?Current Thread:\s*\[`?thread\.md`?\]\([^\)]*\)\s*$', re.IGNORECASE)
     divider_re = re.compile(r'^\s*(?:-{3,}|\*{3,}|_{3,})\s*$')
 
     lines = text.splitlines()
     drop = [False] * len(lines)
 
     for i, line in enumerate(lines):
-        # Any line containing a thread.md / conversation_response.md link is removed entirely.
-        if link_re.search(line):
+        if footer_link_re.match(line):
             drop[i] = True
-            # If the line directly above is a divider (---, ***, ___), remove that too.
             if i > 0 and divider_re.match(lines[i - 1]):
                 drop[i - 1] = True
             continue
@@ -63,27 +109,28 @@ def clean_agent_content(text: str) -> str:
             drop[i] = True
             continue
 
-        cleaned_str = line.strip()
-        if re.match(r'^(?:(?:[-*+]\s*|\d+\.\s*)?reference\s+link(?:\s+to(?:\s+the)?\s+thread\s+artifact)?|thread(?:\s+artifact)?(?:\s+logged\s+at)?|conversation_response\.md)\s*:?\s*$', cleaned_str, re.IGNORECASE):
-            drop[i] = True
+    filtered_lines = []
+    for i, line in enumerate(lines):
+        if drop[i]:
             continue
+        if line.strip() in ('-', '*', '+'):
+            continue
+        filtered_lines.append(line)
 
-        if not line.strip() or line.strip() in ('-', '*', '+'):
-            drop[i] = True
-
-    result = '\n'.join(line for i, line in enumerate(lines) if not drop[i])
+    result = '\n'.join(filtered_lines)
     result = re.sub(r'\n{3,}', '\n\n', result).strip()
     return result
 
 def filter_transient_lines(text: str) -> str:
-    """If text contains non-transient content, strip ALL transient lines.
+    """If text contains non-transient content, strip ALL transient lines while preserving paragraph spacing.
     If text contains ONLY transient content, retain ONLY the latest.
     """
     lines = text.splitlines()
-    non_transient = [l for l in lines if not is_transient_status_line(l)]
-
-    if non_transient:
-        return '\n'.join(non_transient)
+    has_substantive = any(l.strip() and not is_transient_status_line(l) for l in lines)
+    if has_substantive:
+        filtered = [l for l in lines if not l.strip() or not is_transient_status_line(l)]
+        res = '\n'.join(filtered)
+        return re.sub(r'\n{3,}', '\n\n', res).strip()
 
     transient = [l for l in lines if is_transient_status_line(l)]
     if transient:
@@ -96,6 +143,7 @@ def clean_agent_response(text: str) -> str:
     1. Clean agent content (links/status lines).
     2. Demote headings # -> #####, ## -> ######, ### -> ######.
     3. Strip orphan status/context lines.
+    4. Ensure proper spacing before/after headers, blockquotes, and tables.
     """
     text = clean_agent_content(text)
     if not text:
@@ -106,6 +154,16 @@ def clean_agent_response(text: str) -> str:
 
     # Ensure blank lines before headings
     text = re.sub(r'([^\n])\n(#{1,6}\s+)', r'\1\n\n\2', text)
+
+    # Ensure blank lines before and after **Thread Metrics:**
+    text = re.sub(r'([^\n])\n(\*\*Thread Metrics:\*\*)', r'\1\n\n\2', text)
+    text = re.sub(r'(\*\*Thread Metrics:\*\*)\n([^\n])', r'\1\n\n\2', text)
+
+    # Ensure blank line before markdown tables (a table starts with a line containing | that was not preceded by a | line)
+    text = re.sub(r'([^\n|])\n(\|[^\n]+\|)', r'\1\n\n\2', text)
+
+    # Ensure blank line after markdown tables (a table ends with a line containing | followed by a non-| line)
+    text = re.sub(r'(\|[^\n]+\|)\n([^\n|])', r'\1\n\n\2', text)
 
     # Strip orphan status/context lines
     lines = []
@@ -118,7 +176,11 @@ def clean_agent_response(text: str) -> str:
             continue
         lines.append(line)
 
-    return '\n'.join(lines).strip()
+    result = '\n'.join(lines).strip()
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    result = balance_code_fences(result)
+    result = escape_currency_dollar_signs(result)
+    return result
 
 
 APP_DATA_DIR = Path.home() / '.gemini/antigravity'
@@ -211,7 +273,7 @@ def extract_user_input(content: str):
     # Extract user request prompts
     user_requests = re.findall(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, flags=re.DOTALL)
     if user_requests:
-        req_prompt = '\n\n---\n\n'.join(r.strip() for r in user_requests)
+        req_prompt = '\n\n'.join(r.strip() for r in user_requests if r.strip())
     else:
         # Fallback: strip comment/artifact URI prefix and tags
         req_prompt = re.sub(r'Comments on artifact URI:.*', '', cleaned, flags=re.DOTALL)
@@ -236,11 +298,11 @@ def extract_user_input(content: str):
         cmt_clean = strip_html_tags(cmt_raw)
         cmt_clean = decode_html_entities(cmt_clean)
 
-        # Format as markdown blockquote
+        # Format highlighted selection as blockquote, and comment outside the blockquote
         if quote_lines:
             quote_body = '\n'.join(f'> {line}' if line else '>' for line in quote_lines)
             if cmt_clean:
-                formatted_parts.append(f"{quote_body}\n>\n> 💬 **Comment**: {cmt_clean}")
+                formatted_parts.append(f"{quote_body}\n\n💬 **Comment**: {cmt_clean}")
             else:
                 formatted_parts.append(quote_body)
         elif cmt_clean:
@@ -257,7 +319,8 @@ def extract_user_input(content: str):
 
     # Join comment blocks and user prompt with spacing
     if len(formatted_parts) > 1:
-        prompt = '\n\n---\n\n'.join(formatted_parts).strip()
+        divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
+        prompt = divider.join(formatted_parts).strip()
     else:
         prompt = '\n\n'.join(formatted_parts).strip()
     return prompt, time
@@ -267,21 +330,27 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
     """
     Parse transcript.jsonl into a list of exchanges, handling undos.
     """
+    if transcript_path.name == 'transcript.jsonl':
+        full_path = transcript_path.with_name('transcript_full.jsonl')
+        if full_path.exists() and full_path.stat().st_size > 0:
+            transcript_path = full_path
     exchanges = []
     active_items = []
     pending_users = []
     current_agent_time = ''
-    current_agent_content = []
+    substantive_content = []
+    latest_transient_status = None
 
     if not transcript_path.exists():
         return []
 
     def flush_current_turn():
-        nonlocal pending_users, current_agent_content, current_agent_time, active_items
+        nonlocal pending_users, substantive_content, latest_transient_status, current_agent_time, active_items
         if pending_users:
-            # Joined with \n\n to maintain paragraph separation
-            agent_text = '\n\n'.join(c for c in current_agent_content if c.strip()).strip()
-            agent_text = filter_transient_lines(agent_text)
+            if substantive_content:
+                agent_text = '\n\n'.join(c for c in substantive_content if c.strip()).strip()
+            else:
+                agent_text = latest_transient_status or ''
 
             min_step = pending_users[0]['step']
             max_step = pending_users[-1]['step']
@@ -296,7 +365,8 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
             })
             pending_users = []
             current_agent_time = ''
-            current_agent_content = []
+            substantive_content = []
+            latest_transient_status = None
 
     with open(transcript_path) as f:
         for raw in f:
@@ -313,8 +383,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
             if t == 'USER_INPUT':
                 # Flush prior turn ONLY if substantive agent response text was produced
-                has_substantive = bool([c for c in current_agent_content if c.strip() and not is_transient_status_line(c)])
-                if pending_users and has_substantive:
+                if pending_users and substantive_content:
                     flush_current_turn()
 
                 # Check for Undo/Rewind
@@ -353,15 +422,11 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
-                    if not is_transient_status_line(content.strip()):
-                        # If this is non-transient, it's a "real" update - append to content
-                        current_agent_content.append(content.strip())
+                    stripped = content.strip()
+                    if is_transient_status_line(stripped):
+                        latest_transient_status = stripped
                     else:
-                        # If it is transient, just append it if not already present
-                        cleaned = clean_agent_content(content.strip())
-                        if cleaned:
-                            if not current_agent_content or current_agent_content[-1] != cleaned:
-                                current_agent_content.append(cleaned)
+                        substantive_content.append(stripped)
 
     # Flush final turn at EOF
     flush_current_turn()
@@ -408,6 +473,8 @@ def format_prompt(raw_prompt: str) -> str:
     # Pad ending backticks with a trailing newline if followed by text
     text = re.sub(r'```([^\n]*)\n([^\n])', r'```\1\n\n\2', text)
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
+    text = balance_code_fences(text)
+    text = escape_currency_dollar_signs(text)
 
     return text
 
@@ -416,28 +483,30 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     """Build a single exchange block using pure markdown (no HTML tables)."""
     user_blocks = []
     for u in users:
-        p = format_prompt(u['prompt'])
-        user_blocks.append(p)
+        p = format_prompt(u['prompt']).strip()
+        if p:
+            user_blocks.append(p)
 
-    user_md = '\n\n'.join(user_blocks)
+    divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
+    user_md = divider.join(user_blocks) if len(user_blocks) > 1 else (user_blocks[0] if user_blocks else '')
     a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
     if not agent_text:
         agent_text = '*(response in progress or not recorded)*'
 
     user_span = (
-        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: table; margin-left: auto; max-width: 75%; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
+        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
         f'{user_md}\n\n'
         f'</span>'
     )
 
     agent_span = (
-        f'\n\n<span title="Responded at {a_time}" style="display: table; margin-right: auto; max-width: 85%; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'\n\n<span title="Responded at {a_time}" style="display: block; width: fit-content; max-width: 90%; min-width: 0; margin-right: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>\n\n'
     )
 
-    return f'<span style="display: block; width: 100%; margin-top: 8px;">\n\n{user_span}\n\n{agent_span}\n\n</span>'
+    return f'<span style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word;">\n\n{user_span}\n\n{agent_span}\n\n</span>'
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
@@ -507,7 +576,9 @@ def make_exchange_block_with_progress(users: list, agent_content: str, agent_tim
 
 def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override: Path = None):
     base            = app_data_dir / 'brain' / conv_id
-    transcript_path = base / '.system_generated/logs/transcript.jsonl'
+    transcript_path = base / '.system_generated/logs/transcript_full.jsonl'
+    if not transcript_path.exists() or transcript_path.stat().st_size == 0:
+        transcript_path = base / '.system_generated/logs/transcript.jsonl'
     history_dir     = base / 'history'
 
     if output_path_override:
@@ -531,20 +602,20 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     # Placed INSIDE the first (oldest) exchange block
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
-    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 4rem 1.5rem; scrollbar-width: thin;">')
+    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 2.5rem 1.25rem; scrollbar-width: thin;">')
 
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
         if item['type'] == 'exchange':
             agent_content = item.get('agent_content', '').strip()
-            if not agent_content:
-                agent_content = '*(response in progress)*' if i == 0 else '*(no response recorded)*'
-            else:
-                agent_content = clean_agent_content(agent_content)
+            # Drop empty historical exchanges (only newest exchange i==0 can be in-progress)
+            if not agent_content and i > 0:
+                continue
+
+            agent_content = clean_agent_content(agent_content)
 
             # Check for subagent progress
             progress = None
-            # Requirement: pass progress to the NEWEST exchange (first in reversed list)
             if i == 0:
                 progress = get_subagent_progress(conv_id, app_data_dir)
 
