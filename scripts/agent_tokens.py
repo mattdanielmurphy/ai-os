@@ -4,7 +4,7 @@ import json
 import time
 from pathlib import Path
 
-def get_tokens(agent=None):
+def get_tokens(agent=None, conv_id=None):
     if agent == "claude":
         return 0, "reported"
     elif agent == "hermes":
@@ -19,7 +19,7 @@ def get_tokens(agent=None):
             import check_thread_bloat
             project_root = Path(os.getcwd())
             t_sys, _ = check_thread_bloat.get_sys_prompt_tokens(project_root)
-            transcript_path = check_thread_bloat.find_transcript_file()
+            transcript_path = check_thread_bloat.find_transcript_file(conv_id=conv_id)
             t_hist = check_thread_bloat.get_transcript_tokens(transcript_path)
             return t_sys + t_hist, "estimated"
         except ImportError:

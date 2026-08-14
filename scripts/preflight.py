@@ -88,6 +88,16 @@ def step_jules_quota():
         return f"Jules Quota: OK ({status['total_remaining']}/{status['total_limit']} sessions)"
     return f"Jules Quota: {status['status']}"
 
+def step_pplx_quota():
+    try:
+        from pplx_quota import get_pplx_quota
+        q = get_pplx_quota()
+        if q.get("status") == "OK":
+            return f"Perplexity Quota: OK ({q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research)"
+        return f"Perplexity Quota: {q.get('status')}"
+    except Exception as e:
+        return f"Perplexity Quota: ERROR ({e})"
+
 def step_triage(role="orchestrator", verbose=False):
     from triage_task import evaluate_triage
     decision = evaluate_triage(prompt="preflight check", role=role)
@@ -169,6 +179,7 @@ def main():
     steps = [
         ("Quota", step_quota),
         ("Jules Quota", step_jules_quota),
+        ("Perplexity", step_pplx_quota),
         ("Task Triager", lambda: step_triage(args.role, args.verbose)),
         ("Rules", step_rules),
         ("Thread Bloat", step_bloat),
