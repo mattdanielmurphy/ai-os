@@ -32,7 +32,7 @@ def is_transient_status_line(line: str) -> bool:
     s = line.strip()
     if not s:
         return False
-    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+have\s+(?:launched|requested|dispatched)|gemini\s+3\.1\s+pro|streaming\s+its\s+reasoning|actively\s+processing|completing\s+its\s+reasoning|finishing\s+its\s+detailed\s+architectural|will\tagy|delegated\s+the\s+task\s+to|i\'ll\s+fetch\s+the\s+full\s+output|i\'ll\s+present\s+its\s+complete|i\s+will\s+retrieve\s+and\s+display)[^\n]*$', s, re.IGNORECASE):
+    if re.match(r'^(?:completed\s+task-\d+|waiting\s+for|wait\s+for|subagent\s+(?:launched|execution)|i\s+(?:am\s+)?(?:waiting\s+for|waiting|have\s+(?:launched|requested|dispatched))|gemini\s+3\.1\s+pro|streaming\s+its\s+reasoning|actively\s+processing|completing\s+its\s+reasoning|finishing\s+its\s+detailed\s+architectural|will\s+agy|delegated\s+the\s+task\s+to|i\'ll\s+fetch\s+the\s+full\s+output|i\'ll\s+present\s+its\s+complete|i\s+will\s+(?:retrieve\s+and\s+display|wait))[^\n]*$', s, re.IGNORECASE):
         return True
     if re.match(r'^\s*\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
         return True
@@ -352,10 +352,16 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
-                    cleaned = clean_agent_content(content.strip())
-                    if cleaned:
-                        if not current_agent_content or current_agent_content[-1] != cleaned:
-                            current_agent_content.append(cleaned)
+                    if not is_transient_status_line(content.strip()):
+                        # If this is non-transient, it's a "real" update - flush and replace
+                        # or just append as the primary content for this turn.
+                        current_agent_content = [content.strip()]
+                    else:
+                        # If it is transient, just append it if not already present
+                        cleaned = clean_agent_content(content.strip())
+                        if cleaned:
+                            if not current_agent_content or current_agent_content[-1] != cleaned:
+                                current_agent_content.append(cleaned)
 
     # Flush final turn at EOF
     flush_current_turn()
