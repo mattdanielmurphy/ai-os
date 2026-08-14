@@ -115,7 +115,8 @@ def step_bloat():
     return f"Thread Bloat: {'WARNING' if 'true' in out.lower() else 'OK'}" if code == 0 else "Thread Bloat: OK"
 
 def step_git():
-    if os.path.exists(".git"):
+    is_git_out, is_git_code = run_cmd(["git", "rev-parse", "--is-inside-work-tree"], timeout=1)
+    if is_git_code == 0 and is_git_out == "true":
         _, diff_code = run_cmd(["git", "diff", "--quiet"], timeout=1)
         _, cached_code = run_cmd(["git", "diff", "--cached", "--quiet"], timeout=1)
         _, untracked_out = run_cmd(["git", "ls-files", "--others", "--exclude-standard"], timeout=1)
@@ -135,7 +136,7 @@ def step_git():
             res_str = "Up-to-date" if "Already up to date" in out else "Pulled changes"
             return f"Git: OK ({res_str})"
         return "Git: WARNING (pull failed or timed out)"
-    return "Git: Skipped (no .git)"
+    return "Git: Skipped (no git repository)"
 
 def step_watcher():
     _, pgrep_code = run_cmd(["pgrep", "-f", "watch_transcripts.py"], timeout=1)
