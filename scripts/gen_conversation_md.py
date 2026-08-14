@@ -501,7 +501,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
     )
 
     agent_span = (
-        f'\n\n<span title="Responded at {a_time}" style="display: block; width: fit-content; max-width: 90%; min-width: 0; margin-right: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 14px 18px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'\n\n<span title="Responded at {a_time}" style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 16px 20px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
         f'</span>\n\n'
     )
@@ -598,6 +598,74 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         return output_path
 
     doc_content = []
+    doc_content.append('''<style>
+  html, body, .markdown-body, .vscode-body, #root, #app, main, .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    margin: 1.25rem 0 !important;
+    border: 1.5px solid rgba(130, 115, 220, 0.3) !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    font-size: 13.5px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  }
+  th {
+    background: rgba(85, 68, 197, 0.22) !important;
+    color: #e0daf8 !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+    padding: 11px 16px !important;
+    border-bottom: 1.5px solid rgba(130, 115, 220, 0.35) !important;
+    letter-spacing: 0.3px !important;
+  }
+  td {
+    padding: 12px 16px !important;
+    border-bottom: 1px solid rgba(130, 115, 220, 0.12) !important;
+    vertical-align: top !important;
+    line-height: 1.55 !important;
+  }
+  tr:last-child td {
+    border-bottom: none !important;
+  }
+  tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02) !important;
+  }
+  td:nth-child(2), th:nth-child(2) {
+    white-space: nowrap !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+  pre {
+    border: 1.5px solid rgba(130, 115, 220, 0.25) !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    background: rgba(20, 18, 35, 0.6) !important;
+  }
+  span[title^="Responded at"] p, span[title^="Sent at"] p {
+    margin-top: 0.65rem;
+    margin-bottom: 0.65rem;
+  }
+  span[title^="Responded at"] ul, span[title^="Responded at"] ol {
+    margin-top: 0.65rem;
+    margin-bottom: 0.65rem;
+    padding-left: 1.4rem;
+  }
+  span[title^="Responded at"] li {
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+  span[title^="Responded at"] h3, span[title^="Responded at"] h4 {
+    margin-top: 1.3rem;
+    margin-bottom: 0.5rem;
+  }
+</style>''')
     # Requirement 2: Thread Started Banner
     # Placed INSIDE the first (oldest) exchange block
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'

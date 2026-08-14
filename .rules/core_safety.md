@@ -20,3 +20,14 @@
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:
   - ALWAYS translate paths containing `/Users/matthewmurphy/` to `/Users/matt/` (or use relative paths or `~/`).
+
+# User Personal To-Dos & Apple Reminders Protocol
+- **Constraint**: When Matt mentions personal to-dos, reminders, tasks to remember, or requests to "add to global to-do list" for himself (not an automated subagent coding task):
+  - Agents MUST automatically route and sync them directly to **Apple Reminders** using the `apple-reminders` CLI (`apple-reminders add --title "..." --due "YYYY-MM-DD HH:MM" --notes "..."`).
+  - Agents should proactively offer to break down overwhelming or multi-step tasks into small, low-friction subtasks in Apple Reminders.
+  - Do NOT create orphaned markdown to-do files in random locations that won't be actively checked on mobile.
+
+# Proactive System Directive & Knowledge Persistence
+- **Rule**: When Matt establishes a permanent workflow preference, tool routing rule, or operational invariant (e.g. "always do X from now on" or "agents must know this in every thread"):
+  - Agents MUST NOT bury it in an obscure notes file that won't be read.
+  - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md`, `CLAUDE.md`, and `HERMES.md` across every future session.
