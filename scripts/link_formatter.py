@@ -17,7 +17,7 @@ def enrich_file_links(text: str) -> str:
 
         # Idempotency: skip if already appended
         end_pos = match.end()
-        remainder = text[end_pos:end_pos + 80]
+        remainder = text[end_pos:end_pos + 120]
         if 'open_zed' in remainder or 'open_finder' in remainder:
             return full_match
 
@@ -46,6 +46,6 @@ def enrich_file_links(text: str) -> str:
         router_zed_url = f'http://127.0.0.1:8643/open_zed?path={encoded_path}'
         router_finder_url = f'http://127.0.0.1:8643/open_finder?path={urllib.parse.quote(system_path)}'
 
-        return f'[{label}]({url}) [✏️]({router_zed_url}) [📁]({router_finder_url})'
+        return f'[{label}]({url}) []({router_zed_url}) []({router_finder_url})'
 
     return re.sub(pattern, replacer, text)
