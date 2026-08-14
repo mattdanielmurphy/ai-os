@@ -568,7 +568,9 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     except Exception:
         pass
 
-    output_path.write_text(rendered_doc)
+    tmp_path = output_path.with_name(f"{output_path.name}.tmp")
+    tmp_path.write_text(rendered_doc)
+    tmp_path.replace(output_path)
     print(f"Written: {output_path}")
     print(f"  {len(exchanges)} total exchanges rendered in chronological order")
     return output_path

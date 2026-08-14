@@ -76,7 +76,10 @@ def render(conv_id: str, brain_dir: Path) -> bool:
             from link_formatter import enrich_file_links
             thread_md = brain_dir / conv_id / "thread.md"
             if thread_md.exists():
-                thread_md.write_text(enrich_file_links(thread_md.read_text()))
+                enriched = enrich_file_links(thread_md.read_text())
+                tmp_md = thread_md.with_name(f"{thread_md.name}.tmp")
+                tmp_md.write_text(enriched)
+                tmp_md.replace(thread_md)
         except Exception as e:
             print(f"link_formatter enrichment on thread.md failed: {e}")
     except Exception as e:
@@ -120,7 +123,22 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
         render_id = sub_map.get(conv_id, conv_id)
         
         prev = last_state.get(conv_id)
-        if prev is None or mtime != prev[0] or size != prev[1]:
+        
+        # Check for self-healing need (stale in-progress marker when transcript is complete)
+        thread_file = brain_dir / render_id / "thread.md"
+        needs_repair = False
+        if thread_file.exists():
+            try:
+                t_content = thread_file.read_text()
+                if "*(response in progress)*" in t_content:
+                    # check if parent transcript has finished planner response
+                    p_trans = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
+                    if p_trans.exists() and p_trans.stat().st_size > 0:
+                        needs_repair = True
+            except Exception:
+                pass
+
+        if needs_repair or prev is None or mtime != prev[0] or size != prev[1]:
             # Change detected — check cooldown
             last_t = last_render_time.get(render_id, 0)
             if (now - last_t) < COOLDOWN:
