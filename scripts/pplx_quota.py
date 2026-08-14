@@ -63,11 +63,29 @@ def get_pplx_quota(force=False):
             remaining_pro = data.get("remaining_pro", "?")
             remaining_research = data.get("remaining_research", "?")
             remaining_labs = data.get("remaining_labs", "?")
+            
+            # Fetch upload limit
+            upload_limit = "?"
+            try:
+                req_settings = urllib.request.Request(
+                    "https://www.perplexity.ai/rest/user/settings",
+                    headers={
+                        "Cookie": cookie_header,
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    }
+                )
+                with urllib.request.urlopen(req_settings, timeout=5) as resp_settings:
+                    settings_data = json.loads(resp_settings.read().decode("utf-8"))
+                    upload_limit = settings_data.get("upload_limit", "?")
+            except Exception:
+                pass
+
             status_data = {
                 "status": "OK",
                 "remaining_pro": remaining_pro,
                 "remaining_research": remaining_research,
-                "remaining_labs": remaining_labs
+                "remaining_labs": remaining_labs,
+                "remaining_uploads": upload_limit
             }
             try:
                 with open(CACHE_FILE, "w", encoding="utf-8") as f:
@@ -81,6 +99,6 @@ def get_pplx_quota(force=False):
 if __name__ == "__main__":
     q = get_pplx_quota(force=True)
     if q.get("status") == "OK":
-        print(f"Perplexity Quota: OK (Pro: {q.get('remaining_pro')}, Research: {q.get('remaining_research')}, Labs: {q.get('remaining_labs')})")
+        print(f"Perplexity Quota: OK (Pro: {q.get('remaining_pro')}, Research: {q.get('remaining_research')}, Labs: {q.get('remaining_labs')}, Uploads: {q.get('remaining_uploads')})")
     else:
         print(f"Perplexity Quota: {q.get('status')} - {q.get('message')}")
