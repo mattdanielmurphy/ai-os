@@ -93,7 +93,7 @@ def step_pplx_quota():
         from pplx_quota import get_pplx_quota
         q = get_pplx_quota()
         if q.get("status") == "OK":
-            return f"Perplexity Quota: OK ({q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research)"
+            return f"Perplexity Quota: OK ({q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research, {q.get('remaining_uploads')} Uploads)"
         return f"Perplexity Quota: {q.get('status')}"
     except Exception as e:
         return f"Perplexity Quota: ERROR ({e})"

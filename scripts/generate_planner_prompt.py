@@ -9,6 +9,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="Generate planner prompt for Perplexity")
     parser.add_argument("request", help="User request string")
+    parser.add_argument("--image-desc", help="Description of attached image", default=None)
     
     if len(sys.argv) < 2:
         parser.print_help()
@@ -72,8 +73,13 @@ def main():
         )
     else:
         repo_info = ""
+    if args.image_desc:
+        image_context = f"\n--- Visual Context & Image Description ---\n{args.image_desc}\n"
+    else:
+        image_context = ""
+        
     prompt_content = f"""User Request: {user_request}
-{ag_context_str}{repo_info}{log_context}
+{image_context}{ag_context_str}{repo_info}{log_context}
 
 Please act as a senior planner. Analyze the request and output a detailed architectural implementation plan for the orchestrator."""
 

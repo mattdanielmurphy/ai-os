@@ -42,7 +42,12 @@ def main():
     conv_id = args.conv_id or os.environ.get("CONVERSATION_ID") or os.environ.get("ANTIGRAVITY_CONVERSATION_ID")
 
     # 1. Thread Tokens & Economics
-    econ_metric = ""
+    token_display = "0"
+    source = "error"
+    cache_display = "1h"
+    rotation_str = "OK"
+    breakeven_str = "0"
+    
     try:
         from agent_tokens import get_tokens
         token_count, source = get_tokens(args.agent, conv_id=conv_id)
@@ -62,16 +67,29 @@ def main():
             t_sys = int(min(25000, token_count // 2) if token_count > 0 else 25000)
         econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
         
+        cache_display = econ['cache_display']
         status = econ['recommendation_status']
         rotation_str = "OK" if status == "OK" else f"⚠️ {status}"
-        
-    # Horizontal table assembly
-    headers = ["Total Tokens", "Cache Expiry", "Financial Rotation"]
-    values = [token_display, econ['cache_display'], f"{token_display} / Breakeven {format_tokens(econ['n_breakeven'])} (Status: {rotation_str})"]
+        breakeven_str = format_tokens(econ['n_breakeven'])
+    except Exception:
+        pass
 
-    if pplx_quota_data:
+    # 2. Perplexity Quota
+    pplx_quota_str = ""
+    try:
+        from pplx_quota import get_pplx_quota
+        q = get_pplx_quota()
+        if q and q.get("status") == "OK":
+            pplx_quota_str = f"{q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research, {q.get('remaining_uploads')} Uploads"
+    except Exception:
+        pass
+
+    headers = ["Total Tokens", "Cache Expiry", "Financial Rotation"]
+    values = [f"{token_display} ({source})", cache_display, f"{token_display} / Breakeven {breakeven_str} (Status: {rotation_str})"]
+
+    if pplx_quota_str:
         headers.append("Perplexity Quota")
-        values.append(f"{pplx_quota_data.get('remaining_pro')} Pro, {pplx_quota_data.get('remaining_research')} Research")
+        values.append(pplx_quota_str)
 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
