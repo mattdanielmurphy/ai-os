@@ -88,7 +88,7 @@ Comment: "bar"
         turn_file = self.history_dir / 'turn_1.md'
         turn_file.write_text('agent response')
         self.assertEqual(load_agent_response(self.history_dir, 1), 'agent response')
-        self.assertEqual(load_agent_response(self.history_dir, 2, 'fallback'), 'fallback')
+        self.assertEqual(load_agent_response(self.history_dir, 2), '')
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
