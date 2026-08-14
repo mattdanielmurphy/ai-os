@@ -35,7 +35,7 @@ def main():
         r, _, _ = select.select([sys.stdin], [], [], 0.05)
         if r:
             content = sys.stdin.read().strip()
-    
+
     if not content and unknown:
         content = " ".join(unknown).strip()
 
@@ -57,26 +57,26 @@ def main():
     breakeven_str = "0"
     indicator = "🟢"
     brief_str = ""
-    
+
     try:
         from agent_tokens import get_tokens
         token_count, source = get_tokens(args.agent, conv_id=conv_id)
         token_display = format_tokens(token_count)
-        
+
         # Economics
         import thread_economics
         from check_thread_bloat import find_transcript_file, get_sys_prompt_tokens
         from pathlib import Path
         transcript_path = find_transcript_file(conv_id=conv_id)
         last_ts = thread_economics.get_last_activity_time(transcript_path)
-        
+
         try:
             t_sys_val, _ = get_sys_prompt_tokens(Path(os.getcwd()))
             t_sys = int(t_sys_val)
         except Exception:
             t_sys = int(min(25000, token_count // 2) if token_count > 0 else 25000)
         econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
-        
+
         cache_display = econ.get('cache_display', '1h')
         indicator = econ.get('indicator', '🟢')
         brief_str = f" ({econ['brief']})" if econ.get('brief') else ""
@@ -90,7 +90,7 @@ def main():
         from pplx_quota import get_pplx_quota
         q = get_pplx_quota()
         if q and q.get("status") == "OK":
-            pplx_quota_str = f"{q.get('remaining_pro')} Pro, {q.get('remaining_research')} 🔬, {q.get('remaining_uploads')} 📤"
+            pplx_quota_str = f"{q.get('remaining_pro')}, {q.get('remaining_research')} 🔬, {q.get('remaining_uploads')} 📤"
     except Exception:
         pass
 
@@ -104,7 +104,7 @@ def main():
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
     value_row = "| " + " | ".join(values) + " |"
-    
+
     metrics = f"\n\n**Thread Metrics:**\n\n{header_row}\n{separator_row}\n{value_row}"
 
     if content:
