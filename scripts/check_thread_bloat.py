@@ -229,6 +229,14 @@ def main():
         "transcript_path": transcript_path
     }
     
+    try:
+        import thread_economics
+        last_ts = thread_economics.get_last_activity_time(transcript_path)
+        econ = thread_economics.calculate_thread_economics(t_sys + t_hist, t_sys, last_write_ts=last_ts)
+        result["economics"] = econ
+    except Exception:
+        pass
+    
     if args.json_compact:
         print(json.dumps(result))
     else:

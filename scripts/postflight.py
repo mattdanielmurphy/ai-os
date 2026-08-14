@@ -41,12 +41,35 @@ def main():
 
     conv_id = args.conv_id or os.environ.get("CONVERSATION_ID") or os.environ.get("ANTIGRAVITY_CONVERSATION_ID")
 
-    # 1. Thread Tokens
+    # 1. Thread Tokens & Economics
+    econ_metric = ""
     try:
         from agent_tokens import get_tokens
         token_count, source = get_tokens(args.agent, conv_id=conv_id)
         token_display = format_tokens(token_count)
+        
+        # Economics
+        import thread_economics
+        from check_thread_bloat import find_transcript_file, get_sys_prompt_tokens
+        from pathlib import Path
+        transcript_path = find_transcript_file(conv_id=conv_id)
+        last_ts = thread_economics.get_last_activity_time(transcript_path)
+        
+        try:
+            t_sys = get_sys_prompt_tokens(Path(os.getcwd()))
+        except Exception:
+            t_sys = min(25000, token_count // 2) if token_count > 0 else 25000
+        econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
+        
         token_metric = f"- Total Tokens: {token_display} (source: {source})"
+        cache_expiry = f"- Cache Expiry: {econ['cache_display']}"
+        status = econ['recommendation_status']
+        if status == "OK":
+            rotation_str = "OK"
+        else:
+            rotation_str = f"⚠️ {status}"
+        econ_rotation = f"- Financial Rotation: {token_display} / Breakeven {format_tokens(econ['n_breakeven'])} (Status: {rotation_str})"
+        econ_metric = f"\n{cache_expiry}\n{econ_rotation}"
     except Exception:
         token_metric = "- Total Tokens: 0 (source: error)"
 
@@ -60,7 +83,7 @@ def main():
     except Exception:
         pass
 
-    metrics = f"\n\n**Thread Metrics:**\n{token_metric}{pplx_metric}"
+    metrics = f"\n\n**Thread Metrics:**\n{token_metric}{econ_metric}{pplx_metric}"
 
     if content:
         final_output = content + metrics
