@@ -116,19 +116,13 @@ def main():
 
     print(final_output)
 
-    if conv_id and final_output:
+    if conv_id:
         try:
             from pathlib import Path
+            app_data_dir = Path.home() / ".gemini/antigravity"
+            from gen_conversation_md import generate
             import io
             import contextlib
-            app_data_dir = Path.home() / ".gemini/antigravity"
-            history_dir = app_data_dir / "brain" / conv_id / "history"
-            history_dir.mkdir(parents=True, exist_ok=True)
-            from gen_conversation_md import next_turn_number, generate
-            turn_n = next_turn_number(history_dir)
-            turn_file = history_dir / f"turn_{turn_n}.md"
-            turn_file.write_text(final_output)
-            
             with contextlib.redirect_stdout(io.StringIO()):
                 generate(conv_id, "Conversation", app_data_dir=app_data_dir)
         except Exception:
