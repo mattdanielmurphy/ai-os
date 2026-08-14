@@ -81,7 +81,17 @@ def main():
     prompt_content = f"""User Request: {user_request}
 {image_context}{ag_context_str}{repo_info}{log_context}
 
-Please act as a senior planner. Analyze the request and output a detailed architectural implementation plan for the orchestrator."""
+Please act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
+
+The plan MUST include:
+1. Architectural Strategy: High-level overview of the proposed approach.
+2. Data Structures & State Management: Define new data structures or changes to existing state.
+3. API/Interface Contracts: Define function signatures, classes, and expected interface contracts.
+4. Logic Flow & Algorithms: Step-by-step pseudo-code or logic description for the main execution flow.
+5. Error Handling & Edge Cases: Identify potential failure points and mitigation strategies.
+6. Implementation Steps: A list of specific files to modify and the required changes in each, ordered for execution.
+
+DO NOT provide full code implementations. Focus on structural details, signatures, and clear instructions so that downstream agents can implement the changes efficiently without guessing. Ensure all decisions are concrete and leave no gaps in requirements."""
 
     with open("./tmp/planner_prompt.txt", "w") as f:
         f.write(prompt_content)
