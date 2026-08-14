@@ -62,29 +62,22 @@ def main():
             t_sys = int(min(25000, token_count // 2) if token_count > 0 else 25000)
         econ = thread_economics.calculate_thread_economics(token_count, t_sys, last_write_ts=last_ts)
         
-        token_metric = f"| **Total Tokens** | {token_display} ({source}) |"
-        cache_expiry = f"| **Cache Expiry** | {econ['cache_display']} |"
         status = econ['recommendation_status']
-        if status == "OK":
-            rotation_str = "OK"
-        else:
-            rotation_str = f"⚠️ {status}"
-        econ_rotation = f"| **Financial Rotation** | {token_display} / Breakeven {format_tokens(econ['n_breakeven'])} (Status: {rotation_str}) |"
-        econ_metric = f"\n{cache_expiry}\n{econ_rotation}"
-    except Exception:
-        token_metric = "- Total Tokens: 0 (source: error)"
+        rotation_str = "OK" if status == "OK" else f"⚠️ {status}"
+        
+    # Horizontal table assembly
+    headers = ["Total Tokens", "Cache Expiry", "Financial Rotation"]
+    values = [token_display, econ['cache_display'], f"{token_display} / Breakeven {format_tokens(econ['n_breakeven'])} (Status: {rotation_str})"]
 
-    # 2. Perplexity Quota
-    pplx_metric = ""
-    try:
-        from pplx_quota import get_pplx_quota
-        q = get_pplx_quota()
-        if q.get("status") == "OK":
-            pplx_metric = f"\n| **Perplexity Quota** | {q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research |"
-    except Exception:
-        pass
+    if pplx_quota_data:
+        headers.append("Perplexity Quota")
+        values.append(f"{pplx_quota_data.get('remaining_pro')} Pro, {pplx_quota_data.get('remaining_research')} Research")
 
-    metrics = f"\n\n**Thread Metrics:**\n\n| Metric | Value |\n| :--- | :--- |\n{token_metric}{econ_metric}{pplx_metric}"
+    header_row = "| " + " | ".join(headers) + " |"
+    separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
+    value_row = "| " + " | ".join(values) + " |"
+    
+    metrics = f"\n\n**Thread Metrics:**\n\n{header_row}\n{separator_row}\n{value_row}"
 
     if content:
         final_output = content + metrics

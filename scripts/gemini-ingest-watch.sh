@@ -34,6 +34,7 @@ fi
 # Initial ingestion on startup
 log "Starting initial ingestion..."
 python3 "$INGESTER" --write 2>&1 | tee -a "$LOG"
+python3 "$HOME/projects/ai-os/scripts/gemini_antigravity_bridge.py" --days 90 2>&1 | tee -a "$LOG"
 
 # Watch for changes — fswatch fires on Created/Updated events
 log "Watching $ARCHIVE_DIR for changes..."
@@ -44,6 +45,7 @@ log "Watching $ARCHIVE_DIR for changes..."
             *.md)
                 log "Detected change: $(basename "$event_path")"
                 python3 "$INGESTER" --write 2>&1 | tee -a "$LOG"
+                python3 "$HOME/projects/ai-os/scripts/gemini_antigravity_bridge.py" --file "$event_path" 2>&1 | tee -a "$LOG"
                 ;;
             *)
                 # Ignore non-markdown changes (.DS_Store, etc.)
