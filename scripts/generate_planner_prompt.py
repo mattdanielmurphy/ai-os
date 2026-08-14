@@ -10,9 +10,6 @@ def main():
     parser = argparse.ArgumentParser(description="Generate planner prompt for Perplexity")
     parser.add_argument("request", help="User request string")
     parser.add_argument("--image-desc", help="Description of attached image", default=None)
-    
-    parser.add_argument("request", help="User request string")
-    parser.add_argument("--image-desc", help="Description of attached image", default=None)
     parser.add_argument("--context", help="Context mode", default="full")
     
     if len(sys.argv) < 2:
@@ -23,14 +20,14 @@ def main():
     user_request = args.request
     
     # 1. Check Git repo & remote
-    git_check = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True)
-    if git_check.returncode != 0:
-        print("❌ ERROR: No Git repository detected.")
+    is_git = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True)
+    if is_git.returncode != 0 or is_git.stdout.strip() != "true":
+        print("❌ ERROR: No Git repository detected for this project.")
+        print("ACTION REQUIRED: Check if a GitHub remote exists or create one (e.g. via 'gh repo create --private'). Perplexity GitHub connector requires a synced GitHub repo.")
         sys.exit(1)
-    
-    git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
-    
+
     try:
+        git_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
         remote_url = subprocess.check_output(["git", "config", "--get", "remote.origin.url"], text=True).strip()
         if not remote_url:
             raise Exception("Empty remote URL")
@@ -114,8 +111,9 @@ DO NOT provide full code implementations. Focus on structural details, signature
     print("\n--- EXECUTION INSTRUCTIONS ---")
     print("1. Read the contents of ./tmp/planner_prompt.txt")
     print("2. Read the entire text of ./tmp/planner_prompt.txt and pass it VERBATIM as the `message` parameter to `proxima:ask_perplexity`. Do NOT extract or pass only the user request.")
-    print("3. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
-    print("\nCRITICAL: Do NOT pass the 'files' parameter to `proxima:ask_perplexity`. Perplexity file upload quota is extremely limited. Context is provided via text and GitHub connector.")
+    print("3. CRITICAL: NEVER pass the `files` parameter/array to `proxima:ask_perplexity`! Perplexity file upload quota is extremely limited. Context is accessed via GitHub connector and the textual prompt.")
+    print("4. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
+
 
 if __name__ == "__main__":
     main()
