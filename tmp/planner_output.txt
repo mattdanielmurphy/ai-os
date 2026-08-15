@@ -1,19 +1,20 @@
-I pulled the actual repo structure for `apps/gemini-companion` via the GitHub connector to ground this — confirmed files like `src-tauri/src/{main,server,session,threads,pty,proxy,cloud_sync,types}.rs` and the injected scripts `src-tauri/engines/{gemini-engine.js,gemini-sync.js}` — and used that plus your AG_CONTEXT.md to write the full plan into the attached markdown file.
+I've put together the full plan as a markdown file. Key points to flag before your downstream agent starts implementing:
 
-## Key Architectural Decision
+## What I could and couldn't verify
 
-The core problem both action items share is that gemini.google.com runs in a **remote-origin webview**, so Tauri's IPC isn't exposed there by default. The plan resolves this with Tauri v2's `dangerousRemoteDomainIpcAccess` config scoped strictly to `gemini.google.com`, plus a new capability file limiting exactly which commands are exposed — not a blanket IPC open-door.
+I confirmed the exact file inventory, sizes, and change history for `apps/gemini-companion/src-tauri` directly from the repo  — notably that `shell_bridge.rs`, `context_snapshot.rs`, and `fs_bridge.rs` were all added together in commit `da914ab`, and `proxy.rs` had 45 lines stripped in that same commit (likely where the missing `start_proxy_server` export disappeared). The connector wouldn't surface raw file text in this session, so exact current line-by-line contents weren't available — the plan flags every spot where the implementing agent must open the file first rather than guess.
 
-## Agentic Loop Without Native Function-Calling
+## Core fixes in the plan
 
-Since Gemini's web UI has no tool-calling hooks, the plan defines a **fenced-block action protocol** (` ```bridge-action `) that a `MutationObserver` in a new `gemini-context-bridge.js` module scans for, executes through the Rust bridge, and feeds results back into the compose box as the next turn — closing the loop entirely at the DOM layer.
+- **Cargo.toml**: add `sha2 = "0.10"`, remove any leftover `wait_timeout` entry, and check for version conflicts with anything already in `Cargo.lock`.
+- **shell_bridge.rs**: replace the sync `wait_timeout` pattern with `tokio::process::Command` + `tokio::time::timeout`, introducing typed `ShellCommandSpec`/`ShellCommandResult`/`ShellBridgeError` structs and a single consistent UTF-8 decode path (`from_utf8_lossy` for both stdout/stderr) to kill the byte-slice mismatch.
+- **proxy.rs**: a concrete `async fn start_proxy_server(app_handle: tauri::AppHandle) -> Result<(), ProxyServerError>` that binds a listener, spawns the accept loop, and registers state via `app_handle.manage(...)` — reusing whatever HTTP stack `server.rs` already has rather than pulling in a second framework.
+- **Lint cleanup**: a mechanical `cargo check`-driven pass across the four flagged files, with guidance on when to delete vs. `_`-prefix vs. actually wire up "unused" code.
 
-## What's in the file
+## Notable edge cases called out
 
-- **Data structures**: `BridgeState`, `PendingAction`, `AuditEntry`, allowlist config (`bridge.config.json`)
-- **API contracts**: full Rust command signatures for `fs_bridge.rs`, `shell_bridge.rs`, `context_snapshot.rs` (new files), plus the JS-side contract
-- **Logic flow**: step-by-step for prompt prepending (Stable Anchor + Volatile Append, matching your existing repo strategy) and the confirm-before-execute agentic loop
-- **Error handling**: path traversal, React-controlled-input desync, streaming false positives, runaway action loops, TTL-based confirmation expiry
-- **14 ordered implementation steps** across specific real files, from `tauri.conf.json` through to the `bun run build-macos` verification pass
+- Killing the child process explicitly on timeout (Tokio doesn't always do this on drop).
+- Propagating the new `async` shell-bridge API up through any existing sync callers in `main.rs`/`pty.rs`/`session.rs`.
+- Handling `AddrInUse` on proxy bind without crashing the whole Tauri app.
 
-One thing worth flagging: I couldn't pull the literal source of `main.rs`/`gemini-engine.js` through the connector in this session (file content retrieval returned only metadata, not text), so exact selector names and the existing `invoke_handler` list are referenced structurally rather than verbatim — a downstream agent should diff against the actual file content before appending code.
+The file is ready for your implementing agent — it's structural/contract-level only, no full code, per your instructions.
