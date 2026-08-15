@@ -25,11 +25,11 @@ BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
 GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 
 # Per-conversation cooldown to debounce rapid writes (seconds)
-COOLDOWN = 0.2
-DEFAULT_POLLING = 0.4
+COOLDOWN = 0.05
+DEFAULT_POLLING = 0.1
 
 
-def get_active_convs(brain_dir: Path, max_age_secs: int = 7200) -> tuple[dict, dict]:
+def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, dict]:
     """Find active conversations and map subagent conv_ids to parent conv_ids.
     
     Returns ({conv_id: (mtime, size)}, subagent_to_parent_map).

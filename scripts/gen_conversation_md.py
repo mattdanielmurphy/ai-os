@@ -666,7 +666,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         elif item['type'] == 'fork_notice':
             doc_content.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
 
-    doc_content.append('</span>')
+
 
     # Metrics table at bottom
     metrics = compute_thread_metrics(conv_id)
