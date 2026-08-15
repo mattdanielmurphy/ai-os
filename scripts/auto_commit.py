@@ -52,15 +52,6 @@ def main():
         except Exception as e:
             print(f"Warning: Failed to read/update task file {feat_path}: {e}", file=sys.stderr)
 
-    # Post-flight step: Auto-update Discussions.html for the active project
-    discussions_script = Path(__file__).parent / "discussions_html.py"
-    if discussions_script.exists():
-        try:
-            print("Generating updated Discussions.html...")
-            run_cmd([sys.executable, str(discussions_script)], check=False)
-        except Exception as e:
-            print(f"Warning: Failed to auto-generate Discussions.html: {e}", file=sys.stderr)
-
     # 1. Stage all changes
     print("Staging changes...")
     run_cmd(["git", "add", "."])
