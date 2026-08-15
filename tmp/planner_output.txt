@@ -1,9 +1,19 @@
-## Summary
+I pulled the actual repo structure for `apps/gemini-companion` via the GitHub connector to ground this — confirmed files like `src-tauri/src/{main,server,session,threads,pty,proxy,cloud_sync,types}.rs` and the injected scripts `src-tauri/engines/{gemini-engine.js,gemini-sync.js}` — and used that plus your AG_CONTEXT.md to write the full plan into the attached markdown file.
 
-I've delivered the full Stage 3 plan as a Markdown file, grounded in the actual `mattdanielmurphy/ai-os` repo structure I inspected (`apps/gemini-companion/src-tauri/src/{main,server,session,threads,types}.rs`, the frontend TS files, `userscripts/`, and the currently-empty `context/threads/` tree — it doesn't exist yet, only `context/clinical-profile.md` is present).
+## Key Architectural Decision
 
-Key architectural call: rather than reverse-engineering Gemini's `batchexecute` protocol or Perplexity's private `/rest/*` auth in Rust (fragile), the plan extends your existing **Context Sync Protocol** pattern — two new **hidden Tauri webviews** (`gemini-sync`, `perplexity-sync`) sharing the authenticated session, running injected JS listers/fetchers that POST results back to new `/api/cloud-sync/*` routes on the existing loopback daemon. Diffing against locally-known threads happens in Rust via a new `cloud_sync.rs` module, and completed thread turn-histories are atomically written to `context/threads/<provider>/<remote_id>-<slug>.md`.
+The core problem both action items share is that gemini.google.com runs in a **remote-origin webview**, so Tauri's IPC isn't exposed there by default. The plan resolves this with Tauri v2's `dangerousRemoteDomainIpcAccess` config scoped strictly to `gemini.google.com`, plus a new capability file limiting exactly which commands are exposed — not a blanket IPC open-door.
 
-The file covers all six required sections in depth — data structures, exact Rust/TS function signatures, step-by-step polling/ingest pseudocode, a full error-handling table (auth loss, rate limits, partial fetches, ID collisions between mobile-originated and desktop-continued threads, etc.), and a 13-step ordered implementation checklist across both the `ai-os` repo and the separate `userscript-bundler` repo.
+## Agentic Loop Without Native Function-Calling
 
-One caveat worth flagging: the GitHub connector in this session returned file *existence/metadata* but not raw text bodies for `threads.rs`/`server.rs`/`main.ts`, so I couldn't confirm the exact existing struct/function names in `threads.rs` for local-thread cross-referencing, or Gemini/Perplexity's precise internal listing endpoints. I called these out explicitly as verification steps in the plan rather than guessing, so the implementing agent has zero ambiguity about what still needs a quick look at the live file/DevTools before coding.
+Since Gemini's web UI has no tool-calling hooks, the plan defines a **fenced-block action protocol** (` ```bridge-action `) that a `MutationObserver` in a new `gemini-context-bridge.js` module scans for, executes through the Rust bridge, and feeds results back into the compose box as the next turn — closing the loop entirely at the DOM layer.
+
+## What's in the file
+
+- **Data structures**: `BridgeState`, `PendingAction`, `AuditEntry`, allowlist config (`bridge.config.json`)
+- **API contracts**: full Rust command signatures for `fs_bridge.rs`, `shell_bridge.rs`, `context_snapshot.rs` (new files), plus the JS-side contract
+- **Logic flow**: step-by-step for prompt prepending (Stable Anchor + Volatile Append, matching your existing repo strategy) and the confirm-before-execute agentic loop
+- **Error handling**: path traversal, React-controlled-input desync, streaming false positives, runaway action loops, TTL-based confirmation expiry
+- **14 ordered implementation steps** across specific real files, from `tauri.conf.json` through to the `bun run build-macos` verification pass
+
+One thing worth flagging: I couldn't pull the literal source of `main.rs`/`gemini-engine.js` through the connector in this session (file content retrieval returned only metadata, not text), so exact selector names and the existing `invoke_handler` list are referenced structurally rather than verbatim — a downstream agent should diff against the actual file content before appending code.
