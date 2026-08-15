@@ -1,4 +1,4 @@
-User Request: 1. Identify and eliminate latency in watch_transcripts daemon so thread.md updates with minimal delay (fswatch / event-driven instead of slow sleep polling, remove unnecessary subagent/git bottlenecks). 2. Update thread.md HTML layout to match thread example.md: (a) outer wrapper style: left: calc(50% - 50cqw - 2px); padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px), (b) newest exchange wrapper margin-bottom: 80px, (c) thread stats pinned to bottom via absolute position wrapper: <span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">.
+User Request: Stage 1 Architecture and Implementation Plan: Monorepo Restructuring & Severing. Create apps/ directory in ~/projects/ai-os/, sever tauri-gui into two isolated targets (apps/gemini-companion for the lightweight webview + proxy, and apps/aios-tui for the legacy terminal harness), decouple shared services/scripts, and clean up the root repository.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
