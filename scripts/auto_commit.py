@@ -5,7 +5,21 @@ import json
 import os
 import urllib.request
 import urllib.error
+import argparse
 from pathlib import Path
+
+def write_result(path, status, sha=None, message=None, error=None):
+    if not path:
+        return
+    data = {"status": status}
+    if sha: data["sha"] = sha
+    if message: data["message"] = message
+    if error: data["error"] = error
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"Failed to write result: {e}", file=sys.stderr)
 
 def run_cmd(args, check=True):
     try:
@@ -18,6 +32,10 @@ def run_cmd(args, check=True):
         return "", e.returncode
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--result-path", help="Path to write JSON status")
+    args, unknown = parser.parse_known_args()
+    result_path = args.result_path
     # 0. Check and update any active task in-progress to review status
     import glob
     import re
@@ -51,6 +69,7 @@ def main():
     _, code = run_cmd(["git", "diff", "--cached", "--quiet"], check=False)
     if code == 0:
         print("No staged changes to commit.")
+        write_result(result_path, "no_changes")
         sys.exit(0)
 
     # 3. Get the cached diff (cap characters to prevent context blowout)
@@ -119,7 +138,9 @@ def main():
     
     # 5. Execute git commit
     run_cmd(["git", "commit", "-m", commit_msg])
-    print("Git commit completed successfully!")
+    sha, _ = run_cmd(["git", "rev-parse", "HEAD"])
+    print(f"Git commit completed successfully! SHA: {sha}")
+    write_result(result_path, "committed", sha=sha, message=commit_msg)
 
     # 6. Push changes to remote repository
     print("Pushing commits to remote repository...")
