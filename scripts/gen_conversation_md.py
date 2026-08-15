@@ -300,11 +300,12 @@ def extract_user_input(content: str):
 
         # Format highlighted selection as blockquote, and comment outside the blockquote
         if quote_lines:
-            quote_body = '\n'.join(f'> {line}' if line else '>' for line in quote_lines)
+            quote_text = '\n'.join(quote_lines).strip()
+            quote_html = f'<span style="display: block; background: rgba(0, 0, 0, 0.25); border-left: 3px solid rgba(130, 115, 220, 0.7); padding: 6px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; opacity: 0.9; white-space: pre-wrap;">{quote_text}</span>'
             if cmt_clean:
-                formatted_parts.append(f"{quote_body}\n\n💬 **Comment**: {cmt_clean}")
+                formatted_parts.append(f"{quote_html}\n💬 **Comment**: {cmt_clean}")
             else:
-                formatted_parts.append(quote_body)
+                formatted_parts.append(quote_html)
         elif cmt_clean:
             formatted_parts.append(f"💬 **Comment**: {cmt_clean}")
 
@@ -509,9 +510,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
         agent_text = '*(response in progress or not recorded)*'
 
     user_span = (
-        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 12px 16px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
-        f'{user_md}\n\n'
-        f'</span>'
+        f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_md}</span>'
     )
 
     agent_span = (
