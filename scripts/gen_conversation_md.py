@@ -493,7 +493,7 @@ def format_prompt(raw_prompt: str) -> str:
     return text
 
 
-def make_exchange_block(users: list, agent_content: str, agent_time: str, is_newest: bool) -> str:
+def make_exchange_block(users: list, agent_content: str, agent_time: str, is_newest: bool = False) -> str:
     """Build a single exchange block using pure markdown (no HTML tables)."""
     user_blocks = []
     for u in users:
@@ -582,7 +582,7 @@ def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
     return None
 
 
-def make_exchange_block_with_progress(users: list, agent_content: str, agent_time: str, subagent_progress: str | None, is_newest: bool) -> str:
+def make_exchange_block_with_progress(users: list, agent_content: str, agent_time: str, subagent_progress: str | None, is_newest: bool = False) -> str:
     """Build a single exchange block with potential subagent progress."""
     base_block = make_exchange_block(users, agent_content, agent_time, is_newest)
     if subagent_progress:
