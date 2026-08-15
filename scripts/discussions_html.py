@@ -616,11 +616,15 @@ def main():
     first_title = exchanges[0].get('title') if exchanges else None
     title = args.title or first_title or (transcript_path.parent.parent.name if transcript_path and transcript_path.parent.parent.name != 'logs' else 'Conversation')
     
+    last_ex = exchanges[-1] if exchanges else {}
+    ex_date = last_ex.get('date_iso') or datetime.now().strftime("%Y-%m-%d")
+    ex_ts = last_ex.get('timestamp') or 0.0
+
     threads = {
         'default': {
             'title': title,
-            'date': datetime.now().strftime("%Y-%m-%d"),
-            'timestamp': datetime.now().timestamp(),
+            'date': ex_date,
+            'timestamp': ex_ts,
             'count': len(exchanges),
             'source': 'Antigravity',
             'html': build_thread_html(exchanges)
@@ -636,8 +640,9 @@ def main():
         out = project_dir / 'Discussions.html'
         
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(html)
-    print(f"Written: {out}")
+    if not out.exists() or out.read_text(encoding='utf-8', errors='ignore') != html:
+        out.write_text(html, encoding='utf-8')
+        print(f"Written: {out}")
     print(f"  {len(threads)} threads generated.")
 
 def build_thread_html(exchanges: list) -> str:
