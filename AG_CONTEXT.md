@@ -39,6 +39,7 @@ No matching items found by AI. non-interactively in terminal. Supports URL pre-f
 - **Interactive Pre/Post-Flight Audit Protocol (`scripts/preflight.py` & `scripts/auto_commit.py`)**: Pre/postflight routines act as interactive quality gates that validate syntax, check rules, and enforce output standards before commits, returning non-zero codes to reject invalid changes.
 - **Distributed LLM Wiki Pattern (`llm-wiki` & Quartz Integration)**: Ingests project decisions and entity knowledge directly into interlinked markdown files (`[[wikilinks]]`) across project roots and `~/wiki`, connected via Quartz to navigate from any project file to the broader global knowledge graph.
 - **Service Reload Rule**: When modifying daemon/service files (e.g. `services/agy-proxy/proxy.py`, `litellm_config.yaml`, or Hermes services), you MUST restart the corresponding background services via `la restart <service-name>` (e.g. `la restart agy-proxy`, `la restart hermes-webui`, `la restart hermes-gateway`) to ensure changes actually apply to the running runtime environment.
+- **Master Project Board Protocol (`PROJECT_BOARD.md`):** Central multi-project task backlog maintained at `~/projects/ai-os/PROJECT_BOARD.md` and symlinked to Obsidian `Global Todos.md`. Automatically hydrated on turn 1 of every session via `preflight.py`. All agents are required to update task statuses and surface clickable links to `PROJECT_BOARD.md` when initiating features or concluding tasks.
 
 
 
