@@ -133,7 +133,8 @@ def render(conv_id: str, brain_dir: Path) -> bool:
             threads = {conv_id: {"title": f"Conversation {conv_id[:8]}", "exchanges": exchanges}}
             html = build_document(threads, project_root.name, project_root)
             out_file = project_root / 'Discussions.html'
-            out_file.write_text(html)
+            if not out_file.exists() or out_file.read_text(encoding='utf-8', errors='ignore') != html:
+                out_file.write_text(html, encoding='utf-8')
         return True
     except Exception as e:
         print(f"discussions_html failed: {e}")
