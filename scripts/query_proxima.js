@@ -6,9 +6,15 @@ const PROXIMA_PATH = '/Users/matt/projects/external/Proxima';
 const { IPCClient, AIProvider } = await import(path.join(PROXIMA_PATH, 'src/mcp/ipc-bridge.js'));
 const { getAgentHubToken, getAgentHubPort } = await import(path.join(PROXIMA_PATH, 'src/mcp/helpers.js'));
 
+const PERPLEXITY_MODEL_MAP = {
+    'sonnet': 'claude50sonnetthinking',
+    'sonar': 'turbo',
+};
+
 async function main() {
     const args = process.argv.slice(2);
     let providerName = 'perplexity';
+    let rawModel = null;
     let message = '';
     let filePath = null;
     let outputPath = null;
@@ -19,6 +25,8 @@ async function main() {
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--provider' || args[i] === '-p') {
             providerName = args[++i];
+        } else if (args[i] === '--model' || args[i] === '-m') {
+            rawModel = args[++i];
         } else if (args[i] === '--file' || args[i] === '-f') {
             filePath = args[++i];
         } else if (args[i] === '--input' || args[i] === '-i') {
@@ -39,8 +47,22 @@ async function main() {
     }
 
     if (!message && !recoverMode) {
-        console.error('Usage: node query_proxima.js "<message>" [--provider <name>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover]');
+        console.error('Usage: node query_proxima.js "<message>" [--provider <name>] [--model <model>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover]');
         process.exit(1);
+    }
+
+    let resolvedEngine = null;
+    const baseProvider = (providerName || '').split(':')[0].toLowerCase();
+    if (baseProvider === 'perplexity') {
+        const requestedModel = (rawModel || 'sonnet').toLowerCase();
+        if (!PERPLEXITY_MODEL_MAP[requestedModel]) {
+            console.error(`Error: Invalid model "${rawModel}" for provider "perplexity".`);
+            console.error(`Available model params: 'sonnet' (default), 'sonar'.`);
+            process.exit(1);
+        }
+        resolvedEngine = PERPLEXITY_MODEL_MAP[requestedModel];
+    } else {
+        resolvedEngine = rawModel || null;
     }
 
     const port = getAgentHubPort() || 19222;
@@ -49,7 +71,8 @@ async function main() {
     const provider = new AIProvider(providerName, client, () => true);
 
     try {
-        console.error(`[query_proxima] Querying ${providerName} (timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
+        const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'sonnet' : 'default');
+        console.error(`[query_proxima] Querying ${providerName} (model: ${modelDisplay}, timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
         
         let response = '';
         if (recoverMode) {
@@ -77,10 +100,10 @@ async function main() {
             }
             if (!response && message) {
                 // Fallback to sending if recovery didn't find active text
-                response = await provider.chat(message, true, filePath);
+                response = await provider.chat(message, true, filePath, resolvedEngine);
             }
         } else {
-            response = await provider.chat(message, true, filePath);
+            response = await provider.chat(message, true, filePath, resolvedEngine);
         }
 
         if (!response) {
@@ -102,3 +125,4 @@ async function main() {
 }
 
 main();
+
