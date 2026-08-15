@@ -6,6 +6,8 @@ use std::path::{PathBuf};
 use tower_http::cors::CorsLayer;
 use serde_json::Value;
 
+use crate::cloud_sync;
+
 #[derive(Serialize, Deserialize)]
 struct SaveThreadRequest {
     provider: String,
@@ -43,6 +45,7 @@ pub async fn start_proxy_server(_app_handle: tauri::AppHandle) {
     let app = Router::new()
         .route("/api/status", get(status_handler))
         .route("/api/thread/save", post(save_thread_handler))
+        .merge(cloud_sync::router())
         .layer(CorsLayer::permissive());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:19223").await.unwrap();
