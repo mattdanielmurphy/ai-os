@@ -674,6 +674,8 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table}\n</span>'
     doc_content.append(pinned_metrics)
 
+    doc_content.append('</span>')
+
     rendered_doc = '\n\n'.join(doc_content)
     try:
         from link_formatter import enrich_file_links
