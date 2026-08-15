@@ -4,7 +4,6 @@ import os
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 # Add scripts directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../scripts'))
@@ -13,7 +12,8 @@ from gen_conversation_md import (
     fmt_time, strip_html_tags, decode_html_entities,
     extract_user_input, parse_exchanges, load_agent_response,
     next_turn_number, format_prompt, make_exchange_block, generate,
-    clean_agent_content, clean_agent_response, balance_code_fences, filter_transient_lines
+    clean_agent_content, clean_agent_response, balance_code_fences, filter_transient_lines,
+    make_exchange_block_with_progress
 )
 
 class TestGenConversationMd(unittest.TestCase):
@@ -52,7 +52,7 @@ class TestGenConversationMd(unittest.TestCase):
         long = "a" * 900
         self.assertNotIn("<details>", format_prompt(long))
 
-    def test_extract_user_input(self):
+    def test_extract_user_input_single(self):
         content = """<ADDITIONAL_METADATA>meta</ADDITIONAL_METADATA>
 current local time is: 2026-08-05T14:00:00-06:00
 Comments on artifact URI: file:///test.md
@@ -65,20 +65,45 @@ Comment: "bar"
 <USER_REQUEST>hello</USER_REQUEST>"""
         prompt, time = extract_user_input(content)
         self.assertEqual(time, "2:00pm")
-        self.assertIn("> <b>foo</b>", prompt)
-        self.assertIn("💬 **Comment**: bar", prompt)
+        self.assertIn("📌 **Selection:**", prompt)
+        self.assertIn("<b>foo</b>", prompt)
+        self.assertIn("💬 **Comment:** bar", prompt)
         self.assertIn("hello", prompt)
+
+    def test_extract_user_input_multiple_comments(self):
+        content = """current local time is: 2026-08-15T13:45:46-06:00
+Comments on artifact URI: file:///Users/matt/thread.md
+
+Selection:
+>Emotional Support Animals (ESAs)
+
+Comment: "not necessary"
+
+Selection:
+>Campus Transit / Pacing Allowance
+
+Comment: "no need"
+<USER_REQUEST>
+I don't want to ask for too much.
+</USER_REQUEST>"""
+        prompt, time = extract_user_input(content)
+        self.assertEqual(time, "1:45pm")
+        self.assertIn("Emotional Support Animals (ESAs)", prompt)
+        self.assertIn("💬 **Comment:** not necessary", prompt)
+        self.assertIn("Campus Transit / Pacing Allowance", prompt)
+        self.assertIn("💬 **Comment:** no need", prompt)
+        self.assertIn("I don't want to ask for too much.", prompt)
+        # Verify raw unparsed Selection: was not leaked
+        self.assertNotIn('Selection:\n>Campus Transit', prompt)
 
     def test_parse_exchanges(self):
         transcript = Path(self.test_dir.name) / 'transcript.jsonl'
         with open(transcript, 'w') as f:
             f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>hi</USER_REQUEST>'}) + '\n')
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'hello'}) + '\n')
-            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': '[thread.md](...)'}) + '\n') # Should skip
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': '[thread.md](...)'}) + '\n')
         
         exchanges = parse_exchanges(transcript)
-        # Note: older tests return items in active_items list format now
-        # Filtering for exchanges
         ex_items = [i for i in exchanges if i['type'] == 'exchange']
         self.assertEqual(len(ex_items), 1)
         self.assertEqual(ex_items[0]['users'][0]['prompt'], 'hi')
@@ -92,24 +117,12 @@ Comment: "bar"
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        # Expect span layout
-        self.assertIn('span', block)
-        self.assertIn('Sent at 2:00pm', block)
-        self.assertIn('>\n\nhi\n\n<', block)
-        self.assertIn('Responded at 2:01pm', block)
-        self.assertIn('>\n\nhello\n\n<', block)
-        self.assertIn('\n\n<span', block) # Separation between user/agent spans
-        # Verify line-heights were updated (reverted)
-        self.assertIn('line-height: 1.5;', block)
-        self.assertIn('line-height: 1.6;', block)
-
-    def test_make_exchange_block_span_container(self):
-        block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        self.assertIn('<span', block)
+        self.assertIn('### 👤 User *(2:00pm)*', block)
+        self.assertIn('hi', block)
+        self.assertIn('### 🤖 Assistant *(2:01pm)*', block)
+        self.assertIn('hello', block)
+        self.assertNotIn('<span', block)
         self.assertNotIn('<div', block)
-        self.assertIn('Sent at 2:00pm', block)
-        self.assertIn('Responded at 2:01pm', block)
-
 
     def test_strip_system_tags(self):
         content = "<system>hidden</system><user_rules>rule</user_rules><USER_REQUEST>hi</USER_REQUEST>"
@@ -154,7 +167,11 @@ Comment: "bar"
         custom_out = Path(self.test_dir.name) / 'custom.md'
         generate(conv_id, 'Title', Path(self.test_dir.name), output_path_override=custom_out)
         self.assertTrue(custom_out.exists())
-
+        content = custom_out.read_text()
+        self.assertIn('# 💬 Title', content)
+        self.assertIn('### 👤 User', content)
+        self.assertIn('### 🤖 Assistant', content)
+        self.assertNotIn('<span', content)
 
     def test_parse_exchanges_with_undo(self):
         transcript = Path(self.test_dir.name) / 'transcript.jsonl'
@@ -170,19 +187,11 @@ Comment: "bar"
             f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'r3'}) + '\n')
         
         items = parse_exchanges(transcript, 'test_conv', Path(self.test_dir.name))
-        
-        # After turn 1 (min 1, max 1), turn 2 (min 2, max 2).
-        # When turn 3 (step 2) arrives:
-        # 1. Turn 2 (min 2) is undone.
-        # 2. Fork notice (fork_step 2) is added.
-        # 3. Turn 3 (step 2) is added as an exchange.
-        # Items should be: [Turn 1 exchange, Fork notice, Turn 3 exchange]
         self.assertEqual(len(items), 3)
         self.assertEqual(items[1]['type'], 'fork_notice')
         self.assertEqual(items[2]['type'], 'exchange')
         self.assertTrue(items[1]['fork_path'].exists())
         
-        # Test content rendering
         content = items[1]['fork_path'].read_text()
         self.assertIn('r2', content)
 
@@ -210,7 +219,6 @@ Comment: "bar"
         self.assertNotIn("Gemini 3.1 Pro", ex['agent_content'])
         self.assertIn("Actual final agent response output", ex['agent_content'])
 
-
     def test_balance_code_fences(self):
         unclosed = "Some text\n```python\nprint('hello')"
         balanced = balance_code_fences(unclosed)
@@ -232,6 +240,8 @@ Comment: "bar"
         self.assertEqual(clean_agent_content("- [thread.md](file://...)"), "")
         # Prefixed
         self.assertEqual(clean_agent_content("Reference link to the thread artifact: [thread.md](file://...)"), "")
+        self.assertEqual(clean_agent_content("📄 Reference: [thread.md](file://...)"), "")
+        self.assertEqual(clean_agent_content("Current Thread: [thread.md](file://...)"), "")
         # Conversation response
         self.assertEqual(clean_agent_content("[conversation_response.md](file://...)"), "")
         # Normal
@@ -244,10 +254,10 @@ Comment: "bar"
     def test_clean_agent_response(self):
         content = "# H1\n## H2\n### H3\n#### H4\nThread context logged at: link\nThread artifact: link\nThread logged at: link\nReference link: link\nSome text"
         cleaned = clean_agent_response(content)
-        self.assertIn("### H1", cleaned)
-        self.assertIn("### H2", cleaned)
-        self.assertIn("### H3", cleaned)
-        self.assertIn("### H4", cleaned)
+        self.assertIn("#### H1", cleaned)
+        self.assertIn("##### H2", cleaned)
+        self.assertIn("###### H3", cleaned)
+        self.assertIn("#### H4", cleaned)
         self.assertNotIn("Thread context logged at:", cleaned)
         self.assertNotIn("Thread artifact:", cleaned)
         self.assertNotIn("Thread logged at:", cleaned)
@@ -255,25 +265,14 @@ Comment: "bar"
         self.assertIn("Some text", cleaned)
 
     def test_transient_filtering_with_final_output(self):
-        # Issue 1: Transient lines stripped when final output is present
-        from gen_conversation_md import filter_transient_lines
-        text = "Streaming reasoning...\nGemini 3.1 Pro is finishing its detailed architectural proposal...\nFinal answer here."
         text = "Streaming reasoning...\nFinal answer here."
-        # Because we now keep transient lines if they are not exclusively transient.
-        # But wait, my fix to `filter_transient_lines` is not what I intended? 
-        # Actually I didn't change it, the test just failed.
-        # Let's fix the test assertion to match the current logic if it's correct.
         self.assertEqual(filter_transient_lines(text), "Final answer here.")
 
     def test_transient_filtering_streaming_mode(self):
-        # Issue 1: Streaming mode: only latest transient line kept
-        from gen_conversation_md import filter_transient_lines
         text = "Gemini 3.1 Pro is streaming its reasoning...\nWaiting for subagent...\nI'm still waiting."
         self.assertEqual(filter_transient_lines(text), "I'm still waiting.")
 
     def test_paragraph_separation(self):
-        # Issue 2: PLANNER_RESPONSE merged into single paragraph without breaks
-        # The fix is in parse_exchanges: '\n\n'.join(chunks)
         transcript = Path(self.test_dir.name) / 'transcript_paragraphs.jsonl'
         with open(transcript, 'w') as f:
             f.write(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>hi</USER_REQUEST>'}) + '\n')
@@ -285,9 +284,6 @@ Comment: "bar"
         self.assertEqual(ex['agent_content'], 'Para 1\n\nPara 2')
 
     def test_subagent_thought_rendering(self):
-        # Issue 3: Sub-agent thoughts rendered
-        from gen_conversation_md import make_exchange_block_with_progress
-        base = "#### 🤖 Agent\n\nFinal output"
         progress = "🔄 **Subagent Activity**: Running test"
         block = make_exchange_block_with_progress([], "Final output", "", progress)
         self.assertIn(progress, block)
