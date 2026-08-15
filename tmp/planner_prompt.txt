@@ -1,4 +1,4 @@
-User Request: Stage 4 Architecture and Implementation Plan: Gemini Agentic Capabilities & Local Context. Turn standard gemini.google.com interface into a powerful local-aware assistant in apps/gemini-companion. Action items: (1) Add native IPC bridges from the injected script to Tauri Rust for local file reading, editing, and shell commands. (2) Enable smart prompt prepending (e.g. feeding active project context, git status, system info directly into web Gemini queries).
+User Request: Fix all Rust compilation errors in apps/gemini-companion/src-tauri: (1) Add sha2 = '0.10' to Cargo.toml, (2) Refactor shell_bridge.rs to use tokio::process::Command and tokio::time::timeout instead of missing wait_timeout crate, fixing utf8 byte slice type mismatch, (3) Implement and export pub async fn start_proxy_server(app_handle: tauri::AppHandle) in proxy.rs, (4) Clean up unused imports and warnings in cloud_sync.rs, context_snapshot.rs, proxy.rs, and fs_bridge.rs so cargo check compiles cleanly with zero errors.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
