@@ -120,25 +120,25 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         print(f"gen_conversation_md failed: {e}")
         return False
         
-    # 2. Render Discussions.html (if applicable)
-    try:
-        # Import inside to prevent circular issues if any
-        from discussions_html import build_document, parse_exchanges
-        transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript_full.jsonl"
-        if not transcript.exists() or transcript.stat().st_size == 0:
-            transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
-        if transcript.exists():
-            exchanges = parse_exchanges(transcript)
-            project_root = SCRIPTS_DIR.parent
-            threads = {conv_id: {"title": f"Conversation {conv_id[:8]}", "exchanges": exchanges}}
-            html = build_document(threads, project_root.name, project_root)
-            out_file = project_root / 'Discussions.html'
-            if not out_file.exists() or out_file.read_text(encoding='utf-8', errors='ignore') != html:
-                out_file.write_text(html, encoding='utf-8')
-        return True
-    except Exception as e:
-        print(f"discussions_html failed: {e}")
-        return False
+    # 2. Render Discussions.html (main threads only)
+    if conv_id not in _cached_sub_map:
+        try:
+            # Import inside to prevent circular issues if any
+            from discussions_html import build_document, parse_exchanges
+            transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript_full.jsonl"
+            if not transcript.exists() or transcript.stat().st_size == 0:
+                transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
+            if transcript.exists():
+                exchanges = parse_exchanges(transcript)
+                project_root = SCRIPTS_DIR.parent
+                threads = {conv_id: {"title": f"Conversation {conv_id[:8]}", "exchanges": exchanges}}
+                html = build_document(threads, project_root.name, project_root)
+                out_file = project_root / 'Discussions.html'
+                if not out_file.exists() or out_file.read_text(encoding='utf-8', errors='ignore') != html:
+                    out_file.write_text(html, encoding='utf-8')
+        except Exception as e:
+            print(f"discussions_html failed: {e}")
+    return True
 
 
 def is_in_progress(content: str) -> bool:
