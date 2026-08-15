@@ -22,7 +22,7 @@ async fn handle_thread_save(
 
 async fn handle_bridge_context() -> Json<serde_json::Value> {
     let project_root = std::env::var("AIOS_INITIAL_PROJECT").unwrap_or_else(|_| ".".to_string());
-    match context_snapshot::get_project_snapshot(&project_root) {
+    match context_snapshot::get_project_snapshot(&project_root).await {
         Ok(snapshot) => Json(json!({ "status": "ok", "context": snapshot })),
         Err(e) => Json(json!({ "status": "error", "message": e })),
     }

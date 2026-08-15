@@ -33,6 +33,7 @@ pub async fn handle_cloud_status() -> Json<serde_json::Value> {
     Json(serde_json::json!({"status": "ok", "sync_enabled": true}))
 }
 
+#[allow(dead_code)]
 pub fn router() -> Router {
     Router::new()
         .route("/api/cloud-sync/status", get(handle_cloud_status))
