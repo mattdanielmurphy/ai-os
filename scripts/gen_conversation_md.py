@@ -165,38 +165,131 @@ def filter_transient_lines(text: str) -> str:
     return text
 
 
+def normalize_blockquotes(text: str) -> str:
+    """Ensure clean blockquote formatting without splitting internal lines.
+    Self-heals fragmented blockquotes where empty blank lines separated quote lines.
+    """
+    if not text:
+        return text
+
+    lines = text.splitlines()
+    new_lines = []
+    in_quote = False
+
+    for line in lines:
+        stripped = line.strip()
+        is_quote = stripped.startswith('>')
+
+        if not stripped and in_quote:
+            # Retain quote block continuation on empty lines
+            new_lines.append('>')
+            continue
+
+        if is_quote:
+            if not in_quote:
+                if new_lines and new_lines[-1].strip():
+                    new_lines.append('')
+                in_quote = True
+        else:
+            if in_quote and stripped:
+                if new_lines and new_lines[-1].strip():
+                    new_lines.append('')
+                in_quote = False
+
+        new_lines.append(line)
+
+    return '\n'.join(new_lines)
+
+
+def normalize_tables(text: str) -> str:
+    """Ensure clean markdown table boundaries without splitting rows."""
+    if not text:
+        return text
+
+    lines = text.splitlines()
+    new_lines = []
+    in_table = False
+
+    for line in lines:
+        stripped = line.strip()
+        is_table = stripped.startswith('|') and stripped.endswith('|')
+
+        if is_table:
+            if not in_table:
+                if new_lines and new_lines[-1].strip():
+                    new_lines.append('')
+                in_table = True
+        else:
+            if in_table and stripped:
+                if new_lines and new_lines[-1].strip():
+                    new_lines.append('')
+                in_table = False
+
+        new_lines.append(line)
+
+    return '\n'.join(new_lines)
+
+
+def normalize_headings(text: str) -> str:
+    """Ensure blank line before headings and proper heading levels."""
+    if not text:
+        return text
+
+    lines = text.splitlines()
+    new_lines = []
+
+    for line in lines:
+        m = re.match(r'^(#{1,6})\s+(.*)', line)
+        if m:
+            level = len(m.group(1))
+            demoted_level = max(level, 3)
+            heading_prefix = '#' * demoted_level
+            line = f"{heading_prefix} {m.group(2)}"
+            if new_lines and new_lines[-1].strip():
+                new_lines.append('')
+        new_lines.append(line)
+
+    return '\n'.join(new_lines)
+
+
+def heal_markup_spans(text: str) -> str:
+    """Self-healing: balance open and closed span tags to prevent DOM corruption."""
+    if not text:
+        return text
+
+    open_spans = len(re.findall(r'<span\b[^>]*>', text, re.IGNORECASE))
+    close_spans = len(re.findall(r'</span>', text, re.IGNORECASE))
+
+    if open_spans > close_spans:
+        text = text + ('\n</span>' * (open_spans - close_spans))
+    elif close_spans > open_spans:
+        diff = close_spans - open_spans
+        for _ in range(diff):
+            text = re.sub(r'</span>\s*$', '', text, count=1, flags=re.IGNORECASE)
+
+    return text
+
+
 def clean_agent_response(text: str) -> str:
     """
     1. Clean agent content (links/status lines).
-    2. Demote headings # -> #####, ## -> ######, ### -> ######.
-    3. Strip orphan status/context lines.
-    4. Ensure proper spacing before/after headers, blockquotes, and tables.
+    2. Normalize headings (idempotent spacing & demotion).
+    3. Normalize tables (idempotent spacing).
+    4. Normalize blockquotes (self-healing unbroken quote blocks).
+    5. Strip orphan status/context lines.
+    6. Balance code fences and escape currency dollar signs.
     """
     text = clean_agent_content(text)
     if not text:
         return ''
 
-    # Demote headings
-    text = re.sub(r'^#{1,6}\s+', '### ', text, flags=re.MULTILINE)
-
-    # Ensure blank lines before headings
-    text = re.sub(r'([^\n])\n(#{1,6}\s+)', r'\1\n\n\2', text)
+    text = normalize_headings(text)
+    text = normalize_tables(text)
+    text = normalize_blockquotes(text)
 
     # Ensure blank lines before and after **Thread Metrics:**
     text = re.sub(r'([^\n])\n(\*\*Thread Metrics:\*\*)', r'\1\n\n\2', text)
     text = re.sub(r'(\*\*Thread Metrics:\*\*)\n([^\n])', r'\1\n\n\2', text)
-
-    # Ensure blank line before markdown tables
-    text = re.sub(r'([^\n|])\n(\|[^\n]+\|)', r'\1\n\n\2', text)
-
-    # Ensure blank line after markdown tables
-    text = re.sub(r'(\|[^\n]+\|)\n([^\n|])', r'\1\n\n\2', text)
-
-    # Ensure blank line before blockquotes
-    text = re.sub(r'([^\n>])\n(>[^\n]*)', r'\1\n\n\2', text)
-
-    # Ensure blank line after blockquotes
-    text = re.sub(r'(>[^\n]*)\n([^\n>])', r'\1\n\n\2', text)
 
     # Strip orphan status/context lines
     lines = []
@@ -723,6 +816,10 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         rendered_doc = enrich_file_links(rendered_doc)
     except Exception:
         pass
+
+    # Self-healing markup pass on rendered document
+    rendered_doc = heal_markup_spans(rendered_doc)
+    rendered_doc = balance_code_fences(rendered_doc)
 
     tmp_path = output_path.with_name(f"{output_path.name}.tmp")
     tmp_path.write_text(rendered_doc, encoding='utf-8')
