@@ -251,9 +251,9 @@ def extract_user_input(content: str):
     time = fmt_time(ts.group(1)) if ts else ''
 
     # Clean out internal IDE system tags
+    cleaned = content
     for tag in ['USER_SETTINGS_CHANGE', 'user_rules', 'context', 'system', 'workflows', 'skills', 'ADDITIONAL_METADATA']:
-        cleaned = re.sub(fr'<{tag}>.*?</{tag}>', '', content, flags=re.DOTALL)
-    cleaned = content if 'cleaned' not in locals() else cleaned
+        cleaned = re.sub(fr'<{tag}>.*?</{tag}>', '', cleaned, flags=re.DOTALL)
 
     # Extract artifact comments if present
     # The IDE sends: "Comments on artifact URI: ...\n\nSelection:\n>...\n\nComment: \"...\""
@@ -317,12 +317,26 @@ def extract_user_input(content: str):
         if req_prompt_clean:
             formatted_parts.append(req_prompt_clean)
 
+    # Detect artifact approvals
+    if "The user has approved this document." in cleaned:
+        uri_match = re.search(r'Comments on artifact URI:\s*(file://[^\s\n]+)', cleaned)
+        if uri_match:
+            uri = uri_match.group(1)
+            artifact_approval = f"✅ **Approved Plan/Artifact**: [{uri.split('/')[-1]}]({uri})"
+            formatted_parts.append(artifact_approval)
+        else:
+            formatted_parts.append("✅ **Approved Plan/Artifact**")
+
     # Join comment blocks and user prompt with spacing
     if len(formatted_parts) > 1:
         divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
         prompt = divider.join(formatted_parts).strip()
+    elif len(formatted_parts) == 1:
+        prompt = formatted_parts[0].strip()
+    elif cleaned.strip():
+        prompt = cleaned.strip()
     else:
-        prompt = '\n\n'.join(formatted_parts).strip()
+        prompt = ''
     return prompt, time
 
 
