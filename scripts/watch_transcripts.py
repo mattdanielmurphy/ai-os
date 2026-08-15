@@ -33,52 +33,72 @@ DEFAULT_POLLING = 0.1
 
 
 _subagent_cache = {}
+_last_dir_scan = 0
+_cached_active_convs = {}
+_cached_sub_map = {}
 
 def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, dict]:
     """Find active conversations and map subagent conv_ids to parent conv_ids.
     
     Returns ({conv_id: (mtime, size)}, subagent_to_parent_map).
     """
-    active = {}
-    subagent_to_parent = {}
-    if not brain_dir.exists():
+    global _last_dir_scan, _cached_active_convs, _cached_sub_map
+    now = time.time()
+
+    # Full directory discovery only every 2 seconds
+    if (now - _last_dir_scan) > 2.0:
+        _last_dir_scan = now
+        active = {}
+        subagent_to_parent = {}
+        if not brain_dir.exists():
+            return active, subagent_to_parent
+
+        for conv_dir in brain_dir.iterdir():
+            if not conv_dir.is_dir() or conv_dir.name.startswith('.'):
+                continue
+            transcript = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
+            if transcript.exists():
+                try:
+                    stat = transcript.stat()
+                    if (now - stat.st_mtime) < max_age_secs:
+                        active[conv_dir.name] = (stat.st_mtime, stat.st_size)
+                        
+                        cached = _subagent_cache.get(conv_dir.name)
+                        if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
+                            subagent_to_parent.update(cached[2])
+                        else:
+                            sub_map = {}
+                            try:
+                                with open(transcript, 'r', encoding='utf-8', errors='ignore') as f:
+                                    for line in f:
+                                        if 'invoke_subagent' in line or 'agy_start' in line or 'agy' in line:
+                                            matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', line)
+                                            for m in matches:
+                                                if m != conv_dir.name:
+                                                    sub_map[m] = conv_dir.name
+                            except Exception:
+                                pass
+                            _subagent_cache[conv_dir.name] = (stat.st_mtime, stat.st_size, sub_map)
+                            subagent_to_parent.update(sub_map)
+                except Exception:
+                    continue
+        _cached_active_convs = active
+        _cached_sub_map = subagent_to_parent
         return active, subagent_to_parent
 
-    now = time.time()
-    for conv_dir in brain_dir.iterdir():
-        if not conv_dir.is_dir():
-            continue
-        transcript = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
+    # Fast path on 50ms ticks: only stat previously known active conversations
+    active = {}
+    for cid in list(_cached_active_convs.keys()):
+        transcript = brain_dir / cid / ".system_generated" / "logs" / "transcript.jsonl"
         if transcript.exists():
             try:
                 stat = transcript.stat()
                 if (now - stat.st_mtime) < max_age_secs:
-                    active[conv_dir.name] = (stat.st_mtime, stat.st_size)
-                    
-                    cached = _subagent_cache.get(conv_dir.name)
-                    if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
-                        subagent_to_parent.update(cached[2])
-                    else:
-                        sub_map = {}
-                        try:
-                            with open(transcript) as f:
-                                for line in f:
-                                    try:
-                                        obj = json.loads(line)
-                                        content = obj.get('content', '')
-                                        if re.search(r'(?:invoke_subagent|agy_start|agy)\b', content):
-                                            matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', content)
-                                            for m in matches:
-                                                if m != conv_dir.name:
-                                                    sub_map[m] = conv_dir.name
-                                    except: continue
-                        except Exception:
-                            pass
-                        _subagent_cache[conv_dir.name] = (stat.st_mtime, stat.st_size, sub_map)
-                        subagent_to_parent.update(sub_map)
+                    active[cid] = (stat.st_mtime, stat.st_size)
             except Exception:
-                continue
-    return active, subagent_to_parent
+                pass
+    _cached_active_convs = active
+    return active, _cached_sub_map
 
 
 def render(conv_id: str, brain_dir: Path) -> bool:
@@ -225,7 +245,7 @@ def main():
         active, _ = get_active_convs(args.brain_dir)
         last_state = {**active}
         last_render_time = {}
-        summarized_threads = set()
+        summarized_threads = set(last_state.keys())
         print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
