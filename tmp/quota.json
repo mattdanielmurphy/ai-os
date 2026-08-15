@@ -1,0 +1,189 @@
+{
+  "Email": "iammattmurphy@gmail.com",
+  "TierName": "Free 📦",
+  "ProjectID": "teak-guide-cjkxm",
+  "Models": [
+    {
+      "ModelID": "gpt-oss-120b-medium",
+      "DisplayName": "GPT-OSS 120B (Medium)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_OPENAI",
+      "RemainingFraction": 1,
+      "ResetTime": "2026-07-01T12:04:03Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "claude-sonnet-4-6",
+      "DisplayName": "Claude Sonnet 4.6 (Thinking)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_ANTHROPIC",
+      "RemainingFraction": 1,
+      "ResetTime": "2026-07-01T12:04:03Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3.5-flash-extra-low",
+      "DisplayName": "Gemini 3.5 Flash (Low)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "claude-opus-4-6-thinking",
+      "DisplayName": "Claude Opus 4.6 (Thinking)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_ANTHROPIC",
+      "RemainingFraction": 1,
+      "ResetTime": "2026-07-01T12:04:03Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3.1-flash-lite",
+      "DisplayName": "Gemini 3.1 Flash Lite",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "tab_flash_lite_preview",
+      "DisplayName": "",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 1,
+      "ResetTime": "0001-01-01T00:00:00Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3-flash",
+      "DisplayName": "Gemini 3 Flash",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-2.5-flash-lite",
+      "DisplayName": "Gemini 3.1 Flash Lite",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3.5-flash-low",
+      "DisplayName": "Gemini 3.5 Flash (Medium)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "chat_20706",
+      "DisplayName": "",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 1,
+      "ResetTime": "0001-01-01T00:00:00Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-2.5-flash-thinking",
+      "DisplayName": "Gemini 3.1 Flash Lite",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3-flash-agent",
+      "DisplayName": "Gemini 3.5 Flash (High)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-2.5-flash",
+      "DisplayName": "Gemini 3.1 Flash Lite",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3.1-flash-image",
+      "DisplayName": "Gemini 3.1 Flash Image",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3.1-pro-low",
+      "DisplayName": "Gemini 3.1 Pro (Low)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-pro-agent",
+      "DisplayName": "Gemini 3.1 Pro (High)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "chat_23310",
+      "DisplayName": "",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 1,
+      "ResetTime": "0001-01-01T00:00:00Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "tab_jump_flash_lite_preview",
+      "DisplayName": "",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 1,
+      "ResetTime": "0001-01-01T00:00:00Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-3.1-pro-high",
+      "DisplayName": "Gemini 3.1 Pro (High)",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    },
+    {
+      "ModelID": "gemini-2.5-pro",
+      "DisplayName": "Gemini 2.5 Pro",
+      "Label": "",
+      "Provider": "MODEL_PROVIDER_GOOGLE",
+      "RemainingFraction": 0.2278092,
+      "ResetTime": "2026-07-01T08:48:47Z",
+      "IsExhausted": false
+    }
+  ],
+  "DefaultModelID": "gemini-3.5-flash-low",
+  "FetchedAt": "2026-07-01T01:04:03.923531-06:00"
+}

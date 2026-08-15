@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>.system_generated</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#161a22; --panel2:#1b202b;
+    --text:#e6e8ee; --muted:#9aa3b5;
+    --user:#2b2350; --user-border:#6d56d9;
+    --agent:#1c2130; --agent-border:#4a4a5e;
+    --accent:#8b7cf6; --code-bg:#0a0c12;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  header { padding:28px 32px 16px; border-bottom:1px solid #262b38; }
+  header h1 { margin:0 0 4px; font-size:20px; }
+  header .meta { color:var(--muted); font-size:12px; }
+  .toolbar { padding:10px 32px; display:flex; gap:14px; align-items:center;
+              border-bottom:1px solid #262b38; background:var(--panel); position:sticky; top:0;
+              font-size:12px; color:var(--muted); }
+  .toolbar label { display:flex; align-items:center; gap:6px; cursor:pointer; }
+  main { max-width:860px; margin:0 auto; padding:24px 32px 80px; }
+  .exchange { margin-bottom:20px; }
+  .msg { border-radius:14px; padding:14px 18px; position:relative; }
+  .msg.user { background:var(--user); border:1.5px solid var(--user-border);
+               max-width:82%; margin-left:auto; }
+  .msg.agent { background:var(--agent); border:1.5px solid var(--agent-border);
+                max-width:92%; margin-top:10px; }
+  .ts { display:block; font-size:10.5px; color:var(--muted); margin-bottom:6px;
+         text-transform:uppercase; letter-spacing:.5px; }
+  .msg p { margin:0 0 8px; }
+  .msg p:last-child { margin-bottom:0; }
+  .msg code { background:rgba(255,255,255,.07); padding:1px 5px; border-radius:4px;
+               font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+  pre.code { background:var(--code-bg); border:1px solid #262b38; border-radius:8px;
+              padding:12px 14px; overflow-x:auto; font-size:12.5px; line-height:1.5;
+              font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  details.code-fold { margin:6px 0; }
+  details.code-fold summary { cursor:pointer; color:var(--accent); font-size:12px;
+                               user-select:none; }
+  details.full-reply summary { cursor:pointer; color:var(--accent); font-size:12px;
+                                margin:10px 0 4px; user-select:none; }
+  .lead b { color:#cfc7ff; }
+  /* "Summary mode" — hide full replies and code bodies when the toolbar toggle is on */
+  body.folded details.full-reply summary { display:block; }
+  body.folded details.full-reply .full { display:none; }
+  body.folded details.code-fold .code { display:none; }
+  a { color:#a99bff; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1>.system_generated</h1>
+  <div class="meta">2 exchanges · generated august 10, 2026 12:48am</div>
+</header>
+<div class="toolbar">
+  <label><input type="checkbox" id="foldToggle" checked> Fold long replies &amp; code</label>
+</div>
+<main>
+
+<div class="exchange">
+  <div class="msg user">
+    <div class="body"><p>You are continuing a task on Matt's machine. Reconstruct precise state before acting.</p>
+<p># CONTEXT SOURCE (you have a DB-read tool)
+This thread lives in the Hermes session DB at ~/.hermes/state.db (SQLite).
+Continue from Hermes session id: `5a95cb74940d` (source=webui, ~88 messages).</p>
+<p>Option A (DB query):
+  SELECT role, content, timestamp FROM messages
+  WHERE session_id='5a95cb74940d' AND role IN ('user','assistant')
+  ORDER BY id;</p>
+<p>Option B (pre-rendered readable markdown, no DB needed):
+  /Users/matt/projects/music-cross-linker/tmp/hermes_thread_5a95cb74940d.md</p>
+<p>TOKEN COST: message content is only ~32K tokens — you do NOT need to ingest
+the whole history verbatim. Read to understand decisions + state, then focus
+on TASK. Prefer the markdown or a targeted query.</p>
+<p># WHAT WAS DECIDED / BUILT (verify on disk)
+1. GLOBAL RULE (already saved; follow it): keep every user prompt verbatim per
+   project; fold pasted code (&lt;details&gt;/&lt;summary&gt;); summarize verbose agent
+   replies; auto-generate Discussions.html in every project folder; agent logs
+   go to the project's agent-logs/.
+2. Design note A (cache-aware thread handoff, DESIGN ONLY - don't implement
+   unless asked):
+   /Users/matt/projects/ai-os/agent-logs/2026-08-09_cache-aware-thread-handoff-design.md
+3. Design note B (global transcript sync + Discussions.html):
+   /Users/matt/projects/ai-os/agent-logs/2026-08-09_global-transcript-sync-discussions-html.md
+4. PARTIAL IMPLEMENTATION (your main task):
+   /Users/matt/projects/ai-os/scripts/discussions_html.py
+   READ it + the test output first:
+   /Users/matt/projects/music-cross-linker/tmp/Discussions_test.html</p>
+<p># TASK — take discussions_html.py to production-ready
+1. Read + validate scripts/discussions_html.py parses Antigravity transcripts
+   (~/.gemini/antigravity/brain/&lt;conv-id&gt;/.system_generated/logs/transcript.jsonl).
+2. Robustify: dependency-free inline markdown (bold/italic/code/links edge
+   cases); agent-reply summarization heuristic (NO LLM dep - offline/cheap);
+   code folding on large pastes without misfiring on short inline code; handle
+   empty replies, missing turn_N.md, undos/forks, non-JSON lines.
+3. Integrate with existing pipeline (preflight.py runs each turn,
+   watch_transcripts.py, gen_conversation_md.py). Cleanest way to auto-gen
+   Discussions.html (likely a preflight step). --output must work; default to
+   project root. SURGICAL changes only - no over-engineering.
+4. Verify by running against &gt;=2 real transcripts. Confirm clean HTML, code
+   folding present, reply summaries present.
+5. RULES: pnpm only (Python: pip/uv, never npm/yarn). NEVER rm - use
+   `mv [path] ~/.Trash/`. Local temp in ./tmp (never /tmp). No git repo in
+   ~. GitHub repos --private. Agent logs -&gt; project's agent-logs/.
+6. Do NOT start design note A unprompted.</p>
+<p># ENV
+- macOS, host user `matt` (was `matthewmurphy` - translate paths).
+- Workdir /Users/matt/projects/ai-os. Python via uv (check venv).
+- Antigravity brain: ~/.gemini/antigravity/brain/
+- Match ai-os scripts/ conventions.</p>
+<p># Note
+ESLint in music-cross-linker has a PRE-EXISTING break: eslint.config.mjs imports
+`eslint-config-next/core-web-vitals` but it resolves as core-web-vitals.js. Build
+is fine. Fix lint ONLY if asked - it's unrelated to the handoff task.</p></div>
+  </div>
+  <div class="msg agent"><span class="ts">at 6:47am</span>
+    <div class="agent-body"><div class="lead"><p>I'll reconstruct state from the pre-rendered thread and then assess the current implementation before acting.</p>
+<p>Good. Now let me read the test output and the rest of the thread, then examine the existing pipeline scripts for integration:</p>
+<p>Now let me look at the test output and the gen_conversation_md.py / watch_transcripts.py pipeline:</p></div></div>
+  </div>
+</div>
+
+<div class="exchange">
+  <div class="msg user">
+    <div class="body"><p>continue</p></div>
+  </div>
+  <div class="msg agent"><span class="ts">at 6:47am</span>
+    <div class="agent-body"><div class="lead"><p>Subagent `b0ba3951-bffb-4038-9d91-f3ae02a15077` is currently editing the target files. I will update you as soon as it finishes.</p>
+<p>The subagent is currently performing the `multi_replace_file_content` edit operation on `discussions_html.py`. I'll verify the completed diff in a moment.</p>
+<p>Subagent `file_editor_fix` (`c609b6c5-79d6-49b4-8b1b-0579c53870e6`) is fixing the `NameError` in `discussions_html.py`. Waiting for completion.</p></div></div>
+  </div>
+</div>
+</main>
+<script>
+  const t = document.getElementById('foldToggle');
+  const B = document.body;
+  function apply(v) { B.classList.toggle('folded', v); }
+  t.addEventListener('change', () => apply(t.checked));
+  apply(true);
+</script>
+</body>
+</html>

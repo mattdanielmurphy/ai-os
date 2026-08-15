@@ -4,12 +4,18 @@
 `ai-os` is a local-first AI harness designed to transform a macOS machine into an editable, interactive database of thoughts, files, and automation.
 
 ## Core Directories & Structure
-- `/bin`: Wrapper scripts and orchestrator binaries (e.g. `ai-os`, `agy`).
+- `/apps`: Monorepo applications:
+  - `/apps/gemini-companion`: Dedicated Tauri shell for Gemini/Perplexity webview automation + IPC loopback daemon.
+  - `/apps/aios-tui`: Headless terminal UI harness (Ratatui/Crossterm).
+- `/crates`: Shared Rust libraries:
+  - `/crates/aios-core`: Headless PTY, session, and thread tracking library.
+- `/services`: Background daemons (`agy-proxy`, `clinical-trials`, etc.).
+- `/tools`: Standalone helper tools.
+- `/bin`: Wrapper scripts and orchestrator binaries (`ai-os`, `ai-os-wiki`, `triage`).
 - `/docs`: Architecture, vision, memory, and strategy documentation.
-- `/scripts`: Tool helper scripts (`subagent.py`, `get_last_cost.py`, `context_handoff.py`, `precision_edit.py`, `get-active-task.sh`, etc.).
-- `/agent-logs`: Session engineering logs tracking goals, changes, and architecture discoveries (for agents).
-- `/DEVELOPMENT_JOURNAL.md`: Human-readable timeline of key decisions and pivots (for the user).
-- `/.devtool/features`: Features and user task specifications.
+- `/scripts`: Tool helper scripts.
+- `/agent-logs`: Session engineering logs.
+- `/DEVELOPMENT_JOURNAL.md`: Human-readable timeline of key decisions.
 
 ## Key Architecture & Domain Rules
 - **Universal Learning Protocol:** Implements 4-tier knowledge persistence (AG_CONTEXT.md, DEVELOPMENT_JOURNAL.md, Wiki Engine, custom-skills). Learn insights via `/Users/matt/projects/ai-os/scripts/learn_from_moment.py`.

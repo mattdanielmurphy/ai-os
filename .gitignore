@@ -1,15 +1,5 @@
-# Archived directories (see branch archive/macos-app)
-macOS-app/
-node_modules/
-__pycache__/
-*.pyc
-tmp/
-.last_usage
-
-# Build outputs
-dist/
-src-tauri/target/
-
-# Agent logs: we do want to track these!
-#.agent-logs/ — REMOVED: migrated to agent-logs/
-.agy-mcp/worktrees/
+/apps/*/dist
+/apps/*/node_modules
+/apps/**/target
+/crates/**/target
+target/

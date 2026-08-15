@@ -1,0 +1,20 @@
+**Current State of `fix-cmd-opt-m-minimization` (in-progress, priority: high):**
+
+**Bug:** `Cmd+Opt+M` minimizes the Tauri window instead of being handled as a custom shortcut, due to macOS native minimization (`Cmd+M` with Opt modifier) + unreliable `CGEventTap` swallowing.
+
+**Intended Fix (3 tasks from feature file):**
+1. Set `minimizable: false` in Tauri config/WindowBuilder to disable native minimization.
+2. Register `Cmd+Option+M` via `tauri-plugin-global-shortcut` (add crate + JS/TS handler).
+3. Narrow `CGEventTap` scope in `eventtap.rs` — only swallow QWERTY note keys when MIDI mode active, remove `Cmd+Opt+M` swallowing.
+
+**What Has Been Done:**
+- Feature file created and marked `in-progress` (2026-07-24).
+- No code changes applied yet — `git diff` on `main.rs`, `Cargo.toml`, `tauri.conf.json` is empty.
+- No `eventtap.rs` exists in `src-tauri/src/`; no `global-shortcut` dependency in `Cargo.toml`; no `minimizable` flag in config; only existing shortcut is `Cmd+Option+Space` for floating mini-window.
+
+**What Remains:**
+- Add `tauri-plugin-global-shortcut` to Cargo deps and initialize in `lib.rs`/`main.rs`.
+- Set `minimizable: false` (and audit custom menu for Minimize item).
+- Locate/create `eventtap.rs`, refactor its `CGEventTap` filter logic to stop handling `Cmd+Opt+M`.
+- Wire `Cmd+Opt+M` handler to actual intended action (currently undefined — spec only says "fix minimization").
+- Test on macOS that window no longer minimizes and shortcut fires.

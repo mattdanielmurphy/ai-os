@@ -2,28 +2,9 @@
 ## Storage & Volumes
 Storage:
 
-    Macintosh HD:
-
-      Free: 18.18 GB (18 180 759 552 bytes)
-      Capacity: 494.38 GB (494 384 795 648 bytes)
-      Mount Point: /System/Volumes/Update/mnt1
-      File System: APFS
-      Writable: Yes
-      Ignore Ownership: No
-      BSD Name: disk3s1
-      Volume UUID: 229A6DE2-2998-43AC-B1AA-3188979D70F7
-      Physical Drive:
-          Device Name: APPLE SSD AP0512Z
-          Media Name: AppleAPFSMedia
-          Medium Type: SSD
-          Protocol: Apple Fabric
-          Internal: Yes
-          Partition Map Type: Unknown
-          S.M.A.R.T. Status: Verified
-
     Data:
 
-      Free: 18.18 GB (18 180 759 552 bytes)
+      Free: 49.92 GB (49 922 920 448 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /System/Volumes/Data
       File System: APFS
@@ -40,33 +21,16 @@ Storage:
           Partition Map Type: Unknown
           S.M.A.R.T. Status: Verified
 
-    iOS 26.3.1 Simulator:
-
-      Free: 459.6 MB (459 620 352 bytes)
-      Capacity: 17.75 GB (17 754 488 832 bytes)
-      Mount Point: /Library/Developer/CoreSimulator/Volumes/iOS_23D8133
-      File System: APFS
-      Writable: No
-      Ignore Ownership: No
-      BSD Name: disk5s1
-      Volume UUID: 24D4020B-374E-41EA-850D-95D245363378
-      Physical Drive:
-          Device Name: Disk Image
-          Media Name: AppleAPFSMedia
-          Protocol: Disk Image
-          Internal: No
-          Partition Map Type: Unknown
-
     Macintosh HD:
 
-      Free: 18.18 GB (18 180 759 552 bytes)
+      Free: 49.92 GB (49 922 920 448 bytes)
       Capacity: 494.38 GB (494 384 795 648 bytes)
       Mount Point: /
       File System: APFS
       Writable: No
       Ignore Ownership: No
       BSD Name: disk3s1s1
-      Volume UUID: 0FDB629A-27A5-4431-AA03-33A88A1EA3AC
+      Volume UUID: B5C06BDF-F07E-4BF9-A578-BF57D084F689
       Physical Drive:
           Device Name: APPLE SSD AP0512Z
           Media Name: AppleAPFSMedia
@@ -77,29 +41,45 @@ Storage:
           S.M.A.R.T. Status: Verified
 
 ## Active LaunchAgents
-total 224
-drwxr-xr-x@  23 matt  staff    736 Jul 21 20:11 .
-drwx------@ 101 matt  staff   3232 Jul 23 21:25 ..
+total 352
+drwxr-xr-x@  39 matt  staff   1248 Aug 14 21:25 .
+drwx------@ 104 matt  staff   3328 Aug 10 20:11 ..
 drwxr-xr-x@  14 matt  staff    448 Jul 21 20:38 Archive
+-rw-r--r--@   1 matt  staff    386 Jul 24 01:32 Messauto.plist
 -rw-r--r--@   1 matt  staff    871 Jul  5 00:08 com.google.GoogleUpdater.wake.plist
 -rw-r--r--@   1 matt  staff    181 Jul  5 00:08 com.google.keystone.agent.plist
 -rw-r--r--@   1 matt  staff    181 Jul  5 00:08 com.google.keystone.xpcservice.plist
 -rw-------@   1 matt  staff    905 Jul 19 23:51 com.matt.agent.agy-proxy.plist
 -rw-r--r--@   1 matt  staff    656 Jul 11 16:22 com.matt.agent.agymcp.plist
+-rw-r--r--@   1 matt  staff    864 Aug 15 00:23 com.matt.agent.ai-os-wiki.plist
 -rw-------@   1 matt  staff   1158 Jul 10 16:39 com.matt.agent.backup-agents.plist
+-rw-r--r--@   1 matt  staff    941 Aug 13 00:48 com.matt.agent.caddy.plist
 -rw-------@   1 matt  staff    850 Jul 10 16:39 com.matt.agent.chrome-debug.plist
 -rw-------@   1 matt  staff    957 Jul 10 16:39 com.matt.agent.energy-monitor.plist
 -rw-------@   1 matt  staff    890 Jul 10 16:48 com.matt.agent.gemini-ingest.plist
 -rw-------@   1 matt  staff   2513 Jul 19 18:35 com.matt.agent.hermes-gateway.plist
 -rw-------@   1 matt  staff    894 Jul 10 16:39 com.matt.agent.irig-watcher.plist
--rw-------@   1 matt  staff    930 Jul 10 16:39 com.matt.agent.litellm.plist
+-rw-------@   1 matt  staff    960 Jul 27 14:05 com.matt.agent.litellm.plist
 -rw-r--r--@   1 matt  staff   1234 Jul 21 20:06 com.matt.agent.local-automation-server.plist
 -rw-------@   1 matt  staff    959 Jul 10 16:39 com.matt.agent.notesync.plist
+-rw-r--r--@   1 matt  staff    781 Aug  8 14:06 com.matt.agent.oracle-vps-mount.plist
+-rw-r--r--@   1 matt  staff   1023 Aug 11 15:57 com.matt.agent.proxima-mcp.plist
+-rw-r--r--@   1 matt  staff    933 Jul 24 15:03 com.matt.agent.qwerty-midi-bundler.plist
 -rw-------@   1 matt  staff    889 Jul 20 01:49 com.matt.agent.rules-watcher.plist
+-rw-r--r--@   1 matt  staff    864 Jul 29 12:57 com.matt.agent.turn-swap.plist
+-rw-r--r--@   1 matt  staff    796 Aug 11 22:04 com.matt.devcachecleanup.plist
+-rw-r--r--@   1 matt  staff    709 Aug 11 23:10 com.matt.sync-skills.plist
+-rw-r--r--@   1 matt  staff   1481 Jul 27 20:21 com.mattmurphy.userscript-bundler.plist
+-rw-r--r--@   1 matt  staff   1853 Aug  9 18:16 com.parantoux.hermes-webui.plist
 -rw-r--r--@   1 matt  staff    427 Jul  4 23:32 com.pieces.os.launch.plist
 -rw-r--r--@   1 matt  staff    747 Jul  4 23:32 com.samschott.maestral.maestral.plist
+-rw-r--r--@   1 matt  staff    904 Jul 28 17:39 com.user.cm-pinner.plist
+-rw-r--r--@   1 matt  staff    788 Jul 28 17:39 com.user.qbit-manage.plist
+-rw-r--r--@   1 matt  staff    469 Aug  5 16:04 com.user.tmpdir.plist
+-rw-r--r--@   1 matt  staff    854 Aug  6 22:57 com.valvesoftware.steamclean.plist
 -rwxr-xr-x@   1 matt  staff    376 Jul 10 15:53 git-sync.sh
 -rw-r--r--@   1 matt  staff    685 Jul  4 23:32 homebrew.mxcl.nginx.plist
+-rw-r--r--@   1 matt  staff    474 Aug 10 17:02 io.mutagen.mutagen.plist
 -rwxr-xr-x@   1 matt  staff  33472 Jul  4 23:32 notesync-wrapper
 ## Connected Displays
 Graphics/Displays:
@@ -137,9 +117,12 @@ Graphics/Displays:
 -- global reference.
 -- ────────────────────────────────────────────────────────────────────────────────
 
--- ── Global anchor table ─────────────────────────────────────────────────────────
--- All modules and sub-modules share this same table via the `_G` key.
 _G.activeWatchers = _G.activeWatchers or {}
+local activeWatchers = _G.activeWatchers
+
+-- Enable AppleScript and CLI (hs -c) control for instant reloading without app restarts
+hs.allowAppleScript(true)
+require("hs.ipc")
 
 -- ── Config auto-reloader ────────────────────────────────────────────────────────
 -- Watches the entire ~/.hammerspoon/ directory tree for .lua changes and
@@ -163,10 +146,10 @@ activeWatchers.configWatcher:start()
 
 -- ── Modules ─────────────────────────────────────────────────────────────────────
 
-require("modules.clipboard")
-require("modules.keybindings")
-require("modules.qwerty_midi")
+local ModuleManager = require("modules.module_manager")
+require("modules.menu_bar")
 
--- ── Startup confirmation ─────────────────────────────────────────────────────────
-
-hs.alert.show("⚙️  Hammerspoon config loaded")
+ModuleManager.register(require("modules.right_command_raycast"))
+ModuleManager.register(require("modules.keybindings"))
+ModuleManager.register(require("modules.qwerty_midi"))
+ModuleManager.register(require("modules.gemini_thread_search"))

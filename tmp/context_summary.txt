@@ -1,0 +1,65 @@
+================================================================================
+THREAD.MD / GEN_CONVERSATION_MD.PY ARCHITECTURE & CONTEXT OVERVIEW
+================================================================================
+
+1. EXECUTIVE SUMMARY & OBJECTIVE:
+   The `thread.md` / `gen_conversation_md.py` system automatically converts local JSONL
+   antigravity conversation logs into clean, readable Markdown summaries (`thread.md`)
+   for each active conversation. This allows users and subagents to easily view, click,
+   highlight, and review full thread histories via Markdown links without needing to parse
+   raw JSON lines.
+
+2. SYSTEM ARCHITECTURE & COMPONENTS:
+
+   A. Background Log Watcher (`scripts/watch_transcripts.py`):
+      - Continuously monitors active conversation log directories under:
+        `~/.gemini/antigravity/brain/*/logs/transcript.jsonl`
+      - Uses file modification polling / change detection.
+      - Upon detecting changes in a transcript JSONL file, invokes `gen_conversation_md.py`
+        to incrementally update the corresponding `thread.md` file in the conversation's
+        brain directory (`~/.gemini/antigravity/brain/<conv_id>/thread.md`).
+
+   B. Core Converter (`scripts/gen_conversation_md.py`):
+      - Parses step-by-step `transcript.jsonl` log files.
+      - Extracts key conversation elements:
+        - `USER_INPUT` (User prompts, system prompts, context rules)
+        - `PLANNER_RESPONSE` (Model responses, thinking spans, tool calls, tool results)
+      - Formats content into standard GFM (GitHub Flavored Markdown).
+      - Handles special structural edge cases:
+        - Strips / normalizes recursive `[thread.md](file://...)` links in generated output
+          to avoid infinite nesting and self-referential clutter.
+        - Collapses/formats thinking tags, code blocks, and tool executions cleanly.
+      - Uses `scripts/thread_template.md` as the structural template header for generated files.
+
+   C. Template (`scripts/thread_template.md`):
+      - Defines the header, metadata format, table of contents, and structural outline
+        used when initializing or rendering `thread.md`.
+
+   D. Test Suite (`tests/test_gen_conversation_md.py`):
+      - Unit and integration tests covering:
+        - Log parsing and markdown generation (`gen_conversation_md.py`).
+        - Prevention of infinite span/link nesting.
+        - Formatting of tool calls, responses, and user inputs.
+
+   E. Integration Points & Rules (`scripts/preflight.py`, `.rules/gemini_only.md`):
+      - Defines user rules and automated preflight routines that enforce updating and
+        linking `thread.md` artifacts in response outputs.
+
+3. RELEVANT FILE INVENTORY:
+   - `scripts/gen_conversation_md.py` : Main parser & Markdown generator script.
+   - `scripts/watch_transcripts.py`   : Daemon / watcher script monitoring transcript.jsonl changes.
+   - `scripts/thread_template.md`     : Template for thread markdown layout.
+   - `tests/test_gen_conversation_md.py` : Comprehensive unit tests for conversion logic.
+   - `agent-logs/2026-08-05_01-13_robust-thread-md-and-unit-tests.md` : Historical design log.
+   - `agent-logs/2026-08-05_01-24_strip-thread-md-links.md` : Design log on infinite nesting fix.
+   - `agent-logs/2026-08-09_02-57_fix-infinite-span-nesting-bug.md` : Design log on span nesting bug fix.
+
+4. EXTENSION & MAINTENANCE GUIDE FOR FUTURE AGENTS:
+   - To modify parsing logic or HTML/Markdown rendering of tool calls, edit `scripts/gen_conversation_md.py`.
+   - To update test assertions or add edge-case transcript tests, edit `tests/test_gen_conversation_md.py`.
+   - Run tests using `bun test` or `pytest` / `python3 -m unittest discover tests`.
+   - Ensure any changes to `gen_conversation_md.py` maintain link sanitization so recursive `thread.md` links do not nest.
+
+================================================================================
+FULL FILE CONTENTS & REPOSITORY CODEBASE (PRODUCED VIA CODE2PROMPT)
+================================================================================

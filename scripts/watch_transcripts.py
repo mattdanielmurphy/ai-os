@@ -25,7 +25,8 @@ BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
 GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 
 # Per-conversation cooldown to debounce rapid writes (seconds)
-COOLDOWN = 1.0
+COOLDOWN = 0.2
+DEFAULT_POLLING = 0.4
 
 
 def get_active_convs(brain_dir: Path, max_age_secs: int = 7200) -> tuple[dict, dict]:
@@ -66,50 +67,20 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 7200) -> tuple[dict, d
 
 
 def render(conv_id: str, brain_dir: Path) -> bool:
-    """Run gen_conversation_md.py AND discussions_html.py for a conversation."""
+    """Run gen_conversation_md.generate in-process."""
+    import gen_conversation_md
     app_data_dir = brain_dir.parent
     
     # 1. Render Markdown thread
     try:
-        subprocess.run(
-            [sys.executable, str(GEN_SCRIPT), conv_id, "--app-data-dir", str(app_data_dir)],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        
-        # Add metrics
-        try:
-            metrics = compute_thread_metrics(conv_id)
-            metrics_table = format_metrics_table(metrics, conv_id)
-            thread_md = brain_dir / conv_id / "thread.md"
-            if thread_md.exists():
-                content = thread_md.read_text()
-                # Replace if already present
-                if "**Thread Metrics:**" in content:
-                    content = re.sub(r'\n\n\*\*Thread Metrics:\*\*.*?(?=\n\n|\Z)', metrics_table, content, flags=re.DOTALL)
-                else:
-                    content += metrics_table
-                thread_md.write_text(content)
-        except Exception as e:
-            print(f"Metrics update failed: {e}")
-
-        try:
-            from link_formatter import enrich_file_links
-            thread_md = brain_dir / conv_id / "thread.md"
-            if thread_md.exists():
-                enriched = enrich_file_links(thread_md.read_text())
-                tmp_md = thread_md.with_name(f"{thread_md.name}.tmp")
-                tmp_md.write_text(enriched)
-                tmp_md.replace(thread_md)
-        except Exception as e:
-            print(f"link_formatter enrichment on thread.md failed: {e}")
+        gen_conversation_md.generate(conv_id, "Conversation", app_data_dir)
     except Exception as e:
         print(f"gen_conversation_md failed: {e}")
         return False
         
-    # 2. Render Discussions.html
+    # 2. Render Discussions.html (if applicable)
     try:
+        # Import inside to prevent circular issues if any
         from discussions_html import build_document, parse_exchanges
         transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript_full.jsonl"
         if not transcript.exists() or transcript.stat().st_size == 0:
@@ -190,10 +161,7 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
                 try:
                     res = json.loads(res_path.read_text())
                     if res.get("status") == "committed":
-                        thread_file = brain_dir / conv_id / "thread.md"
-                        if thread_file.exists():
-                            with open(thread_file, "a") as f:
-                                f.write(f"\n\n> 🚀 **Auto-Committed:** [`{res['sha'][:7]}`] - *{res['message']}*\n")
+                        render(conv_id, brain_dir)
                 except Exception as e:
                     print(f"Result processing failed: {e}")
             del pending_commits[repo_path]
@@ -210,7 +178,10 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
     for conv_id, (mtime, size) in full_state.items():
         if conv_id not in summarized_threads and (now - mtime) > 300:
             print(f"Thread {conv_id[:8]} idle > 5m. Triggering summarize_thread.py...")
-            subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "summarize_thread.py"), conv_id])
+            try:
+                subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "summarize_thread.py"), conv_id])
+            except Exception as e:
+                print(f"summarize_thread failed: {e}")
             summarized_threads.add(conv_id)
 
 
@@ -221,9 +192,8 @@ def main():
     parser.add_argument("--brain-dir", type=Path, default=BRAIN_DIR, help="Brain directory path")
     parser.add_argument("--daemon", action="store_true", help="Run in continuous loop")
     parser.add_argument("--once", action="store_true", help="Run once and exit")
-    parser.add_argument(
-        "--interval", type=float, default=2.0,
-        help="Poll interval in seconds (default: 2.0)"
+    parser.add_argument("--interval", type=float, default=DEFAULT_POLLING,
+        help="Poll interval in seconds (default: 0.4)"
     )
     args = parser.parse_args()
 

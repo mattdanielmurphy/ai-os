@@ -1,0 +1,65 @@
+User Request: 1. Identify and eliminate latency in watch_transcripts daemon so thread.md updates with minimal delay (fswatch / event-driven instead of slow sleep polling, remove unnecessary subagent/git bottlenecks). 2. Update thread.md HTML layout to match thread example.md: (a) outer wrapper style: left: calc(50% - 50cqw - 2px); padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px), (b) newest exchange wrapper margin-bottom: 80px, (c) thread stats pinned to bottom via absolute position wrapper: <span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">.
+
+--- AG_CONTEXT.md ---
+# Repository Context & Domain Knowledge
+
+## Project Overview
+`ai-os` is a local-first AI harness designed to transform a macOS machine into an editable, interactive database of thoughts, files, and automation.
+
+## Core Directories & Structure
+- `/apps`: Monorepo applications:
+  - `/apps/gemini-companion`: Dedicated Tauri shell for Gemini/Perplexity webview automation + IPC loopback daemon.
+  - `/apps/aios-tui`: Headless terminal UI harness (Ratatui/Crossterm).
+- `/crates`: Shared Rust libraries:
+  - `/crates/aios-core`: Headless PTY, session, and thread tracking library.
+- `/services`: Background daemons (`agy-proxy`, `clinical-trials`, etc.).
+- `/tools`: Standalone helper tools.
+- `/bin`: Wrapper scripts and orchestrator binaries (`ai-os`, `ai-os-wiki`, `triage`).
+- `/docs`: Architecture, vision, memory, and strategy documentation.
+- `/scripts`: Tool helper scripts.
+- `/agent-logs`: Session engineering logs.
+- `/DEVELOPMENT_JOURNAL.md`: Human-readable timeline of key decisions.
+
+## Key Architecture & Domain Rules
+- **Universal Learning Protocol:** Implements 4-tier knowledge persistence (AG_CONTEXT.md, DEVELOPMENT_JOURNAL.md, Wiki Engine, custom-skills). Learn insights via `/Users/matt/projects/ai-os/scripts/learn_from_moment.py`.
+- **AI Clipboard Memory Tool (Usage: search-clipboard '<query>' [--pro])**: Agents can search macOS Alfred clipboard history using natural language by running ⚡ Flash model found no confident match. Auto-escalating to Gemini 2.5 Pro...
+
+=== AI Search Results for '<query>' ===
+No matching items found by AI. non-interactively in terminal. Supports URL pre-filtering, brand alias expansion (e.g. g.co, gemini.google.com), and auto-escalation to Gemini 2.5 Pro.
+- **Stable Anchor + Volatile Append Context Strategy:** Uses a structural map (repo map generated via AST parser/tree-sitter) as the stable front of the prompt context, and appends only active files and user requests at the end to maximize cache hits.
+- **Delegation Philosophy:** agy handles work directly by default, using its native tools. When delegation makes sense (large context savings), agy prefers self-delegation (`agy -p`) over external tools like Claude Code to avoid per-call costs. Extreme delegation mode (always delegate to Claude Code) is preserved as a skill for when it's needed.
+- **Dual-Rail Google Grid:** Seamlessly rotates Google accounts/authentication to double task quotas and VM limits.
+- **Context Sync Protocol:** Userscript (`gemini.js`) integrated into browser/Tauri webview connects live Google web interface turns back to the Rust loopback daemon (`/api/context/sync`, `/api/notes/save`, `/api/revision/commit`) to serialize and version active text revisions in Git.
+- **Gemini Userscript is GENERATED (DO NOT EDIT):** `~/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js` is a symlink to the generated `~/projects/userscript-bundler/compiled/gemini-enhancements.user.js`. Its real source is the numbered modules in `~/projects/userscript-bundler/userscripts/gemini-enhancements/`. To change it: edit those source modules, then `cd ~/projects/userscript-bundler && node bundler.cjs` (auto-watcher also rebuilds). The generated file is read-only with a DO-NOT-EDIT banner. `tauri-gui/src-tauri/src/main.rs` injects it into the webview; rebuild the Tauri app (`bun run build-macos`) for changes to take effect.
+- **Three-Turn Delegation Protocol (Extreme Mode Only):** Available as the `agy-extreme-delegation` skill. Not the default — agy handles work directly with pragmatic self-delegation.
+- **Hermes Thread Sync Daemon:** Integrates and synchronizes CLI/GUI NDJSON execution logs (`~/.gemini/antigravity-cli/brain/`) with Hermes' FTS5-enabled SQLite database (`~/.hermes/state.db`) bidirectionally. It launches as a background subprocess via the `bin/ai-os` execution wrapper, maintaining a unified search history across both platforms.
+- **Multi-Way Sync for Skills (`watch_skills.sh` & `sync_skills.py`)**: The system runs a background daemon (`watch_skills.sh`) that monitors all ecosystem skill directories (`~/.hermes/skills`, `~/.claude/skills`, `~/.gemini/config/skills`, `~/.agents/skills`, `~/.agy/skills`, etc.) via `fswatch`. This functionally acts as a **multi-way symlink** across the directories. Agents MUST understand that adding, moving, or deleting skills in `~/projects/ai-os/skills/` (or any other watched directory) will instantly propagate the structural changes to all other agent platforms automatically. Do not attempt to manually manage UNIX symlinks for this.
+- **Hermes System Prompt Handoff**: Enabled the `agymcp` server to dynamically extract the active Hermes system prompt from `~/.hermes/state.db` and prepend it to prompts sent to `agy` (via `agy`, `agy_continue`, and `agy_start`) to align instructions and preserve behavioral consistency during task handoffs.
+- **Multi-Tier Triage Routing & Pre-Flight Quota Check**: Evaluates remaining quota using `ag-quota -j` (or `codexbar status`). Automatically switches Antigravity to Minimal-Token Mode (Strict Orchestrator Mode 3) if remaining quota is low (<25%) or burning quickly, delegating code generation to `claude code` or cheap LiteLLM/subagent models.
+- **Userscripts Directory & Bundler (`~/projects/userscript-bundler/userscripts/`)**: All browser and webview userscripts (Gemini, Perplexity, YouTube, Control Center, etc.) live in `~/projects/userscript-bundler/userscripts/`. The auto-bundler (`watch-and-bundle.js` / `bundler.cjs`) builds them into `~/projects/userscript-bundler/compiled/`. Perplexity rate-limit and quota checks query `https://www.perplexity.ai/rest/rate-limit/all` using local browser session cookies via `scripts/pplx_quota.py`.
+- **AGY Proxy Architecture & Session Resume (`services/agy-proxy/proxy.py`)**: Local FastAPI OpenAI proxy (`http://localhost:8080`) bridging Hermes WebUI to the local `/Users/matt/.local/bin/agy` CLI binary using Google subscription quota. All `agy` and `gemini-*` models are STRICTLY HARD-LOCKED to `agy` CLI to prevent accidental Vertex API key billing. Session persistence is keyed by SHA256 of the anchor user/system message in `~/.hermes/agy_proxy_sessions.json` and passed via `agy --conversation <conv_id>` to resume threads seamlessly across turns. See `services/agy-proxy/README.md`.
+- **Documentation & Wiki Architecture (6 Boundaries + Quartz Wiki):** Documentation is partitioned into 6 distinct boundaries: (1) AI-OS Core Project Docs (`~/projects/ai-os/docs/`), (2) Me & Personal (`Obsidian/Personal/`), (3) Mac System Specs (`Obsidian/Mac/`), (4) Personal Notes & Ideas (`Obsidian/Ideas/`), (5) Project Conceptual Specs (`Obsidian/Projects/<Name>/`), and (6) Implementation Code Docs (`~/projects/<Name>/docs/`). The unified off-the-shelf **Quartz 4.0 Wiki Engine** aggregates these boundaries and is served locally on `http://localhost:3333` via `ai-os wiki` or `ai-os-wiki`.
+- **Interactive Pre/Post-Flight Audit Protocol (`scripts/preflight.py` & `scripts/auto_commit.py`)**: Pre/postflight routines act as interactive quality gates that validate syntax, check rules, and enforce output standards before commits, returning non-zero codes to reject invalid changes.
+- **Distributed LLM Wiki Pattern (`llm-wiki` & Quartz Integration)**: Ingests project decisions and entity knowledge directly into interlinked markdown files (`[[wikilinks]]`) across project roots and `~/wiki`, connected via Quartz to navigate from any project file to the broader global knowledge graph.
+- **Service Reload Rule**: When modifying daemon/service files (e.g. `services/agy-proxy/proxy.py`, `litellm_config.yaml`, or Hermes services), you MUST restart the corresponding background services via `la restart <service-name>` (e.g. `la restart agy-proxy`, `la restart hermes-webui`, `la restart hermes-gateway`) to ensure changes actually apply to the running runtime environment.
+
+
+
+
+
+--- GitHub Connector Context ---
+Target Private Repository: 'mattdanielmurphy/ai-os'
+IMPORTANT: You have access to my authenticated GitHub account via your GitHub connector. Please use your GitHub connector to directly read, search, and inspect the codebase, files, and documentation in my repository 'mattdanielmurphy/ai-os' (including private files and configs) as needed to construct this plan.
+
+
+Please act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
+
+The plan MUST include:
+1. Architectural Strategy: High-level overview of the proposed approach.
+2. Data Structures & State Management: Define new data structures or changes to existing state.
+3. API/Interface Contracts: Define function signatures, classes, and expected interface contracts.
+4. Logic Flow & Algorithms: Step-by-step pseudo-code or logic description for the main execution flow.
+5. Error Handling & Edge Cases: Identify potential failure points and mitigation strategies.
+6. Implementation Steps: A list of specific files to modify and the required changes in each, ordered for execution.
+
+DO NOT provide full code implementations. Focus on structural details, signatures, and clear instructions so that downstream agents can implement the changes efficiently without guessing. Ensure all decisions are concrete and leave no gaps in requirements.

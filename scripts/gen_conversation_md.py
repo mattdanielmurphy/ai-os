@@ -493,7 +493,7 @@ def format_prompt(raw_prompt: str) -> str:
     return text
 
 
-def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str:
+def make_exchange_block(users: list, agent_content: str, agent_time: str, is_newest: bool) -> str:
     """Build a single exchange block using pure markdown (no HTML tables)."""
     user_blocks = []
     for u in users:
@@ -520,7 +520,11 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str) -> str
         f'</span>\n\n'
     )
 
-    return f'<span style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word;">\n\n{user_span}\n\n{agent_span}\n\n</span>'
+    style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word;"'
+    if is_newest:
+        style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; margin-bottom: 80px; overflow-wrap: anywhere; word-break: break-word;"'
+    
+    return f'<span {style}>\n\n{user_span}\n\n{agent_span}\n\n</span>'
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
@@ -578,9 +582,9 @@ def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
     return None
 
 
-def make_exchange_block_with_progress(users: list, agent_content: str, agent_time: str, subagent_progress: str | None) -> str:
+def make_exchange_block_with_progress(users: list, agent_content: str, agent_time: str, subagent_progress: str | None, is_newest: bool) -> str:
     """Build a single exchange block with potential subagent progress."""
-    base_block = make_exchange_block(users, agent_content, agent_time)
+    base_block = make_exchange_block(users, agent_content, agent_time, is_newest)
     if subagent_progress:
         return f"{base_block}\n\n> [!NOTE]\n> 🔄 **Subagent Active**: {subagent_progress}"
     return base_block
@@ -611,12 +615,15 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     if not exchanges:
         return output_path
 
+    from postflight_lib import compute_thread_metrics, format_metrics_table
+    from link_formatter import enrich_file_links
+
     doc_content = []
         # Requirement 2: Thread Started Banner
     # Placed INSIDE the first (oldest) exchange block
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
-    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw + 2px); bottom: 0; padding: 2.5rem 2rem; scrollbar-width: thin;">')
+    doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
 
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
@@ -628,12 +635,27 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
             agent_content = clean_agent_content(agent_content)
 
+            # Check for auto-commit results
+            if i == 0:
+                commit_dir = app_data_dir / 'brain' / '.commit_results'
+                if commit_dir.exists():
+                    import glob
+                    results = list(commit_dir.glob(f"{conv_id}_*.json"))
+                    results.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    if results:
+                        latest = results[0]
+                        if (datetime.now().timestamp() - latest.stat().st_mtime) < 600:
+                            try:
+                                res = json.loads(latest.read_text())
+                                agent_content += f'\n\n> 🚀 **Auto-Committed:** [`{res["sha"][:7]}`] - *{res["message"]}*\n'
+                            except: pass
+
             # Check for subagent progress
             progress = None
             if i == 0:
                 progress = get_subagent_progress(conv_id, app_data_dir)
 
-            block = make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress)
+            block = make_exchange_block_with_progress(item['users'], agent_content, item['agent_time'], progress, i == 0)
 
             # Prepend banner to the first exchange block
             # Requirement: Thread Started banner to the OLDEST exchange (which is the last in the reversed list)
@@ -645,6 +667,12 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
             doc_content.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
 
     doc_content.append('</span>')
+
+    # Metrics table at bottom
+    metrics = compute_thread_metrics(conv_id)
+    metrics_table = format_metrics_table(metrics, conv_id)
+    pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table}\n</span>'
+    doc_content.append(pinned_metrics)
 
     rendered_doc = '\n\n'.join(doc_content)
     try:
