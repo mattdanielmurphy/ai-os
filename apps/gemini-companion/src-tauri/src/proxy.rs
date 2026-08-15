@@ -105,5 +105,10 @@ pub async fn start_proxy_server(_app_handle: tauri::AppHandle) -> Result<(), Str
         return Err(e.to_string());
     }
 
-    Ok(())
+    
+pub fn spawn_proxy_server(app_handle: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let _ = start_proxy_server(app_handle).await;
+    });
 }
+

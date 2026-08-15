@@ -79,7 +79,7 @@ fn save_cloud_thread(payload: CloudThreadIngestPayload) -> Result<(), Box<dyn st
 }
 
 pub fn start_sync_scheduler(app_handle: tauri::AppHandle) {
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(15 * 60));
         loop {
             interval.tick().await;
