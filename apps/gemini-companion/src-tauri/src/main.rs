@@ -1,3 +1,4 @@
+mod proxy;
 mod pty;
 mod server;
 mod session;
@@ -477,6 +478,7 @@ fn main() {
             }
 
             // --- spawn servers ---
+            tokio::spawn(proxy::start_proxy_server(app_handle.clone()));
             server::spawn_axum_server(app_handle.clone());
 
             // --- state ---
