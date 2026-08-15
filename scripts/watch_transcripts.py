@@ -31,6 +31,9 @@ COOLDOWN = 0.05
 DEFAULT_POLLING = 0.1
 
 
+
+_subagent_cache = {}
+
 def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, dict]:
     """Find active conversations and map subagent conv_ids to parent conv_ids.
     
@@ -47,24 +50,34 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
             continue
         transcript = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
         if transcript.exists():
-            stat = transcript.stat()
-            if (now - stat.st_mtime) < max_age_secs:
-                active[conv_dir.name] = (stat.st_mtime, stat.st_size)
-                
-                # Scan for subagents
-                try:
-                    with open(transcript) as f:
-                        for line in f:
-                            try:
-                                obj = json.loads(line)
-                                content = obj.get('content', '')
-                                if re.search(r'(?:invoke_subagent|agy_start|agy)\b', content):
-                                    matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', content)
-                                    for m in matches:
-                                        if m != conv_dir.name:
-                                            subagent_to_parent[m] = conv_dir.name
-                            except: continue
-                except: pass
+            try:
+                stat = transcript.stat()
+                if (now - stat.st_mtime) < max_age_secs:
+                    active[conv_dir.name] = (stat.st_mtime, stat.st_size)
+                    
+                    cached = _subagent_cache.get(conv_dir.name)
+                    if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
+                        subagent_to_parent.update(cached[2])
+                    else:
+                        sub_map = {}
+                        try:
+                            with open(transcript) as f:
+                                for line in f:
+                                    try:
+                                        obj = json.loads(line)
+                                        content = obj.get('content', '')
+                                        if re.search(r'(?:invoke_subagent|agy_start|agy)\b', content):
+                                            matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', content)
+                                            for m in matches:
+                                                if m != conv_dir.name:
+                                                    sub_map[m] = conv_dir.name
+                                    except: continue
+                        except Exception:
+                            pass
+                        _subagent_cache[conv_dir.name] = (stat.st_mtime, stat.st_size, sub_map)
+                        subagent_to_parent.update(sub_map)
+            except Exception:
+                continue
     return active, subagent_to_parent
 
 
