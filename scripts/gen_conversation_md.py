@@ -27,6 +27,15 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+def iso_to_epoch(iso_str: str) -> float:
+    if not iso_str:
+        return 0.0
+    try:
+        dt = datetime.fromisoformat(iso_str.replace('Z', '+00:00'))
+        return dt.timestamp()
+    except Exception:
+        return 0.0
+
 def balance_code_fences(text: str) -> str:
     """Ensure all open markdown fenced code blocks (backticks or tildes >= 3) are properly closed."""
     if not text:
@@ -377,8 +386,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
             min_step = pending_users[0]['step']
             max_step = pending_users[-1]['step']
-            # Determine if this exchange is in progress
-            # It's in progress if there's no substantive content (agent was only streaming transient status)
+            start_epoch = pending_users[0].get('epoch', 0.0) if pending_users else 0.0
             active_items.append({
                 'type': 'exchange',
                 'users': pending_users[:],
@@ -386,7 +394,8 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                 'agent_content': agent_text,
                 'agent_time': current_agent_time,
                 'is_in_progress': (not substantive_content),
-                'end_epoch': float(obj.get('timestamp') or 0),
+                'start_epoch': start_epoch,
+                'end_epoch': current_agent_epoch,
                 'min_step': min_step,
                 'max_step': max_step
             })
@@ -438,14 +447,18 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                             'undone_count': len(undone)
                         })
 
+                created_iso = obj.get('created_at') or obj.get('timestamp') or ''
+                user_epoch = iso_to_epoch(created_iso)
                 prompt, ts = extract_user_input(obj.get('content', ''))
                 if prompt:
-                    pending_users.append({'prompt': prompt, 'time': ts, 'step': idx})
+                    pending_users.append({'prompt': prompt, 'time': ts, 'step': idx, 'epoch': user_epoch})
 
             elif t == 'PLANNER_RESPONSE':
-                created = obj.get('created_at') or obj.get('timestamp') or ''
-                if created:
-                    current_agent_time = fmt_time(created)
+                created_iso = obj.get('created_at') or obj.get('timestamp') or ''
+                if created_iso:
+                    current_agent_epoch = iso_to_epoch(created_iso)
+                    if not current_agent_time:
+                        current_agent_time = fmt_time(created_iso)
 
                 tool_calls = obj.get('tool_calls')
                 content = obj.get('content', '') or obj.get('text', '')
@@ -638,26 +651,26 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
     doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
 
-    # Map commit results to completed exchanges
+    # Map commit results to specific exchanges by timestamp window
     commit_dir = app_data_dir / 'brain' / '.commit_results'
-    commit_results = []
+    exchange_commits = {}
     if commit_dir.exists():
-        for r in commit_dir.glob(f"{conv_id}_*.json"):
+        for cf in commit_dir.glob(f"{conv_id}_*.json"):
             try:
-                res = json.loads(r.read_text())
+                res = json.loads(cf.read_text())
                 if res.get("status") == "committed" and res.get("sha"):
-                    commit_results.append((r.stat().st_mtime, res))
+                    commit_epoch = cf.stat().st_mtime
+                    for idx, ex in enumerate(exchanges):
+                        if ex.get('type') != 'exchange' or ex.get('is_in_progress'):
+                            continue
+                        start_e = ex.get('start_epoch', 0.0)
+                        next_ex = next((e for e in exchanges[idx + 1:] if e.get('type') == 'exchange'), None)
+                        next_start_e = next_ex.get('start_epoch', 0.0) if next_ex else (ex.get('end_epoch', start_e) + 180.0)
+                        if start_e <= commit_epoch <= next_start_e:
+                            exchange_commits[idx] = res
+                            break
             except:
                 continue
-    commit_results.sort(key=lambda x: x[0])
-
-    # Assign commits to completed exchanges
-    exchange_commits = {}
-    completed_indices = [idx for idx, ex in enumerate(exchanges) if ex.get('type') == 'exchange' and not ex.get('is_in_progress')]
-    for commit_time, res in commit_results:
-        if completed_indices:
-            best_idx = completed_indices[-1]
-            exchange_commits[best_idx] = res
 
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
