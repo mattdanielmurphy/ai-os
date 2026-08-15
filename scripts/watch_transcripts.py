@@ -20,6 +20,8 @@ import time
 from pathlib import Path
 from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes
 
+IN_PROGRESS_STR = "response in progress"
+
 SCRIPTS_DIR = Path(__file__).resolve().parent
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
 GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
@@ -68,7 +70,9 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
 
 def render(conv_id: str, brain_dir: Path) -> bool:
     """Run gen_conversation_md.generate in-process."""
+    import importlib
     import gen_conversation_md
+    importlib.reload(gen_conversation_md)
     app_data_dir = brain_dir.parent
     
     # 1. Render Markdown thread
@@ -130,11 +134,13 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
         if thread_file.exists():
             try:
                 t_content = thread_file.read_text()
-                if "*(response in progress)*" in t_content:
+                if IN_PROGRESS_STR in t_content:
                     # check if parent transcript has finished planner response
                     p_trans = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
                     if p_trans.exists() and p_trans.stat().st_size > 0:
-                        needs_repair = True
+                        # Only set needs_repair if substantive content exists (not just marker)
+                        if "*(response in progress)*" not in t_content:
+                            needs_repair = True
             except Exception:
                 pass
 
@@ -152,7 +158,7 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
 
             # Auto-commit check
             thread_file = brain_dir / render_id / "thread.md"
-            if thread_file.exists() and "*(response in progress)*" not in thread_file.read_text():
+            if thread_file.exists() and IN_PROGRESS_STR not in thread_file.read_text():
                 workspace_root = Path("/Users/matt/projects/ai-os")
                 
                 # Check for 60s cooldown per repository
