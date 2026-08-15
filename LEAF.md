@@ -32,6 +32,11 @@
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
   - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md`, `CLAUDE.md`, and `HERMES.md` across every future session.
 
+## Strict Planner / Workflow Immediate Dispatch
+- **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/proxima-planner` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
+- **Workflow**: Immediately run the prompt generation script, query the planner (Perplexity or Pro escalation), and present the resulting implementation plan without intermediate manual codebase rummaging.
+- **Dispatch Restriction**: When `/proxima-planner` is invoked, the orchestrator MUST ONLY dispatch to `proxima:ask_perplexity`, and NEVER fallback to `agy`/`gemini` unless explicitly told to by Matt.
+
 # Subagent Rules
 
 1. **Execution Only**: Strictly execute the plan provided by the orchestrator.
