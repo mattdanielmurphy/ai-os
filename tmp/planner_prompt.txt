@@ -1,4 +1,4 @@
-User Request: Stage 1 Architecture and Implementation Plan: Monorepo Restructuring & Severing. Create apps/ directory in ~/projects/ai-os/, sever tauri-gui into two isolated targets (apps/gemini-companion for the lightweight webview + proxy, and apps/aios-tui for the legacy terminal harness), decouple shared services/scripts, and clean up the root repository.
+User Request: Stage 3 Architecture and Implementation Plan: Universal Cloud Thread Sync for Gemini & Perplexity (Mobile and Glic Catch-Up). Building a background sync engine inside apps/gemini-companion that periodically queries Google Gemini and Perplexity cloud conversation history endpoints via the active authenticated session, detects threads created externally on mobile or Glic, fetches their full turn history, and writes them to local Markdown files in context/threads/.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge

@@ -642,14 +642,16 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
                     import glob
                     results = list(commit_dir.glob(f"{conv_id}_*.json"))
                     results.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                    if results:
-                        latest = results[0]
-                        if (datetime.now().timestamp() - latest.stat().st_mtime) < 7200:
-                            try:
-                                res = json.loads(latest.read_text())
+                    for r in results:
+                        if (datetime.now().timestamp() - r.stat().st_mtime) > 7200:
+                            break
+                        try:
+                            res = json.loads(r.read_text())
+                            if res.get("status") == "committed" and res.get("sha"):
                                 commit_badge = f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{res["sha"][:7]}`] {res["message"]}</div></details>\n'
                                 agent_content += commit_badge
-                            except: pass
+                                break
+                        except: continue
 
             # Check for subagent progress
             progress = None
