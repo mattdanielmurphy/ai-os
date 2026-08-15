@@ -522,7 +522,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
 
     style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word;"'
     if is_newest:
-        style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; margin-bottom: 80px; overflow-wrap: anywhere; word-break: break-word;"'
+        style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; margin-bottom: 48px; overflow-wrap: anywhere; word-break: break-word;"'
     
     return f'<span {style}>\n\n{user_span}\n\n{agent_span}\n\n</span>'
 
@@ -644,10 +644,11 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
                     results.sort(key=lambda x: x.stat().st_mtime, reverse=True)
                     if results:
                         latest = results[0]
-                        if (datetime.now().timestamp() - latest.stat().st_mtime) < 600:
+                        if (datetime.now().timestamp() - latest.stat().st_mtime) < 7200:
                             try:
                                 res = json.loads(latest.read_text())
-                                agent_content += f'\n\n> 🚀 **Auto-Committed:** [`{res["sha"][:7]}`] - *{res["message"]}*\n'
+                                commit_badge = f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{res["sha"][:7]}`] {res["message"]}</div></details>\n'
+                                agent_content += commit_badge
                             except: pass
 
             # Check for subagent progress
@@ -671,7 +672,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     # Metrics table at bottom
     metrics = compute_thread_metrics(conv_id)
     metrics_table = format_metrics_table(metrics, conv_id)
-    pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table}\n</span>'
+    pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table.strip()}\n\n</span>'
     doc_content.append(pinned_metrics)
 
     doc_content.append('</span>')
