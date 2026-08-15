@@ -651,27 +651,6 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
     doc_content.append(f'<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
 
-    # Map commit results to specific exchanges by timestamp window
-    commit_dir = app_data_dir / 'brain' / '.commit_results'
-    exchange_commits = {}
-    if commit_dir.exists():
-        for cf in commit_dir.glob(f"{conv_id}_*.json"):
-            try:
-                res = json.loads(cf.read_text())
-                if res.get("status") == "committed" and res.get("sha"):
-                    commit_epoch = cf.stat().st_mtime
-                    for idx, ex in enumerate(exchanges):
-                        if ex.get('type') != 'exchange' or ex.get('is_in_progress'):
-                            continue
-                        start_e = ex.get('start_epoch', 0.0)
-                        next_ex = next((e for e in exchanges[idx + 1:] if e.get('type') == 'exchange'), None)
-                        next_start_e = next_ex.get('start_epoch', 0.0) if next_ex else (ex.get('end_epoch', start_e) + 180.0)
-                        if start_e <= commit_epoch <= next_start_e:
-                            exchange_commits[idx] = res
-                            break
-            except:
-                continue
-
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
         if item['type'] == 'exchange':
@@ -682,12 +661,6 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
                 continue
 
             agent_content = clean_agent_content(agent_content)
-
-            # Attach commit badge only if this exchange is completed and has a commit
-            if orig_idx in exchange_commits and not item.get('is_in_progress'):
-                res = exchange_commits[orig_idx]
-                commit_badge = f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none; cursor: pointer;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{res["sha"][:7]}`] {res["message"]}</div></details>\n'
-                agent_content += commit_badge
 
             # Check for subagent progress
             progress = None

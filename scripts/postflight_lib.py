@@ -26,7 +26,32 @@ def format_tokens(tokens: int) -> str:
         return f"{round(tokens / 1_000)}k"
     return str(tokens)
 
-def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity") -> dict:
+def get_git_commit_status(repo_root: str = "/Users/matt/projects/ai-os") -> dict:
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode != 0:
+            return {"state": "error", "badge": "🔴 Error", "count": 0}
+        
+        lines = [l for l in result.stdout.strip().split("\n") if l.strip()]
+        if not lines:
+            return {"state": "clean", "badge": "🟢 Clean", "count": 0}
+        
+        for l in lines:
+            if l.startswith("UU") or l.startswith("AA") or l.startswith("UD") or l.startswith("DU"):
+                return {"state": "error", "badge": "🔴 Conflict", "count": len(lines)}
+        
+        return {"state": "uncommitted", "badge": f"🟡 Uncommitted ({len(lines)})", "count": len(lines)}
+    except Exception:
+        return {"state": "error", "badge": "🔴 Error", "count": 0}
+
+def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity", workspace_root: str = "/Users/matt/projects/ai-os") -> dict:
     from agent_tokens import get_tokens
     import thread_economics
     from check_thread_bloat import find_transcript_file, get_sys_prompt_tokens
@@ -68,20 +93,26 @@ def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity") -> d
     except Exception:
         pass
 
+    commit_status = get_git_commit_status(workspace_root)
+
     return {
         "token_display": token_display,
         "cache_display": cache_display,
         "indicator": indicator,
         "brief_str": brief_str,
         "breakeven_str": breakeven_str,
-        "pplx_quota_str": pplx_quota_str
+        "pplx_quota_str": pplx_quota_str,
+        "commit_status": commit_status
     }
 
 def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
-    headers = ["Tokens", "Expiry"]
+    headers = ["Tokens", "Expiry", "Committed"]
+    commit_badge = metrics.get('commit_status', {}).get('badge', '🟢 Clean') if isinstance(metrics.get('commit_status'), dict) else '🟢 Clean'
+    
     values = [
         f"~{metrics['token_display']} / ~{metrics['breakeven_str']} {metrics['indicator']}{metrics['brief_str']}",
-        metrics['cache_display']
+        metrics['cache_display'],
+        commit_badge
     ]
 
     if metrics.get('pplx_quota_str'):
