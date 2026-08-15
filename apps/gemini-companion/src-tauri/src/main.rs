@@ -1,3 +1,4 @@
+mod cloud_sync;
 mod proxy;
 mod pty;
 mod server;
@@ -141,6 +142,8 @@ fn main() {
         .menu(menu)
         .setup(|app| {
             let app_handle = app.handle();
+            cloud_sync::start_sync_scheduler(app_handle.clone());
+            // ... (rest of setup)
 
             // --- floating window init script ---
             let floating_init_script = r#"
