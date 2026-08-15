@@ -81,9 +81,12 @@ def main():
             # Sync to all
             for loc in all_locations:
                 target_path = loc / rel_path
-                if target_path != newest_file:
+                if target_path.resolve() != newest_file.resolve():
                     target_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(newest_file, target_path)
+                    try:
+                        shutil.copy2(newest_file, target_path)
+                    except shutil.SameFileError:
+                        pass
             state[rel_path] = max_mtime
 
     save_state(state)

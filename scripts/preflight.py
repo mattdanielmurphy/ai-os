@@ -89,6 +89,7 @@ def step_jules_quota():
     except Exception:
         return "Jules Quota: Skipped"
 
+
 def step_pplx_quota():
     try:
         from pplx_quota import get_pplx_quota
@@ -98,6 +99,40 @@ def step_pplx_quota():
         return f"Perplexity Quota: {q.get('status')}"
     except Exception as e:
         return f"Perplexity Quota: ERROR ({e})"
+
+def get_project_board_summary():
+    board_path = os.path.expanduser("~/projects/ai-os/PROJECT_BOARD.md")
+    if not os.path.exists(board_path):
+        return []
+    
+    in_progress = []
+    backlog = []
+    current_section = None
+    
+    try:
+        with open(board_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line_str = line.strip()
+                if "## 🚀 In Progress" in line_str or "## In Progress" in line_str:
+                    current_section = "in_progress"
+                    continue
+                elif "## 📋 Backlog" in line_str or "## To Do" in line_str:
+                    current_section = "backlog"
+                    continue
+                elif line_str.startswith("## "):
+                    current_section = None
+                    continue
+                
+                if line_str.startswith("- [ ]") and current_section:
+                    task_text = line_str[5:].strip()
+                    if current_section == "in_progress":
+                        in_progress.append(task_text)
+                    elif current_section == "backlog":
+                        backlog.append(task_text)
+    except Exception:
+        pass
+    
+    return in_progress, backlog
 
 
 
@@ -284,7 +319,21 @@ def main():
             folders = extract_folders(path)
             title = get_thread_title(path)
             print(f"- [{cid[:8]}] {title} | Folders: {', '.join(folders) if folders else 'None'}")
-        print("================================================\n")
+        
+        in_progress, backlog = get_project_board_summary()
+        if in_progress or backlog:
+            print("\n=== ACTIVE PROJECT BOARD (PROJECT_BOARD.md) ===")
+            print("Path: file:///Users/matt/projects/ai-os/PROJECT_BOARD.md")
+            print("Launch: http://127.0.0.1:8643/open_zed?path=/Users/matt/projects/ai-os/PROJECT_BOARD.md\n")
+            if in_progress:
+                print("🚀 In Progress:")
+                for item in in_progress[:4]:
+                    print(f"  - {item}")
+            if backlog:
+                print("\n📋 Top Backlog:")
+                for item in backlog[:4]:
+                    print(f"  - {item}")
+            print("================================================\n")
     else:
         print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
     
