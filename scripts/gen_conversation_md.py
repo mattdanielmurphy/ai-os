@@ -648,7 +648,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
                         try:
                             res = json.loads(r.read_text())
                             if res.get("status") == "committed" and res.get("sha"):
-                                commit_badge = f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{res["sha"][:7]}`] {res["message"]}</div></details>\n'
+                                commit_badge = f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none; cursor: pointer;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{res["sha"][:7]}`] {res["message"]}</div></details>\n'
                                 agent_content += commit_badge
                                 break
                         except: continue
