@@ -84,14 +84,18 @@ def escape_currency_dollar_signs(text: str) -> str:
     return ''.join(parts)
 
 
-def is_transient_status_line(line: str) -> bool:
-    """Check if a line is a transient progress/status update from tool execution."""
-    s = line.strip()
+def is_transient_status_line(s: str) -> bool:
+    """Return True if s is a short intermediate status update emitted while tools/subagents are running."""
     if not s:
         return False
-    if re.match(r'^(?:updating|running|checking|waiting|wait|verifying|restarting|generating|modifying|fetching|reading|analyzing|inspecting|cleaning|completed|subagent|i\s+(?:am\s+)?(?:waiting|have|will|just)|streaming|actively\s+processing|finishing|delegated|will\s+agy|please\s+edit|gemini\s+3\.1\s+pro)[^\n]*$', s, re.IGNORECASE):
+    if '\n' in s or s.startswith('#') or s.startswith('-') or s.startswith('*') or s.startswith('|'):
+        return False
+    s_clean = s.strip()
+    if len(s_clean) > 140:
+        return False
+    if re.match(r'^(?:updating|running|checking|waiting|wait|verifying|restarting|generating|modifying|fetching|reading|analyzing|inspecting|cleaning|subagent\s+updating|planner\s+is\s+still|plan\s+generation|generation\s+is\s+progressing|still\s+awaiting|streaming)[^\n]*$', s_clean, re.IGNORECASE):
         return True
-    if re.match(r'^\s*(?:[-*+]\s*)?(?:Reference\s+link(?:\s+to\s+(?:the\s+)?thread\s+artifact)?:\s*)?\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s, re.IGNORECASE):
+    if re.match(r'^\s*(?:[-*+]\s*)?(?:Reference\s+link(?:\s+to\s+(?:the\s+)?thread\s+artifact)?:\s*)?\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s_clean, re.IGNORECASE):
         return True
     return False
 
@@ -380,7 +384,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
         nonlocal pending_users, substantive_content, latest_transient_status, current_agent_time, active_items
         if pending_users:
             if substantive_content:
-                agent_text = '\n\n'.join(c for c in substantive_content if c.strip()).strip()
+                agent_text = substantive_content[-1].strip()
             else:
                 agent_text = latest_transient_status or ''
 
@@ -457,8 +461,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                 created_iso = obj.get('created_at') or obj.get('timestamp') or ''
                 if created_iso:
                     current_agent_epoch = iso_to_epoch(created_iso)
-                    if not current_agent_time:
-                        current_agent_time = fmt_time(created_iso)
+                    current_agent_time = fmt_time(created_iso)
 
                 tool_calls = obj.get('tool_calls')
                 content = obj.get('content', '') or obj.get('text', '')
