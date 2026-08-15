@@ -15,7 +15,13 @@ def format_tokens(tokens: int) -> str:
         return "0"
     if tokens >= 1_000_000:
         val = tokens / 1_000_000
-        return f"{val:.1f}M" if (val % 1 >= 0.05 and val % 1 <= 0.95) else f"{round(val)}M"
+        return f"{val:.1f}M".replace(".0M", "M") if (val % 1 >= 0.05 and val % 1 <= 0.95) else f"{round(val)}M"
+    if tokens >= 100_000:
+        k_val = round(tokens / 10_000) * 10
+        return f"{k_val}k"
+    if tokens >= 20_000:
+        k_val = round(tokens / 5_000) * 5
+        return f"{k_val}k"
     if tokens >= 1_000:
         return f"{round(tokens / 1_000)}k"
     return str(tokens)
