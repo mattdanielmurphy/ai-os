@@ -99,16 +99,7 @@ def step_pplx_quota():
     except Exception as e:
         return f"Perplexity Quota: ERROR ({e})"
 
-def step_triage(role="orchestrator", verbose=False):
-    try:
-        from triage_task import evaluate_triage
-        decision = evaluate_triage(prompt="preflight check", role=role)
-        line = f"Triager: Engine {decision['engine'].upper()} ({decision['recommended_model']}) | Jules: {decision['use_jules']}"
-        if verbose and decision.get('compiled_system_prompt'):
-            line += f"\n--- INJECTED DIRECTIVE ---\n{decision['compiled_system_prompt'][:200]}...\n--------------------------"
-        return line
-    except Exception:
-        return "Triager: Skipped"
+
 
 def step_rules():
     out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")], timeout=2)
@@ -297,17 +288,20 @@ def main():
     else:
         print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
     
-    steps = [
-        ("Quota", step_quota),
-        ("Jules Quota", step_jules_quota),
-        ("Perplexity", step_pplx_quota),
-        ("Task Triager", lambda: step_triage(args.role, args.verbose)),
-        ("Rules", step_rules),
-        ("Thread Bloat", step_bloat),
-        ("Git", step_git),
-        ("Watcher", step_watcher),
-        ("Hammerspoon", step_hammerspoon_errors),
-    ]
+    if is_first:
+        steps = [
+            ("Quota", step_quota),
+            ("Jules Quota", step_jules_quota),
+            ("Perplexity", step_pplx_quota),
+            ("Rules", step_rules),
+            ("Git", step_git),
+            ("Watcher", step_watcher),
+            ("Hammerspoon", step_hammerspoon_errors),
+        ]
+    else:
+        steps = [
+            ("Quota", step_quota),
+        ]
     
     results = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
