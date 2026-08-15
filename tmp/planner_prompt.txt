@@ -1,4 +1,4 @@
-User Request: Stage 3 Architecture and Implementation Plan: Universal Cloud Thread Sync for Gemini & Perplexity (Mobile and Glic Catch-Up). Building a background sync engine inside apps/gemini-companion that periodically queries Google Gemini and Perplexity cloud conversation history endpoints via the active authenticated session, detects threads created externally on mobile or Glic, fetches their full turn history, and writes them to local Markdown files in context/threads/.
+User Request: Stage 4 Architecture and Implementation Plan: Gemini Agentic Capabilities & Local Context. Turn standard gemini.google.com interface into a powerful local-aware assistant in apps/gemini-companion. Action items: (1) Add native IPC bridges from the injected script to Tauri Rust for local file reading, editing, and shell commands. (2) Enable smart prompt prepending (e.g. feeding active project context, git status, system info directly into web Gemini queries).
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
