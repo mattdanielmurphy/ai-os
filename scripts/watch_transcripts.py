@@ -207,15 +207,14 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             if conv_id in summarized_threads:
                 summarized_threads.remove(conv_id)
 
-    # Summarize idle threads
+    # Summarize idle threads (main threads only, not subagents)
     for conv_id, (mtime, size) in full_state.items():
-        if conv_id not in summarized_threads and (now - mtime) > 300:
-            print(f"Thread {conv_id[:8]} idle > 5m. Triggering summarize_thread.py...")
+        if conv_id not in sub_map and conv_id not in summarized_threads and (now - mtime) > 300:
+            summarized_threads.add(conv_id)
             try:
                 subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "summarize_thread.py"), conv_id])
             except Exception as e:
                 print(f"summarize_thread failed: {e}")
-            summarized_threads.add(conv_id)
 
     return newest_mtime
 
@@ -242,10 +241,10 @@ def main():
         process_updates(last_state, last_render_time, set(), args.brain_dir, pending_commits, commit_results_dir)
     elif args.daemon:
         # Pre-seed: record current state
-        active, _ = get_active_convs(args.brain_dir)
+        active, sub_map = get_active_convs(args.brain_dir)
         last_state = {**active}
         last_render_time = {}
-        summarized_threads = set(last_state.keys())
+        summarized_threads = set(active.keys()) | set(sub_map.keys())
         print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
