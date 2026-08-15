@@ -1,4 +1,4 @@
-User Request: our 'commited' notification is unreliable. Instead of appending it to the agent's response after the code is committed, let's just add a dynamic Committed status in our thread token counter. If it's red, there's an error or something; if it's yellow, it's uncomitted, if it's green, all committed.
+User Request: Right now we're aggressively delegating to subagents. I normally am all for this, but I have a bunch of quota to burn through over the next couple days, so until I say otherwise, let's just remove that 'delegate ALL file writes to a file_writer subagent' rule. In fact, this is a good opportunity for us to build this as a feature: we can modify rules etc with a '/' command and they'll stay changed until we toggle them back. And we should have some kind of like config file for changing settings for ai-os global rules. I think just give a toggle for every rule basically?
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
