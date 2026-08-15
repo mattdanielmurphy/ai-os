@@ -5,6 +5,8 @@ import datetime
 import concurrent.futures
 import json
 import time
+import glob
+import re
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -37,8 +39,6 @@ def run_step(name, func, *args):
 
 def step_quota():
     snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
-    
-    # Check cache freshness (valid for 60s)
     if os.path.exists(snapshot_path):
         mtime = os.path.getmtime(snapshot_path)
         if time.time() - mtime < 60:
@@ -51,8 +51,6 @@ def step_quota():
                 return "ag-quota (cached): OK"
             except Exception:
                 pass
-
-    # If stale or missing, query ag-quota with short timeout
     out, code = run_cmd(["ag-quota", "--all", "-j"], timeout=2)
     if code == 0 and out:
         try:
@@ -82,11 +80,14 @@ def step_quota():
     return "ag-quota: Skipped/Cached"
 
 def step_jules_quota():
-    from jules_quota import get_jules_status
-    status = get_jules_status()
-    if status["status"] == "OK":
-        return f"Jules Quota: OK ({status['total_remaining']}/{status['total_limit']} sessions)"
-    return f"Jules Quota: {status['status']}"
+    try:
+        from jules_quota import get_jules_status
+        status = get_jules_status()
+        if status["status"] == "OK":
+            return f"Jules Quota: OK ({status['total_remaining']}/{status['total_limit']} sessions)"
+        return f"Jules Quota: {status['status']}"
+    except Exception:
+        return "Jules Quota: Skipped"
 
 def step_pplx_quota():
     try:
@@ -99,12 +100,15 @@ def step_pplx_quota():
         return f"Perplexity Quota: ERROR ({e})"
 
 def step_triage(role="orchestrator", verbose=False):
-    from triage_task import evaluate_triage
-    decision = evaluate_triage(prompt="preflight check", role=role)
-    line = f"Triager: Engine {decision['engine'].upper()} ({decision['recommended_model']}) | Jules: {decision['use_jules']}"
-    if verbose and decision.get('compiled_system_prompt'):
-        line += f"\n--- INJECTED DIRECTIVE ---\n{decision['compiled_system_prompt'][:200]}...\n--------------------------"
-    return line
+    try:
+        from triage_task import evaluate_triage
+        decision = evaluate_triage(prompt="preflight check", role=role)
+        line = f"Triager: Engine {decision['engine'].upper()} ({decision['recommended_model']}) | Jules: {decision['use_jules']}"
+        if verbose and decision.get('compiled_system_prompt'):
+            line += f"\n--- INJECTED DIRECTIVE ---\n{decision['compiled_system_prompt'][:200]}...\n--------------------------"
+        return line
+    except Exception:
+        return "Triager: Skipped"
 
 def step_rules():
     out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")], timeout=2)
@@ -123,7 +127,6 @@ def step_git():
         has_local_changes = (diff_code != 0 or cached_code != 0 or len(untracked_out) > 0)
         
         if has_local_changes:
-            # Count modified/untracked files
             status_out, _ = run_cmd(["git", "status", "--porcelain"], timeout=1)
             num_changes = len(status_out.strip().splitlines()) if status_out else 0
             if num_changes > 10:
@@ -166,29 +169,133 @@ def step_hammerspoon_errors():
         return f"Hammerspoon: ERROR ({excerpt})"
     return "Hammerspoon: OK"
 
+def get_transcript_path(conv_dir):
+    p1 = os.path.join(conv_dir, ".system_generated", "logs", "transcript.jsonl")
+    p2 = os.path.join(conv_dir, "transcript.jsonl")
+    return p1 if os.path.exists(p1) else p2
+
+def get_thread_context(target_cid=None):
+    brain_dir = os.path.expanduser("~/.gemini/antigravity/brain/")
+    convs = []
+    for d in glob.glob(os.path.join(brain_dir, "*")):
+        if os.path.isdir(d) and os.path.basename(d) != "scratch":
+            bname = os.path.basename(d)
+            if len(bname) >= 32:
+                convs.append(d)
+    if not convs: return None, True, 0, []
+    
+    # Sort by mtime of transcript file, then directory mtime
+    def get_sort_key(d):
+        t_path = get_transcript_path(d)
+        if os.path.exists(t_path): return os.path.getmtime(t_path)
+        return os.path.getmtime(d)
+
+    convs.sort(key=get_sort_key, reverse=True)
+    
+    if target_cid:
+        active_path = next((p for p in convs if os.path.basename(p) == target_cid), convs[0])
+    else:
+        active_path = convs[0]
+        
+    active_cid = os.path.basename(active_path)
+    
+    transcript_path = get_transcript_path(active_path)
+    user_turn_count = 0
+    if os.path.exists(transcript_path):
+        with open(transcript_path, "r") as f:
+            for line in f:
+                try:
+                    entry = json.loads(line)
+                    if entry.get("type") == "USER_INPUT":
+                        user_turn_count += 1
+                except: continue
+    
+    is_first = user_turn_count <= 1
+    return active_cid, is_first, user_turn_count, convs
+
+def extract_folders(conv_path):
+    folders = set()
+    patterns = [
+        re.compile(r"/Users/matt/projects/([^/\"\'\s\\]+)"),
+        re.compile(r"/Users/matt/Library/Mobile Documents/[^/\"\'\s\\]+/([^/\"\'\s\\]+)"),
+        re.compile(r"/Users/matt/\.gemini/([^/\"\'\s\\]+)")
+    ]
+    
+    transcript_path = get_transcript_path(conv_path)
+    if os.path.exists(transcript_path):
+        with open(transcript_path, "r") as f:
+            for line in f:
+                for p in patterns:
+                    m = p.search(line)
+                    if m:
+                        folder = m.group(1).strip("\"\'\n\\")
+                        if re.match(r"^[a-zA-Z0-9_\-\.]+$", folder):
+                            folders.add(folder)
+    return sorted(list(folders))[:3]
+
+def get_thread_title(conv_path):
+    transcript_path = get_transcript_path(conv_path)
+    if not os.path.exists(transcript_path): return "Untitled"
+    
+    with open(transcript_path, "r") as f:
+        for line in f:
+            try:
+                entry = json.loads(line)
+                if entry.get("type") == "USER_INPUT":
+                    content = entry.get("content", "")
+                    # Strip tags and take first line up to 60 chars
+                    clean = re.sub(r'<[^>]+>', '', content).strip()
+                    return (clean.splitlines()[0])[:60]
+            except: continue
+    return "Untitled"
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--role", default="orchestrator", choices=["orchestrator", "leaf"], help="Agent role")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--first-turn", action="store_true")
+    parser.add_argument("--subsequent", action="store_true")
+    parser.add_argument("--conv-id", help="Target conversation ID")
     args = parser.parse_args()
+
+    active_cid, is_first, turn_count, all_convs = get_thread_context(args.conv_id)
+    if args.first_turn: is_first = True
+    elif args.subsequent: is_first = False
 
     log_preflight("STARTED")
     print("=== PRE-FLIGHT CHECK ===")
-    try:
-        import json, os
+    
+    if is_first:
+        print("\n=== RECENT THREAD CONTEXT (NEW THREAD START) ===")
         summaries_path = os.path.expanduser("~/.gemini/antigravity/brain/thread_summaries.json")
+        summaries = {}
         if os.path.exists(summaries_path):
             with open(summaries_path, "r") as f:
-                summaries = json.load(f)
-                if summaries:
-                    print("\n=== RECENT THREAD SUMMARIES ===")
-                    for cid, summ in list(summaries.items())[-3:]:
-                        print(f"- [{cid[:8]}] {summ}")
-                    print("===============================\n")
-    except Exception as e:
-        print(f"Failed to load thread summaries: {e}")
-
+                try: summaries = json.load(f)
+                except: pass
+        
+        print("--- Detailed Summaries of Past 5 Threads ---")
+        for i, path in enumerate(all_convs[1:6]):
+            cid = os.path.basename(path)
+            folders = extract_folders(path)
+            title = get_thread_title(path)
+            summ = summaries.get(cid, "No summary available")
+            if summ == "No summary available":
+                summ = get_thread_title(path)
+            print(f"[{i+1}] [{cid[:8]}] {title}")
+            print(f"    Folders: {', '.join(folders) if folders else 'None'}")
+            print(f"    Summary: {summ}")
+        
+        print("\n--- Titles & Folders of Past 10 Threads ---")
+        for path in all_convs[1:11]:
+            cid = os.path.basename(path)
+            folders = extract_folders(path)
+            title = get_thread_title(path)
+            print(f"- [{cid[:8]}] {title} | Folders: {', '.join(folders) if folders else 'None'}")
+        print("================================================\n")
+    else:
+        print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
     
     steps = [
         ("Quota", step_quota),
