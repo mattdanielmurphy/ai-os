@@ -13,7 +13,7 @@ ARCHITECTURE:
     - transcript.jsonl  -> all user messages + timestamps (auto-extracted)
     - history/turn_N.md -> agent response content per turn (agent writes this)
 
-  And generates a pure-markdown thread.md (no HTML tags, no CSS position hacks).
+  And generates a pure-markdown thread.md (no HTML tables).
 
 USAGE:
   python3 gen_conversation_md.py <conversation-id> [--title "Thread Title"] [--app-data-dir PATH]
@@ -168,7 +168,7 @@ def filter_transient_lines(text: str) -> str:
 def clean_agent_response(text: str) -> str:
     """
     1. Clean agent content (links/status lines).
-    2. Demote headings # -> ####, ## -> #####, ### -> ######.
+    2. Demote headings # -> #####, ## -> ######, ### -> ######.
     3. Strip orphan status/context lines.
     4. Ensure proper spacing before/after headers, blockquotes, and tables.
     """
@@ -177,9 +177,7 @@ def clean_agent_response(text: str) -> str:
         return ''
 
     # Demote headings
-    text = re.sub(r'^###\s+', '###### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^##\s+', '##### ', text, flags=re.MULTILINE)
-    text = re.sub(r'^#\s+', '#### ', text, flags=re.MULTILINE)
+    text = re.sub(r'^#{1,6}\s+', '### ', text, flags=re.MULTILINE)
 
     # Ensure blank lines before headings
     text = re.sub(r'([^\n])\n(#{1,6}\s+)', r'\1\n\n\2', text)
@@ -193,6 +191,12 @@ def clean_agent_response(text: str) -> str:
 
     # Ensure blank line after markdown tables
     text = re.sub(r'(\|[^\n]+\|)\n([^\n|])', r'\1\n\n\2', text)
+
+    # Ensure blank line before blockquotes
+    text = re.sub(r'([^\n>])\n(>[^\n]*)', r'\1\n\n\2', text)
+
+    # Ensure blank line after blockquotes
+    text = re.sub(r'(>[^\n]*)\n([^\n>])', r'\1\n\n\2', text)
 
     # Strip orphan status/context lines
     lines = []
@@ -271,8 +275,7 @@ def decode_html_entities(text: str) -> str:
 def extract_user_input(content: str):
     """Extract (prompt_text, local_timestamp_str) from a USER_INPUT step content.
 
-    Returns the user's prompt as clean markdown.
-    Artifact comments are formatted as markdown blockquotes + comment text.
+    Returns formatted user input with styled selection cards and comment text.
     """
     # Find timestamp if present
     ts = re.search(r'current local time is:\s*([^\n<]+)', content)
@@ -324,13 +327,14 @@ def extract_user_input(content: str):
         cmt_clean = decode_html_entities(cmt_clean).strip()
 
         if quote_lines:
-            quote_text = '\n> '.join(quote_lines)
-            block = f"> 📌 **Selection:**\n> {quote_text}"
+            quote_text = '\n'.join(quote_lines).strip()
+            quote_html = f'<span style="display: block; background: rgba(0, 0, 0, 0.25); border-left: 3px solid rgba(130, 115, 220, 0.7); padding: 6px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; opacity: 0.9; white-space: pre-wrap;">{quote_text}</span>'
             if cmt_clean:
-                block += f"\n>\n> 💬 **Comment:** {cmt_clean}"
-            formatted_parts.append(block)
+                formatted_parts.append(f"{quote_html}\n💬 **Comment**: {cmt_clean}")
+            else:
+                formatted_parts.append(quote_html)
         elif cmt_clean:
-            formatted_parts.append(f"💬 **Comment:** {cmt_clean}")
+            formatted_parts.append(f"💬 **Comment**: {cmt_clean}")
 
     if req_prompt:
         req_prompt_clean = decode_html_entities(req_prompt).strip()
@@ -348,7 +352,7 @@ def extract_user_input(content: str):
             formatted_parts.append("✅ **Approved Plan/Artifact**")
 
     if len(formatted_parts) > 1:
-        divider = '\n\n---\n\n'
+        divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
         prompt = divider.join(formatted_parts).strip()
     elif len(formatted_parts) == 1:
         prompt = formatted_parts[0].strip()
@@ -538,20 +542,16 @@ def format_prompt(raw_prompt: str) -> str:
 
 
 def make_exchange_block(users: list, agent_content: str, agent_time: str, is_newest: bool = False, tool_action: str = None, transient_status: str = None) -> str:
-    """Build a single exchange block using pure markdown."""
+    """Build a single exchange block using styled span containers."""
     user_blocks = []
     for u in users:
         p = format_prompt(u['prompt']).strip()
         if p:
             user_blocks.append(p)
 
-    divider = '\n\n---\n\n'
+    divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
     user_md = divider.join(user_blocks) if len(user_blocks) > 1 else (user_blocks[0] if user_blocks else '')
-    
-    user_time_str = f" *({users[0]['time']})*" if users and users[0].get('time') else ""
-    user_section = f"### 👤 User{user_time_str}\n\n{user_md}"
-
-    agent_time_str = f" *({agent_time})*" if agent_time else ""
+    a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
     if not agent_text:
         if is_newest:
@@ -564,9 +564,22 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
         else:
             agent_text = "✅ *Turn completed.*"
 
-    agent_section = f"### 🤖 Assistant{agent_time_str}\n\n{agent_text}"
+    user_time_str = f"Sent at {users[0]['time']}" if users and users[0].get('time') else "Sent at "
+    user_span = (
+        f'<span title="{user_time_str}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_md}</span>'
+    )
 
-    return f"{user_section}\n\n---\n\n{agent_section}"
+    agent_span = (
+        f'\n\n<span title="Responded at {a_time}" style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 16px 20px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+        f'{agent_text}\n\n'
+        f'</span>\n\n'
+    )
+
+    style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word;"'
+    if is_newest:
+        style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; margin-bottom: 48px; overflow-wrap: anywhere; word-break: break-word;"'
+
+    return f'<span {style}>\n\n{user_span}\n\n{agent_span}\n\n</span>'
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
@@ -655,25 +668,27 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
     from postflight_lib import compute_thread_metrics, format_metrics_table
 
-    doc_parts = []
+    doc_content = []
     
-    # Document Header
-    date_str = datetime.now().strftime("%B %d, %Y")
-    doc_parts.append(f"# 💬 {title or 'Conversation Thread'}\n\n*Thread Started — {date_str}*")
+    # Thread Started Banner (placed at the top of the oldest exchange block)
+    banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
-    # Render exchanges in natural chronological order (oldest to newest)
-    for i, item in enumerate(exchanges):
+    # Outer container with custom styles
+    doc_content.append('<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
+
+    reversed_exchanges = list(reversed(exchanges))
+    for i, item in enumerate(reversed_exchanges):
         if item['type'] == 'exchange':
             agent_content = item.get('agent_content', '').strip()
-            # Drop empty historical exchanges (only newest exchange can be in-progress)
-            if not agent_content and i < len(exchanges) - 1:
+            # Drop empty historical exchanges (only newest exchange i==0 can be in-progress)
+            if not agent_content and i > 0:
                 continue
 
             agent_content = clean_agent_content(agent_content)
 
             # Check for subagent progress
             progress = None
-            if i == len(exchanges) - 1:
+            if i == 0:
                 progress = get_subagent_progress(conv_id, app_data_dir)
 
             block = make_exchange_block_with_progress(
@@ -681,21 +696,28 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
                 agent_content,
                 item['agent_time'],
                 progress,
-                i == len(exchanges) - 1,
+                i == 0,
                 item.get('tool_action'),
                 item.get('transient_status')
             )
-            doc_parts.append(block)
-        elif item['type'] == 'fork_notice':
-            doc_parts.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
 
-    # Metrics table at bottom
+            # Prepend banner to the oldest exchange (which is the last in the reversed list)
+            if i == len(reversed_exchanges) - 1:
+                block = f"{banner}\n\n{block}"
+
+            doc_content.append(block)
+        elif item['type'] == 'fork_notice':
+            doc_content.append(make_fork_notice_block(item['fork_path'], item['undone_count']))
+
+    # Metrics table at bottom (pinned)
     metrics = compute_thread_metrics(conv_id)
     metrics_table = format_metrics_table(metrics, conv_id)
-    metrics_section = f"### 📊 Thread Metrics\n\n{metrics_table.strip()}"
-    doc_parts.append(metrics_section)
+    pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table.strip()}\n\n</span>'
+    doc_content.append(pinned_metrics)
 
-    rendered_doc = '\n\n---\n\n'.join(doc_parts) + '\n'
+    doc_content.append('</span>')
+
+    rendered_doc = '\n\n'.join(doc_content)
     try:
         from link_formatter import enrich_file_links
         rendered_doc = enrich_file_links(rendered_doc)
