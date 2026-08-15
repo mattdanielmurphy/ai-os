@@ -113,10 +113,10 @@ def get_project_board_summary():
         with open(board_path, "r", encoding="utf-8") as f:
             for line in f:
                 line_str = line.strip()
-                if "## 🚀 In Progress" in line_str or "## In Progress" in line_str:
+                if "In Progress" in line_str:
                     current_section = "in_progress"
                     continue
-                elif "## 📋 Backlog" in line_str or "## To Do" in line_str:
+                elif "Backlog" in line_str or "To Do" in line_str:
                     current_section = "backlog"
                     continue
                 elif line_str.startswith("## "):
