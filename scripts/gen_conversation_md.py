@@ -27,6 +27,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+APP_DATA_DIR = Path.home() / '.gemini/antigravity'
+
 def iso_to_epoch(iso_str: str) -> float:
     if not iso_str:
         return 0.0
@@ -204,7 +206,13 @@ def clean_agent_response(text: str) -> str:
     return result
 
 
-APP_DATA_DIR = Path.home() / '.gemini/antigravity'
+def resolve_app_data_dir(conv_id: str, default_app_data_dir: Path) -> Path:
+    if (default_app_data_dir / 'brain' / conv_id).exists():
+        return default_app_data_dir
+    cli_app_data_dir = Path.home() / '.gemini/antigravity-cli'
+    if (cli_app_data_dir / 'brain' / conv_id).exists():
+        return cli_app_data_dir
+    return default_app_data_dir
 
 
 # ─── Forking ──────────────────────────────────────────────────────────────────
@@ -374,17 +382,25 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
     active_items = []
     pending_users = []
     current_agent_time = ''
-    substantive_content = []
+    accumulated_text = []
+    latest_tool_action = None
     latest_transient_status = None
+    current_agent_epoch = 0.0
+    history_dir = app_data_dir / 'brain' / conv_id / 'history' if (app_data_dir and conv_id) else None
 
     if not transcript_path.exists():
         return []
 
     def flush_current_turn():
-        nonlocal pending_users, substantive_content, latest_transient_status, current_agent_time, active_items
+        nonlocal pending_users, accumulated_text, latest_tool_action, latest_transient_status, current_agent_time, active_items, current_agent_epoch
         if pending_users:
-            if substantive_content:
-                agent_text = substantive_content[-1].strip()
+            history_turn_text = load_agent_response(history_dir, len([i for i in active_items if i['type'] == 'exchange']) + 1) if history_dir else ''
+            if accumulated_text:
+                agent_text = '\n\n'.join(t for t in accumulated_text if t.strip()).strip()
+            elif history_turn_text:
+                agent_text = history_turn_text
+            elif latest_tool_action:
+                agent_text = f"✅ *Action completed: {latest_tool_action}*"
             else:
                 agent_text = latest_transient_status or ''
 
@@ -397,7 +413,9 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                 'agent_turn': len([i for i in active_items if i['type'] == 'exchange']) + 1,
                 'agent_content': agent_text,
                 'agent_time': current_agent_time,
-                'is_in_progress': (not substantive_content),
+                'is_in_progress': (not accumulated_text and not history_turn_text),
+                'tool_action': latest_tool_action,
+                'transient_status': latest_transient_status,
                 'start_epoch': start_epoch,
                 'end_epoch': current_agent_epoch,
                 'min_step': min_step,
@@ -405,7 +423,8 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
             })
             pending_users = []
             current_agent_time = ''
-            substantive_content = []
+            accumulated_text = []
+            latest_tool_action = None
             latest_transient_status = None
 
     with open(transcript_path) as f:
@@ -422,8 +441,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
             idx = obj.get('step_index', 0)
 
             if t == 'USER_INPUT':
-                # Flush prior turn ONLY if substantive agent response text was produced
-                if pending_users and substantive_content:
+                if pending_users:
                     flush_current_turn()
 
                 # Check for Undo/Rewind
@@ -464,14 +482,19 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                     current_agent_time = fmt_time(created_iso)
 
                 tool_calls = obj.get('tool_calls')
+                if tool_calls and isinstance(tool_calls, list) and len(tool_calls) > 0:
+                    first = tool_calls[0]
+                    args = first.get('args', {})
+                    latest_tool_action = args.get('toolAction') or args.get('toolSummary') or first.get('name')
+
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
                     cleaned = clean_agent_content(content.strip())
                     if cleaned:
                         if is_transient_status_line(cleaned):
                             latest_transient_status = cleaned
-                        elif not tool_calls:
-                            substantive_content.append(cleaned)
+                        elif cleaned not in accumulated_text:
+                            accumulated_text.append(cleaned)
 
     # Flush final turn at EOF
     flush_current_turn()
@@ -537,7 +560,15 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
     a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
     if not agent_text:
-        agent_text = '*Thinking...*'
+        if is_newest:
+            if tool_action:
+                agent_text = f"⏳ *Executing: {tool_action}...*"
+            elif transient_status:
+                agent_text = f"⏳ *{transient_status}*"
+            else:
+                agent_text = "*Thinking...*"
+        else:
+            agent_text = "✅ *Turn completed.*"
 
     user_span = (
         f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_md}</span>'
@@ -622,6 +653,7 @@ def make_exchange_block_with_progress(users: list, agent_content: str, agent_tim
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override: Path = None):
+    app_data_dir = resolve_app_data_dir(conv_id, app_data_dir)
     base            = app_data_dir / 'brain' / conv_id
     transcript_path = base / '.system_generated/logs/transcript_full.jsonl'
     if not transcript_path.exists() or transcript_path.stat().st_size == 0:

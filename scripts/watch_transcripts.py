@@ -53,35 +53,38 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
         if not brain_dir.exists():
             return active, subagent_to_parent
 
-        for conv_dir in brain_dir.iterdir():
-            if not conv_dir.is_dir() or conv_dir.name.startswith('.'):
+        for brain_dir_path in [brain_dir, Path.home() / ".gemini" / "antigravity-cli" / "brain"]:
+            if not brain_dir_path.exists():
                 continue
-            transcript = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
-            if transcript.exists():
-                try:
-                    stat = transcript.stat()
-                    if (now - stat.st_mtime) < max_age_secs:
-                        active[conv_dir.name] = (stat.st_mtime, stat.st_size)
-                        
-                        cached = _subagent_cache.get(conv_dir.name)
-                        if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
-                            subagent_to_parent.update(cached[2])
-                        else:
-                            sub_map = {}
-                            try:
-                                with open(transcript, 'r', encoding='utf-8', errors='ignore') as f:
-                                    for line in f:
-                                        if 'invoke_subagent' in line or 'agy_start' in line or 'agy' in line:
-                                            matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', line)
-                                            for m in matches:
-                                                if m != conv_dir.name:
-                                                    sub_map[m] = conv_dir.name
-                            except Exception:
-                                pass
-                            _subagent_cache[conv_dir.name] = (stat.st_mtime, stat.st_size, sub_map)
-                            subagent_to_parent.update(sub_map)
-                except Exception:
+            for conv_dir in brain_dir_path.iterdir():
+                if not conv_dir.is_dir() or conv_dir.name.startswith('.'):
                     continue
+                transcript = conv_dir / ".system_generated" / "logs" / "transcript.jsonl"
+                if transcript.exists():
+                    try:
+                        stat = transcript.stat()
+                        if (now - stat.st_mtime) < max_age_secs:
+                            active[conv_dir.name] = (stat.st_mtime, stat.st_size)
+                            
+                            cached = _subagent_cache.get(conv_dir.name)
+                            if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
+                                subagent_to_parent.update(cached[2])
+                            else:
+                                sub_map = {}
+                                try:
+                                    with open(transcript, 'r', encoding='utf-8', errors='ignore') as f:
+                                        for line in f:
+                                            if 'invoke_subagent' in line or 'agy_start' in line or 'agy' in line:
+                                                matches = re.findall(r'[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}', line)
+                                                for m in matches:
+                                                    if m != conv_dir.name:
+                                                        sub_map[m] = conv_dir.name
+                                except Exception:
+                                    pass
+                                _subagent_cache[conv_dir.name] = (stat.st_mtime, stat.st_size, sub_map)
+                                subagent_to_parent.update(sub_map)
+                    except Exception:
+                        continue
         _cached_active_convs = active
         _cached_sub_map = subagent_to_parent
         return active, subagent_to_parent
