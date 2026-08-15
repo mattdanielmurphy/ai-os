@@ -65,9 +65,8 @@ Comment: "bar"
 <USER_REQUEST>hello</USER_REQUEST>"""
         prompt, time = extract_user_input(content)
         self.assertEqual(time, "2:00pm")
-        self.assertIn("📌 **Selection:**", prompt)
         self.assertIn("<b>foo</b>", prompt)
-        self.assertIn("💬 **Comment:** bar", prompt)
+        self.assertIn("💬 **Comment**: bar", prompt)
         self.assertIn("hello", prompt)
 
     def test_extract_user_input_multiple_comments(self):
@@ -89,9 +88,9 @@ I don't want to ask for too much.
         prompt, time = extract_user_input(content)
         self.assertEqual(time, "1:45pm")
         self.assertIn("Emotional Support Animals (ESAs)", prompt)
-        self.assertIn("💬 **Comment:** not necessary", prompt)
+        self.assertIn("💬 **Comment**: not necessary", prompt)
         self.assertIn("Campus Transit / Pacing Allowance", prompt)
-        self.assertIn("💬 **Comment:** no need", prompt)
+        self.assertIn("💬 **Comment**: no need", prompt)
         self.assertIn("I don't want to ask for too much.", prompt)
         # Verify raw unparsed Selection: was not leaked
         self.assertNotIn('Selection:\n>Campus Transit', prompt)
@@ -117,12 +116,11 @@ I don't want to ask for too much.
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        self.assertIn('### 👤 User *(2:00pm)*', block)
+        self.assertIn('<span', block)
+        self.assertIn('Sent at 2:00pm', block)
+        self.assertIn('Responded at 2:01pm', block)
         self.assertIn('hi', block)
-        self.assertIn('### 🤖 Assistant *(2:01pm)*', block)
         self.assertIn('hello', block)
-        self.assertNotIn('<span', block)
-        self.assertNotIn('<div', block)
 
     def test_strip_system_tags(self):
         content = "<system>hidden</system><user_rules>rule</user_rules><USER_REQUEST>hi</USER_REQUEST>"
@@ -168,10 +166,9 @@ I don't want to ask for too much.
         generate(conv_id, 'Title', Path(self.test_dir.name), output_path_override=custom_out)
         self.assertTrue(custom_out.exists())
         content = custom_out.read_text()
-        self.assertIn('# 💬 Title', content)
-        self.assertIn('### 👤 User', content)
-        self.assertIn('### 🤖 Assistant', content)
-        self.assertNotIn('<span', content)
+        self.assertIn('column-reverse', content)
+        self.assertIn('Thread Started', content)
+        self.assertIn('Sent at', content)
 
     def test_parse_exchanges_with_undo(self):
         transcript = Path(self.test_dir.name) / 'transcript.jsonl'
@@ -254,10 +251,10 @@ I don't want to ask for too much.
     def test_clean_agent_response(self):
         content = "# H1\n## H2\n### H3\n#### H4\nThread context logged at: link\nThread artifact: link\nThread logged at: link\nReference link: link\nSome text"
         cleaned = clean_agent_response(content)
-        self.assertIn("#### H1", cleaned)
-        self.assertIn("##### H2", cleaned)
-        self.assertIn("###### H3", cleaned)
-        self.assertIn("#### H4", cleaned)
+        self.assertIn("### H1", cleaned)
+        self.assertIn("### H2", cleaned)
+        self.assertIn("### H3", cleaned)
+        self.assertIn("### H4", cleaned)
         self.assertNotIn("Thread context logged at:", cleaned)
         self.assertNotIn("Thread artifact:", cleaned)
         self.assertNotIn("Thread logged at:", cleaned)
