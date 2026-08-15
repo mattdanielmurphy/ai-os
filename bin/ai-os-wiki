@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-export PATH="/Users/matt/.bun/bin:/Users/matt/.local/state/fnm_multishells/92026_1785906007508/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export PATH="/Users/matt/.bun/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 export AI_OS_HOME="/Users/matt/projects/ai-os"
-echo "[ai-os wiki] Starting Quartz Wiki web server on http://localhost:3333..."
+echo "[ai-os wiki] Starting Docsify Wiki web server on http://localhost:3333..."
 cd "$AI_OS_HOME/wiki-engine" || exit 1
-exec bun run ./quartz/bootstrap-cli.mjs build --serve --port 3333
+exec python3 -m http.server 3333 --bind 127.0.0.1
