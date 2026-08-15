@@ -154,10 +154,15 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             thread_file = brain_dir / render_id / "thread.md"
             if thread_file.exists() and "*(response in progress)*" not in thread_file.read_text():
                 workspace_root = Path("/Users/matt/projects/ai-os")
-                if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
-                    res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
-                    proc = subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)])
-                    pending_commits[str(workspace_root)] = (proc, res_path, render_id)
+                
+                # Check for 60s cooldown per repository
+                last_commit_time = last_render_time.get(f"commit_{workspace_root}", 0)
+                if (now - last_commit_time) > 60:
+                    if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
+                        res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
+                        proc = subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)])
+                        pending_commits[str(workspace_root)] = (proc, res_path, render_id)
+                        last_render_time[f"commit_{workspace_root}"] = now
 
     # Check pending commits
     for repo_path, (proc, res_path, conv_id) in list(pending_commits.items()):
