@@ -139,30 +139,34 @@ def extract_user_input(content: str):
 
     # Artifact comments
     comment_blocks = []
-    comment_match = re.search(
-        r'Selection:\s*\n(.*?)\n\nComment:\s*(.+?)(?=\n<USER_REQUEST>|\Z)',
-        cleaned, re.DOTALL
+    sel_cmt_pattern = re.compile(
+        r'Selection:\s*\n(.*?)\n+Comment:\s*(".*?"|[^\n]+(?:\n(?!\n*(?:Selection:|<USER_REQUEST>))[^\n]+)*)',
+        re.DOTALL
     )
-    if comment_match:
-        sel_raw = comment_match.group(1).strip()
-        cmt_raw = comment_match.group(2).strip()
+    for m in sel_cmt_pattern.finditer(cleaned):
+        sel_raw = m.group(1).strip()
+        cmt_raw = m.group(2).strip()
         if cmt_raw.startswith('"') and cmt_raw.endswith('"'):
             cmt_raw = cmt_raw[1:-1].strip()
         comment_blocks.append((sel_raw, cmt_raw))
 
     user_requests = re.findall(r'<USER_REQUEST>(.*?)</USER_REQUEST>', cleaned, flags=re.DOTALL)
     if user_requests:
-        req_prompt = '\n\n---\n\n'.join(r.strip() for r in user_requests)
+        req_prompt = '\n\n---\n\n'.join(r.strip() for r in user_requests if r.strip())
     else:
         req_prompt = re.sub(r'Comments on artifact URI:.*', '', cleaned, flags=re.DOTALL)
         req_prompt = re.sub(r'</?USER_REQUEST>', '', req_prompt).strip()
+
+    if comment_blocks:
+        req_prompt = re.sub(r'Comments on artifact URI:[^\n]*', '', req_prompt)
+        req_prompt = sel_cmt_pattern.sub('', req_prompt).strip()
 
     formatted_parts = []
     for sel_raw, cmt_raw in comment_blocks:
         quote_lines = []
         for line in sel_raw.split('\n'):
             quote_lines.append(decode_html_entities(strip_html_tags(line)).lstrip('>').strip())
-        cmt_clean = decode_html_entities(strip_html_tags(cmt_raw))
+        cmt_clean = decode_html_entities(strip_html_tags(cmt_raw)).strip()
         if quote_lines:
             quote_body = '\n'.join(f'> {l}' if l else '>' for l in quote_lines)
             formatted_parts.append(f"{quote_body}\n>\n> 💬 **Comment**: {cmt_clean}" if cmt_clean else quote_body)
