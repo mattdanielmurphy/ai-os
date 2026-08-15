@@ -127,24 +127,8 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
         render_id = sub_map.get(conv_id, conv_id)
         
         prev = last_state.get(conv_id)
-        
-        # Check for self-healing need (stale in-progress marker when transcript is complete)
-        thread_file = brain_dir / render_id / "thread.md"
-        needs_repair = False
-        if thread_file.exists():
-            try:
-                t_content = thread_file.read_text()
-                if IN_PROGRESS_STR in t_content:
-                    # check if parent transcript has finished planner response
-                    p_trans = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
-                    if p_trans.exists() and p_trans.stat().st_size > 0:
-                        # Only set needs_repair if substantive content exists (not just marker)
-                        if "*(response in progress)*" not in t_content:
-                            needs_repair = True
-            except Exception:
-                pass
 
-        if needs_repair or prev is None or mtime != prev[0] or size != prev[1]:
+        if prev is None or mtime != prev[0] or size != prev[1]:
             # Change detected — check cooldown
             last_t = last_render_time.get(render_id, 0)
             if (now - last_t) < COOLDOWN:
