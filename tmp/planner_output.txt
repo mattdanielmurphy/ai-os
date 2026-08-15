@@ -1,20 +1,15 @@
-I've put together the full plan as a markdown file. Key points to flag before your downstream agent starts implementing:
+I dropped the full architecture plan into a markdown file (**rule-toggle-system-plan.md**). Key points:
 
-## What I could and couldn't verify
+## What I confirmed via GitHub
+I inspected the actual `mattdanielmurphy/ai-os` repo structure — `config/rules/01-05*.md`, `.rules/*.md` (including `subagent_leaf.md`), `scripts/build_rules.py`, `compile_dynamic_prompt.py`, `append_system_rule.py`, `sync_rules.sh`, and `subagent.py`. One caveat worth flagging: the connector's `get_file_contents` returned only download confirmations, not actual file bodies, for this private repo — so the plan is architecturally grounded in your confirmed file topology and `AG_CONTEXT.md`, but a downstream agent needs to `cat` the actual rule files first to locate the exact "file_writer" directive text before editing.
 
-I confirmed the exact file inventory, sizes, and change history for `apps/gemini-companion/src-tauri` directly from the repo  — notably that `shell_bridge.rs`, `context_snapshot.rs`, and `fs_bridge.rs` were all added together in commit `da914ab`, and `proxy.rs` had 45 lines stripped in that same commit (likely where the missing `start_proxy_server` export disappeared). The connector wouldn't surface raw file text in this session, so exact current line-by-line contents weren't available — the plan flags every spot where the implementing agent must open the file first rather than guess.
-
-## Core fixes in the plan
-
-- **Cargo.toml**: add `sha2 = "0.10"`, remove any leftover `wait_timeout` entry, and check for version conflicts with anything already in `Cargo.lock`.
-- **shell_bridge.rs**: replace the sync `wait_timeout` pattern with `tokio::process::Command` + `tokio::time::timeout`, introducing typed `ShellCommandSpec`/`ShellCommandResult`/`ShellBridgeError` structs and a single consistent UTF-8 decode path (`from_utf8_lossy` for both stdout/stderr) to kill the byte-slice mismatch.
-- **proxy.rs**: a concrete `async fn start_proxy_server(app_handle: tauri::AppHandle) -> Result<(), ProxyServerError>` that binds a listener, spawns the accept loop, and registers state via `app_handle.manage(...)` — reusing whatever HTTP stack `server.rs` already has rather than pulling in a second framework.
-- **Lint cleanup**: a mechanical `cargo check`-driven pass across the four flagged files, with guidance on when to delete vs. `_`-prefix vs. actually wire up "unused" code.
+## The core design
+- **State layer**: new `config/rules.state.json` — sparse overrides map, never edits rule `.md` content directly.
+- **Compile layer**: `build_rules.py` gets a `filter_enabled_fragments()` step that excludes disabled rules (whole-file or anchor-delimited sub-block) before compiling the prompt, with a self-documenting `DISABLED RULES:` banner comment.
+- **Command layer**: new `/rule` slash command (`on`/`off`/`list`/`status`/`reset`) intercepted in `apps/aios-tui` (and/or `bin/ai-os`), backed by a new canonical `scripts/rule_toggle.py` CLI that both the TUI and any script can call — toggles persist until explicitly flipped back, no auto-expiry, per your requirement.
+- **Generalization**: a parallel `features.state.json` pattern for non-rule settings (e.g., extreme-delegation default, quota thresholds) as a fast-follow, using the same store pattern.
 
 ## Notable edge cases called out
+File-locking for concurrent writes across agent surfaces, dry-run validation before persisting state (to avoid state/compiled-output drift), explicit non-toggleable rules (e.g. `core_safety.md`), and the fact that in-flight delegated subagents won't retroactively pick up a mid-task toggle.
 
-- Killing the child process explicitly on timeout (Tokio doesn't always do this on drop).
-- Propagating the new `async` shell-bridge API up through any existing sync callers in `main.rs`/`pty.rs`/`session.rs`.
-- Handling `AddrInUse` on proxy bind without crashing the whole Tauri app.
-
-The file is ready for your implementing agent — it's structural/contract-level only, no full code, per your instructions.
+The plan's step 14 also flags the immediate practical fix: until the tooling exists, treat the file-writer delegation rule as manually suspended for this session per your instruction.
