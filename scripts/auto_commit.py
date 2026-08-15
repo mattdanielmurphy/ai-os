@@ -101,7 +101,7 @@ def main():
     )
 
     # Build an informative fallback message based on staged files rather than generic "Update files"
-    staged_status, _ = run_cmd(["git", "status", "--porcelain"])
+    staged_status, _ = run_cmd(["git", "status", "--porcelain", "--ignore-submodules=dirty"])
     staged_files = [line.strip().split()[-1] for line in staged_status.splitlines() if line.strip()]
     if staged_files:
         files_summary = ", ".join(staged_files[:3])

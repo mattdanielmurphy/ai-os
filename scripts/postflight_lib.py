@@ -30,7 +30,7 @@ def get_git_commit_status(repo_root: str = "/Users/matt/projects/ai-os") -> dict
     import subprocess
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "--ignore-submodules=dirty"],
             cwd=repo_root,
             capture_output=True,
             text=True,
@@ -128,7 +128,7 @@ def has_uncommitted_changes(repo_root: str) -> bool:
     import subprocess
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "--ignore-submodules=dirty"],
             cwd=repo_root,
             capture_output=True,
             text=True
