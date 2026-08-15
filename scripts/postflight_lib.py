@@ -91,7 +91,7 @@ def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
     value_row = "| " + " | ".join(values) + " |"
-    return f"\n{header_row}\n{separator_row}\n{value_row}\n"
+    return f"\n\n{header_row}\n{separator_row}\n{value_row}\n\n"
 
 def has_uncommitted_changes(repo_root: str) -> bool:
     import subprocess
