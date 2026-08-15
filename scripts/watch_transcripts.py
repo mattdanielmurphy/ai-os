@@ -201,7 +201,7 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
 
     # Clean up stale entries
     for conv_id in list(last_state.keys()):
-        if conv_id not in current:
+        if conv_id not in full_state:
             del last_state[conv_id]
             last_render_time.pop(conv_id, None)
             if conv_id in summarized_threads:
