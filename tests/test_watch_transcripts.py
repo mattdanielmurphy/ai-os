@@ -56,14 +56,14 @@ class TestWatchTranscripts(unittest.TestCase):
         
         # Initial run
         with patch('watch_transcripts.render', return_value=True) as mock_render:
-            process_updates(last_state, last_render_time, self.brain_dir)
+            process_updates(last_state, last_render_time, set(), self.brain_dir, {}, self.brain_dir / ".commit_results")
             self.assertIn(conv_id, last_state)
             
             # Simulate change
             transcript.write_text("new content")
             time.sleep(0.1) # Ensure mtime changes
             
-            process_updates(last_state, last_render_time, self.brain_dir)
+            process_updates(last_state, last_render_time, set(), self.brain_dir, {}, self.brain_dir / ".commit_results")
             self.assertTrue(mock_render.called)
 
 if __name__ == '__main__':

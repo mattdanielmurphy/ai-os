@@ -45,6 +45,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  --gui           Launch the Tauri GUI dashboard (default)"
+    echo "  --tui           Launch the headless AI-OS Terminal UI"
     echo "  --cli           Run the Agy orchestrator agent in the current terminal"
     echo "  --terminal      Run the Agy orchestrator agent in the current terminal"
     echo "  --no-gui        Run the Agy orchestrator agent in the current terminal"
@@ -88,6 +89,11 @@ while [[ $# -gt 0 ]]; do
         wiki|--wiki)
             exec "$AI_OS_HOME/bin/ai-os-wiki"
             ;;
+        --tui)
+            echo "[ai-os] Launching AI-OS TUI in terminal..."
+            cd "$AI_OS_HOME/apps/aios-tui" && cargo run --release
+            exit 0
+            ;;
         *)
             # Forward everything else to agent (only applicable if running non-GUI)
             break
@@ -104,7 +110,7 @@ trap 'kill $SYNC_PID 2>/dev/null' EXIT
 if [ "$LAUNCH_GUI" = true ]; then
     echo "[ai-os] Launching GUI interface..."
     export AIOS_INITIAL_PROJECT="$ORIGINAL_PWD"
-    cd tauri-gui && bun run tauri dev
+    cd "$AI_OS_HOME/apps/gemini-companion" && bun run tauri dev
 elif [ "$ENGINE" = "claude" ]; then
     echo "[ai-os] Launching Claude Code agent in terminal at $ORIGINAL_PWD..."
     cd "$ORIGINAL_PWD" || exit

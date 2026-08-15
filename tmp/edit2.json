@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "/Users/matt/projects/ai-os/scripts/subagent.py",
+      "edits": [
+        {
+          "old_string": "    sys.exit(run_in_tmux(model=args.model, prompt=args.prompt, cwd=args.cwd))\n",
+          "new_string": "    # Default to the current working directory if none was explicitly provided\n    active_cwd = args.cwd if args.cwd else os.getcwd()\n    sys.exit(run_in_tmux(model=args.model, prompt=args.prompt, cwd=active_cwd))\n"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,783 @@
+pnpm tauri dev
+$ tauri dev
+     Running BeforeDevCommand (`pnpm dev`)
+$ vite
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+Re-optimizing dependencies because lockfile has changed
+
+  VITE v5.4.21  ready in 160 ms
+
+  ➜  Local:   http://localhost:1420/
+  ➜  Network: use --host to expose
+        Info Watching /Users/matt/projects/ai-os/src-tauri for changes...
+   Compiling objc_exception v0.1.2
+   Compiling tao v0.16.11
+   Compiling objc v0.2.7
+   Compiling cocoa-foundation v0.1.2
+   Compiling objc_id v0.1.1
+   Compiling objc-foundation v0.1.1
+   Compiling rfd v0.10.0
+   Compiling cocoa v0.24.1
+   Compiling wry v0.24.12
+   Compiling tauri-runtime-wry v0.14.11
+   Compiling tauri v1.8.3
+   Compiling tauri-app v0.1.0 (/Users/matt/projects/ai-os/src-tauri)
+warning: unused variable: `root_info`
+    --> src/main.rs:1530:13
+     |
+1530 |         let root_info = match get_cached_thread_info(&ro...
+     |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_root_info`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `root_info`
+    --> src/main.rs:1643:13
+     |
+1643 |         let root_info = match get_cached_thread_info(&ro...
+     |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_root_info`
+
+warning: `tauri-app` (bin "tauri-app") generated 2 warnings (run `cargo fix --bin "tauri-app" -p tauri-app` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.83s
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+register Accelerator { id: Some(AcceleratorId(6226)), mods: ALT | SUPER, key: Space }
+[DEBUG thread-naming] Fallback title set to 'ai-os' GUI is consistently failing to sh...' for 9ec05ade-db75-4b09-8f8a-02bbed3dd9b4
+[DEBUG thread-naming] Snippet set for 9ec05ade-db75-4b09-8f8a-02bbed3dd9b4
+[DEBUG thread-naming] Fallback title set to 'Ok, the panes still have the same offset...' for 40092bad-0a90-4ae0-b2e7-9ffb227a0e0f
+[DEBUG thread-naming] Snippet set for 40092bad-0a90-4ae0-b2e7-9ffb227a0e0f
+[DEBUG thread-naming] Fallback title set to 'when it fails to find a client, it must ...' for ca372bb3-5ddc-4adb-ab05-fcbfc25d5f23
+[DEBUG thread-naming] Snippet set for ca372bb3-5ddc-4adb-ab05-fcbfc25d5f23
+[DEBUG thread-naming] Fallback title set to 'the notehighway has this hideous gray co...' for 93d91d4f-568d-4a4e-af6e-0173182f7006
+[DEBUG thread-naming] Snippet set for 93d91d4f-568d-4a4e-af6e-0173182f7006
+[DEBUG thread-naming] Fallback title set to 'What is the actual API signature for sta...' for 33dae094-8afd-4fb1-a82d-7b2517ffd3e9
+[DEBUG thread-naming] Snippet set for 33dae094-8afd-4fb1-a82d-7b2517ffd3e9
+[DEBUG thread-naming] Fallback title set to 'I have a new idea! And as always, when I...' for 67424f52-fa7c-49c5-90a3-b5658786aee3
+[DEBUG thread-naming] Snippet set for 67424f52-fa7c-49c5-90a3-b5658786aee3
+[DEBUG thread-naming] Fallback title set to 'arrow-up does not recall the previously ...' for 1f473756-7ce9-4975-bce0-f3a24098d8ae
+[DEBUG thread-naming] Snippet set for 1f473756-7ce9-4975-bce0-f3a24098d8ae
+[DEBUG thread-naming] Fallback title set to '(continuing the last agy thread: /Users/...' for 6eb138b5-79f1-4db8-8527-95d7acbe29a1
+[DEBUG thread-naming] Snippet set for 6eb138b5-79f1-4db8-8527-95d7acbe29a1
+[DEBUG thread-naming] Fallback title set to 'Role: Senior JavaScript Architecture Exp...' for f366ebca-d5de-4297-83f7-df52a89d2fc2
+[DEBUG thread-naming] Snippet set for f366ebca-d5de-4297-83f7-df52a89d2fc2
+[DEBUG thread-naming] Fallback title set to 'scripts/get_last_cost.py is STILL output...' for aea2352c-6539-4669-94b1-55ec07db31b1
+[DEBUG thread-naming] Snippet set for aea2352c-6539-4669-94b1-55ec07db31b1
+[DEBUG thread-naming] Fallback title set to 'Nothing happens when I click OpenRouter....' for 745178ac-8103-4943-88ed-c0f58f8b5c83
+[DEBUG thread-naming] Snippet set for 745178ac-8103-4943-88ed-c0f58f8b5c83
+[DEBUG thread-naming] Fallback title set to 'Lots of work to do. This WAS a pixel art...' for 5c4d509b-afdf-4e94-ac63-b95f7b78c0c4
+[DEBUG thread-naming] Snippet set for 5c4d509b-afdf-4e94-ac63-b95f7b78c0c4
+[DEBUG thread-naming] Fallback title set to 'after a response, it scrolls the window ...' for 6b2be2c1-2ac1-4eff-846d-77b799b71327
+[DEBUG thread-naming] Snippet set for 6b2be2c1-2ac1-4eff-846d-77b799b71327
+[DEBUG thread-naming] Fallback title set to 'when the project reloads, I lose the tex...' for 2b907295-60f4-4c7a-b368-05d3e03d6288
+[DEBUG thread-naming] Snippet set for 2b907295-60f4-4c7a-b368-05d3e03d6288
+[DEBUG thread-naming] Fallback title set to '[Error] [AI-OS Thread Log Poll] Error: –...' for 054dc6b6-07ab-4684-a90e-5930dc2149fa
+[DEBUG thread-naming] Snippet set for 054dc6b6-07ab-4684-a90e-5930dc2149fa
+[DEBUG thread-naming] Fallback title set to 'up arrow is supposed to load the previou...' for 144d95a6-182e-4093-8cbc-85008fa3cb6e
+[DEBUG thread-naming] Snippet set for 144d95a6-182e-4093-8cbc-85008fa3cb6e
+[DEBUG thread-naming] Fallback title set to '1. I can't select and copy text in the T...' for 7d948989-2623-4721-a1d0-aee014f527a9
+[DEBUG thread-naming] Snippet set for 7d948989-2623-4721-a1d0-aee014f527a9
+[DEBUG thread-naming] Fallback title set to 'A big issue to resolve: the pricing is n...' for 5c7d6fb4-1138-45d6-bfd5-2fbc1db8561e
+[DEBUG thread-naming] Snippet set for 5c7d6fb4-1138-45d6-bfd5-2fbc1db8561e
+[DEBUG thread-naming] Fallback title set to '# TRIAGE PROTOCOL       You are a struct...' for 9a3f3471-25f4-4e25-933d-535ab87b563e
+[DEBUG thread-naming] Snippet set for 9a3f3471-25f4-4e25-933d-535ab87b563e
+[DEBUG thread-naming] Fallback title set to 'regarding agent log 2026-06-24_20-00_con...' for c825d83e-c0a6-4a91-b1bf-12fde38f6e61
+[DEBUG thread-naming] Snippet set for c825d83e-c0a6-4a91-b1bf-12fde38f6e61
+[DEBUG thread-naming] Fallback title set to 'error[E0599]: no method named `transpare...' for 7502ad96-079f-40c9-8132-2f4ad6128187
+[DEBUG thread-naming] Snippet set for 7502ad96-079f-40c9-8132-2f4ad6128187
+[DEBUG thread-naming] Fallback title set to 'agy --add-dir=$PWD -i "I’m pretty sure I...' for 7c4de66d-2e1d-49da-b525-9b0e41fe81d6
+[DEBUG thread-naming] Snippet set for 7c4de66d-2e1d-49da-b525-9b0e41fe81d6
+[DEBUG thread-naming] Fallback title set to 'I want to create a more detailed impleme...' for 71b2ecd8-ac60-4406-8e33-65f27803765b
+[DEBUG thread-naming] Snippet set for 71b2ecd8-ac60-4406-8e33-65f27803765b
+[DEBUG thread-naming] Fallback title set to 'Act as an expert Rust and Tauri develope...' for c4d5218e-76ea-4413-9a15-288fdc90626b
+[DEBUG thread-naming] Snippet set for c4d5218e-76ea-4413-9a15-288fdc90626b
+[DEBUG thread-naming] Fallback title set to '1. light mode has a few issues: a. Markd...' for 65959a8e-b36e-4267-a806-c71c1b0e3785
+[DEBUG thread-naming] Snippet set for 65959a8e-b36e-4267-a806-c71c1b0e3785
+[DEBUG thread-naming] Fallback title set to 'That did not work. It’s not accurate to ...' for 7d420c8d-e4cf-4529-8f99-bcf653667442
+[DEBUG thread-naming] Snippet set for 7d420c8d-e4cf-4529-8f99-bcf653667442
+[DEBUG thread-naming] Fallback title set to 'I’d like you to try and extract the curr...' for 169ed7f5-78d8-4e82-9170-677082cb9652
+[DEBUG thread-naming] Snippet set for 169ed7f5-78d8-4e82-9170-677082cb9652
+[DEBUG thread-naming] Fallback title set to 'each multiline code snippet in the tool ...' for ba57253a-f56d-4477-b54e-4d1fbbc768b4
+[DEBUG thread-naming] Snippet set for ba57253a-f56d-4477-b54e-4d1fbbc768b4
+[DEBUG thread-naming] Fallback title set to 'The tool calls entries are showing far m...' for a5350f2b-e022-4d98-b7fa-f510ee710b0b
+[DEBUG thread-naming] Snippet set for a5350f2b-e022-4d98-b7fa-f510ee710b0b
+[DEBUG thread-naming] Fallback title set to '### 1. The Visual Fix: Why the terminal ...' for b60492bd-c4f3-4572-ac8b-e0719d1b19ba
+[DEBUG thread-naming] Snippet set for b60492bd-c4f3-4572-ac8b-e0719d1b19ba
+[DEBUG thread-naming] Fallback title set to 'christ, the whole point of switching to ...' for b6cda3d4-878d-4560-8b46-8ae0d9dd3e92
+[DEBUG thread-naming] Snippet set for b6cda3d4-878d-4560-8b46-8ae0d9dd3e92
+[DEBUG thread-naming] Fallback title set to 'I want you to replace the entire UI of t...' for e61f8e19-b626-4dd1-bf0b-4a1867df0d4e
+[DEBUG thread-naming] Snippet set for e61f8e19-b626-4dd1-bf0b-4a1867df0d4e
+[DEBUG thread-naming] Fallback title set to 'I want the notes to light up when they h...' for 978cf6c5-abe8-45e0-9edf-91d5f940bdc3
+[DEBUG thread-naming] Snippet set for 978cf6c5-abe8-45e0-9edf-91d5f940bdc3
+[DEBUG thread-naming] Fallback title set to 'agy --add-dir=$PWD -i "For /Users/matthe...' for b9173dca-e150-43bf-b933-3824834cacca
+[DEBUG thread-naming] Snippet set for b9173dca-e150-43bf-b933-3824834cacca
+[DEBUG thread-naming] Fallback title set to 'Role: Vanilla JS Expert Task: Fix the Co...' for 0b5d7cc9-abbf-4e32-b772-0e132f18a40b
+[DEBUG thread-naming] Snippet set for 0b5d7cc9-abbf-4e32-b772-0e132f18a40b
+[DEBUG thread-naming] Fallback title set to 'review the most recent agent log. The bu...' for d7736fde-eced-4f8b-b344-b0a26c6d9b36
+[DEBUG thread-naming] Snippet set for d7736fde-eced-4f8b-b344-b0a26c6d9b36
+[DEBUG thread-naming] Fallback title set to 'All the panes should be resizable, parti...' for 336d7d22-a11e-4834-ac63-1d8e9aa40941
+[DEBUG thread-naming] Snippet set for 336d7d22-a11e-4834-ac63-1d8e9aa40941
+[DEBUG thread-naming] Fallback title set to 'list the files in this dir' for 6f146802-4db3-4c38-b0e0-d0921c9e95c8
+[DEBUG thread-naming] Snippet set for 6f146802-4db3-4c38-b0e0-d0921c9e95c8
+[DEBUG thread-naming] Fallback title set to '1. Implement our new command-interceptio...' for e95f6203-3437-4129-9130-be7d462ae498
+[DEBUG thread-naming] Snippet set for e95f6203-3437-4129-9130-be7d462ae498
+[DEBUG thread-naming] Fallback title set to 'ls' for 8e5ae6c1-268c-47be-8899-1c5025d3e9a2
+[DEBUG thread-naming] Snippet set for 8e5ae6c1-268c-47be-8899-1c5025d3e9a2
+[DEBUG thread-naming] Fallback title set to 'Ongoing issue that's not been solved: Wh...' for e9bd0f81-3e01-4687-aba2-b07b7420e6f3
+[DEBUG thread-naming] Snippet set for e9bd0f81-3e01-4687-aba2-b07b7420e6f3
+[DEBUG thread-naming] Fallback title set to 'Did you document all this in FEATURES.md...' for 619cae10-077d-402e-9ef7-a02b0fd89f88
+[DEBUG thread-naming] Snippet set for 619cae10-077d-402e-9ef7-a02b0fd89f88
+[DEBUG thread-naming] Fallback title set to 'Let's fix the labels, fix the execution ...' for 8484fad7-48f7-4ca5-bd82-68867f3f74da
+[DEBUG thread-naming] Snippet set for 8484fad7-48f7-4ca5-bd82-68867f3f74da
+[DEBUG thread-naming] Fallback title set to 'When we use `agy`, logs are generated at...' for f49e9ff4-3345-409e-9b01-bdad1d29ba18
+[DEBUG thread-naming] Snippet set for f49e9ff4-3345-409e-9b01-bdad1d29ba18
+[DEBUG thread-naming] Fallback title set to 'when I generate anything, I want all the...' for 8a69c232-58d1-4e70-88da-5a5b184a4593
+[DEBUG thread-naming] Snippet set for 8a69c232-58d1-4e70-88da-5a5b184a4593
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for 47ee4f78-fded-4e97-9a1b-ffe6f7b69896
+[DEBUG thread-naming] Snippet set for 47ee4f78-fded-4e97-9a1b-ffe6f7b69896
+[DEBUG thread-naming] Fallback title set to 'I really hate tailwind. It makes things ...' for 012bdfb0-c349-4184-9ef6-7cd781c0c55e
+[DEBUG thread-naming] Snippet set for 012bdfb0-c349-4184-9ef6-7cd781c0c55e
+[DEBUG thread-naming] Fallback title set to 'System_instructions are still being inse...' for 7ccd987c-0dad-4a5b-be3b-fa1956d373ba
+[DEBUG thread-naming] Snippet set for 7ccd987c-0dad-4a5b-be3b-fa1956d373ba
+[DEBUG thread-naming] Extracted title 'Acknowledge System Instructions' from PLANNER_RESPONSE in 7ccd987c-0dad-4a5b-be3b-fa1956d373ba
+[DEBUG thread-naming] Fallback title set to '``` You  Fork read the most recent file ...' for d9bb037e-c113-4bfd-b75c-030de83d09dd
+[DEBUG thread-naming] Snippet set for d9bb037e-c113-4bfd-b75c-030de83d09dd
+[DEBUG thread-naming] Fallback title set to '``` You  Fork save this thread as a mark...' for 80e51e3d-9530-40a7-8626-6b4f02e6ec95
+[DEBUG thread-naming] Snippet set for 80e51e3d-9530-40a7-8626-6b4f02e6ec95
+[DEBUG thread-naming] Fallback title set to 'The agent is extremely stupid and incomp...' for a8974779-0dc7-4f9f-a203-c9d287c119e4
+[DEBUG thread-naming] Snippet set for a8974779-0dc7-4f9f-a203-c9d287c119e4
+[DEBUG thread-naming] Fallback title set to 'can you simply move the current state of...' for 824e446c-e7dd-40fe-8d87-dbc43db6937d
+[DEBUG thread-naming] Snippet set for 824e446c-e7dd-40fe-8d87-dbc43db6937d
+[DEBUG thread-naming] Fallback title set to 'Antigravity doesn't HAVE `/theme`. So do...' for 3cf3422a-c027-480b-ae74-033505b0b0fe
+[DEBUG thread-naming] Snippet set for 3cf3422a-c027-480b-ae74-033505b0b0fe
+[DEBUG thread-naming] Fallback title set to '# TRIAGE PROTOCOL       You are a struct...' for 8c6bb337-7688-4003-85f3-af110ee7f07d
+[DEBUG thread-naming] Snippet set for 8c6bb337-7688-4003-85f3-af110ee7f07d
+[DEBUG thread-naming] Fallback title set to 'ls -t .agent-logs/ | head -n 2' for 23ace701-defa-4774-b397-b63ac8b23e11
+[DEBUG thread-naming] Snippet set for 23ace701-defa-4774-b397-b63ac8b23e11
+[DEBUG thread-naming] Fallback title set to 'Ok I did actually want you to take a sta...' for 42c1db5d-0481-46fa-b265-0423df88e28e
+[DEBUG thread-naming] Snippet set for 42c1db5d-0481-46fa-b265-0423df88e28e
+[DEBUG thread-naming] Fallback title set to '<USER_REQUEST>      # DIRECT API TASK EX...' for 27f78084-b5d5-4d4e-8441-c0542b54d977
+[DEBUG thread-naming] Snippet set for 27f78084-b5d5-4d4e-8441-c0542b54d977
+[DEBUG thread-naming] Fallback title set to 'fold this into the vision document. It’s...' for c6c2eac9-7aa0-45a9-aa68-a2295e21f783
+[DEBUG thread-naming] Snippet set for c6c2eac9-7aa0-45a9-aa68-a2295e21f783
+[DEBUG thread-naming] Fallback title set to 'Oh! Yeah, we don’t need to bother with o...' for 15b9f3b7-c524-48e3-98cb-acadaa05182f
+[DEBUG thread-naming] Snippet set for 15b9f3b7-c524-48e3-98cb-acadaa05182f
+[DEBUG thread-naming] Fallback title set to 'Follow this implementation plan for phas...' for 9c70afc3-1312-4f9d-a46d-3004b8e6a98c
+[DEBUG thread-naming] Snippet set for 9c70afc3-1312-4f9d-a46d-3004b8e6a98c
+[DEBUG thread-naming] Fallback title set to 'You are the friendly executive responder...' for b603e7f2-3cb1-49a8-abeb-a03c2e116ae2
+[DEBUG thread-naming] Snippet set for b603e7f2-3cb1-49a8-abeb-a03c2e116ae2
+[DEBUG thread-naming] Fallback title set to 'When I start a new thread… first of all,...' for dadb6b1b-652b-45fc-b43a-2d8dcc238640
+[DEBUG thread-naming] Snippet set for dadb6b1b-652b-45fc-b43a-2d8dcc238640
+[DEBUG thread-naming] Fallback title set to 'historical context is being included as ...' for eacae6df-a43c-41e2-937c-567be42699b5
+[DEBUG thread-naming] Snippet set for eacae6df-a43c-41e2-937c-567be42699b5
+[DEBUG thread-naming] Fallback title set to 'the camera starts zoomed in WAY too much...' for 13a75236-2581-473a-9590-3b8b719f08bc
+[DEBUG thread-naming] Snippet set for 13a75236-2581-473a-9590-3b8b719f08bc
+[DEBUG thread-naming] Fallback title set to 'Add a copy button to each final response...' for 12ee98cd-34ae-41a4-ad94-6cd47b27fc9d
+[DEBUG thread-naming] Snippet set for 12ee98cd-34ae-41a4-ad94-6cd47b27fc9d
+[DEBUG thread-naming] Fallback title set to 'for some reason when the app has to spaw...' for 5f7b95ae-4016-46c9-9a6d-03c7c6d26dab
+[DEBUG thread-naming] Snippet set for 5f7b95ae-4016-46c9-9a6d-03c7c6d26dab
+[DEBUG thread-naming] Fallback title set to 'When I hit up arrow and my cursor is at ...' for 829886a9-10cb-4e92-9efc-0d6eb894c974
+[DEBUG thread-naming] Snippet set for 829886a9-10cb-4e92-9efc-0d6eb894c974
+[DEBUG thread-naming] Fallback title set to 'Recall the last changes you made to this...' for 76f02337-654c-4a92-aa1f-df078ae5244a
+[DEBUG thread-naming] Snippet set for 76f02337-654c-4a92-aa1f-df078ae5244a
+[DEBUG thread-naming] Fallback title set to 'In our last agy thread, you reponded: ``...' for b254a564-7a42-4cfc-acc3-86f39a14c41a
+[DEBUG thread-naming] Snippet set for b254a564-7a42-4cfc-acc3-86f39a14c41a
+[DEBUG thread-naming] Fallback title set to 'Set up vite so I have a hotreloaded serv...' for 5d3da325-ef75-4726-bb9c-2814bd3a8814
+[DEBUG thread-naming] Snippet set for 5d3da325-ef75-4726-bb9c-2814bd3a8814
+[DEBUG thread-naming] Fallback title set to 'new feature request: ability to cmd-clic...' for 13f145d5-c8c7-4897-a91f-c4366a7eae86
+[DEBUG thread-naming] Snippet set for 13f145d5-c8c7-4897-a91f-c4366a7eae86
+[DEBUG thread-naming] Fallback title set to 'specifically for bass mode: the colors o...' for 3a07179f-76c1-4a7f-8b27-758a89e9d2fe
+[DEBUG thread-naming] Snippet set for 3a07179f-76c1-4a7f-8b27-758a89e9d2fe
+[DEBUG thread-naming] Fallback title set to 'When I hover over the agent output, the ...' for cbbf44a3-be6f-4c21-8326-2ea82d16d287
+[DEBUG thread-naming] Snippet set for cbbf44a3-be6f-4c21-8326-2ea82d16d287
+[DEBUG thread-naming] Fallback title set to 'Task: Create a token-saving shell wrappe...' for 0b97ef46-a661-4ed0-9ff4-bd3bb0254238
+[DEBUG thread-naming] Snippet set for 0b97ef46-a661-4ed0-9ff4-bd3bb0254238
+[DEBUG thread-naming] Fallback title set to 'Refactor the UI layout in `index.html` t...' for d17a031d-8d51-4138-a309-19c40b330562
+[DEBUG thread-naming] Snippet set for d17a031d-8d51-4138-a309-19c40b330562
+[DEBUG thread-naming] Fallback title set to 'Task: Implement a windowed file reader t...' for 2bf92e4f-2b2d-44fd-9288-d99b68f0fc9f
+[DEBUG thread-naming] Snippet set for 2bf92e4f-2b2d-44fd-9288-d99b68f0fc9f
+[DEBUG thread-naming] Fallback title set to 'Threads are still being saved as uuids i...' for d52fabeb-02f1-431e-af6e-bd90936e9e26
+[DEBUG thread-naming] Snippet set for d52fabeb-02f1-431e-af6e-bd90936e9e26
+[DEBUG thread-naming] Fallback title set to '# GATEWAY SELF-REFLECTION AUDIT     You ...' for 93e3313b-947e-4e9d-8779-9d34782c8f2d
+[DEBUG thread-naming] Snippet set for 93e3313b-947e-4e9d-8779-9d34782c8f2d
+[DEBUG thread-naming] Fallback title set to '# DIRECT API TASK EXECUTOR     [BUDGET_M...' for 26058eb8-85f6-4eb7-be34-9bdf8c490e65
+[DEBUG thread-naming] Snippet set for 26058eb8-85f6-4eb7-be34-9bdf8c490e65
+[DEBUG thread-naming] Fallback title set to 'So only the most recent command’s log is...' for a851bf44-ed3f-4dc7-acc4-98a27a96c5df
+[DEBUG thread-naming] Snippet set for a851bf44-ed3f-4dc7-acc4-98a27a96c5df
+[DEBUG thread-naming] Fallback title set to 'new feature: automatic os-synced light/d...' for b3b5c98f-8b57-45a9-97b5-4d9ecf9d9d47
+[DEBUG thread-naming] Snippet set for b3b5c98f-8b57-45a9-97b5-4d9ecf9d9d47
+[DEBUG thread-naming] Fallback title set to 'Task: Fix the telemetry script's fake da...' for 7fcbeebf-41ad-4458-b0e5-b5155bb999be
+[DEBUG thread-naming] Snippet set for 7fcbeebf-41ad-4458-b0e5-b5155bb999be
+[DEBUG thread-naming] Fallback title set to 'a' for a2e6923c-bf51-40dd-a1ca-8889a59ec5c0
+[DEBUG thread-naming] Snippet set for a2e6923c-bf51-40dd-a1ca-8889a59ec5c0
+[DEBUG thread-naming] Fallback title set to 'Implement 3. Codebase Ingestion Parser (...' for 388fe278-686a-4012-b34a-88fc0c85ec7f
+[DEBUG thread-naming] Snippet set for 388fe278-686a-4012-b34a-88fc0c85ec7f
+[DEBUG thread-naming] Fallback title set to 'Re: the last implemented change. When I ...' for 091abd66-db3f-4c64-a5d3-39f00d71268c
+[DEBUG thread-naming] Snippet set for 091abd66-db3f-4c64-a5d3-39f00d71268c
+[DEBUG thread-naming] Fallback title set to '"Histortical context” should be separate...' for 31dc126f-45c4-4cbe-8459-86f136c85409
+[DEBUG thread-naming] Snippet set for 31dc126f-45c4-4cbe-8459-86f136c85409
+[DEBUG thread-naming] Fallback title set to 'tauri app is still broken; nothing is lo...' for b097ab81-0f37-454d-a352-99eac8bc62a4
+[DEBUG thread-naming] Snippet set for b097ab81-0f37-454d-a352-99eac8bc62a4
+[DEBUG thread-naming] Fallback title set to 'the gemini thread extractor userscript i...' for 69be1536-d9c0-4eb9-93ad-2276e811680a
+[DEBUG thread-naming] Snippet set for 69be1536-d9c0-4eb9-93ad-2276e811680a
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 1 - Context Engineering (A...' for e9f5ed39-bd5d-47b4-a5a3-83ea547a48d0
+[DEBUG thread-naming] Snippet set for e9f5ed39-bd5d-47b4-a5a3-83ea547a48d0
+[DEBUG thread-naming] Fallback title set to '**Title:** Bug: Terminal layout corrupti...' for 4fa493ab-78c6-4ae3-beef-d55a0f5d7054
+[DEBUG thread-naming] Snippet set for 4fa493ab-78c6-4ae3-beef-d55a0f5d7054
+[DEBUG thread-naming] Fallback title set to 'Nimbalyst has agy support, but only supp...' for 35b426dd-815a-4e19-a7d1-0906e36bf810
+[DEBUG thread-naming] Snippet set for 35b426dd-815a-4e19-a7d1-0906e36bf810
+[DEBUG thread-naming] Fallback title set to 'Lots of issues with the song mode. In li...' for 2233e540-e5e4-4f1e-abc4-d4d8f7250ea6
+[DEBUG thread-naming] Snippet set for 2233e540-e5e4-4f1e-abc4-d4d8f7250ea6
+[DEBUG thread-naming] Fallback title set to 'Ok, our sans-serif final output modal ne...' for 784002e3-2250-4862-88c4-334183a26e63
+[DEBUG thread-naming] Snippet set for 784002e3-2250-4862-88c4-334183a26e63
+[DEBUG thread-naming] Fallback title set to 'For some reason I'm getting `Preference ...' for 90d497f7-a3e4-4c5c-9dc9-3af5c612e872
+[DEBUG thread-naming] Snippet set for 90d497f7-a3e4-4c5c-9dc9-3af5c612e872
+[DEBUG thread-naming] Fallback title set to 'I migrated user accounts and my Antigrav...' for 97e844f4-164e-44ab-bd4b-b42cf87340f2
+[DEBUG thread-naming] Snippet set for 97e844f4-164e-44ab-bd4b-b42cf87340f2
+[DEBUG thread-naming] Extracted title 'Syncing Antigravity IDE Settings' from PLANNER_RESPONSE in 97e844f4-164e-44ab-bd4b-b42cf87340f2
+[DEBUG thread-naming] Fallback title set to '- we have to never use a thread name lik...' for db4d8157-d3ea-48a4-a201-553129277297
+[DEBUG thread-naming] Snippet set for db4d8157-d3ea-48a4-a201-553129277297
+[DEBUG thread-naming] Extracted title 'Fix Thread Naming Bug' from PLANNER_RESPONSE in db4d8157-d3ea-48a4-a201-553129277297
+[DEBUG thread-naming] Fallback title set to 'furthering our discussion on tmux sessio...' for 64292c87-04d8-4e89-b456-77ab24096790
+[DEBUG thread-naming] Snippet set for 64292c87-04d8-4e89-b456-77ab24096790
+[DEBUG thread-naming] Fallback title set to 'See @[ARCHITECTURAL_BLUEPRINTS.md] and @...' for aa9417de-6cb1-441b-a72e-078db628f4c1
+[DEBUG thread-naming] Snippet set for aa9417de-6cb1-441b-a72e-078db628f4c1
+[DEBUG thread-naming] Fallback title set to 'New problem with our historical threads ...' for f15eb76e-943c-4e1b-8639-c02985ead94c
+[DEBUG thread-naming] Snippet set for f15eb76e-943c-4e1b-8639-c02985ead94c
+[DEBUG thread-naming] Fallback title set to 'How can I add a series of images that th...' for 947f29ab-ae77-4dab-b2af-6bf2529ce37d
+[DEBUG thread-naming] Snippet set for 947f29ab-ae77-4dab-b2af-6bf2529ce37d
+[DEBUG thread-naming] Fallback title set to 'I still can't cmd-click filepaths. I wan...' for 38c685ba-f85d-468b-b3d1-0fd456c490d8
+[DEBUG thread-naming] Snippet set for 38c685ba-f85d-468b-b3d1-0fd456c490d8
+[DEBUG thread-naming] Fallback title set to 'exciting news! We’re going to shift from...' for a6d9e11d-12f2-4277-bc7f-858b30d36520
+[DEBUG thread-naming] Snippet set for a6d9e11d-12f2-4277-bc7f-858b30d36520
+[DEBUG thread-naming] Fallback title set to 'For the google.gemini.com userscript, I'...' for 2614f6b9-4a6d-40a5-a780-5930320a082d
+[DEBUG thread-naming] Snippet set for 2614f6b9-4a6d-40a5-a780-5930320a082d
+[DEBUG thread-naming] Fallback title set to 'Add buttons to each message that copies ...' for eba8c05b-819e-4c77-ba3b-5854df62b923
+[DEBUG thread-naming] Snippet set for eba8c05b-819e-4c77-ba3b-5854df62b923
+[DEBUG thread-naming] Fallback title set to 'Something quite irritating is happening....' for a0897ca6-26db-4842-b580-7f4ea55e1e4c
+[DEBUG thread-naming] Snippet set for a0897ca6-26db-4842-b580-7f4ea55e1e4c
+[DEBUG thread-naming] Fallback title set to 'the reason we added a way to intercept t...' for bdabf4d9-e6ed-453e-a42e-00584504067b
+[DEBUG thread-naming] Snippet set for bdabf4d9-e6ed-453e-a42e-00584504067b
+[DEBUG thread-naming] Fallback title set to 'Sometimes the main preview stops updatin...' for 9d4875fd-83d8-4550-8332-a8a833787b82
+[DEBUG thread-naming] Snippet set for 9d4875fd-83d8-4550-8332-a8a833787b82
+[DEBUG thread-naming] Fallback title set to 'I sent a message when the TUI was open t...' for 1a8f992c-dc23-4095-afed-589ff7f038b9
+[DEBUG thread-naming] Snippet set for 1a8f992c-dc23-4095-afed-589ff7f038b9
+[DEBUG thread-naming] Fallback title set to 'I like that we use multiple tmux session...' for 48532954-2d5a-4276-bc73-b137a877d415
+[DEBUG thread-naming] Snippet set for 48532954-2d5a-4276-bc73-b137a877d415
+[DEBUG thread-naming] Extracted title 'Disable Tmux for Agents' from PLANNER_RESPONSE in 48532954-2d5a-4276-bc73-b137a877d415
+[DEBUG thread-naming] Fallback title set to 'I asked the agent to save a response, an...' for 47289a08-6f49-4218-b9a4-1a15a8a10d98
+[DEBUG thread-naming] Snippet set for 47289a08-6f49-4218-b9a4-1a15a8a10d98
+[DEBUG thread-naming] Fallback title set to 'Agent tool calls should be displayed lik...' for b4f8bdcc-3f51-4e25-ba8d-57fdd9a0880d
+[DEBUG thread-naming] Snippet set for b4f8bdcc-3f51-4e25-ba8d-57fdd9a0880d
+[DEBUG thread-naming] Fallback title set to 'in projects/structural-constraint-art, a...' for 1e66ee71-cb4b-442d-924c-753d535cbc0f
+[DEBUG thread-naming] Snippet set for 1e66ee71-cb4b-442d-924c-753d535cbc0f
+[DEBUG thread-naming] Fallback title set to 'see how terrible the sidebar looks? Fix ...' for d025a87a-8748-454d-b03a-c454fd911aef
+[DEBUG thread-naming] Snippet set for d025a87a-8748-454d-b03a-c454fd911aef
+[DEBUG thread-naming] Fallback title set to 'have a look at the most recent message i...' for 048ab3a6-6985-467f-9224-c89105d9358d
+[DEBUG thread-naming] Snippet set for 048ab3a6-6985-467f-9224-c89105d9358d
+[DEBUG thread-naming] Fallback title set to 'Look at most recent thread. It sent me a...' for f2ce1097-ebf7-49fe-9e68-389be97c1df3
+[DEBUG thread-naming] Snippet set for f2ce1097-ebf7-49fe-9e68-389be97c1df3
+[DEBUG thread-naming] Fallback title set to 'Implement the following UI refactoring, ...' for 6bfc6682-c8c2-40ff-bdba-c6cd2debdecf
+[DEBUG thread-naming] Snippet set for 6bfc6682-c8c2-40ff-bdba-c6cd2debdecf
+[DEBUG thread-naming] Fallback title set to 'list the files in this dir' for 7c34d2ab-d062-4f04-a123-125c4373646a
+[DEBUG thread-naming] Snippet set for 7c34d2ab-d062-4f04-a123-125c4373646a
+[DEBUG thread-naming] Fallback title set to 'agy --add-dir=$PWD -i "/clear" --dangero...' for 86a0c190-ba91-4775-a46c-581eb823f2e2
+[DEBUG thread-naming] Snippet set for 86a0c190-ba91-4775-a46c-581eb823f2e2
+[DEBUG thread-naming] Fallback title set to 'When I click “new thread” button, a plac...' for a5d86882-79c1-43b6-ad9c-8dffc551e35c
+[DEBUG thread-naming] Snippet set for a5d86882-79c1-43b6-ad9c-8dffc551e35c
+[DEBUG thread-naming] Fallback title set to 'hello' for 620a3e0c-0ead-4562-9edc-0a4fe6867d94
+[DEBUG thread-naming] Snippet set for 620a3e0c-0ead-4562-9edc-0a4fe6867d94
+[DEBUG thread-naming] Fallback title set to 'When the app starts, it tries to open th...' for adcb5eb2-ee48-412a-a8a0-32127365b0ff
+[DEBUG thread-naming] Snippet set for adcb5eb2-ee48-412a-a8a0-32127365b0ff
+[DEBUG thread-naming] Fallback title set to 'BEGIN implementing our @[specs/export_pl...' for 10cf909f-f16b-47b1-8899-fc025474aa19
+[DEBUG thread-naming] Snippet set for 10cf909f-f16b-47b1-8899-fc025474aa19
+[DEBUG thread-naming] Fallback title set to 'This project USED to be a pixel art gene...' for a3c0e73b-5bf4-4dd5-bc3c-f8cd44e9e38f
+[DEBUG thread-naming] Snippet set for a3c0e73b-5bf4-4dd5-bc3c-f8cd44e9e38f
+[DEBUG thread-naming] Fallback title set to 'I still cannot select text and copy it i...' for 52e066d4-26f3-4002-b8aa-6a356a1496c0
+[DEBUG thread-naming] Snippet set for 52e066d4-26f3-4002-b8aa-6a356a1496c0
+[DEBUG thread-naming] Fallback title set to 'clicking on a thread, it `/resume`d the ...' for 6dd5add6-9870-447f-9947-5a03928b2f4b
+[DEBUG thread-naming] Snippet set for 6dd5add6-9870-447f-9947-5a03928b2f4b
+[DEBUG thread-naming] Fallback title set to 'the sidebar shows lots of threads as “Co...' for be200b62-50db-4a31-a58d-bb7c82acd4ff
+[DEBUG thread-naming] Snippet set for be200b62-50db-4a31-a58d-bb7c82acd4ff
+[DEBUG thread-naming] Fallback title set to 'Is this just 2.5 flash lites basic incom...' for d8c43bb4-03d3-40dc-9c9e-882e4332876b
+[DEBUG thread-naming] Snippet set for d8c43bb4-03d3-40dc-9c9e-882e4332876b
+[DEBUG thread-naming] Fallback title set to 'Output.md is STILL not opening in the pr...' for f2c79479-d784-4e88-97b0-849a3d75e4f1
+[DEBUG thread-naming] Snippet set for f2c79479-d784-4e88-97b0-849a3d75e4f1
+[DEBUG thread-naming] Fallback title set to 'the reason we added a way to intercept t...' for 6f08346c-63da-470a-a224-e553b602636d
+[DEBUG thread-naming] Snippet set for 6f08346c-63da-470a-a224-e553b602636d
+[DEBUG thread-naming] Fallback title set to 'In settings.toml, there's a part: ``` [a...' for f85f0a42-418f-47f1-b0d7-924d6251432a
+[DEBUG thread-naming] Snippet set for f85f0a42-418f-47f1-b0d7-924d6251432a
+[DEBUG thread-naming] Fallback title set to '# Objective Create a lightweight, determ...' for 3b8431f9-5798-491b-b1a7-ad3acb4bec91
+[DEBUG thread-naming] Snippet set for 3b8431f9-5798-491b-b1a7-ad3acb4bec91
+[DEBUG thread-naming] Fallback title set to 'no threads are loading, output is not lo...' for 0f903cc9-266f-44c3-921d-ee8be975c277
+[DEBUG thread-naming] Snippet set for 0f903cc9-266f-44c3-921d-ee8be975c277
+[DEBUG thread-naming] Extracted title 'Fix Thread and Output Loading' from PLANNER_RESPONSE in 0f903cc9-266f-44c3-921d-ee8be975c277
+[DEBUG thread-naming] Fallback title set to 'These are excellent catches! Both issues...' for f579ae27-e1b7-459f-ae00-df76150241ac
+[DEBUG thread-naming] Snippet set for f579ae27-e1b7-459f-ae00-df76150241ac
+[DEBUG thread-naming] Fallback title set to 'the preview pane is rendering the messag...' for 4789847e-c4b6-40d0-bf91-1af725703f5c
+[DEBUG thread-naming] Snippet set for 4789847e-c4b6-40d0-bf91-1af725703f5c
+[DEBUG thread-naming] Fallback title set to 'I'm curious if I can add Gemini 3.1 Pro ...' for 05e62b64-8b9c-4f40-99e2-284492ab3d1c
+[DEBUG thread-naming] Snippet set for 05e62b64-8b9c-4f40-99e2-284492ab3d1c
+[DEBUG thread-naming] Extracted title 'Add Gemini 3.1 Pro (Low)' from PLANNER_RESPONSE in 05e62b64-8b9c-4f40-99e2-284492ab3d1c
+[DEBUG thread-naming] Fallback title set to 'what model is this using? I asked for a ...' for 6d04662a-bd0e-4cde-afd9-397c2d4d21db
+[DEBUG thread-naming] Snippet set for 6d04662a-bd0e-4cde-afd9-397c2d4d21db
+[DEBUG thread-naming] Fallback title set to 'Some big issues to fix: 1. I can't use s...' for ca66979b-43f9-4127-8dda-34ec1bda9983
+[DEBUG thread-naming] Snippet set for ca66979b-43f9-4127-8dda-34ec1bda9983
+[DEBUG thread-naming] Fallback title set to 'have a look at the most recent agent log...' for be3cd2c0-288a-4695-a51b-7b1fdafef95d
+[DEBUG thread-naming] Snippet set for be3cd2c0-288a-4695-a51b-7b1fdafef95d
+[DEBUG thread-naming] Fallback title set to 'My new goal for this project is to be ab...' for 34867002-1a9e-47eb-a884-c72d772ac98d
+[DEBUG thread-naming] Snippet set for 34867002-1a9e-47eb-a884-c72d772ac98d
+[DEBUG thread-naming] Fallback title set to 'I'd like to start using this harness, to...' for bcd4f0b4-6efe-4616-ad11-38db9fac729f
+[DEBUG thread-naming] Snippet set for bcd4f0b4-6efe-4616-ad11-38db9fac729f
+[DEBUG thread-naming] Fallback title set to 'Role: Senior JavaScript Architecture Exp...' for a9bf4b5e-ffd4-48ff-a732-bac0b8508422
+[DEBUG thread-naming] Snippet set for a9bf4b5e-ffd4-48ff-a732-bac0b8508422
+[DEBUG thread-naming] Fallback title set to 'The terminal is constantly being rendere...' for d65f7300-3edf-474e-bd29-aed52ba3f43e
+[DEBUG thread-naming] Snippet set for d65f7300-3edf-474e-bd29-aed52ba3f43e
+[DEBUG thread-naming] Fallback title set to 'when I hover over the cost of a message,...' for 727b7fa0-afe4-462a-a538-e9a1cba5eef0
+[DEBUG thread-naming] Snippet set for 727b7fa0-afe4-462a-a538-e9a1cba5eef0
+[DEBUG thread-naming] Fallback title set to 'Have a look at /Users/Shared/MigrationBr...' for 9a460c06-dc8f-45c9-a940-de9506e59d3e
+[DEBUG thread-naming] Snippet set for 9a460c06-dc8f-45c9-a940-de9506e59d3e
+[DEBUG thread-naming] Fallback title set to 'so the terminal mode is totally insuffic...' for 8247ee3a-0e0c-4f8f-ac95-d95a019fb383
+[DEBUG thread-naming] Snippet set for 8247ee3a-0e0c-4f8f-ac95-d95a019fb383
+[DEBUG thread-naming] Fallback title set to 'I STILL often see: `[ai-os] Connecting t...' for 9a03ae63-058d-4657-9e0a-1b74ef065018
+[DEBUG thread-naming] Snippet set for 9a03ae63-058d-4657-9e0a-1b74ef065018
+[DEBUG thread-naming] Fallback title set to 'For now, make the gemini floating window...' for c602417f-8d9f-4a10-b9df-3f86e1feced6
+[DEBUG thread-naming] Snippet set for c602417f-8d9f-4a10-b9df-3f86e1feced6
+[DEBUG thread-naming] Fallback title set to 'I should be able to toggle the sessions ...' for 23a85787-ce62-4255-8833-193d7b7a32b9
+[DEBUG thread-naming] Snippet set for 23a85787-ce62-4255-8833-193d7b7a32b9
+[DEBUG thread-naming] Fallback title set to 'I want more info for the agent steps. “F...' for 4cbb4013-196f-4ba4-9562-d952203f3172
+[DEBUG thread-naming] Snippet set for 4cbb4013-196f-4ba4-9562-d952203f3172
+[DEBUG thread-naming] Fallback title set to 'Oops. I hit enter a little quickly there...' for 08e0e286-28d7-4c2e-aea6-54be3562750a
+[DEBUG thread-naming] Snippet set for 08e0e286-28d7-4c2e-aea6-54be3562750a
+[DEBUG thread-naming] Fallback title set to 'Really enjoy the gemini webview. I want ...' for 5e90f1ec-5957-492c-bfd5-d28ced129ced
+[DEBUG thread-naming] Snippet set for 5e90f1ec-5957-492c-bfd5-d28ced129ced
+[DEBUG thread-naming] Fallback title set to 'When I build the app, the terminal is ne...' for a8b6b77c-3053-4e3f-adcc-012f89a6c191
+[DEBUG thread-naming] Snippet set for a8b6b77c-3053-4e3f-adcc-012f89a6c191
+[DEBUG thread-naming] Fallback title set to 'new function: pause when convenient - do...' for c6834b2b-d5cb-4bdf-8b71-0a9d4088c9ef
+[DEBUG thread-naming] Snippet set for c6834b2b-d5cb-4bdf-8b71-0a9d4088c9ef
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for a45802a1-de88-4083-baaf-c48578e7dfa5
+[DEBUG thread-naming] Snippet set for a45802a1-de88-4083-baaf-c48578e7dfa5
+[DEBUG thread-naming] Fallback title set to 'Role: Senior JavaScript Architecture Exp...' for 8540810d-92d3-492a-a24f-5785010620a5
+[DEBUG thread-naming] Snippet set for 8540810d-92d3-492a-a24f-5785010620a5
+[DEBUG thread-naming] Fallback title set to 'I don’t get it, I see stuff in the dev s...' for 68fab690-4cec-41fe-947e-cf5c82a4f5ce
+[DEBUG thread-naming] Snippet set for 68fab690-4cec-41fe-947e-cf5c82a4f5ce
+[DEBUG thread-naming] Extracted title 'Fix Thread Title UI Rendering' from PLANNER_RESPONSE in 68fab690-4cec-41fe-947e-cf5c82a4f5ce
+[DEBUG thread-naming] Fallback title set to 'Lets store the gemini and OR api keys in...' for a1a14934-8734-4ffb-8eea-e7608ab7f74a
+[DEBUG thread-naming] Snippet set for a1a14934-8734-4ffb-8eea-e7608ab7f74a
+[DEBUG thread-naming] Fallback title set to 'when continuing a thread (auto-clear off...' for 09d92552-1222-4da2-8cfe-9f20e1808f5f
+[DEBUG thread-naming] Snippet set for 09d92552-1222-4da2-8cfe-9f20e1808f5f
+[DEBUG thread-naming] Extracted title 'Acknowledge System Instructions' from PLANNER_RESPONSE in 09d92552-1222-4da2-8cfe-9f20e1808f5f
+[DEBUG thread-naming] Fallback title set to 'the threads list in the sidebar should h...' for 7f2be36a-f0fe-4e4c-acc7-ddf7a18e9311
+[DEBUG thread-naming] Snippet set for 7f2be36a-f0fe-4e4c-acc7-ddf7a18e9311
+[DEBUG thread-naming] Extracted title 'Update thread list layout' from PLANNER_RESPONSE in 7f2be36a-f0fe-4e4c-acc7-ddf7a18e9311
+[DEBUG thread-naming] Fallback title set to 'Role: Senior AI Architect' for bfde1edc-f125-4e38-871a-3b1e96fefecc
+[DEBUG thread-naming] Snippet set for bfde1edc-f125-4e38-871a-3b1e96fefecc
+[DEBUG thread-naming] Fallback title set to '# TRIAGE PROTOCOL       You are a struct...' for 71840806-67c7-4f74-b7b7-cd875c765bf6
+[DEBUG thread-naming] Snippet set for 71840806-67c7-4f74-b7b7-cd875c765bf6
+[DEBUG thread-naming] Fallback title set to 'Role: Senior AI Prompt Engineer & System...' for bacb3d02-eaad-483d-8054-b79d3f794267
+[DEBUG thread-naming] Snippet set for bacb3d02-eaad-483d-8054-b79d3f794267
+[DEBUG thread-naming] Fallback title set to 're: userscript The thread saving doesn't...' for 8eaf6097-20e8-4b1e-80e5-7ddb8148d844
+[DEBUG thread-naming] Snippet set for 8eaf6097-20e8-4b1e-80e5-7ddb8148d844
+[DEBUG thread-naming] Fallback title set to 'This should show me a dialog with the pr...' for 5e29c5d5-adfd-42c6-be8c-a2f93bb3295a
+[DEBUG thread-naming] Snippet set for 5e29c5d5-adfd-42c6-be8c-a2f93bb3295a
+[DEBUG thread-naming] Fallback title set to 'I must to be able to click directly on t...' for 4934065e-ac9b-42a6-8556-69b056900c0b
+[DEBUG thread-naming] Snippet set for 4934065e-ac9b-42a6-8556-69b056900c0b
+[DEBUG thread-naming] Fallback title set to 'As I scroll down the threads listed for ...' for 4d56258a-f843-47bd-9e7b-6acc31acac7b
+[DEBUG thread-naming] Snippet set for 4d56258a-f843-47bd-9e7b-6acc31acac7b
+[DEBUG thread-naming] Extracted title 'Implement infinite scroll for threads' from PLANNER_RESPONSE in 4d56258a-f843-47bd-9e7b-6acc31acac7b
+[DEBUG thread-naming] Fallback title set to 'Print my current Antigravity 5-hour and ...' for c1ef948b-2579-433e-b441-e2cfe096956d
+[DEBUG thread-naming] Snippet set for c1ef948b-2579-433e-b441-e2cfe096956d
+[DEBUG thread-naming] Fallback title set to 'I'd like to be able to add new projects....' for c6cc1e0c-1ea6-4008-8602-b0957f1bc0bc
+[DEBUG thread-naming] Snippet set for c6cc1e0c-1ea6-4008-8602-b0957f1bc0bc
+[DEBUG thread-naming] Fallback title set to 'I sent a message when the TUI was open t...' for a6bf1fe9-c78b-41f1-a9fd-274857065afe
+[DEBUG thread-naming] Snippet set for a6bf1fe9-c78b-41f1-a9fd-274857065afe
+[DEBUG thread-naming] Fallback title set to 'You are the friendly executive responder...' for be95747c-2378-4a76-b9d1-f7cc6d2862f4
+[DEBUG thread-naming] Snippet set for be95747c-2378-4a76-b9d1-f7cc6d2862f4
+[DEBUG thread-naming] Fallback title set to 'Threads don’t work properly. If I’m in a...' for 7e0f2e59-5c9b-4e83-8dac-6fd48b7f6f45
+[DEBUG thread-naming] Snippet set for 7e0f2e59-5c9b-4e83-8dac-6fd48b7f6f45
+[DEBUG thread-naming] Fallback title set to 'I need to understand how the pi desktop ...' for 6d422d0f-dbed-471f-8923-e6dd3aef065e
+[DEBUG thread-naming] Snippet set for 6d422d0f-dbed-471f-8923-e6dd3aef065e
+[DEBUG thread-naming] Fallback title set to 'I'd like the light/dark mode to update i...' for ccf3472d-6f03-447c-994f-f644fda0d5c4
+[DEBUG thread-naming] Snippet set for ccf3472d-6f03-447c-994f-f644fda0d5c4
+[DEBUG thread-naming] Fallback title set to 'the notes should glow way more when they...' for 718ccd11-cbe6-4895-8a05-7ef739583674
+[DEBUG thread-naming] Snippet set for 718ccd11-cbe6-4895-8a05-7ef739583674
+[DEBUG thread-naming] Fallback title set to 'I’m wondering why this app using Pi is s...' for 2198a2fc-a242-499d-8d47-36f0491b53d5
+[DEBUG thread-naming] Snippet set for 2198a2fc-a242-499d-8d47-36f0491b53d5
+[DEBUG thread-naming] Fallback title set to 'Act as a senior frontend engineer. I am ...' for 3d555e38-2010-42d4-8476-f3003e9eb2b1
+[DEBUG thread-naming] Snippet set for 3d555e38-2010-42d4-8476-f3003e9eb2b1
+[DEBUG thread-naming] Fallback title set to 'When the model is thinking in one sessio...' for 5b5752dc-498d-47c2-8c69-871ac805302c
+[DEBUG thread-naming] Snippet set for 5b5752dc-498d-47c2-8c69-871ac805302c
+[DEBUG thread-naming] Fallback title set to 'smart-c2p --out codebase.txt Execution f...' for e9eac825-bba2-47c1-a162-e272d0b0cb00
+[DEBUG thread-naming] Snippet set for e9eac825-bba2-47c1-a162-e272d0b0cb00
+[DEBUG thread-naming] Fallback title set to 'yeah, go ahead and duplicate it' for a957c3d7-f06b-4df9-9240-304392c8b657
+[DEBUG thread-naming] Snippet set for a957c3d7-f06b-4df9-9240-304392c8b657
+[DEBUG thread-naming] Fallback title set to 'I want to try generating real vector art...' for 8078e746-1910-45e8-8d62-2ac97ebd29c0
+[DEBUG thread-naming] Snippet set for 8078e746-1910-45e8-8d62-2ac97ebd29c0
+[DEBUG thread-naming] Fallback title set to 'help me solve this issue:  brew install ...' for 964e0c64-0bd8-4228-b233-c2456c2c95cc
+[DEBUG thread-naming] Snippet set for 964e0c64-0bd8-4228-b233-c2456c2c95cc
+[DEBUG thread-naming] Fallback title set to 'Implement markdown formatting for TUI ou...' for 59977017-5d5e-4454-bffb-16cc3eb1f46d
+[DEBUG thread-naming] Snippet set for 59977017-5d5e-4454-bffb-16cc3eb1f46d
+[DEBUG thread-naming] Fallback title set to '# DIRECT API TASK EXECUTOR     [BUDGET_M...' for eac7123e-c95d-4dc1-af5a-68f7773bc5a5
+[DEBUG thread-naming] Snippet set for eac7123e-c95d-4dc1-af5a-68f7773bc5a5
+[DEBUG thread-naming] Fallback title set to 'the tui display has really gone downhill...' for 2b819ebc-9854-42d4-9a55-8b48c228bdc3
+[DEBUG thread-naming] Snippet set for 2b819ebc-9854-42d4-9a55-8b48c228bdc3
+[DEBUG thread-naming] Extracted title 'Fix TUI Display & Paste' from PLANNER_RESPONSE in 2b819ebc-9854-42d4-9a55-8b48c228bdc3
+[DEBUG thread-naming] Fallback title set to 'In dark mode the notes are way too brigh...' for a45b721a-7004-4ada-846a-805897f4c259
+[DEBUG thread-naming] Snippet set for a45b721a-7004-4ada-846a-805897f4c259
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 5 - Context Architecture C...' for 3f4df818-ae4b-44fc-bd84-29c74023218e
+[DEBUG thread-naming] Snippet set for 3f4df818-ae4b-44fc-bd84-29c74023218e
+[DEBUG thread-naming] Fallback title set to 'Ok, so I just opened the mac build and I...' for eca296e9-b542-41f8-812b-579f2b963d12
+[DEBUG thread-naming] Snippet set for eca296e9-b542-41f8-812b-579f2b963d12
+[DEBUG thread-naming] Fallback title set to 'Please help me out here. I’m trying to b...' for 091390e5-1c7a-4a65-a60e-79ef63702700
+[DEBUG thread-naming] Snippet set for 091390e5-1c7a-4a65-a60e-79ef63702700
+[DEBUG thread-naming] Fallback title set to 'Implement automatic Github Actions deplo...' for c5b68a72-ee0e-45a3-8b4f-985ba38982ee
+[DEBUG thread-naming] Snippet set for c5b68a72-ee0e-45a3-8b4f-985ba38982ee
+[DEBUG thread-naming] Fallback title set to 'Output.md is still not being loaded. Per...' for 46fe787f-abdb-436a-9e7c-50d40dccff39
+[DEBUG thread-naming] Snippet set for 46fe787f-abdb-436a-9e7c-50d40dccff39
+[DEBUG thread-naming] Fallback title set to 'Act as an expert macOS automation engine...' for 430c3a4b-93ec-491f-ac5f-95ea1b0e43a0
+[DEBUG thread-naming] Snippet set for 430c3a4b-93ec-491f-ac5f-95ea1b0e43a0
+[DEBUG thread-naming] Fallback title set to 'There's a number of visual fixes and imp...' for a4a262aa-af0f-40e8-a53a-01216f7a68d5
+[DEBUG thread-naming] Snippet set for a4a262aa-af0f-40e8-a53a-01216f7a68d5
+[DEBUG thread-naming] Fallback title set to '<USER_REQUEST>      # GATEWAY SELF-REFLE...' for cde8a678-3a93-4708-9d3d-ca2465639da7
+[DEBUG thread-naming] Snippet set for cde8a678-3a93-4708-9d3d-ca2465639da7
+[DEBUG thread-naming] Fallback title set to 'I am getting the error "zsh compinit: in...' for cef1d677-dcf6-4111-b1c7-e8f4d8ed1978
+[DEBUG thread-naming] Snippet set for cef1d677-dcf6-4111-b1c7-e8f4d8ed1978
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 6 - Accurate Telemetry, Qu...' for b2af4897-9ca9-4b63-9efc-913f3a2ff5c3
+[DEBUG thread-naming] Snippet set for b2af4897-9ca9-4b63-9efc-913f3a2ff5c3
+[DEBUG thread-naming] Fallback title set to 'Continuing from the last agent log: The ...' for ad7a01d9-ccc4-4f9f-b635-52d2852c4f59
+[DEBUG thread-naming] Snippet set for ad7a01d9-ccc4-4f9f-b635-52d2852c4f59
+[DEBUG thread-naming] Fallback title set to 'When I start a new thread… first of all,...' for b3716c8d-f44a-4fef-8155-4be1b45d638a
+[DEBUG thread-naming] Snippet set for b3716c8d-f44a-4fef-8155-4be1b45d638a
+[DEBUG thread-naming] Fallback title set to 'when I click “new thread” I STILL don’t ...' for 841cabdf-0e7e-4950-bcfc-0992e99be70f
+[DEBUG thread-naming] Snippet set for 841cabdf-0e7e-4950-bcfc-0992e99be70f
+[DEBUG thread-naming] Fallback title set to 'Quite often I’m unable to type anything ...' for fb75c0b2-a933-4b00-ba57-37bcbbe721ee
+[DEBUG thread-naming] Snippet set for fb75c0b2-a933-4b00-ba57-37bcbbe721ee
+[DEBUG thread-naming] Extracted title 'Fix terminal focus bug' from PLANNER_RESPONSE in fb75c0b2-a933-4b00-ba57-37bcbbe721ee
+[DEBUG thread-naming] Fallback title set to 'Role: Senior AI Prompt Engineer & System...' for bec6e555-e9c5-42b3-887c-9f158aca0984
+[DEBUG thread-naming] Snippet set for bec6e555-e9c5-42b3-887c-9f158aca0984
+[DEBUG thread-naming] Fallback title set to 'The note hit effects looked FAR better b...' for de0bff72-565f-4197-a2a6-267fdca49aa3
+[DEBUG thread-naming] Snippet set for de0bff72-565f-4197-a2a6-267fdca49aa3
+[DEBUG thread-naming] Fallback title set to 'You are the friendly executive responder...' for ac1dcbb5-9e60-4ef2-a5c8-852942d42107
+[DEBUG thread-naming] Snippet set for ac1dcbb5-9e60-4ef2-a5c8-852942d42107
+[DEBUG thread-naming] Fallback title set to 'something I really liked about the way m...' for c11227c8-846c-4497-8bcc-00aa611848ee
+[DEBUG thread-naming] Snippet set for c11227c8-846c-4497-8bcc-00aa611848ee
+[DEBUG thread-naming] Fallback title set to 'GEMINI.md should instruct checking the r...' for 3cefaa75-89c5-469d-af91-181689659710
+[DEBUG thread-naming] Snippet set for 3cefaa75-89c5-469d-af91-181689659710
+[DEBUG thread-naming] Fallback title set to 'please push changes to the git repo http...' for b9779f66-1efd-4e0d-9b9b-dd67b1a492e8
+[DEBUG thread-naming] Snippet set for b9779f66-1efd-4e0d-9b9b-dd67b1a492e8
+[DEBUG thread-naming] Fallback title set to 'when the app is re-rendered (from vite p...' for 797b5204-8df3-43de-8a5e-9c2473426a5b
+[DEBUG thread-naming] Snippet set for 797b5204-8df3-43de-8a5e-9c2473426a5b
+[DEBUG thread-naming] Fallback title set to '# DIRECT API TASK EXECUTOR     [BUDGET_M...' for 8030e9b5-0ebd-4359-b6c9-322f4417d2bf
+[DEBUG thread-naming] Snippet set for 8030e9b5-0ebd-4359-b6c9-322f4417d2bf
+[DEBUG thread-naming] Fallback title set to 'When I actually send a message with a go...' for c7fc8437-0254-4ca1-84c1-e61ad68e0952
+[DEBUG thread-naming] Snippet set for c7fc8437-0254-4ca1-84c1-e61ad68e0952
+[DEBUG thread-naming] Fallback title set to 'Ok we’re working on problem. I downloade...' for 8b77a381-be79-4074-b529-917b25002220
+[DEBUG thread-naming] Snippet set for 8b77a381-be79-4074-b529-917b25002220
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for 169b67b9-6c3c-44cf-a177-1e13b2ff428b
+[DEBUG thread-naming] Snippet set for 169b67b9-6c3c-44cf-a177-1e13b2ff428b
+[DEBUG thread-naming] Extracted title 'Migrating Raycast Local Settings' from PLANNER_RESPONSE in 169b67b9-6c3c-44cf-a177-1e13b2ff428b
+[DEBUG thread-naming] Fallback title set to 'You are acting as an expert macOS System...' for d8887a58-2a06-472c-a8c6-b46bc4ee865b
+[DEBUG thread-naming] Snippet set for d8887a58-2a06-472c-a8c6-b46bc4ee865b
+[DEBUG thread-naming] Extracted title 'User Profile Migration Audit' from PLANNER_RESPONSE in d8887a58-2a06-472c-a8c6-b46bc4ee865b
+[DEBUG thread-naming] Fallback title set to 'When I type a prompt to contune a thread...' for 55f08dbd-f506-4340-9a1d-e7358cd25d6e
+[DEBUG thread-naming] Snippet set for 55f08dbd-f506-4340-9a1d-e7358cd25d6e
+[DEBUG thread-naming] Fallback title set to 're: clickable file path links. Sometimes...' for faf0967e-4565-4119-a6f3-3f4f573639a4
+[DEBUG thread-naming] Snippet set for faf0967e-4565-4119-a6f3-3f4f573639a4
+[DEBUG thread-naming] Fallback title set to '### Phase 1 Debugging: Fixing the Visual...' for 68a9db1e-5c3d-4799-86fc-3d849e4a9c12
+[DEBUG thread-naming] Snippet set for 68a9db1e-5c3d-4799-86fc-3d849e4a9c12
+[DEBUG thread-naming] Fallback title set to 'We are repurposing this repository into ...' for 37a06a72-39cf-4395-af0f-e2e9454814bd
+[DEBUG thread-naming] Snippet set for 37a06a72-39cf-4395-af0f-e2e9454814bd
+[DEBUG thread-naming] Fallback title set to 'There’s some bizarre behavior with the m...' for f8fe0fc7-7986-4d6b-8096-28dc4990ad26
+[DEBUG thread-naming] Snippet set for f8fe0fc7-7986-4d6b-8096-28dc4990ad26
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for e3247094-5267-4c51-8c53-75c055b58f54
+[DEBUG thread-naming] Snippet set for e3247094-5267-4c51-8c53-75c055b58f54
+[DEBUG thread-naming] Fallback title set to 'I love the way that we’re seeing live th...' for 8d887e26-d1a8-4237-932f-afe91aa3973d
+[DEBUG thread-naming] Snippet set for 8d887e26-d1a8-4237-932f-afe91aa3973d
+[DEBUG thread-naming] Extracted title 'Fix TUI Spinner Bug' from PLANNER_RESPONSE in 8d887e26-d1a8-4237-932f-afe91aa3973d
+[DEBUG thread-naming] Fallback title set to 'Implement 2. Browser Extension / Web Con...' for c08f2dac-cf97-4de8-9418-c486a80b9543
+[DEBUG thread-naming] Snippet set for c08f2dac-cf97-4de8-9418-c486a80b9543
+[DEBUG thread-naming] Fallback title set to 'do nothing' for 248785e4-a489-4942-8713-0a8bef961bc0
+[DEBUG thread-naming] Snippet set for 248785e4-a489-4942-8713-0a8bef961bc0
+[DEBUG thread-naming] Fallback title set to 'the terminal implementation is still bro...' for 47130c18-d4e5-48f8-888c-c96db718b6ec
+[DEBUG thread-naming] Snippet set for 47130c18-d4e5-48f8-888c-c96db718b6ec
+[DEBUG thread-naming] Fallback title set to 'I just sent a message that's a clear ins...' for 13005392-f92e-4a46-8e87-5e6ee0fb61ab
+[DEBUG thread-naming] Snippet set for 13005392-f92e-4a46-8e87-5e6ee0fb61ab
+[DEBUG thread-naming] Fallback title set to 'after a response, it scrolls the window ...' for 9a012ddb-df61-44db-80fb-f5f8e3633e6b
+[DEBUG thread-naming] Snippet set for 9a012ddb-df61-44db-80fb-f5f8e3633e6b
+[DEBUG thread-naming] Fallback title set to 'I need to investigate the git history of...' for 0455466c-09f6-44c2-b2b1-962b439ca2a0
+[DEBUG thread-naming] Snippet set for 0455466c-09f6-44c2-b2b1-962b439ca2a0
+[DEBUG thread-naming] Fallback title set to 'error: cannot find macro `__cmd__delete_...' for 016d1510-27f9-4ef0-8373-6ad54472c2af
+[DEBUG thread-naming] Snippet set for 016d1510-27f9-4ef0-8373-6ad54472c2af
+[DEBUG thread-naming] Fallback title set to 'The userscript works, but it's saving th...' for 3a139398-f103-44eb-a183-3648ceecd0a3
+[DEBUG thread-naming] Snippet set for 3a139398-f103-44eb-a183-3648ceecd0a3
+[DEBUG thread-naming] Fallback title set to 'Here’s a sample of the projects list: ``...' for ea45b70a-e7a8-407e-b120-da94dd490848
+[DEBUG thread-naming] Snippet set for ea45b70a-e7a8-407e-b120-da94dd490848
+[DEBUG thread-naming] Fallback title set to 'I have nothing running (on this user acc...' for 8d024e98-aef0-4f7d-8188-6aadddea8411
+[DEBUG thread-naming] Snippet set for 8d024e98-aef0-4f7d-8188-6aadddea8411
+[DEBUG thread-naming] Fallback title set to '[plugin:vite:oxc] Transform failed with ...' for cb5ef0df-a005-4a9c-9edb-1658a8fc8813
+[DEBUG thread-naming] Snippet set for cb5ef0df-a005-4a9c-9edb-1658a8fc8813
+[DEBUG thread-naming] Fallback title set to 'I want to pretty-print the tool calls: T...' for e6d82ac1-3919-4e43-81bf-779a6e58c83d
+[DEBUG thread-naming] Snippet set for e6d82ac1-3919-4e43-81bf-779a6e58c83d
+[DEBUG thread-naming] Extracted title 'Pretty Print Tool Calls' from PLANNER_RESPONSE in e6d82ac1-3919-4e43-81bf-779a6e58c83d
+[DEBUG thread-naming] Fallback title set to 'Re: output preview for threads `Error lo...' for f4b4c73d-bc39-4646-889b-4217b6665e63
+[DEBUG thread-naming] Snippet set for f4b4c73d-bc39-4646-889b-4217b6665e63
+[DEBUG thread-naming] Fallback title set to 'I still can't press shift-enter and inse...' for ffd2c5ad-f80e-4465-bea1-2040907feb6a
+[DEBUG thread-naming] Snippet set for ffd2c5ad-f80e-4465-bea1-2040907feb6a
+[DEBUG thread-naming] Fallback title set to 'for structural' for 5a423880-c2a7-41d9-997c-3a5d998e94d6
+[DEBUG thread-naming] Snippet set for 5a423880-c2a7-41d9-997c-3a5d998e94d6
+[DEBUG thread-naming] Fallback title set to 'non-whitelist commands are not asking pe...' for 3e959f96-b062-43d4-8721-e2037d4e23a3
+[DEBUG thread-naming] Snippet set for 3e959f96-b062-43d4-8721-e2037d4e23a3
+[DEBUG thread-naming] Fallback title set to 'When I hover over threads, sometimes I s...' for 523f5c7c-b9f7-4a3b-9f2c-fe80b3c34087
+[DEBUG thread-naming] Snippet set for 523f5c7c-b9f7-4a3b-9f2c-fe80b3c34087
+[DEBUG thread-naming] Fallback title set to 'map cmd-n to New Thread and when I creat...' for 4a95993f-aa8b-4813-8838-7fb255328a2e
+[DEBUG thread-naming] Snippet set for 4a95993f-aa8b-4813-8838-7fb255328a2e
+[DEBUG thread-naming] Fallback title set to 'Found it: hardcoded `matthewmurphy`:  [D...' for bc776593-642c-4245-a928-c5d0cdbfa48b
+[DEBUG thread-naming] Snippet set for bc776593-642c-4245-a928-c5d0cdbfa48b
+[DEBUG thread-naming] Fallback title set to 'I want to try integrating auto-streaming...' for a3d31679-5f77-4baa-afd0-ae0f64ccfd62
+[DEBUG thread-naming] Snippet set for a3d31679-5f77-4baa-afd0-ae0f64ccfd62
+[DEBUG thread-naming] Fallback title set to 'Role: Senior JavaScript & AI Prompt Engi...' for 583ce191-3898-4b0e-b1c4-c2b4790e2fe0
+[DEBUG thread-naming] Snippet set for 583ce191-3898-4b0e-b1c4-c2b4790e2fe0
+[DEBUG thread-naming] Fallback title set to 'I’m curious what kind of thread logs ant...' for 080e8ba0-9a5d-4009-b605-81127901b002
+[DEBUG thread-naming] Snippet set for 080e8ba0-9a5d-4009-b605-81127901b002
+[DEBUG thread-naming] Fallback title set to 'For the hover tooltip: - I need both 5-h...' for 996163a9-5cdf-4872-8f3f-2593581ee2f1
+[DEBUG thread-naming] Snippet set for 996163a9-5cdf-4872-8f3f-2593581ee2f1
+[DEBUG thread-naming] Fallback title set to 'add a quota display using the cli tool `...' for 64400cc9-6d5d-47aa-8f93-cf941d91fb27
+[DEBUG thread-naming] Snippet set for 64400cc9-6d5d-47aa-8f93-cf941d91fb27
+[DEBUG thread-naming] Fallback title set to 'the sidebar ui should indicate the selec...' for 21e2fe23-b92e-4e86-8fd6-764aa35915ea
+[DEBUG thread-naming] Snippet set for 21e2fe23-b92e-4e86-8fd6-764aa35915ea
+[DEBUG thread-naming] Fallback title set to 'When I close the floating gemini window,...' for a4ceb4ed-8277-4528-aaa3-02ca50f6d131
+[DEBUG thread-naming] Snippet set for a4ceb4ed-8277-4528-aaa3-02ca50f6d131
+[DEBUG thread-naming] Fallback title set to '# TASK: Phases 9 & 10 - Loop Prevention,...' for 1e1a12c0-20d7-413c-9210-cb6839f67061
+[DEBUG thread-naming] Snippet set for 1e1a12c0-20d7-413c-9210-cb6839f67061
+[DEBUG thread-naming] Fallback title set to 'implement the following: ### Phase 2 Imp...' for 145516f2-863f-47ff-a873-d8b3b4656156
+[DEBUG thread-naming] Snippet set for 145516f2-863f-47ff-a873-d8b3b4656156
+[DEBUG thread-naming] Fallback title set to 'I want you to replace the entire UI of t...' for 0434408b-6d30-4710-a92f-4e745a809023
+[DEBUG thread-naming] Snippet set for 0434408b-6d30-4710-a92f-4e745a809023
+[DEBUG thread-naming] Fallback title set to '# DIRECT API TASK EXECUTOR     [BUDGET_M...' for ac1a09d1-c8cf-4d95-a610-8539f01496d2
+[DEBUG thread-naming] Snippet set for ac1a09d1-c8cf-4d95-a610-8539f01496d2
+[DEBUG thread-naming] Fallback title set to 'Now it shows: `[Worker 0] {"primitives":...' for f5bb2ce0-e297-48ac-b1d2-f6309f3679fa
+[DEBUG thread-naming] Snippet set for f5bb2ce0-e297-48ac-b1d2-f6309f3679fa
+[DEBUG thread-naming] Fallback title set to 'It still fails to call a worker. I also ...' for 335399a6-5cfa-4f36-8ba2-cae35bebc490
+[DEBUG thread-naming] Snippet set for 335399a6-5cfa-4f36-8ba2-cae35bebc490
+[DEBUG thread-naming] Fallback title set to 'agy --add-dir=$PWD -i "We only need macO...' for 9a85b5ca-4b3c-4d47-a069-1eb2bc184eb5
+[DEBUG thread-naming] Snippet set for 9a85b5ca-4b3c-4d47-a069-1eb2bc184eb5
+[DEBUG thread-naming] Fallback title set to 'every time an agent does something and h...' for 3c98e4b1-05d8-4fdd-ba0d-32337b28a2cd
+[DEBUG thread-naming] Snippet set for 3c98e4b1-05d8-4fdd-ba0d-32337b28a2cd
+[DEBUG thread-naming] Fallback title set to '# DIRECT API TASK EXECUTOR     [BUDGET_M...' for c77ba281-afe2-4ef3-949f-23f39a4b6a2e
+[DEBUG thread-naming] Snippet set for c77ba281-afe2-4ef3-949f-23f39a4b6a2e
+[DEBUG thread-naming] Fallback title set to 'notehighway is still grey. It shouldn’t ...' for 315120d5-1a60-4372-9983-70ee01c250b9
+[DEBUG thread-naming] Snippet set for 315120d5-1a60-4372-9983-70ee01c250b9
+[DEBUG thread-naming] Fallback title set to 'When I start a new thread, I don’t see a...' for 9083b9ce-a878-4d33-9848-f691375fafb0
+[DEBUG thread-naming] Snippet set for 9083b9ce-a878-4d33-9848-f691375fafb0
+[DEBUG thread-naming] Fallback title set to 'just testing thread context carry-over, ...' for 79a99dc8-ff82-4b5c-b590-75052461eaf6
+[DEBUG thread-naming] Snippet set for 79a99dc8-ff82-4b5c-b590-75052461eaf6
+[DEBUG thread-naming] Fallback title set to 'No, you have not understood. System inst...' for 5ee61d9b-25c8-4665-bf8e-daa6c8fa31a3
+[DEBUG thread-naming] Snippet set for 5ee61d9b-25c8-4665-bf8e-daa6c8fa31a3
+[DEBUG thread-naming] Extracted title 'Fix System Instruction Injection' from PLANNER_RESPONSE in 5ee61d9b-25c8-4665-bf8e-daa6c8fa31a3
+[DEBUG thread-naming] Fallback title set to 'why is ai-os project using such a vast a...' for b8bcd24e-d387-4273-a2c7-e6798ad49538
+[DEBUG thread-naming] Snippet set for b8bcd24e-d387-4273-a2c7-e6798ad49538
+[DEBUG thread-naming] Fallback title set to 'There's a number of visual fixes and imp...' for 70b56f27-71bf-4254-95c3-6df3f1300d8a
+[DEBUG thread-naming] Snippet set for 70b56f27-71bf-4254-95c3-6df3f1300d8a
+[DEBUG thread-naming] Fallback title set to 'What apps do I have on my Mac for contro...' for 70a20b5e-b22d-4e4e-9a05-823748b8c258
+[DEBUG thread-naming] Snippet set for 70a20b5e-b22d-4e4e-9a05-823748b8c258
+[DEBUG thread-naming] Fallback title set to 'The tool calls box closes as soon as mor...' for b1384760-482c-4f1f-806f-b16c117125a5
+[DEBUG thread-naming] Snippet set for b1384760-482c-4f1f-806f-b16c117125a5
+[DEBUG thread-naming] Extracted title 'Refactor Tool Calls UI' from PLANNER_RESPONSE in b1384760-482c-4f1f-806f-b16c117125a5
+[DEBUG thread-naming] Fallback title set to 'Task: Fix the Telemetry Hallucination is...' for 8f5e8cb1-95e1-4756-816a-91ea60b3196a
+[DEBUG thread-naming] Snippet set for 8f5e8cb1-95e1-4756-816a-91ea60b3196a
+[DEBUG thread-naming] Fallback title set to 'add an "open project in Finder” button f...' for 9464029f-5f8d-4497-8545-d0ab587c4562
+[DEBUG thread-naming] Snippet set for 9464029f-5f8d-4497-8545-d0ab587c4562
+[DEBUG thread-naming] Fallback title set to '1. When I expand a “Show older steps” dr...' for 123b5880-0aad-4d55-9a0f-339b1fdf33fe
+[DEBUG thread-naming] Snippet set for 123b5880-0aad-4d55-9a0f-339b1fdf33fe
+[DEBUG thread-naming] Fallback title set to '/quota' for 96b9aab9-c446-4e24-b912-b5011bcb6e74
+[DEBUG thread-naming] Snippet set for 96b9aab9-c446-4e24-b912-b5011bcb6e74
+[DEBUG thread-naming] Fallback title set to 'Implement an auto-expanding input area a...' for f356bbb4-8e5b-4758-8d2b-0bb2b5b02f9a
+[DEBUG thread-naming] Snippet set for f356bbb4-8e5b-4758-8d2b-0bb2b5b02f9a
+[DEBUG thread-naming] Fallback title set to 'recall the last changes you made (look a...' for 6b41b517-b9a8-4e6c-8e0a-c052dcd5210e
+[DEBUG thread-naming] Snippet set for 6b41b517-b9a8-4e6c-8e0a-c052dcd5210e
+[DEBUG thread-naming] Fallback title set to 'the reason we added a way to intercept t...' for c861d8ec-4250-40a1-9214-4d6be89ef54a
+[DEBUG thread-naming] Snippet set for c861d8ec-4250-40a1-9214-4d6be89ef54a
+[DEBUG thread-naming] Fallback title set to 'I'd like a way of quickly changing direc...' for 08e25990-63f7-41e8-82b2-d7e898451c9f
+[DEBUG thread-naming] Snippet set for 08e25990-63f7-41e8-82b2-d7e898451c9f
+[DEBUG thread-naming] Fallback title set to 'regarding main.ts markdown formatting. M...' for 4e802240-c51a-4605-8405-1ac3f261afbe
+[DEBUG thread-naming] Snippet set for 4e802240-c51a-4605-8405-1ac3f261afbe
+[DEBUG thread-naming] Fallback title set to 'WOAH So it looks like what happened here...' for 28ad716c-042e-44cc-aac3-db190517f6db
+[DEBUG thread-naming] Snippet set for 28ad716c-042e-44cc-aac3-db190517f6db
+[DEBUG thread-naming] Fallback title set to 'for some reason I'm seeing this: pnpm ta...' for 15439e68-ea37-4550-a0de-afb990b68538
+[DEBUG thread-naming] Snippet set for 15439e68-ea37-4550-a0de-afb990b68538
+[DEBUG thread-naming] Fallback title set to '1. links don’t work. 2. I’m still seeing...' for 246e5156-25c1-4aa9-99a3-4b66f99a838c
+[DEBUG thread-naming] Snippet set for 246e5156-25c1-4aa9-99a3-4b66f99a838c
+[DEBUG thread-naming] Fallback title set to 'local file links don't work. `Here is an...' for aee52bec-2388-4e3b-9654-a65b06adf3ad
+[DEBUG thread-naming] Snippet set for aee52bec-2388-4e3b-9654-a65b06adf3ad
+[DEBUG thread-naming] Fallback title set to 'agy --add-dir=$PWD -i "/" --dangerously-...' for c2c11ad2-c3bc-445f-bfa8-28fc22948182
+[DEBUG thread-naming] Snippet set for c2c11ad2-c3bc-445f-bfa8-28fc22948182
+[DEBUG thread-naming] Fallback title set to 'the folder icon doesnt open projects, it...' for e4d769cb-a716-47a0-83e4-1b222e2ee641
+[DEBUG thread-naming] Snippet set for e4d769cb-a716-47a0-83e4-1b222e2ee641
+[DEBUG thread-naming] Fallback title set to '# GATEWAY SELF-REFLECTION AUDIT     You ...' for dc07e17c-6dec-448d-903a-821c42cf1b83
+[DEBUG thread-naming] Snippet set for dc07e17c-6dec-448d-903a-821c42cf1b83
+[DEBUG thread-naming] Fallback title set to 'something I really liked about the way m...' for 9cba46f2-fb17-4d80-8a0f-34f47fa0e44b
+[DEBUG thread-naming] Snippet set for 9cba46f2-fb17-4d80-8a0f-34f47fa0e44b
+[DEBUG thread-naming] Fallback title set to 'so it’s critical for all these things th...' for 71b95d34-2642-4ce1-9e34-d98d96b4cd9e
+[DEBUG thread-naming] Snippet set for 71b95d34-2642-4ce1-9e34-d98d96b4cd9e
+[DEBUG thread-naming] Fallback title set to 'Holy shit. ``` You  Fork tell me a long ...' for 856bc4e1-ca44-4b22-b619-449a3b179f24
+[DEBUG thread-naming] Snippet set for 856bc4e1-ca44-4b22-b619-449a3b179f24
+[DEBUG thread-naming] Fallback title set to 'Compiling tauri-app v0.1.0 (/Users/matth...' for 72b7b01d-f80c-42b7-be1c-49c9fd664c24
+[DEBUG thread-naming] Snippet set for 72b7b01d-f80c-42b7-be1c-49c9fd664c24
+[DEBUG thread-naming] Fallback title set to 'Task: Extract API payload and schema cod...' for ce1f49b2-f76c-4961-acd4-6d8700a42b37
+[DEBUG thread-naming] Snippet set for ce1f49b2-f76c-4961-acd4-6d8700a42b37
+[DEBUG thread-naming] Fallback title set to 'I just realized something... We might as...' for a831b0d4-ee8f-4e57-aaaa-685270a8a984
+[DEBUG thread-naming] Snippet set for a831b0d4-ee8f-4e57-aaaa-685270a8a984
+[DEBUG thread-naming] Fallback title set to 'list the files in this dir' for bcc313af-94bd-41a3-b7e6-657f6d285a02
+[DEBUG thread-naming] Snippet set for bcc313af-94bd-41a3-b7e6-657f6d285a02
+[DEBUG thread-naming] Fallback title set to 'in white mode, the fretboard string colo...' for 5a039235-c2d0-4f75-830e-fb85d2dba37c
+[DEBUG thread-naming] Snippet set for 5a039235-c2d0-4f75-830e-fb85d2dba37c
+[DEBUG thread-naming] Fallback title set to 'I'd like you to archive @[macOS-app] in ...' for cf05e822-bad2-473a-af6f-57634845f482
+[DEBUG thread-naming] Snippet set for cf05e822-bad2-473a-af6f-57634845f482
+[DEBUG thread-naming] Fallback title set to '@[userscripts/ai-os-context-sync.user.js...' for 9a377882-4d76-4396-8e47-cd45c4f86fa9
+[DEBUG thread-naming] Snippet set for 9a377882-4d76-4396-8e47-cd45c4f86fa9
+[DEBUG thread-naming] Fallback title set to '"Max Depth Limit: It will now only trave...' for ef12292a-02a6-499f-ae1d-196585ebcf64
+[DEBUG thread-naming] Snippet set for ef12292a-02a6-499f-ae1d-196585ebcf64
+[DEBUG thread-naming] Fallback title set to 'I tried to run smart-c2p in another proj...' for 8aca10bd-d490-4f7f-9885-a12e870805f7
+[DEBUG thread-naming] Snippet set for 8aca10bd-d490-4f7f-9885-a12e870805f7
+[DEBUG thread-naming] Fallback title set to 'When I start a new thread, and I send a ...' for db0b5065-b303-47aa-905f-2bd3d0d7072e
+[DEBUG thread-naming] Snippet set for db0b5065-b303-47aa-905f-2bd3d0d7072e
+[DEBUG thread-naming] Fallback title set to 'I want to be able to run the non-tauri c...' for 2ff1dcab-ff99-4999-a99d-5c7f383a06d9
+[DEBUG thread-naming] Snippet set for 2ff1dcab-ff99-4999-a99d-5c7f383a06d9
+[DEBUG thread-naming] Fallback title set to 'You did not fix the issue. Not only are ...' for dcfd9c20-77a6-4fe9-9746-fb0c2e545004
+[DEBUG thread-naming] Snippet set for dcfd9c20-77a6-4fe9-9746-fb0c2e545004
+[DEBUG thread-naming] Fallback title set to 'When I press up-arrow, it should load th...' for 6fc3601d-a6d8-414a-b422-2f656307cfda
+[DEBUG thread-naming] Snippet set for 6fc3601d-a6d8-414a-b422-2f656307cfda
+[DEBUG thread-naming] Fallback title set to 'user threads still have giant names on t...' for 445381d5-662d-4128-9365-7c8528e8c610
+[DEBUG thread-naming] Snippet set for 445381d5-662d-4128-9365-7c8528e8c610
+[DEBUG thread-naming] Extracted title 'Remove Thread IDs from UI' from PLANNER_RESPONSE in 445381d5-662d-4128-9365-7c8528e8c610
+[DEBUG thread-naming] Fallback title set to 'we should NOT be providing historical co...' for 99717be6-512a-4306-8b07-44e0ec1ac5c0
+[DEBUG thread-naming] Snippet set for 99717be6-512a-4306-8b07-44e0ec1ac5c0
+[DEBUG thread-naming] Fallback title set to 'I see `[AI-OS SYNC] Sending payload to b...' for d143562d-aa50-4a65-9b24-d8b35afd5817
+[DEBUG thread-naming] Snippet set for d143562d-aa50-4a65-9b24-d8b35afd5817
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for bbefbafd-0a2e-4414-a3d4-d4d5eb1b7261
+[DEBUG thread-naming] Snippet set for bbefbafd-0a2e-4414-a3d4-d4d5eb1b7261
+[DEBUG thread-naming] Fallback title set to 'Add a way to quickly search threads. I t...' for a4730640-d58c-41f7-917a-27fd7890e439
+[DEBUG thread-naming] Snippet set for a4730640-d58c-41f7-917a-27fd7890e439
+[DEBUG thread-naming] Fallback title set to 'I want the cli version (bin/ai-os) to by...' for e4da94f3-e096-4eb5-86ef-24b7e2740dee
+[DEBUG thread-naming] Snippet set for e4da94f3-e096-4eb5-86ef-24b7e2740dee
+[DEBUG thread-naming] Fallback title set to 'when I type a message to `agy` it's not ...' for 5d600f49-7e57-4f86-8e89-2b472963e122
+[DEBUG thread-naming] Snippet set for 5d600f49-7e57-4f86-8e89-2b472963e122
+[DEBUG thread-naming] Fallback title set to 'Could you please make it so I can modify...' for ee65adcf-2f8f-41f1-aa4c-9fa92c3461e9
+[DEBUG thread-naming] Snippet set for ee65adcf-2f8f-41f1-aa4c-9fa92c3461e9
+[DEBUG thread-naming] Fallback title set to 'Step 2 is creating a Spotlight-like floa...' for 62bebc14-50aa-4552-bddf-5fd7a4d22dae
+[DEBUG thread-naming] Snippet set for 62bebc14-50aa-4552-bddf-5fd7a4d22dae
+[DEBUG thread-naming] Fallback title set to 'I am splitting my `ai-os` app into a dua...' for a082f74d-98a1-4a46-82e8-ec083b8335b4
+[DEBUG thread-naming] Snippet set for a082f74d-98a1-4a46-82e8-ec083b8335b4
+[DEBUG thread-naming] Fallback title set to 'INFO:     127.0.0.1:51358 - "POST /api/g...' for 93852f31-163c-4d9c-98b2-284d6decd607
+[DEBUG thread-naming] Snippet set for 93852f31-163c-4d9c-98b2-284d6decd607
+[DEBUG thread-naming] Fallback title set to 'node src/tools/get_suggestions.js' for 584de4b0-5bfb-4001-827b-f4032881a728
+[DEBUG thread-naming] Snippet set for 584de4b0-5bfb-4001-827b-f4032881a728
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for f82c5d91-e29d-4f7e-8943-f7a4a6554bfe
+[DEBUG thread-naming] Snippet set for f82c5d91-e29d-4f7e-8943-f7a4a6554bfe
+[DEBUG thread-naming] Fallback title set to 'styles.css seems like it's just a comple...' for 45ef5316-724a-4040-b4db-1a208b052e88
+[DEBUG thread-naming] Snippet set for 45ef5316-724a-4040-b4db-1a208b052e88
+[DEBUG thread-naming] Fallback title set to 'Two things must be made distinct: 1. The...' for 230e7bec-8f5b-4472-935e-3b1a04475334
+[DEBUG thread-naming] Snippet set for 230e7bec-8f5b-4472-935e-3b1a04475334
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for 16636ae5-0f63-4082-b773-0ed5c2a26f24
+[DEBUG thread-naming] Snippet set for 16636ae5-0f63-4082-b773-0ed5c2a26f24
+[DEBUG thread-naming] Extracted title 'Thread Notes Bug Fix' from PLANNER_RESPONSE in 16636ae5-0f63-4082-b773-0ed5c2a26f24
+[DEBUG thread-naming] Fallback title set to 'I want to be able to edit a markdown fil...' for 51d7d36b-10c0-4fb9-abea-47f4ca4f9294
+[DEBUG thread-naming] Snippet set for 51d7d36b-10c0-4fb9-abea-47f4ca4f9294
+[DEBUG thread-naming] Fallback title set to 'I want to clean up this project director...' for cdff71f5-6e27-4e5b-bdea-25c33bdd3b13
+[DEBUG thread-naming] Snippet set for cdff71f5-6e27-4e5b-bdea-25c33bdd3b13
+[DEBUG thread-naming] Fallback title set to 'Role: Senior JS Architect Task: Implemen...' for d05d237b-ea41-421c-bb0a-a2eee5f895f3
+[DEBUG thread-naming] Snippet set for d05d237b-ea41-421c-bb0a-a2eee5f895f3
+[DEBUG thread-naming] Fallback title set to 'This issue which we've tried to fix seve...' for e6fa0c11-3640-4eae-b895-723b5767021a
+[DEBUG thread-naming] Snippet set for e6fa0c11-3640-4eae-b895-723b5767021a
+[DEBUG thread-naming] Fallback title set to 'The active area for the drag handle arou...' for 91177022-cd43-4e05-9c73-48316eae8997
+[DEBUG thread-naming] Snippet set for 91177022-cd43-4e05-9c73-48316eae8997
+[DEBUG thread-naming] Fallback title set to 'Role: Senior engineer.  Goal: Implement ...' for 8dae6ddd-67e2-4531-8c10-4fb57ee811cc
+[DEBUG thread-naming] Snippet set for 8dae6ddd-67e2-4531-8c10-4fb57ee811cc
+[DEBUG thread-naming] Fallback title set to 'quite often I'll submit a prompt in a th...' for ae91fa52-8234-4ce3-be83-d2a270eb8f33
+[DEBUG thread-naming] Snippet set for ae91fa52-8234-4ce3-be83-d2a270eb8f33
+[DEBUG thread-naming] Fallback title set to 'What do you know about my Mac?' for 178628be-59d9-4520-b873-34c437b69916
+[DEBUG thread-naming] Snippet set for 178628be-59d9-4520-b873-34c437b69916
+[DEBUG thread-naming] Fallback title set to 'hello' for f323687c-117d-4c66-9314-956340deae8a
+[DEBUG thread-naming] Snippet set for f323687c-117d-4c66-9314-956340deae8a
+[DEBUG thread-naming] Fallback title set to 'auto-clear should be enabled by default,...' for 1d30e9fa-46d2-4e1d-925f-5c519d4e4c64
+[DEBUG thread-naming] Snippet set for 1d30e9fa-46d2-4e1d-925f-5c519d4e4c64
+[DEBUG thread-naming] Fallback title set to 'A big issue to resolve: the pricing is n...' for 9891659b-d912-45ac-8e6c-76d049007b6b
+[DEBUG thread-naming] Snippet set for 9891659b-d912-45ac-8e6c-76d049007b6b
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for 8453269f-dc59-4a72-9f45-71e50f8adf37
+[DEBUG thread-naming] Snippet set for 8453269f-dc59-4a72-9f45-71e50f8adf37
+[DEBUG thread-naming] Extracted title 'Fix Thread Naming UUID Display' from PLANNER_RESPONSE in 8453269f-dc59-4a72-9f45-71e50f8adf37
+[DEBUG thread-naming] Fallback title set to 'we need to have better names for threads...' for bd2a7f09-d821-48f0-8848-54c101de9457
+[DEBUG thread-naming] Snippet set for bd2a7f09-d821-48f0-8848-54c101de9457
+[DEBUG thread-naming] Fallback title set to 'Now, when the final output comes from th...' for 479a6145-b60d-48e7-959f-67ee13c3f915
+[DEBUG thread-naming] Snippet set for 479a6145-b60d-48e7-959f-67ee13c3f915
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 7 - Fix Mechanical Editor ...' for 9e995a83-c4fb-4af0-be5a-24df72e9b931
+[DEBUG thread-naming] Snippet set for 9e995a83-c4fb-4af0-be5a-24df72e9b931
+[DEBUG thread-naming] Fallback title set to '# GATEWAY SELF-REFLECTION AUDIT     You ...' for 82e0baa6-9e9b-45ba-8460-34940554e2e7
+[DEBUG thread-naming] Snippet set for 82e0baa6-9e9b-45ba-8460-34940554e2e7
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 3 - Two-Layer Git Memory &...' for 8026eb37-84bd-4ae7-aa8d-df80dc2e9c8b
+[DEBUG thread-naming] Snippet set for 8026eb37-84bd-4ae7-aa8d-df80dc2e9c8b
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 2 - System Instructions & ...' for 6a9e6c1b-e55b-49fa-ad13-00c8028da68a
+[DEBUG thread-naming] Snippet set for 6a9e6c1b-e55b-49fa-ad13-00c8028da68a
+[DEBUG thread-naming] Fallback title set to ';s' for 79fb95ad-de16-4782-855e-4fc8ca9cb134
+[DEBUG thread-naming] Snippet set for 79fb95ad-de16-4782-855e-4fc8ca9cb134
+[DEBUG thread-naming] Fallback title set to 'You are tasked with fulfilling a user re...' for f4324a71-3359-430e-bf6f-bb2cb92028c9
+[DEBUG thread-naming] Snippet set for f4324a71-3359-430e-bf6f-bb2cb92028c9
+[DEBUG thread-naming] Fallback title set to 'Continuing conversation from history (Th...' for fb65b8be-27c4-4b71-857d-1506b7e6c4de
+[DEBUG thread-naming] Snippet set for fb65b8be-27c4-4b71-857d-1506b7e6c4de
+[DEBUG thread-naming] Fallback title set to 'The tool calls box closes as soon as mor...' for b62d9042-b8c8-4b74-9cbc-bf951e3053e0
+[DEBUG thread-naming] Snippet set for b62d9042-b8c8-4b74-9cbc-bf951e3053e0
+[DEBUG thread-naming] Extracted title 'Fix Tool Calls Box Behavior' from PLANNER_RESPONSE in b62d9042-b8c8-4b74-9cbc-bf951e3053e0
+[DEBUG thread-naming] Fallback title set to 'There seems to be a lot of lag I get whe...' for dc2e3554-eea5-41f1-a4ce-a2abad3a43e0
+[DEBUG thread-naming] Snippet set for dc2e3554-eea5-41f1-a4ce-a2abad3a43e0
+[DEBUG thread-naming] Fallback title set to 'So to be super clear: there’s TWO kinds ...' for 0b8766e6-0259-4e86-84a0-3ec4955dd59b
+[DEBUG thread-naming] Snippet set for 0b8766e6-0259-4e86-84a0-3ec4955dd59b
+[DEBUG thread-naming] Fallback title set to 'I want to expand this project slightly.....' for c77ca119-a8d1-4604-9a96-6276766d0a02
+[DEBUG thread-naming] Snippet set for c77ca119-a8d1-4604-9a96-6276766d0a02
+[DEBUG thread-naming] Fallback title set to 'I want to actually CHECK that the agent’...' for efa8f3dc-91b4-4398-a4fb-79f80721edfc
+[DEBUG thread-naming] Snippet set for efa8f3dc-91b4-4398-a4fb-79f80721edfc
+[DEBUG thread-naming] Fallback title set to 'in the sidebar. thread names must be whi...' for 064db6d0-262f-4317-adf1-a4495150282b
+[DEBUG thread-naming] Snippet set for 064db6d0-262f-4317-adf1-a4495150282b
+[DEBUG thread-naming] Extracted title 'Update Sidebar and Input UI' from PLANNER_RESPONSE in 064db6d0-262f-4317-adf1-a4495150282b
+[DEBUG thread-naming] Fallback title set to 'the bar above the textarea with the Auto...' for 5fe39614-932a-487a-803b-048d52ef8b22
+[DEBUG thread-naming] Snippet set for 5fe39614-932a-487a-803b-048d52ef8b22
+[DEBUG thread-naming] Fallback title set to 'It's very hard to get an agent to positi...' for 780f826e-f30e-40ea-83b8-3c0b9627c2dc
+[DEBUG thread-naming] Snippet set for 780f826e-f30e-40ea-83b8-3c0b9627c2dc
+[DEBUG thread-naming] Fallback title set to 'So, when I said my last prompt, did you ...' for 844dc41c-8b17-4bf3-8048-9efbafe71b1c
+[DEBUG thread-naming] Snippet set for 844dc41c-8b17-4bf3-8048-9efbafe71b1c
+[DEBUG thread-naming] Fallback title set to 'I've got a strange situation where my Ma...' for 9dd49a35-47f6-48cf-a1b9-d8347e468c7d
+[DEBUG thread-naming] Snippet set for 9dd49a35-47f6-48cf-a1b9-d8347e468c7d
+[DEBUG thread-naming] Fallback title set to 'something I really liked about the way m...' for b9b35d11-4c01-412d-9b3c-9494724eb3e6
+[DEBUG thread-naming] Snippet set for b9b35d11-4c01-412d-9b3c-9494724eb3e6
+[DEBUG thread-naming] Fallback title set to '# TASK: Phase 2 - Orchestration & Delega...' for 2b12d95f-e39b-4685-a445-450ba2724bbe
+[DEBUG thread-naming] Snippet set for 2b12d95f-e39b-4685-a445-450ba2724bbe
+[DEBUG thread-naming] Fallback title set to 'is mouse mode enabled for tmux sessions?...' for 61ea92ac-446d-48c2-ab91-eea90b559ed8
+[DEBUG thread-naming] Snippet set for 61ea92ac-446d-48c2-ab91-eea90b559ed8
+[DEBUG thread-naming] Fallback title set to 'Task: Implement a dynamic toggle to let ...' for b0d30e35-e0cd-4fef-a755-4a76b36301a0
+[DEBUG thread-naming] Snippet set for b0d30e35-e0cd-4fef-a755-4a76b36301a0
+[DEBUG thread-naming] Fallback title set to 'When I start a new thread… first of all,...' for a44d246d-3b2d-4b2e-ac41-5f2b5d08eb67
+[DEBUG thread-naming] Snippet set for a44d246d-3b2d-4b2e-ac41-5f2b5d08eb67
+[DEBUG thread-naming] Fallback title set to 'I’ve switched user accounts, and now ai-...' for 26f810f0-7615-4c86-b3d8-e1eac878c93e
+[DEBUG thread-naming] Snippet set for 26f810f0-7615-4c86-b3d8-e1eac878c93e
+[DEBUG thread-naming] Extracted title 'Migrate Thread History Across Users' from PLANNER_RESPONSE in 26f810f0-7615-4c86-b3d8-e1eac878c93e
+[DEBUG thread-naming] Fallback title set to 'above the text input field, it shows: `I...' for 83d45601-7f96-4e32-a133-060f9581f22e
+[DEBUG thread-naming] Snippet set for 83d45601-7f96-4e32-a133-060f9581f22e
+[DEBUG thread-naming] Fallback title set to 'complete phase 1 of @[PLAN.md]' for be6990cf-8286-46e9-a5b0-30a41ea622a6
+[DEBUG thread-naming] Snippet set for be6990cf-8286-46e9-a5b0-30a41ea622a6
+[DEBUG thread-naming] Fallback title set to 'Task: Upgrade the context handoff system...' for c84fa39f-c599-427f-a8e5-ba92f2f0033a
+[DEBUG thread-naming] Snippet set for c84fa39f-c599-427f-a8e5-ba92f2f0033a
+[DEBUG thread-naming] Fallback title set to 'quite often I go to the app and see: `[a...' for d0b421c2-cb83-4d7a-a69b-a724b52a7795
+[DEBUG thread-naming] Snippet set for d0b421c2-cb83-4d7a-a69b-a724b52a7795
+[DEBUG thread-naming] Fallback title set to 'for the gemini thread saver userscript.....' for 273cc924-452f-43f8-b348-dcf425c53613
+[DEBUG thread-naming] Snippet set for 273cc924-452f-43f8-b348-dcf425c53613
+[DEBUG thread-naming] Fallback title set to 'I can tell you, for existing threads at ...' for 8410f095-142b-4a73-a0fe-7dd952eda3f1
+[DEBUG thread-naming] Snippet set for 8410f095-142b-4a73-a0fe-7dd952eda3f1
+[DEBUG thread-naming] Fallback title set to 'Tool calls box should be automatically e...' for de33dd66-724b-4ac7-a83e-416e93c2297a
+[DEBUG thread-naming] Snippet set for de33dd66-724b-4ac7-a83e-416e93c2297a
+[DEBUG] tmux is available. Checking for session: ai_os_agy
+[DEBUG] tmux is available. Checking for session: ai_os_mini_Users_mock_project
+[DEBUG] Session ai_os_mini_Users_mock_project already exists. Attaching.
+[DEBUG] tmux args: ["-u", "new-session", "-A", "-s", "ai_os_mini_Users_mock_project", "-c", "/Users/mock/project"]
+[DEBUG] Spawning command for project=/Users/mock/project, type=mini
+[DEBUG] Session ai_os_agy already exists. Attaching.
+[DEBUG] tmux args: ["-u", "new-session", "-A", "-s", "ai_os_agy", "-c", "/Users/mock/project", "agy --add-dir=/Users/mock/project --dangerously-skip-permissions"]
+[DEBUG] Spawning command for project=/Users/mock/project, type=agy
+[DEBUG] Spawned command with shell_pid=50694
+[DEBUG] Spawned command with shell_pid=50695

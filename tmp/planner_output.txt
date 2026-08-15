@@ -1,0 +1,23 @@
+## Stage 1 Monorepo Plan — Ready
+
+I inspected the actual repo structure (root tree, `tauri-gui/src/`, and critically `tauri-gui/src-tauri/src/`) rather than guessing, and that changed the plan meaningfully. The Rust backend isn't a monolithic GUI crate — it already contains `pty.rs` (17KB), `session.rs` (26KB), and `threads.rs` (43KB) alongside `main.rs`/`server.rs`, and none of those three have any inherent webview dependency. That's your real severing seam.
+
+## Key architectural decision
+
+Rather than copy-pasting `tauri-gui` into two folders, the plan extracts `pty.rs`, `session.rs`, `threads.rs`, `types.rs` into a new **`crates/aios-core`** Rust library (zero Tauri dependencies, enforced by a preflight grep check). `apps/gemini-companion` (renamed from `tauri-gui`) keeps `main.rs` + `server.rs` (webview, tray, userscript injection, the `/api/context/sync` loopback endpoints). `apps/aios-tui` is a **new** ratatui/crossterm binary crate that consumes `aios-core` directly — meaning it can run PTY sessions over SSH/tmux with no display, which is the real distinguishing acceptance criterion between the two apps.
+
+I went with the `gemini-companion` name over `proxima-lite` since `AG_CONTEXT.md` already documents the Gemini-specific sync protocol by that vocabulary — easier for future agents to grep.
+
+## What the plan file covers
+
+The generated document works through all six requested sections in detail:
+
+- **Data structures**: new root `Cargo.toml` workspace, updated root `package.json` workspaces array, `aios-core`'s module layout, and a state-ownership table.
+- **Interface contracts**: concrete Rust signatures for `PtySession`, `SessionManager`, the `aios-tui` main loop skeleton, and the `bin/ai-os` dispatcher.
+- **Logic flow**: an ordered, git-history-preserving `git mv` sequence, a per-file dependency-audit sub-algorithm (the riskiest part — checking whether `session.rs`/`threads.rs` secretly reach into `tauri::AppHandle`), and a cleanup flow.
+- **Error handling**: 9 concrete failure modes (stale `Cargo.lock` duplicates, broken relative imports, transitive `wry` leakage into `aios-tui`, icon-asset deletion breaking the macOS bundle config, etc.) each with a specific mitigation.
+- **Implementation steps**: 18 ordered, file-specific steps from the initial `git mv` through preflight checks and final PR commit sequencing.
+
+It also flags concrete repo hygiene issues found during inspection worth cleaning in this stage: a stray `pnpm-lock.yaml` alongside `bun.lock` (project is Bun-first per `AG_CONTEXT.md`), a 352KB committed agent-transcript `.txt` file at repo root, `main.ts.tmp` (0 bytes), `test.db` (0 bytes), and ~20MB of redundant icon PNGs/Sketch files.
+
+One thing worth flagging: I couldn't pull raw byte-level file contents through the GitHub connector for this private repo (it confirms downloads but doesn't surface text inline), so the extraction boundaries for `session.rs`/`threads.rs` are based on file size/naming and the `AG_CONTEXT.md` narrative rather than a line-by-line read — that's exactly why step 4.2 (the per-file dependency audit with a `cargo check` after each move) is called out as the highest-risk part for the downstream implementing agent to slow down on.

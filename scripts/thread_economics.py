@@ -74,19 +74,29 @@ def calculate_thread_economics(t_current: int, t_sys: int, last_write_ts: float 
     is_past_breakeven = t_current >= n_breakeven
     is_hard_cap_breached = t_current >= n_hard_cap
     
-    if is_hard_cap_breached:
+    if t_current >= 250_000:
         indicator = "🔴"
-        brief = "reset now"
+        brief = "rotate"
         recommendation_status = "DEFINITELY_NEW_THREAD"
-        rotation_recommendation = f"🛑 Context cap reached ({t_current:,} >= {n_hard_cap:,}). Model reasoning degrades significantly. Definitely start a new thread!"
+        rotation_recommendation = f"🛑 High reasoning drift & hallucination risk ({t_current:,} >= 250k). Definitely start a new thread!"
+    elif t_current >= 200_000:
+        indicator = "🟠"
+        brief = "attention drift"
+        recommendation_status = "CONSIDER_NEW_THREAD"
+        rotation_recommendation = f"⚠️ Attention dilution & lost-in-the-middle effects begin ({t_current:,} >= 200k). Consider starting a new thread."
+    elif t_current >= 100_000:
+        indicator = "🟡"
+        brief = "fatigue"
+        recommendation_status = "CONSIDER_NEW_THREAD"
+        rotation_recommendation = f"⚠️ Early reasoning fatigue ({t_current:,} >= 100k). Instruction adherence may begin to soften."
     elif is_past_breakeven:
         indicator = "🟡"
         brief = "rotate soon"
         recommendation_status = "CONSIDER_NEW_THREAD"
-        rotation_recommendation = f"⚠️ Past financial breakeven ({t_current:,} >= {n_breakeven:,}). Marginal cost of continuing exceeds fresh thread initialization. Consider starting a new thread."
+        rotation_recommendation = f"⚠️ Past financial breakeven ({t_current:,} >= {n_breakeven:,}). Marginal cost of continuing exceeds fresh thread initialization."
     else:
         indicator = "🟢"
-        brief = ""
+        brief = "optimal"
         recommendation_status = "OK"
         rotation_recommendation = "OK"
         
