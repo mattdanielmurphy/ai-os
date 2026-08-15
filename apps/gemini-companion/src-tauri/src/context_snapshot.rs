@@ -1,5 +1,4 @@
 use crate::shell_bridge;
-use std::path::Path;
 
 pub fn get_project_snapshot(project_root: &str) -> Result<String, String> {
     let mut snapshot = String::from("# Project Context Snapshot\n\n");

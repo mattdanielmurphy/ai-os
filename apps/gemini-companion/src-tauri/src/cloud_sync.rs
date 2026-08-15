@@ -2,7 +2,7 @@ use axum::{Json, Router, routing::{get, post}};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Write, Read};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use sha2::{Sha256, Digest};
 use tauri::Manager;
 use tokio::time::{self, Duration};
