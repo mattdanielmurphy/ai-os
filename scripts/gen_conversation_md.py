@@ -92,6 +92,14 @@ def clean_agent_content(text: str) -> str:
     if not text:
         return text
 
+    # Strip system banners and background execution wrappers
+    text = re.sub(r'All background operations have completed\.[\s\S]*?</ADDITIONAL_METADATA>', '', text)
+    text = re.sub(r'<USER_REQUEST>[\s\S]*?</USER_REQUEST>', '', text)
+    text = re.sub(r'<ADDITIONAL_METADATA>[\s\S]*?</ADDITIONAL_METADATA>', '', text)
+    text = re.sub(r'<SYSTEM_MESSAGE>[\s\S]*?</SYSTEM_MESSAGE>', '', text)
+    text = re.sub(r'<USER_SETTINGS_CHANGE>[\s\S]*?</USER_SETTINGS_CHANGE>', '', text)
+    text = re.sub(r'\[Message\] timestamp=[^\n]*', '', text)
+
     footer_link_re = re.compile(r'^\s*(?:[-*+]\s*)?Current Thread:\s*\[`?thread\.md`?\]\([^\)]*\)\s*$', re.IGNORECASE)
     divider_re = re.compile(r'^\s*(?:-{3,}|\*{3,}|_{3,})\s*$')
 
@@ -432,16 +440,20 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
             elif t == 'PLANNER_RESPONSE':
                 created = obj.get('created_at') or obj.get('timestamp') or ''
-                if created and not current_agent_time:
+                if created:
                     current_agent_time = fmt_time(created)
 
+                tool_calls = obj.get('tool_calls')
                 content = obj.get('content', '') or obj.get('text', '')
                 if content and isinstance(content, str) and content.strip():
-                    stripped = content.strip()
-                    if is_transient_status_line(stripped):
-                        latest_transient_status = stripped
-                    else:
-                        substantive_content.append(stripped)
+                    cleaned = clean_agent_content(content.strip())
+                    if cleaned:
+                        if is_transient_status_line(cleaned):
+                            latest_transient_status = cleaned
+                        elif not tool_calls:
+                            substantive_content.append(cleaned)
+                        else:
+                            latest_transient_status = cleaned
 
     # Flush final turn at EOF
     flush_current_turn()
