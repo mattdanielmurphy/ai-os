@@ -1,4 +1,7 @@
 mod cloud_sync;
+mod fs_bridge;
+mod shell_bridge;
+mod context_snapshot;
 mod proxy;
 mod pty;
 mod server;
