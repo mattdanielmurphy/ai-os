@@ -104,7 +104,9 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
 def render(conv_id: str, brain_dir: Path) -> bool:
     """Run gen_conversation_md.generate in-process."""
     import importlib
+    import postflight_lib
     import gen_conversation_md
+    importlib.reload(postflight_lib)
     importlib.reload(gen_conversation_md)
     app_data_dir = brain_dir.parent
     
