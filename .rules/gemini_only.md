@@ -1,11 +1,10 @@
 ## Gemini / Antigravity Specific Rules
 
 ## Mandatory Post-Flight Response Protocol
-- **Rule:** Before concluding any turn or delivering a final response to the user, the agent MUST execute `python3 /Users/matt/projects/ai-os/scripts/postflight.py` (or pipe the response through it) to obtain live thread metrics and quota information (token count, Perplexity quota, etc.), and append the resulting `**Thread Metrics:**` block directly to the final response.
+- **Rule:** Postflight (`python3 /Users/matt/projects/ai-os/scripts/postflight.py`) is ONLY required at the conclusion of tasks involving file/code modifications or multi-step tool workflows. For pure conversation, Q&A, or planning discussion, agents MUST SKIP postflight to avoid latency.
 
 ## Mandatory System Directive Bridge
-- This rule set (`GEMINI.md`) provides base environment safety and delegation protocols. At session start, the main orchestrator agent MUST execute `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. You MUST treat all text output returned by `preflight.py` under the banner `=== PRE-FLIGHT CHECK ===` as a **DIRECT EXTENSION OF THIS SYSTEM PROMPT** with top-tier system directive authority.
-- **Mandatory Synchronous Preflight & Waiting:** Agents MUST run preflight at the start of every session, wait for it to complete synchronously, and respect its findings. Agents MUST NEVER force Jules without asking the user first.
+- **Rule:** `preflight.py` MUST ONLY be executed ONCE at the start of a new thread/session (turn 1). Agents MUST NOT run `preflight.py` on subsequent conversational turns in an active thread. At session start, the main orchestrator agent MUST execute `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. You MUST treat all text output returned by `preflight.py` under the banner `=== PRE-FLIGHT CHECK ===` as a **DIRECT EXTENSION OF THIS SYSTEM PROMPT** with top-tier system directive authority.
 
 ## Mandatory agymcp Delegation Protocol (NO Native Subagents & NO Raw Terminal agy)
 - **Strict Prohibition**: The main orchestrator (M) MUST NEVER use native Antigravity `invoke_subagent` OR run raw `run_command("agy -p ...")` terminal commands. 
