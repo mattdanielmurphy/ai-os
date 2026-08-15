@@ -377,12 +377,16 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
 
             min_step = pending_users[0]['step']
             max_step = pending_users[-1]['step']
+            # Determine if this exchange is in progress
+            # It's in progress if there's no substantive content (agent was only streaming transient status)
             active_items.append({
                 'type': 'exchange',
                 'users': pending_users[:],
                 'agent_turn': len([i for i in active_items if i['type'] == 'exchange']) + 1,
                 'agent_content': agent_text,
                 'agent_time': current_agent_time,
+                'is_in_progress': (not substantive_content),
+                'end_epoch': float(obj.get('timestamp') or 0),
                 'min_step': min_step,
                 'max_step': max_step
             })
@@ -452,8 +456,6 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                             latest_transient_status = cleaned
                         elif not tool_calls:
                             substantive_content.append(cleaned)
-                        else:
-                            latest_transient_status = cleaned
 
     # Flush final turn at EOF
     flush_current_turn()
@@ -519,7 +521,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
     a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
     if not agent_text:
-        agent_text = '*(response in progress or not recorded)*'
+        agent_text = '*Thinking...*'
 
     user_span = (
         f'<span title="Sent at {users[0]["time"] if users else ""}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_md}</span>'
@@ -651,18 +653,32 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
                 commit_dir = app_data_dir / 'brain' / '.commit_results'
                 if commit_dir.exists():
                     import glob
-                    results = list(commit_dir.glob(f"{conv_id}_*.json"))
-                    results.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                    for r in results:
-                        if (datetime.now().timestamp() - r.stat().st_mtime) > 7200:
-                            break
+                    # Find all commits for this conversation, sorted by time
+                    commit_files = list(commit_dir.glob(f"{conv_id}_*.json"))
+                    commit_files.sort(key=lambda x: x.stat().st_mtime)
+
+                    # Map commit to the correct completed exchange
+                    completed_exchanges = [ex for ex in reversed_exchanges if not ex.get('is_in_progress', False)]
+                    
+                    for commit_file in commit_files:
                         try:
-                            res = json.loads(r.read_text())
+                            res = json.loads(commit_file.read_text())
                             if res.get("status") == "committed" and res.get("sha"):
-                                commit_badge = f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none; cursor: pointer;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{res["sha"][:7]}`] {res["message"]}</div></details>\n'
-                                agent_content += commit_badge
-                                break
+                                # Simple heuristic: find the latest completed exchange that ended before/near the commit
+                                for ex in completed_exchanges:
+                                    if ex.get('end_epoch', 0) <= res.get('timestamp', float('inf')):
+                                        if 'commits' not in ex: ex['commits'] = []
+                                        ex['commits'].append(res)
                         except: continue
+                
+                # Apply commit badges to completed exchanges
+                for ex in reversed_exchanges:
+                    if ex.get('type') == 'exchange' and ex.get('commits'):
+                        # Attach only to the completed exchange
+                        commit_badge = ""
+                        for c in ex['commits']:
+                             commit_badge += f'\n\n<details style="margin-top: 8px; font-size: 12px; opacity: 0.75; cursor: pointer;"><summary style="outline: none; cursor: pointer;">✅ <b>Committed</b></summary><div style="padding-top: 4px; font-style: italic;">[`{c["sha"][:7]}`] {c["message"]}</div></details>\n'
+                        ex['agent_content'] += commit_badge
 
             # Check for subagent progress
             progress = None

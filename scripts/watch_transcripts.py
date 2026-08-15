@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes
 
-IN_PROGRESS_STR = "response in progress"
+
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
@@ -135,6 +135,9 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         return False
 
 
+def is_in_progress(content: str) -> bool:
+    return "Thinking..." in content or "response in progress" in content
+
 def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path, pending_commits: dict, commit_results_dir: Path) -> float:
     """Check for transcript changes and trigger re-rendering.
     Returns the newest modification time found across all active conversations.
@@ -175,7 +178,7 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
 
             # Auto-commit check
             thread_file = brain_dir / render_id / "thread.md"
-            if thread_file.exists() and IN_PROGRESS_STR not in thread_file.read_text():
+            if thread_file.exists() and not is_in_progress(thread_file.read_text()):
                 workspace_root = Path("/Users/matt/projects/ai-os")
                 
                 # Check for 60s cooldown per repository
