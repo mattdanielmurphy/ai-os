@@ -445,6 +445,7 @@ model_list:
 router_settings:
   routing_strategy: simple-shuffle
   fallbacks:
+    - deepseek-v4-flash*: ["deepseek-v4-flash"]
     - haiku*: ["deepseek-v4-flash"]
     - sonnet*: ["muse-spark-1.1"]
     - opus*: ["claude-opus-5"]
