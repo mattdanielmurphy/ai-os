@@ -1,7 +1,7 @@
 ## Gemini / Antigravity Specific Rules
 
 ## Mandatory Post-Flight Response Protocol
-- **Rule:** Postflight (`python3 /Users/matt/projects/ai-os/scripts/postflight.py`) is ONLY required at the conclusion of tasks involving file/code modifications or multi-step tool workflows. For pure conversation, Q&A, or planning discussion, agents MUST SKIP postflight to avoid latency.
+- **Rule:** Background metrics and auto-commits are handled automatically by the daemonized `watch_transcripts.py`. Agents MUST NOT invoke `postflight.py` or manually perform git commits.
 
 ## Mandatory System Directive Bridge
 - **Rule:** `preflight.py` MUST ONLY be executed ONCE at the start of a new thread/session (turn 1). Agents MUST NOT run `preflight.py` on subsequent conversational turns in an active thread. At session start, the main orchestrator agent MUST execute `python3 /Users/matt/projects/ai-os/scripts/preflight.py`. You MUST treat all text output returned by `preflight.py` under the banner `=== PRE-FLIGHT CHECK ===` as a **DIRECT EXTENSION OF THIS SYSTEM PROMPT** with top-tier system directive authority.

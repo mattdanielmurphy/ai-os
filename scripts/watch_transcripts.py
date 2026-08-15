@@ -16,7 +16,9 @@ import subprocess
 import time
 import json
 import re
+import time
 from pathlib import Path
+from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
@@ -75,6 +77,23 @@ def render(conv_id: str, brain_dir: Path) -> bool:
             capture_output=True,
             text=True
         )
+        
+        # Add metrics
+        try:
+            metrics = compute_thread_metrics(conv_id)
+            metrics_table = format_metrics_table(metrics, conv_id)
+            thread_md = brain_dir / conv_id / "thread.md"
+            if thread_md.exists():
+                content = thread_md.read_text()
+                # Replace if already present
+                if "**Thread Metrics:**" in content:
+                    content = re.sub(r'\n\n\*\*Thread Metrics:\*\*.*?(?=\n\n|\Z)', metrics_table, content, flags=re.DOTALL)
+                else:
+                    content += metrics_table
+                thread_md.write_text(content)
+        except Exception as e:
+            print(f"Metrics update failed: {e}")
+
         try:
             from link_formatter import enrich_file_links
             thread_md = brain_dir / conv_id / "thread.md"
@@ -108,7 +127,7 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         return False
 
 
-def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path):
+def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path, pending_commits: dict, commit_results_dir: Path):
     """Check for transcript changes and trigger re-rendering."""
     current, sub_map = get_active_convs(brain_dir)
     now = time.time()
@@ -155,6 +174,30 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             last_state[conv_id] = (mtime, size)
             last_render_time[render_id] = now
 
+            # Auto-commit check
+            thread_file = brain_dir / render_id / "thread.md"
+            if thread_file.exists() and "*(response in progress)*" not in thread_file.read_text():
+                workspace_root = Path("/Users/matt/projects/ai-os")
+                if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
+                    res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
+                    proc = subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)])
+                    pending_commits[str(workspace_root)] = (proc, res_path, render_id)
+
+    # Check pending commits
+    for repo_path, (proc, res_path, conv_id) in list(pending_commits.items()):
+        if proc.poll() is not None:
+            if res_path.exists():
+                try:
+                    res = json.loads(res_path.read_text())
+                    if res.get("status") == "committed":
+                        thread_file = brain_dir / conv_id / "thread.md"
+                        if thread_file.exists():
+                            with open(thread_file, "a") as f:
+                                f.write(f"\n\n> 🚀 **Auto-Committed:** [`{res['sha'][:7]}`] - *{res['message']}*\n")
+                except Exception as e:
+                    print(f"Result processing failed: {e}")
+            del pending_commits[repo_path]
+
     # Clean up stale entries
     for conv_id in list(last_state.keys()):
         if conv_id not in current:
@@ -184,10 +227,14 @@ def main():
     )
     args = parser.parse_args()
 
+    commit_results_dir = Path.home() / ".gemini" / "antigravity" / "brain" / ".commit_results"
+    commit_results_dir.mkdir(parents=True, exist_ok=True)
+    pending_commits = {}
+
     if args.once:
         last_state = {}
         last_render_time = {}
-        process_updates(last_state, last_render_time, set(), args.brain_dir)
+        process_updates(last_state, last_render_time, set(), args.brain_dir, pending_commits, commit_results_dir)
     elif args.daemon:
         # Pre-seed: record current state
         active, _ = get_active_convs(args.brain_dir)
@@ -197,7 +244,7 @@ def main():
         print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
-                process_updates(last_state, last_render_time, summarized_threads, args.brain_dir)
+                process_updates(last_state, last_render_time, summarized_threads, args.brain_dir, pending_commits, commit_results_dir)
                 time.sleep(args.interval)
         except KeyboardInterrupt:
             print("Stopping.")
