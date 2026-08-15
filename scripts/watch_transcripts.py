@@ -141,8 +141,34 @@ def render(conv_id: str, brain_dir: Path) -> bool:
     return True
 
 
-def is_in_progress(content: str) -> bool:
-    return "Thinking..." in content or "response in progress" in content
+def is_turn_completed(transcript_path: Path) -> bool:
+    """Check if the latest turn in transcript.jsonl has completed (agent stopped calling tools)."""
+    if not transcript_path.exists():
+        return False
+    try:
+        with open(transcript_path, 'rb') as f:
+            f.seek(0, 2)
+            size = f.tell()
+            buffer_size = min(size, 8192)
+            f.seek(size - buffer_size)
+            lines = f.read().decode('utf-8', errors='ignore').strip().split('\n')
+            for line in reversed(lines):
+                if not line.strip():
+                    continue
+                obj = json.loads(line)
+                t = obj.get('type')
+                if t == 'PLANNER_RESPONSE':
+                    # Completed turn if no tool calls were made in this planner response
+                    return not bool(obj.get('tool_calls'))
+                elif t == 'USER_INPUT':
+                    # User just asked something, agent hasn't responded yet
+                    return False
+                else:
+                    # Tool execution result -> turn still in progress
+                    return False
+    except Exception:
+        return False
+    return False
 
 def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path, pending_commits: dict, commit_results_dir: Path) -> float:
     """Check for transcript changes and trigger re-rendering.
@@ -182,14 +208,14 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             last_state[conv_id] = (mtime, size)
             last_render_time[render_id] = now
 
-            # Auto-commit check
-            thread_file = brain_dir / render_id / "thread.md"
-            if thread_file.exists() and not is_in_progress(thread_file.read_text()):
+            # Auto-commit check (Trigger only once when the entire turn is completed)
+            transcript_file = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
+            if transcript_file.exists() and is_turn_completed(transcript_file):
                 workspace_root = Path("/Users/matt/projects/ai-os")
                 
-                # Check for 60s cooldown per repository
+                # Check for cooldown per repository
                 last_commit_time = last_render_time.get(f"commit_{workspace_root}", 0)
-                if (now - last_commit_time) > 60:
+                if (now - last_commit_time) > 10:
                     if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
                         res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
                         proc = subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)])
