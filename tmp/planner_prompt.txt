@@ -1,4 +1,4 @@
-User Request: Fix all Rust compilation errors in apps/gemini-companion/src-tauri: (1) Add sha2 = '0.10' to Cargo.toml, (2) Refactor shell_bridge.rs to use tokio::process::Command and tokio::time::timeout instead of missing wait_timeout crate, fixing utf8 byte slice type mismatch, (3) Implement and export pub async fn start_proxy_server(app_handle: tauri::AppHandle) in proxy.rs, (4) Clean up unused imports and warnings in cloud_sync.rs, context_snapshot.rs, proxy.rs, and fs_bridge.rs so cargo check compiles cleanly with zero errors.
+User Request: our 'commited' notification is unreliable. Instead of appending it to the agent's response after the code is committed, let's just add a dynamic Committed status in our thread token counter. If it's red, there's an error or something; if it's yellow, it's uncomitted, if it's green, all committed.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -42,6 +42,7 @@ No matching items found by AI. non-interactively in terminal. Supports URL pre-f
 - **Interactive Pre/Post-Flight Audit Protocol (`scripts/preflight.py` & `scripts/auto_commit.py`)**: Pre/postflight routines act as interactive quality gates that validate syntax, check rules, and enforce output standards before commits, returning non-zero codes to reject invalid changes.
 - **Distributed LLM Wiki Pattern (`llm-wiki` & Quartz Integration)**: Ingests project decisions and entity knowledge directly into interlinked markdown files (`[[wikilinks]]`) across project roots and `~/wiki`, connected via Quartz to navigate from any project file to the broader global knowledge graph.
 - **Service Reload Rule**: When modifying daemon/service files (e.g. `services/agy-proxy/proxy.py`, `litellm_config.yaml`, or Hermes services), you MUST restart the corresponding background services via `la restart <service-name>` (e.g. `la restart agy-proxy`, `la restart hermes-webui`, `la restart hermes-gateway`) to ensure changes actually apply to the running runtime environment.
+- **Master Project Board Protocol (`PROJECT_BOARD.md`):** Central multi-project task backlog maintained at `~/projects/ai-os/PROJECT_BOARD.md` and symlinked to Obsidian `Global Todos.md`. Automatically hydrated on turn 1 of every session via `preflight.py`. All agents are required to update task statuses and surface clickable links to `PROJECT_BOARD.md` when initiating features or concluding tasks.
 
 
 
