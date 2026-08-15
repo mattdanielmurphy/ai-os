@@ -1,0 +1,81 @@
+{
+  "rules": {
+    "flash_lite_delegation": {
+      "name": "Flash-Lite Edit Delegation (Antigravity Native)",
+      "tag": "FLASH_LITE_DELEGATION",
+      "file": "gemini_only.md",
+      "enabled": false,
+      "description": "Enforce delegating all file writes and edits to a flash_lite subagent in Antigravity"
+    },
+    "agymcp_delegation": {
+      "name": "Mandatory agymcp Delegation Protocol",
+      "tag": "AGYMCP_DELEGATION",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Invoke all subagents via agymcp server tools instead of raw terminal or native subagents"
+    },
+    "high_reasoning_escalation": {
+      "name": "High-Reasoning Escalation for Stuck Bugs",
+      "tag": "HIGH_REASONING_ESCALATION",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Escalate planning and root-cause analysis after 2 failed turns"
+    },
+    "thread_artifact": {
+      "name": "Mandatory Response Artifact Protocol (thread.md)",
+      "tag": "THREAD_ARTIFACT",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Reference thread.md artifact in agent responses"
+    },
+    "subagent_cleanup": {
+      "name": "Subagent Concurrency & Immediate Cleanup Rule",
+      "tag": "SUBAGENT_CLEANUP",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Prevent duplicate subagents and clean up lingering subagents"
+    },
+    "background_task_cleanup": {
+      "name": "Background Task UI Prevention & Cleanup",
+      "tag": "BACKGROUND_TASK_CLEANUP",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Set synchronous probe timeouts and clean up background tasks"
+    },
+    "hammerspoon_reload": {
+      "name": "Hammerspoon Post-Edit Reload Protocol",
+      "tag": "HAMMERSPOON_RELOAD",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Automatically trigger Hammerspoon bundle and reload on Lua edits"
+    },
+    "hermes_emulation": {
+      "name": "Hermes Operational Emulation Protocol",
+      "tag": "HERMES_EMULATION",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Emulate Hermes tool-use and anti-fabrication runtime directives"
+    },
+    "proxima_guardrails": {
+      "name": "Proxima & Perplexity Integration Guardrails",
+      "tag": "PROXIMA_GUARDRAILS",
+      "file": "gemini_only.md",
+      "enabled": true,
+      "description": "Upload quota rules and disabled providers for Proxima/Perplexity"
+    },
+    "strict_planner_dispatch": {
+      "name": "Strict Planner / Workflow Immediate Dispatch",
+      "tag": "STRICT_PLANNER_DISPATCH",
+      "file": "core_safety.md",
+      "enabled": true,
+      "description": "Enforce immediate planner dispatch on /proxima-planner"
+    }
+  },
+  "settings": {
+    "high_reasoning_model_default": {
+      "value": "perplexity",
+      "options": ["perplexity", "flash_high", "sonnet"],
+      "description": "Default high-reasoning engine for planning and stuck bug escalation"
+    }
+  }
+}

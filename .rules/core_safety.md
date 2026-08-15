@@ -32,8 +32,10 @@
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
   - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md`, `CLAUDE.md`, and `HERMES.md` across every future session.
 
+<!-- RULE:STRICT_PLANNER_DISPATCH -->
 ## Strict Planner / Workflow Immediate Dispatch
 - **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/proxima-planner` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
 - **Workflow**: Immediately run the prompt generation script, query the planner (Perplexity via `proxima:ask_perplexity`), and present the resulting implementation plan without intermediate manual codebase rummaging.
 - **Strict Perplexity Dispatch & Fallback Policy**: When `/proxima-planner` is invoked, the orchestrator MUST ONLY dispatch to Perplexity via `run_command` (using `node ~/projects/ai-os/scripts/query_proxima.js --provider perplexity --input ./tmp/planner_prompt.txt --output ./tmp/planner_output.txt --timeout 600`) with `WaitMsBeforeAsync: 500`. Never use Gemini 3.1 Pro for planning for any reason. Fall back to `agy` ONLY if Perplexity quota is 0, or if Matt specifically requests it; and when falling back to `agy`, ALWAYS use `Gemini 3.7 Flash (High)` for planning, NEVER 3.1 Pro.
 - **Connection Recovery**: If the `query_proxima.js` script fails, ensure Proxima is running (`cd ~/projects/external/Proxima && bun start &`) and retry.
+<!-- /RULE:STRICT_PLANNER_DISPATCH -->
