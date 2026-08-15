@@ -15,36 +15,39 @@ Central task registry across all projects and active coding threads. Automatical
 ## 🚀 In Progress
 
 - [ ] Replace Quartz with Docsify for ai-os-wiki knowledge base engine [project:: ai-os] [assignee:: agent] [due:: 2026-08-15]
-- [ ] Establish Master PROJECT_BOARD.md and active preflight state hydration [project:: ai-os] [assignee:: agent] [due:: 2026-08-15]
-- [ ] Fix gemini-thread-sync userscript connection on Safari [project:: gemini-thread-sync] [assignee:: agent]
+- [ ] Fix gemini-thread-sync userscript connection on Safari & complete Userscripts port [project:: gemini-thread-sync] [assignee:: agent]
 
 ---
 
-## 📋 Backlog / To Do
+## 📋 Active Engineering Backlog
 
-- [ ] Transfer $1k from Scotiabank to Koho and back around noon to retain free Koho Essential [project:: personal] [assignee:: user]
-- [ ] Present new Mounjaro savings card from Apple Wallet at Costco pharmacy [project:: personal] [assignee:: user]
-- [ ] Design & build Clipboard History GUI App with frequency tracking and AI auto-snippets [project:: clipboard-snippet-app] [assignee:: user]
-- [ ] Audit and run Wails thread-browser [project:: ai-os] [assignee:: agent]
-- [ ] Implement system prompt injection in gemini-thread-sync [project:: gemini-thread-sync] [assignee:: agent]
+- [ ] Design & build Clipboard History GUI App with frequency tracking and AI auto-snippets [project:: clipboard-snippet-app] [assignee:: agent]
 - [ ] Fix Perplexity thread-sync userscript for Safari [project:: perplexity-thread-sync] [assignee:: agent]
-- [ ] Map out thread review workflow [project:: ai-os] [assignee:: user]
-- [ ] Build GLIC Safari sidecar (Tauri + gemini.google.com native webview) [project:: glic] [assignee:: agent]
-- [ ] Fork Hermes WebUI + port agy tool-call/thoughts rendering from ai-os Tauri [project:: hermes-webui] [assignee:: agent]
-- [ ] Build unified thread browser into Hermes WebUI fork [project:: thread-browser] [assignee:: agent]
-- [ ] Warp/tmux auto-tab for agy MCP subagent visibility [project:: ai-os] [assignee:: agent]
-- [ ] Resolve Safari CORS loopback block for gemini-thread-sync daemon [project:: gemini-thread-sync] [assignee:: agent]
-- [ ] Port userscripts (Gemini + Perplexity) to Safari using Userscripts Safari Extension [project:: gemini-thread-sync] [assignee:: agent]
-- [ ] Write Rust prototype for Safari window tracking bounds using core-graphics/cocoa [project:: glic] [assignee:: agent]
-- [ ] Configure Tauri v2 multi-webview setup for Gemini and Perplexity toggles [project:: glic] [assignee:: agent]
-- [ ] Initialize Hermes WebUI fork repository and configure styling overrides [project:: hermes-webui] [assignee:: agent]
+- [ ] Implement system prompt injection helper in gemini-thread-sync [project:: gemini-thread-sync] [assignee:: agent]
+
+---
+
+## 👤 Personal Reminders (Synced to Apple Reminders)
+
+- [ ] Transfer $1k from Scotiabank to Koho and back around noon [project:: personal] [assignee:: user] [due:: 2026-08-15 12:00] (📲 In Apple Reminders)
+- [ ] Present new Mounjaro savings card from Apple Wallet at Costco pharmacy [project:: personal] [assignee:: user] [due:: 2026-08-16 12:00] (📲 In Apple Reminders)
+
+---
+
+## 📦 Archived / Deprecated Decisions
+
+- `[DEPRECATED]` Audit and run Wails thread-browser (Superseded by Antigravity / Hermes web & CLI tools)
+- `[DEPRECATED]` GLIC Safari sidecar Tauri app & Rust window tracker (Superseded by native Antigravity IDE & Hammerspoon webview)
+- `[DEPRECATED]` Fork Hermes WebUI repository (Superseded by Hermes Gateway API + direct transcript ingestion)
+- `[COMPLETED/SUPERSEDED]` Warp/tmux auto-tab script (Superseded by agymcp background tmux sessions)
 
 ---
 
 ## ✅ Completed
 
-- [x] Clean up ai-os docs (active/archive subfolders) [project:: ai-os] [assignee:: agent]
+- [x] Establish Master PROJECT_BOARD.md and active preflight state hydration [project:: ai-os] [assignee:: agent]
 - [x] Unload rogue Quartz ai-os-wiki LaunchAgent to stop CPU/memory runaway [project:: ai-os] [assignee:: agent]
+- [x] Clean up ai-os docs (active/archive subfolders) [project:: ai-os] [assignee:: agent]
 - [x] Set up Obsidian Project Notes vault folder and index [project:: ai-os] [assignee:: agent]
 - [x] Strategize and clean up global todo system [project:: ai-os] [assignee:: agent]
 
