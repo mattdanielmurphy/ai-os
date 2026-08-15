@@ -32,6 +32,15 @@
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
   - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md`, `CLAUDE.md`, and `HERMES.md` across every future session.
 
+# Zero-Placeholder Policy & User Context Auto-Population
+- **Rule**: Agents MUST NEVER emit generic user placeholders (e.g. `[Your Name]`, `[Your Student ID]`, `[Your CCID]`, `[Your Email]`, `[Insert Date]`) in templates, email drafts, forms, or scripts when the information exists in the project context or personal vault.
+- **Auto-Lookup**: Agents must search and auto-populate all known identifiers and personal metadata directly:
+  - Full Name: `Matthew Daniel Murphy` (Matt)
+  - U of A Student ID: `1981495`
+  - CCID: `mdmurphy` (`mdmurphy@ualberta.ca`)
+  - Alberta Student Number (ASN): `3069-4370-5`
+  - Program: `B.Sc. Major in Computing Science / Artificial Intelligence Concentration`
+
 ## Strict Planner / Workflow Immediate Dispatch
 - **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/proxima-planner` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
 - **Workflow**: Immediately run the prompt generation script, query the planner (Perplexity via `proxima:ask_perplexity`), and present the resulting implementation plan without intermediate manual codebase rummaging.
