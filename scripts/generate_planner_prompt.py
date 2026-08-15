@@ -110,9 +110,10 @@ DO NOT provide full code implementations. Focus on structural details, signature
     print("✅ Planner prompt generated at ./tmp/planner_prompt.txt")
     print("\n--- EXECUTION INSTRUCTIONS ---")
     print("1. Read the contents of ./tmp/planner_prompt.txt")
-    print("2. Read the entire text of ./tmp/planner_prompt.txt and pass it VERBATIM as the `message` parameter to `proxima:ask_perplexity`. Do NOT extract or pass only the user request.")
-    print("3. CRITICAL: NEVER pass the `files` parameter/array to `proxima:ask_perplexity`! Perplexity file upload quota is extremely limited. Context is accessed via GitHub connector and the textual prompt.")
-    print("4. IMPORTANT: Do NOT perform the work yourself. Wait for the planner's response, then delegate tasks to subagents.")
+    print("2. Run the following command via `run_command` (with `WaitMsBeforeAsync: 500`):")
+    print("   node ~/projects/ai-os/scripts/query_proxima.js --provider perplexity --input ./tmp/planner_prompt.txt --output ./tmp/planner_output.txt --timeout 600")
+    print("3. CRITICAL: NEVER pass files to the planner. Context is accessed via GitHub connector and the textual prompt.")
+    print("4. IMPORTANT: Do NOT perform the work yourself. Wait for Antigravity to notify you that the planning task is complete, then read ./tmp/planner_output.txt and delegate tasks to subagents.")
 
 
 if __name__ == "__main__":
