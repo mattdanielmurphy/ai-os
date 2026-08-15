@@ -53,7 +53,12 @@ def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity") -> d
     try:
         q = get_pplx_quota()
         if q and q.get("status") == "OK":
-            pplx_quota_str = f"{q.get('remaining_pro')}, {q.get('remaining_research')} 🔬, {q.get('remaining_uploads')} 📤"
+            remaining_pro = q.get('remaining_pro')
+            remaining_uploads = q.get('remaining_uploads')
+            if remaining_uploads:
+                pplx_quota_str = f"{remaining_pro} ❓, {remaining_uploads} 📤"
+            else:
+                pplx_quota_str = f"{remaining_pro} ❓"
     except Exception:
         pass
 
@@ -67,22 +72,20 @@ def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity") -> d
     }
 
 def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
-    headers = ["Total Tokens", "Cache Expiry", "Financial Rotation"]
+    headers = ["Tokens", "Expiry"]
     values = [
-        f"~{metrics['token_display']}", 
-        metrics['cache_display'], 
-        f"~{metrics['token_display']} / ~{metrics['breakeven_str']} {metrics['indicator']}{metrics['brief_str']}"
+        f"~{metrics['token_display']} / ~{metrics['breakeven_str']} {metrics['indicator']}{metrics['brief_str']}",
+        metrics['cache_display']
     ]
 
     if metrics.get('pplx_quota_str'):
-        headers.append("Perplexity Quota")
+        headers.append("PPLX Quota")
         values.append(metrics['pplx_quota_str'])
 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
     value_row = "| " + " | ".join(values) + " |"
-
-    return f"\n\n**Thread Metrics:**\n\n{header_row}\n{separator_row}\n{value_row}\n"
+    return f"\n{header_row}\n{separator_row}\n{value_row}\n"
 
 def has_uncommitted_changes(repo_root: str) -> bool:
     import subprocess
