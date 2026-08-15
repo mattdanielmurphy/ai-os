@@ -98,8 +98,10 @@ def render(conv_id: str, brain_dir: Path) -> bool:
         return False
 
 
-def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path, pending_commits: dict, commit_results_dir: Path):
-    """Check for transcript changes and trigger re-rendering."""
+def process_updates(last_state: dict, last_render_time: dict, summarized_threads: set, brain_dir: Path, pending_commits: dict, commit_results_dir: Path) -> float:
+    """Check for transcript changes and trigger re-rendering.
+    Returns the newest modification time found across all active conversations.
+    """
     current, sub_map = get_active_convs(brain_dir)
     now = time.time()
 
@@ -112,6 +114,9 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             if t.exists():
                 s = t.stat()
                 full_state[sub] = (s.st_mtime, s.st_size)
+
+    newest_mtime = max((mtime for mtime, _ in full_state.values()), default=0)
+
 
     for conv_id, (mtime, size) in full_state.items():
         # Identify which conv to render (if subagent, render parent)
@@ -184,6 +189,8 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
                 print(f"summarize_thread failed: {e}")
             summarized_threads.add(conv_id)
 
+    return newest_mtime
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -214,8 +221,21 @@ def main():
         print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
-                process_updates(last_state, last_render_time, summarized_threads, args.brain_dir, pending_commits, commit_results_dir)
-                time.sleep(args.interval)
+                newest_mtime = process_updates(last_state, last_render_time, summarized_threads, args.brain_dir, pending_commits, commit_results_dir)
+                
+                now = time.time()
+                time_since_activity = now - newest_mtime
+                
+                if time_since_activity < 180:
+                    sleep_interval = 0.05
+                elif time_since_activity < 600:
+                    sleep_interval = 0.5
+                elif time_since_activity < 1800:
+                    sleep_interval = 1.5
+                else:
+                    sleep_interval = 3.0
+                
+                time.sleep(sleep_interval)
         except KeyboardInterrupt:
             print("Stopping.")
     else:
