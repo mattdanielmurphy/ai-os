@@ -41,6 +41,12 @@
   - Alberta Student Number (ASN): `3069-4370-5`
   - Program: `B.Sc. Major in Computing Science / Artificial Intelligence Concentration`
 
+# Architectural Preservation & Non-Destructive Debugging Policy
+- **Rule**: When debugging, fixing formatting bugs, or refactoring established custom code, UI layouts, CSS architectures, or templates (e.g. `thread.md` styles, pure-CSS flex hacks, container queries, custom DOM structures):
+  - Agents MUST NEVER unilaterally scrap, strip out, "simplify", or replace custom styling and architecture with barebones alternatives.
+  - Agents MUST isolate and fix the exact root cause (e.g. string sanitization, unescaped quotes, regex edge cases, tag boundary spacing, markdown blank lines) while strictly preserving all existing styling, DOM structures, and visual design patterns.
+  - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
+
 ## Strict Planner / Workflow Immediate Dispatch
 - **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/proxima-planner` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
 - **Workflow**: Immediately run the prompt generation script, query the planner (Perplexity via `proxima:ask_perplexity`), and present the resulting implementation plan without intermediate manual codebase rummaging.
