@@ -19,8 +19,9 @@ async function main() {
     let filePath = null;
     let outputPath = null;
     let inputFile = null;
-    let timeoutMs = 600000; // 10 minutes default
+    let timeoutMs = 600000;
     let recoverMode = false;
+    let conversationId = crypto.randomUUID();
 
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--provider' || args[i] === '-p') {
@@ -37,6 +38,13 @@ async function main() {
             timeoutMs = parseInt(args[++i], 10) * 1000;
         } else if (args[i] === '--recover' || args[i] === '--wait-active') {
             recoverMode = true;
+        } else if (args[i] === '--thread' || args[i] === '-c' || args[i] === '--continue') {
+            const nextArg = args[i + 1];
+            if (nextArg && !nextArg.startsWith('-')) {
+                conversationId = args[++i];
+            }
+        } else if (args[i] === '--new' || args[i] === '-n') {
+            // conversationId already defaults to randomUUID()
         } else if (!message) {
             message = args[i];
         }
@@ -47,7 +55,7 @@ async function main() {
     }
 
     if (!message && !recoverMode) {
-        console.error('Usage: node query_proxima.js "<message>" [--provider <name>] [--model <model>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover]');
+        console.error('Usage: node query_proxima.js "<message>" [--provider <name>] [--model <model>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--thread <id> | --continue [id]] [--new]');
         process.exit(1);
     }
 
@@ -72,7 +80,7 @@ async function main() {
 
     try {
         const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'sonnet' : 'default');
-        console.error(`[query_proxima] Querying ${providerName} (model: ${modelDisplay}, timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
+        console.error(`[query_proxima] Querying ${providerName} (model: ${modelDisplay}, thread: ${conversationId}, timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
         
         let response = '';
         if (recoverMode) {
@@ -100,10 +108,10 @@ async function main() {
             }
             if (!response && message) {
                 // Fallback to sending if recovery didn't find active text
-                response = await provider.chat(message, true, filePath, resolvedEngine);
+                response = await provider.chat(message, true, filePath, resolvedEngine, conversationId);
             }
         } else {
-            response = await provider.chat(message, true, filePath, resolvedEngine);
+            response = await provider.chat(message, true, filePath, resolvedEngine, conversationId);
         }
 
         if (!response) {
