@@ -15,31 +15,24 @@ Central task registry across all projects and active coding threads. Automatical
 ## 🚀 In Progress
 
 - [ ] Replace Quartz with Docsify for ai-os-wiki knowledge base engine [project:: ai-os] [assignee:: agent] [due:: 2026-08-15]
-- [ ] Fix gemini-thread-sync userscript connection on Safari & complete Userscripts port [project:: gemini-thread-sync] [assignee:: agent]
+- [ ] Fix gemini-thread-sync userscript connection & verify sync daemon [project:: gemini-thread-sync] [assignee:: agent]
 
 ---
 
 ## 📋 Active Engineering Backlog
 
+- [ ] Build unified Thread Browser (as extension of ai-os companion app) [project:: thread-browser] [assignee:: agent]
+- [ ] Fork Hermes WebUI for custom UI controls & unconstrained agent view [project:: hermes-webui] [assignee:: agent]
 - [ ] Design & build Clipboard History GUI App with frequency tracking and AI auto-snippets [project:: clipboard-snippet-app] [assignee:: agent]
-- [ ] Fix Perplexity thread-sync userscript for Safari [project:: perplexity-thread-sync] [assignee:: agent]
+- [ ] Fix Perplexity thread-sync userscript [project:: perplexity-thread-sync] [assignee:: agent]
 - [ ] Implement system prompt injection helper in gemini-thread-sync [project:: gemini-thread-sync] [assignee:: agent]
-
----
-
-## 👤 Personal Reminders (Synced to Apple Reminders)
-
-- [ ] Transfer $1k from Scotiabank to Koho and back around noon [project:: personal] [assignee:: user] [due:: 2026-08-15 12:00] (📲 In Apple Reminders)
-- [ ] Present new Mounjaro savings card from Apple Wallet at Costco pharmacy [project:: personal] [assignee:: user] [due:: 2026-08-16 12:00] (📲 In Apple Reminders)
 
 ---
 
 ## 📦 Archived / Deprecated Decisions
 
-- `[DEPRECATED]` Audit and run Wails thread-browser (Superseded by Antigravity / Hermes web & CLI tools)
-- `[DEPRECATED]` GLIC Safari sidecar Tauri app & Rust window tracker (Superseded by native Antigravity IDE & Hammerspoon webview)
-- `[DEPRECATED]` Fork Hermes WebUI repository (Superseded by Hermes Gateway API + direct transcript ingestion)
-- `[COMPLETED/SUPERSEDED]` Warp/tmux auto-tab script (Superseded by agymcp background tmux sessions)
+- `[DEPRECATED]` GLIC Safari sidecar Tauri app & Rust window tracker (Made irrelevant by Chrome migration)
+- `[DEPRECATED]` Wails Go backend for thread-browser (Replaced by ai-os companion app)
 
 ---
 
