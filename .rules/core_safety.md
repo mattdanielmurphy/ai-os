@@ -34,5 +34,6 @@
 
 ## Strict Planner / Workflow Immediate Dispatch
 - **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/proxima-planner` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
-- **Workflow**: Immediately run the prompt generation script, query the planner (Perplexity or Pro escalation), and present the resulting implementation plan without intermediate manual codebase rummaging.
-- **Dispatch Restriction**: When `/proxima-planner` is invoked, the orchestrator MUST ONLY dispatch to `proxima:ask_perplexity`, and NEVER fallback to `agy`/`gemini` unless explicitly told to by Matt.
+- **Workflow**: Immediately run the prompt generation script, query the planner (Perplexity via `proxima:ask_perplexity`), and present the resulting implementation plan without intermediate manual codebase rummaging.
+- **Strict Perplexity Dispatch & Fallback Policy**: When `/proxima-planner` is invoked, the orchestrator MUST ONLY dispatch to `proxima:ask_perplexity`. Never use Gemini 3.1 Pro for planning for any reason. Fall back to `agy` ONLY if Perplexity quota is 0, or if Matt specifically requests it; and when falling back to `agy`, ALWAYS use `Gemini 3.7 Flash (High)` for planning, NEVER 3.1 Pro.
+- **Connection Recovery**: If `proxima:ask_perplexity` fails with `ECONNREFUSED` / port 19222 error, immediately launch/ensure Proxima is running (`cd ~/projects/external/Proxima && bun start &`) and retry `proxima:ask_perplexity`.
