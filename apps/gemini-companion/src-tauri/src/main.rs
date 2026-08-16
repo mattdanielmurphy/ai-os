@@ -30,32 +30,21 @@ fn spawn_fresh_engine(
 #[derive(serde::Deserialize)]
 pub struct QueryCallbackPayload {
     #[serde(alias = "queryId")]
-    pub query_id: Option<String>,
+    pub query_id: String,
     pub response: Option<String>,
     pub error: Option<String>,
 }
 
 #[tauri::command]
-pub async fn query_callback(
-    query_id: Option<String>,
-    queryId: Option<String>,
-    response: Option<String>,
-    error: Option<String>,
-    payload: Option<QueryCallbackPayload>,
+async fn query_callback(
+    payload: QueryCallbackPayload,
 ) -> Result<(), String> {
-    let q_id = query_id
-        .or(queryId)
-        .or_else(|| payload.as_ref().and_then(|p| p.query_id.clone()))
-        .unwrap_or_default();
-    let resp = response.or_else(|| payload.as_ref().and_then(|p| p.response.clone()));
-    let err = error.or_else(|| payload.as_ref().and_then(|p| p.error.clone()));
-
     let mut callbacks = server::get_query_callbacks().lock().await;
-    if let Some(tx) = callbacks.remove(&q_id) {
-        if let Some(e) = err {
+    if let Some(tx) = callbacks.remove(&payload.query_id) {
+        if let Some(e) = payload.error {
             let _ = tx.send(Err(e));
         } else {
-            let _ = tx.send(Ok(resp.unwrap_or_default()));
+            let _ = tx.send(Ok(payload.response.unwrap_or_default()));
         }
         Ok(())
     } else {
