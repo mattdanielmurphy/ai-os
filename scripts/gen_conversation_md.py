@@ -567,7 +567,8 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                     current_agent_time = fmt_time(created_iso)
 
                 tool_calls = obj.get('tool_calls')
-                if tool_calls and isinstance(tool_calls, list) and len(tool_calls) > 0:
+                has_tool_calls = bool(tool_calls and isinstance(tool_calls, list) and len(tool_calls) > 0)
+                if has_tool_calls:
                     first = tool_calls[0]
                     args = first.get('args', {})
                     latest_tool_action = args.get('toolAction') or args.get('toolSummary') or first.get('name')
@@ -578,8 +579,10 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                     if cleaned:
                         if is_transient_status_line(cleaned):
                             latest_transient_status = cleaned
-                        elif cleaned not in accumulated_text:
-                            accumulated_text.append(cleaned)
+                        elif has_tool_calls:
+                            pass
+                        else:
+                            accumulated_text = [cleaned]
 
     # Flush final turn at EOF
     flush_current_turn()
