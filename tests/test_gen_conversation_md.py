@@ -117,7 +117,7 @@ I don't want to ask for too much.
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        self.assertIn('<span', block)
+        self.assertIn('<div', block)
         self.assertIn('Sent at 2:00pm', block)
         self.assertIn('Responded at 2:01pm', block)
         self.assertIn('hi', block)
@@ -281,30 +281,24 @@ I don't want to ask for too much.
         ex = [i for i in items if i['type'] == 'exchange'][0]
         self.assertEqual(ex['agent_content'], 'Para 1\n\nPara 2')
 
-    def test_multiline_user_prompt_no_blank_lines(self):
+    def test_multiline_user_prompt_preserves_paragraphs(self):
         raw = "Para 1\n\nPara 2\n\n\nPara 3"
         formatted = format_prompt(raw)
-        self.assertNotIn("\n\n", formatted)
-        self.assertIn("\u200b", formatted)
-        self.assertIn("Para 1", formatted)
-        self.assertIn("Para 2", formatted)
-        self.assertIn("Para 3", formatted)
+        self.assertIn("Para 1\n\nPara 2\n\nPara 3", formatted)
 
     def test_make_exchange_block_multiline_user_prompt(self):
-        raw_user = "Paragraph 1\n\nParagraph 2 with **bold**"
+        raw_user = "Paragraph 1\n\nParagraph 2 with **bold**\n\n```python\nprint(1)\n```"
         block = make_exchange_block([{'prompt': raw_user, 'time': '2:00pm'}], 'agent response', '2:01pm')
         self.assertIn('Paragraph 1', block)
         self.assertIn('Paragraph 2 with **bold**', block)
-        self.assertIn('\u200b', block)
-        # Ensure user container is a closed single span
-        user_span_match = re.search(r'<span title="Sent at 2:00pm"[^>]*>(.*?)</span>', block, re.DOTALL)
-        self.assertIsNotNone(user_span_match)
-        user_content = user_span_match.group(1)
+        # Ensure user container is a closed single div
+        user_div_match = re.search(r'<div title="Sent at 2:00pm"[^>]*>(.*?)</div>', block, re.DOTALL)
+        self.assertIsNotNone(user_div_match)
+        user_content = user_div_match.group(1)
         self.assertIn('Paragraph 1', user_content)
         self.assertIn('Paragraph 2 with **bold**', user_content)
-        self.assertNotIn('\n\n', user_content)
 
-    def test_multi_comment_and_prompt_span_divider(self):
+    def test_multi_comment_and_prompt_div_divider(self):
         content = """current local time is: 2026-08-15T13:45:46-06:00
 Comments on artifact URI: file:///Users/matt/thread.md
 
@@ -323,6 +317,7 @@ User question line 2
         self.assertIn('border-top: 1px solid', prompt)
         block = make_exchange_block([{'prompt': prompt, 'time': time}], 'reply', '1:46pm')
         self.assertNotIn('<hr', block)
+        self.assertIn('<div title="Sent at 1:45pm"', block)
 
 if __name__ == '__main__':
     unittest.main()
