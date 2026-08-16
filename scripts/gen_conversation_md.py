@@ -806,7 +806,8 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
 
     # Metrics table at bottom (pinned)
     metrics = compute_thread_metrics(conv_id)
-    metrics_table = format_metrics_table(metrics, conv_id)
+    kanban_path = str(Path(app_data_dir) / "brain" / conv_id / "kanban.md") if conv_id and app_data_dir else None
+    metrics_table = format_metrics_table(metrics, conv_id, kanban_path=kanban_path)
     pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table.strip()}\n\n</span>'
     doc_content.append(pinned_metrics)
 
