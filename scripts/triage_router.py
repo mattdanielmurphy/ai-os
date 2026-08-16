@@ -290,6 +290,62 @@ def open_gemini_webview_thread(query, model=None):
 
     sys.exit(0)
 
+def open_perplexity_webview_thread(query, model=None):
+    """Dispatches prompt directly to the ai-os Perplexity webview via local HTTP server API,
+    or launches ai-os app if not currently running."""
+    print(f"[triage] Dispatching prompt ({len(query)} chars) to Perplexity webview in ai-os...")
+
+    # 1. Copy prompt to macOS clipboard as fallback
+    try:
+        proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+        proc.communicate(input=query.encode("utf-8"))
+    except Exception:
+        pass
+
+    # 2. Attempt HTTP POST to local AI-OS Tauri Axum server (127.0.0.1:3031/api/perplexity/prompt)
+    payload = json.dumps({"prompt": query, "model": model}).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:3031/api/perplexity/prompt",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=2) as res:
+            if res.status == 200:
+                print("[triage] Successfully dispatched prompt directly to running AI-OS Perplexity window!")
+                sys.exit(0)
+    except Exception:
+        pass
+
+    # 3. If AI-OS app server is not running, write pending prompt file and launch /Applications/ai-os.app
+    print("[triage] AI-OS app not currently active. Launching /Applications/ai-os.app with pending Perplexity prompt...")
+    pending_file = Path.home() / ".ai-os" / "pending_pplx_prompt.txt"
+    pending_file.parent.mkdir(parents=True, exist_ok=True)
+    pending_file.write_text(query, encoding="utf-8")
+
+    app_paths = [
+        Path("/Applications/ai-os.app"),
+        Path("/Applications/AI-OS.app"),
+        Path.home() / "Applications" / "ai-os.app",
+        Path.home() / "Applications" / "AI-OS.app"
+    ]
+    
+    launched = False
+    for app_path in app_paths:
+        if app_path.exists():
+            subprocess.run(["open", str(app_path)])
+            launched = True
+            break
+            
+    if not launched:
+        res = subprocess.run(["open", "-a", "AI-OS"], stderr=subprocess.DEVNULL)
+        if res.returncode != 0:
+            subprocess.run(["open", "-a", "ai-os"], stderr=subprocess.DEVNULL)
+
+    sys.exit(0)
+
 def get_antigravity_window_bounds():
     """Gets (x, y, w, h) of window 1 of Antigravity process."""
     try:
