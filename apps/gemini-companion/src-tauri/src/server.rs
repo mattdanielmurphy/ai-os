@@ -425,28 +425,48 @@ async fn handle_perplexity_query(
 
     let eval_script = format!(
         r#"
-        (async function() {{
+        (function() {{
             const qId = {};
+            const prompt = {};
+            const model = {};
+            const session = {};
+
             function sendDone(resp, err) {{
+                const msgObj = {{
+                    query_id: qId,
+                    queryId: qId,
+                    response: resp,
+                    error: err,
+                    payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
+                }};
+
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', {{
-                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
-                            queryId: qId,
-                            query_id: qId,
-                            response: resp,
-                            error: err
-                        }}).catch(function(e) {{}});
-                    }} else if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', {{
-                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
-                            query_id: qId,
-                            queryId: qId,
-                            response: resp,
-                            error: err
-                        }});
+                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
                     }}
                 }} catch (e) {{}}
+
+                try {{
+                    if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', msgObj);
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                            cmd: 'query_callback',
+                            callback: 0,
+                            error: 0,
+                            query_id: qId,
+                            queryId: qId,
+                            response: resp,
+                            error: err,
+                            payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
+                        }}));
+                    }}
+                }} catch (e) {{}}
+
                 try {{
                     fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
                         method: 'POST',
@@ -456,15 +476,19 @@ async fn handle_perplexity_query(
                 }} catch (e) {{}}
             }}
 
-            try {{
-                if (!window.__proximaPerplexity || !window.__proximaPerplexity.send) {{
-                    throw new Error('Perplexity engine not initialized in webview');
+            async function run() {{
+                try {{
+                    if (!window.__proximaPerplexity || !window.__proximaPerplexity.send) {{
+                        throw new Error('Perplexity engine not initialized in webview. URL: ' + window.location.href);
+                    }}
+                    const answer = await window.__proximaPerplexity.send(prompt, model, null, session);
+                    sendDone(answer, null);
+                }} catch (err) {{
+                    sendDone(null, err.message || String(err));
                 }}
-                const answer = await window.__proximaPerplexity.send({}, {}, null, {});
-                sendDone(answer, null);
-            }} catch (err) {{
-                sendDone(null, err.message || String(err));
             }}
+
+            run();
         }})();
         "#,
         js_query_id, js_prompt, js_model, js_session
@@ -518,28 +542,48 @@ async fn handle_gemini_query(
 
     let eval_script = format!(
         r#"
-        (async function() {{
+        (function() {{
             const qId = {};
+            const prompt = {};
+            const model = {};
+            const session = {};
+
             function sendDone(resp, err) {{
+                const msgObj = {{
+                    query_id: qId,
+                    queryId: qId,
+                    response: resp,
+                    error: err,
+                    payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
+                }};
+
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', {{
-                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
-                            queryId: qId,
-                            query_id: qId,
-                            response: resp,
-                            error: err
-                        }}).catch(function(e) {{}});
-                    }} else if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', {{
-                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
-                            query_id: qId,
-                            queryId: qId,
-                            response: resp,
-                            error: err
-                        }});
+                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
                     }}
                 }} catch (e) {{}}
+
+                try {{
+                    if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', msgObj);
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                            cmd: 'query_callback',
+                            callback: 0,
+                            error: 0,
+                            query_id: qId,
+                            queryId: qId,
+                            response: resp,
+                            error: err,
+                            payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
+                        }}));
+                    }}
+                }} catch (e) {{}}
+
                 try {{
                     fetch('http://127.0.0.1:3031/api/gemini/callback', {{
                         method: 'POST',
@@ -549,16 +593,20 @@ async fn handle_gemini_query(
                 }} catch (e) {{}}
             }}
 
-            try {{
-                const engine = window.__proximaGeminiUnified || window.__proximaGemini;
-                if (!engine || !engine.send) {{
-                    throw new Error('Gemini engine not initialized in webview');
+            async function run() {{
+                try {{
+                    const engine = window.__proximaGeminiUnified || window.__proximaGemini;
+                    if (!engine || !engine.send) {{
+                        throw new Error('Gemini engine not initialized in webview. URL: ' + window.location.href);
+                    }}
+                    const answer = await engine.send(prompt, model, null, session);
+                    sendDone(answer, null);
+                }} catch (err) {{
+                    sendDone(null, err.message || String(err));
                 }}
-                const answer = await engine.send({}, {}, null, {});
-                sendDone(answer, null);
-            }} catch (err) {{
-                sendDone(null, err.message || String(err));
             }}
+
+            run();
         }})();
         "#,
         js_query_id, js_prompt, js_model, js_session
