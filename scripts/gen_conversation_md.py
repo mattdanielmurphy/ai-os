@@ -252,20 +252,21 @@ def normalize_headings(text: str) -> str:
     return '\n'.join(new_lines)
 
 
-def heal_markup_spans(text: str) -> str:
-    """Self-healing: balance open and closed span tags to prevent DOM corruption."""
+def heal_markup_tags(text: str) -> str:
+    """Self-healing: balance open and closed div/span tags to prevent DOM corruption."""
     if not text:
         return text
 
-    open_spans = len(re.findall(r'<span\b[^>]*>', text, re.IGNORECASE))
-    close_spans = len(re.findall(r'</span>', text, re.IGNORECASE))
+    for tag in ['div', 'span']:
+        open_tags = len(re.findall(rf'<{tag}\b[^>]*>', text, re.IGNORECASE))
+        close_tags = len(re.findall(rf'</{tag}>', text, re.IGNORECASE))
 
-    if open_spans > close_spans:
-        text = text + ('\n</span>' * (open_spans - close_spans))
-    elif close_spans > open_spans:
-        diff = close_spans - open_spans
-        for _ in range(diff):
-            text = re.sub(r'</span>\s*$', '', text, count=1, flags=re.IGNORECASE)
+        if open_tags > close_tags:
+            text = text + (f'\n</{tag}>' * (open_tags - close_tags))
+        elif close_tags > open_tags:
+            diff = close_tags - open_tags
+            for _ in range(diff):
+                text = re.sub(rf'</{tag}>\s*$', '', text, count=1, flags=re.IGNORECASE)
 
     return text
 
@@ -421,9 +422,9 @@ def extract_user_input(content: str):
 
         if quote_lines:
             quote_text = '\n'.join(quote_lines).strip()
-            quote_html = f'<span style="display: block; background: rgba(0, 0, 0, 0.25); border-left: 3px solid rgba(130, 115, 220, 0.7); padding: 6px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; opacity: 0.9; white-space: pre-wrap;">{quote_text}</span>'
+            quote_html = f'<div style="display: block; background: rgba(0, 0, 0, 0.25); border-left: 3px solid rgba(130, 115, 220, 0.7); padding: 6px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; opacity: 0.9;">\n\n{quote_text}\n\n</div>'
             if cmt_clean:
-                formatted_parts.append(f"{quote_html}\n💬 **Comment**: {cmt_clean}")
+                formatted_parts.append(f"{quote_html}\n\n💬 **Comment**: {cmt_clean}")
             else:
                 formatted_parts.append(quote_html)
         elif cmt_clean:
@@ -445,7 +446,7 @@ def extract_user_input(content: str):
             formatted_parts.append("✅ **Approved Plan/Artifact**")
 
     if len(formatted_parts) > 1:
-        divider = '\n<span style="display: block; margin: 8px 0; border-top: 1px solid rgba(130, 115, 220, 0.35);"></span>\n'
+        divider = '\n\n<div style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);"></div>\n\n'
         prompt = divider.join(formatted_parts).strip()
     elif len(formatted_parts) == 1:
         prompt = formatted_parts[0].strip()
