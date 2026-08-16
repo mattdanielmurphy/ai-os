@@ -1,5 +1,5 @@
 ---
-name: subtractive-prune
+name: _subtractive-prune
 description: "Trims selected text down to its essential points without altering the author's original phrasing or vocabulary. Purely destructive deletion without vocabulary substitution or transitional insertions."
 ---
 

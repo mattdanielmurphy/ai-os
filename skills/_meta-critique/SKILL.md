@@ -1,5 +1,5 @@
 ---
-name: meta-critique
+name: _meta-critique
 description: "Delivers high-level editorial feedback and structural analysis without generating any copy, sample sentences, or rewritten prose."
 ---
 
