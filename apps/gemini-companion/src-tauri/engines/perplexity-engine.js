@@ -278,6 +278,8 @@
             modelPref = 'claude50sonnetthinking';
         } else if (engine === 'grok' || engine === 'grok-2' || engine === 'grok46medium') {
             modelPref = 'grok46medium';
+        } else if (engine === 'kimi' || engine === 'k3' || engine === 'kimik3thinking') {
+            modelPref = 'kimik3thinking';
         } else if (engine && engine !== 'auto') {
             modelPref = engine;
         }

@@ -13,6 +13,9 @@ const PERPLEXITY_MODEL_MAP = {
     'grok': 'grok46medium',
     'grok-2': 'grok46medium',
     'grok46medium': 'grok46medium',
+    'kimi': 'kimik3thinking',
+    'k3': 'kimik3thinking',
+    'kimik3thinking': 'kimik3thinking',
 };
 
 async function main() {
