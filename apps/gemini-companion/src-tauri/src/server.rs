@@ -635,6 +635,126 @@ async fn handle_gemini_query(
     }
 }
 
+async fn handle_debug_ping(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let win = app_handle.get_window("perplexity_main")
+        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))?;
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    {
+        let mut callbacks = get_query_callbacks().lock().await;
+        callbacks.insert("test_ping".to_string(), tx);
+    }
+
+    let script = r#"
+        (function() {
+            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__proximaPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
+            var msg = {
+                query_id: 'test_ping',
+                queryId: 'test_ping',
+                response: diag,
+                error: null,
+                payload: {
+                    query_id: 'test_ping',
+                    queryId: 'test_ping',
+                    response: diag,
+                    error: null
+                }
+            };
+            if (window.__TAURI__ && window.__TAURI__.invoke) {
+                window.__TAURI__.invoke('query_callback', msg).catch(function(e) {});
+            }
+            if (window.__TAURI_INVOKE__) {
+                window.__TAURI_INVOKE__('query_callback', msg);
+            }
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {
+                window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({
+                    cmd: 'query_callback',
+                    callback: 0,
+                    error: 0,
+                    query_id: 'test_ping',
+                    queryId: 'test_ping',
+                    response: diag,
+                    payload: msg.payload
+                }));
+            }
+        })();
+    "#;
+    let eval_res = win.eval(script);
+
+    match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(Ok(resp))) => Ok(resp),
+        Ok(Ok(Err(err))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err)),
+        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed".to_string())),
+        Err(_) => {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove("test_ping");
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, format!("Ping timed out. eval_res={:?}", eval_res)))
+        }
+    }
+}
+
+async fn handle_debug_ping_gemini(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let win = app_handle.get_window("gemini_main")
+        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))?;
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    {
+        let mut callbacks = get_query_callbacks().lock().await;
+        callbacks.insert("test_ping_gemini".to_string(), tx);
+    }
+
+    let script = r#"
+        (function() {
+            var diag = 'URL=' + window.location.href + ' | GEMINI_UNIFIED=' + (typeof window.__proximaGeminiUnified !== 'undefined') + ' | GEMINI=' + (typeof window.__proximaGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
+            var msg = {
+                query_id: 'test_ping_gemini',
+                queryId: 'test_ping_gemini',
+                response: diag,
+                error: null,
+                payload: {
+                    query_id: 'test_ping_gemini',
+                    queryId: 'test_ping_gemini',
+                    response: diag,
+                    error: null
+                }
+            };
+            if (window.__TAURI__ && window.__TAURI__.invoke) {
+                window.__TAURI__.invoke('query_callback', msg).catch(function(e) {});
+            }
+            if (window.__TAURI_INVOKE__) {
+                window.__TAURI_INVOKE__('query_callback', msg);
+            }
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {
+                window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({
+                    cmd: 'query_callback',
+                    callback: 0,
+                    error: 0,
+                    query_id: 'test_ping_gemini',
+                    queryId: 'test_ping_gemini',
+                    response: diag,
+                    payload: msg.payload
+                }));
+            }
+        })();
+    "#;
+    let eval_res = win.eval(script);
+
+    match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(Ok(resp))) => Ok(resp),
+        Ok(Ok(Err(err))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err)),
+        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed".to_string())),
+        Err(_) => {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove("test_ping_gemini");
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, format!("Ping timed out. eval_res={:?}", eval_res)))
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Server spawn
 // ---------------------------------------------------------------------------
@@ -658,6 +778,8 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/perplexity/prompt", post(handle_perplexity_prompt))
             .route("/api/perplexity/query", post(handle_perplexity_query))
             .route("/api/perplexity/callback", post(handle_perplexity_callback))
+            .route("/api/debug/ping", axum::routing::get(handle_debug_ping))
+            .route("/api/debug/ping_gemini", axum::routing::get(handle_debug_ping_gemini))
             .layer(cors)
             .with_state(app_handle);
 
