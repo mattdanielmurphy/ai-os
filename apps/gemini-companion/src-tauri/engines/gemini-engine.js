@@ -41,7 +41,21 @@
     }
 
     function activateSession(sessionId) {
-        if (!sessionId) sessionId = 'default';
+        if (!sessionId || sessionId === 'default' || sessionId === 'new') {
+            _currentSessionId = generateUuid().toUpperCase();
+            _conversationId = '';
+            _responseId = '';
+            _choiceId = '';
+            _contextToken = '';
+            _sessionUuid = _currentSessionId;
+            return {
+                conversationId: '',
+                responseId: '',
+                choiceId: '',
+                contextToken: '',
+                sessionUuid: _currentSessionId
+            };
+        }
         _currentSessionId = sessionId;
         if (!_sessions[sessionId]) {
             _sessions[sessionId] = {

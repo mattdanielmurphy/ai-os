@@ -417,29 +417,51 @@ async fn handle_perplexity_query(
 
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
     let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "claude50sonnetthinking".to_string())).unwrap_or_default();
-    let js_session = serde_json::to_string(&payload.session_id.unwrap_or_else(|| "default".to_string())).unwrap_or_default();
+    let js_session = match payload.session_id {
+        Some(s) => serde_json::to_string(&s).unwrap_or_else(|_| "null".to_string()),
+        None => "null".to_string(),
+    };
     let js_query_id = serde_json::to_string(&query_id).unwrap_or_default();
 
     let eval_script = format!(
         r#"
         (async function() {{
             const qId = {};
+            function sendDone(resp, err) {{
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                        window.__TAURI__.invoke('query_callback', {{
+                            queryId: qId,
+                            query_id: qId,
+                            response: resp,
+                            error: err
+                        }}).catch(function() {{}});
+                    }} else if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', {{
+                            query_id: qId,
+                            queryId: qId,
+                            response: resp,
+                            error: err
+                        }});
+                    }}
+                }} catch (e) {{}}
+                try {{
+                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ query_id: qId, response: resp, error: err }})
+                    }}).catch(function() {{}});
+                }} catch (e) {{}}
+            }}
+
             try {{
                 if (!window.__proximaPerplexity || !window.__proximaPerplexity.send) {{
                     throw new Error('Perplexity engine not initialized in webview');
                 }}
                 const answer = await window.__proximaPerplexity.send({}, {}, null, {});
-                await fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ query_id: qId, response: answer }})
-                }});
+                sendDone(answer, null);
             }} catch (err) {{
-                await fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ query_id: qId, error: err.message || String(err) }})
-                }}).catch(function() {{}});
+                sendDone(null, err.message || String(err));
             }}
         }})();
         "#,
@@ -486,30 +508,52 @@ async fn handle_gemini_query(
 
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
     let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "auto".to_string())).unwrap_or_default();
-    let js_session = serde_json::to_string(&payload.session_id.unwrap_or_else(|| "default".to_string())).unwrap_or_default();
+    let js_session = match payload.session_id {
+        Some(s) => serde_json::to_string(&s).unwrap_or_else(|_| "null".to_string()),
+        None => "null".to_string(),
+    };
     let js_query_id = serde_json::to_string(&query_id).unwrap_or_default();
 
     let eval_script = format!(
         r#"
         (async function() {{
             const qId = {};
+            function sendDone(resp, err) {{
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                        window.__TAURI__.invoke('query_callback', {{
+                            queryId: qId,
+                            query_id: qId,
+                            response: resp,
+                            error: err
+                        }}).catch(function() {{}});
+                    }} else if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', {{
+                            query_id: qId,
+                            queryId: qId,
+                            response: resp,
+                            error: err
+                        }});
+                    }}
+                }} catch (e) {{}}
+                try {{
+                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ query_id: qId, response: resp, error: err }})
+                    }}).catch(function() {{}});
+                }} catch (e) {{}}
+            }}
+
             try {{
                 const engine = window.__proximaGeminiUnified || window.__proximaGemini;
                 if (!engine || !engine.send) {{
                     throw new Error('Gemini engine not initialized in webview');
                 }}
                 const answer = await engine.send({}, {}, null, {});
-                await fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ query_id: qId, response: answer }})
-                }});
+                sendDone(answer, null);
             }} catch (err) {{
-                await fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ query_id: qId, error: err.message || String(err) }})
-                }}).catch(function() {{}});
+                sendDone(null, err.message || String(err));
             }}
         }})();
         "#,
