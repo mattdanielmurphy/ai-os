@@ -90,29 +90,69 @@ async function main() {
             process.exit(0);
         }
 
-        // Synchronous query evaluation for Perplexity or Gemini
-        const queryEndpoint = provider === 'perplexity' ? `${baseUrl}/api/perplexity/query` : `${baseUrl}/api/gemini/query`;
-        const modelDisplay = provider === 'perplexity' ? rawModel : (rawModel || 'auto');
-        console.error(`[query_aios] Querying ${provider} in ai-os (model: ${modelDisplay}, timeout: ${timeoutSec}s)...`);
-        
-        const res = await fetch(queryEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt: message,
-                model: resolvedModel,
-                session_id: sessionId
-            }),
-            signal: AbortSignal.timeout(timeoutSec * 1000)
-        });
+        let answer = '';
 
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Server error (${res.status}): ${errText}`);
+        if (provider === 'perplexity') {
+            const modelDisplay = rawModel || 'sonnet';
+            console.error(`[query_aios] Querying perplexity in ai-os (model: ${modelDisplay}, timeout: ${timeoutSec}s)...`);
+            
+            try {
+                const PROXIMA_PATH = '/Users/matt/projects/external/Proxima';
+                const { IPCClient, AIProvider } = await import(path.join(PROXIMA_PATH, 'src/mcp/ipc-bridge.js'));
+                const { getAgentHubToken, getAgentHubPort } = await import(path.join(PROXIMA_PATH, 'src/mcp/helpers.js'));
+                
+                const port = getAgentHubPort() || 19222;
+                const token = getAgentHubToken();
+                const client = new IPCClient(port, token);
+                const pplxProvider = new AIProvider('perplexity', client, () => true);
+                
+                const threadId = sessionId || crypto.randomUUID();
+                answer = await pplxProvider.chat(message, true, null, resolvedModel, threadId);
+            } catch (ipcErr) {
+                console.error(`[query_aios] IPC direct error (${ipcErr.message}), falling back to HTTP 3031...`);
+                const queryEndpoint = `${baseUrl}/api/perplexity/query`;
+                const res = await fetch(queryEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: message,
+                        model: resolvedModel,
+                        session_id: sessionId
+                    }),
+                    signal: AbortSignal.timeout(timeoutSec * 1000)
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`Server error (${res.status}): ${errText}`);
+                }
+                const data = await res.json();
+                answer = data.response || '';
+            }
+        } else {
+            // Gemini query via companion HTTP
+            const queryEndpoint = `${baseUrl}/api/gemini/query`;
+            const modelDisplay = rawModel || 'auto';
+            console.error(`[query_aios] Querying ${provider} in ai-os (model: ${modelDisplay}, timeout: ${timeoutSec}s)...`);
+            
+            const res = await fetch(queryEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: message,
+                    model: resolvedModel,
+                    session_id: sessionId
+                }),
+                signal: AbortSignal.timeout(timeoutSec * 1000)
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Server error (${res.status}): ${errText}`);
+            }
+
+            const data = await res.json();
+            answer = data.response || '';
         }
-
-        const data = await res.json();
-        const answer = data.response || '';
 
         if (!answer) {
             throw new Error(`Received empty response from ${provider}`);
