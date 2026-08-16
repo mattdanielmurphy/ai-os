@@ -27,27 +27,45 @@ fn spawn_fresh_engine(
     pty::spawn_fresh_engine(project_path, engine, thread_id, app_handle, state)
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct QueryCallbackPayload {
     #[serde(alias = "queryId")]
-    pub query_id: String,
+    pub query_id: Option<String>,
     pub response: Option<String>,
     pub error: Option<String>,
+    pub payload: Option<Box<QueryCallbackPayload>>,
 }
 
 #[tauri::command]
 async fn query_callback(
-    payload: QueryCallbackPayload,
+    query_id: Option<String>,
+    response: Option<String>,
+    error: Option<String>,
+    payload: Option<QueryCallbackPayload>,
 ) -> Result<(), String> {
+    eprintln!("[query_callback INVOKED] direct_id={:?}, has_payload={}", query_id, payload.is_some());
+    let q_id = query_id
+        .or_else(|| payload.as_ref().and_then(|p| p.query_id.clone()))
+        .or_else(|| payload.as_ref().and_then(|p| p.payload.as_ref().and_then(|pp| pp.query_id.clone())))
+        .unwrap_or_default();
+    let resp = response
+        .or_else(|| payload.as_ref().and_then(|p| p.response.clone()))
+        .or_else(|| payload.as_ref().and_then(|p| p.payload.as_ref().and_then(|pp| pp.response.clone())));
+    let err = error
+        .or_else(|| payload.as_ref().and_then(|p| p.error.clone()))
+        .or_else(|| payload.as_ref().and_then(|p| p.payload.as_ref().and_then(|pp| pp.error.clone())));
+
+    eprintln!("[query_callback RESOLVED] q_id={}, resp_len={:?}, err={:?}", q_id, resp.as_ref().map(|s| s.len()), err);
     let mut callbacks = server::get_query_callbacks().lock().await;
-    if let Some(tx) = callbacks.remove(&payload.query_id) {
-        if let Some(e) = payload.error {
+    if let Some(tx) = callbacks.remove(&q_id) {
+        if let Some(e) = err {
             let _ = tx.send(Err(e));
         } else {
-            let _ = tx.send(Ok(payload.response.unwrap_or_default()));
+            let _ = tx.send(Ok(resp.unwrap_or_default()));
         }
         Ok(())
     } else {
+        eprintln!("[query_callback NOT FOUND] q_id={}", q_id);
         Err("Query ID not found or timed out".to_string())
     }
 }
