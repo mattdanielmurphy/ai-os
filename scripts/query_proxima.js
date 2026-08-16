@@ -92,24 +92,76 @@ async function main() {
         resolvedEngine = rawModel || null;
     }
 
-    const port = getAgentHubPort() || 19222;
-    const token = getAgentHubToken();
-    const client = new IPCClient(port, token);
-    const provider = new AIProvider(providerName, client, () => true);
+    const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'sonnet' : 'default');
+    console.error(`[query_proxima] Querying ${providerName} (model: ${modelDisplay}, thread: ${conversationId}, timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
 
+    // 1. Try querying native Tauri AI-OS server directly (port 3031)
     try {
-        const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'sonnet' : 'default');
-        console.error(`[query_proxima] Querying ${providerName} (model: ${modelDisplay}, thread: ${conversationId}, timeout: ${timeoutMs / 1000}s, recover: ${recoverMode})...`);
-        
+        const pingController = new AbortController();
+        const pingTimeout = setTimeout(() => pingController.abort(), 1000);
+        const pingRes = await fetch('http://127.0.0.1:3031/v1/models', { signal: pingController.signal }).catch(() => null);
+        clearTimeout(pingTimeout);
+
+        if (pingRes && pingRes.ok) {
+            console.error(`[query_proxima] Connected to native Tauri AI-OS server on 127.0.0.1:3031`);
+            const endpoint = baseProvider === 'gemini' 
+                ? 'http://127.0.0.1:3031/api/gemini/query' 
+                : 'http://127.0.0.1:3031/api/perplexity/query';
+
+            const queryController = new AbortController();
+            const queryTimeout = setTimeout(() => queryController.abort(), timeoutMs);
+
+            const payload = {
+                prompt: message,
+                model: resolvedEngine,
+                session_id: conversationId,
+                file_path: filePath ? path.resolve(filePath) : null,
+            };
+
+            const queryRes = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: queryController.signal,
+            });
+            clearTimeout(queryTimeout);
+
+            if (queryRes.ok) {
+                const data = await queryRes.json();
+                const response = data.response;
+                if (response) {
+                    if (outputPath) {
+                        fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
+                        fs.writeFileSync(outputPath, response, 'utf8');
+                        console.error(`[query_proxima] Output written to ${outputPath}`);
+                    } else {
+                        console.log(response);
+                    }
+                    process.exit(0);
+                }
+            } else {
+                const errText = await queryRes.text();
+                console.error(`[query_proxima] Tauri returned error (${queryRes.status}): ${errText}. Falling back to Proxima IPC...`);
+            }
+        }
+    } catch (e) {
+        // Fall back to Proxima IPC
+    }
+
+    // 2. Fallback to Proxima Electron IPC
+    try {
+        const port = getAgentHubPort() || 19222;
+        const token = getAgentHubToken();
+        const client = new IPCClient(port, token);
+        const provider = new AIProvider(providerName, client, () => true);
+
         let response = '';
         if (recoverMode) {
-            // Wait for active generation in webview or cache
             const startTime = Date.now();
             while (Date.now() - startTime < timeoutMs) {
                 try {
                     const result = await provider.executeScript(`
                         (function() {
-                            // Check if page is currently streaming or has completed answer
                             var isStreaming = document.querySelector('.animate-pulse') || document.querySelector('[data-testid="loading"]');
                             var markdownEl = document.querySelector('.prose') || document.querySelector('[data-testid="answer-content"]');
                             return {
@@ -126,7 +178,6 @@ async function main() {
                 await new Promise(r => setTimeout(r, 2000));
             }
             if (!response && message) {
-                // Fallback to sending if recovery didn't find active text
                 response = await provider.chat(message, true, filePath, resolvedEngine, conversationId);
             }
         } else {

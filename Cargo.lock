@@ -3682,6 +3682,7 @@ version = "0.1.0"
 dependencies = [
  "aios-core",
  "axum",
+ "base64 0.22.1",
  "futures-util",
  "portable-pty",
  "serde",
