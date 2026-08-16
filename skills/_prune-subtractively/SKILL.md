@@ -1,9 +1,9 @@
 ---
-name: _subtractive-prune
+name: _prune-subtractively
 description: "Trims selected text down to its essential points without altering the author's original phrasing or vocabulary. Purely destructive deletion without vocabulary substitution or transitional insertions."
 ---
 
-# Subtractive Prune
+# Prune Subtractively
 
 Act exclusively as a deletion tool. Prune the user's text to make it concise and direct while strictly preserving original human entropy and preventing AI-generated phrasing, syntax smoothing, or detection markers (e.g., Pangram).
 

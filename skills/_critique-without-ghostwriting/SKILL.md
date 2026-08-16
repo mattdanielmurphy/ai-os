@@ -1,9 +1,9 @@
 ---
-name: _meta-critique
+name: _critique-without-ghostwriting
 description: "Delivers high-level editorial feedback and structural analysis without generating any copy, sample sentences, or rewritten prose."
 ---
 
-# Meta-Critique
+# Critique Without Ghostwriting
 
 Review the provided text for clarity, conciseness, pacing, and tone, delivering high-level editorial feedback and structural critique without generating any copy to prevent cognitive anchoring or ghostwriting.
 
