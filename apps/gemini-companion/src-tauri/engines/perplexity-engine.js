@@ -276,6 +276,8 @@
             modelPref = 'turbo';
         } else if (engine === 'sonnet' || engine === 'claude50sonnetthinking') {
             modelPref = 'claude50sonnetthinking';
+        } else if (engine === 'grok' || engine === 'grok-2' || engine === 'grok46medium') {
+            modelPref = 'grok46medium';
         } else if (engine && engine !== 'auto') {
             modelPref = engine;
         }
@@ -296,18 +298,20 @@
             prompt_source: 'user',
             query_source: _lastBackendUuid ? 'followup' : 'home',
             is_incognito: false,
-            time_from_first_type: Math.floor(Math.random() * 5000) + 1000,
+            time_from_first_type: Math.floor(Math.random() * 2000) + 500,
             local_search_enabled: false,
             use_schematized_api: true,
             send_back_text_in_streaming_api: true,
             supported_block_use_cases: [
                 'answer_modes', 'media_items', 'knowledge_cards', 'inline_entity_cards',
                 'place_widgets', 'finance_widgets', 'prediction_market_widgets', 'sports_widgets',
-                'flight_status_widgets', 'news_widgets', 'shopping_widgets', 'search_result_widgets',
-                'inline_images', 'inline_assets', 'placeholder_cards', 'diff_blocks',
-                'inline_knowledge_cards', 'entity_group_v2', 'refinement_filters',
-                'answer_tabs', 'preserve_latex', 'in_context_suggestions',
-                'pending_followups', 'inline_claims', 'unified_assets'
+                'flight_status_widgets', 'news_widgets', 'shopping_widgets', 'jobs_widgets',
+                'search_result_widgets', 'inline_images', 'inline_assets', 'placeholder_cards',
+                'diff_blocks', 'inline_knowledge_cards', 'entity_group_v2', 'refinement_filters',
+                'canvas_mode', 'maps_preview', 'answer_tabs', 'price_comparison_widgets',
+                'preserve_latex', 'generic_onboarding_widgets', 'in_context_suggestions',
+                'pending_followups', 'inline_claims', 'unified_assets', 'workflow_steps',
+                'workflow_widgets', 'navigation_results', 'background_agents'
             ],
             client_coordinates: null,
             mentions: [],
