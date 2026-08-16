@@ -280,6 +280,12 @@
             modelPref = 'grok46medium';
         } else if (engine === 'kimi' || engine === 'k3' || engine === 'kimik3thinking') {
             modelPref = 'kimik3thinking';
+        } else if (engine === 'gpt' || engine === 'gpt5' || engine === 'terra' || engine === 'gpt56_terra_thinking') {
+            modelPref = 'gpt56_terra_thinking';
+        } else if (engine === 'gemini' || engine === 'gemini-3.7' || engine === 'flash-thinking' || engine === 'gemini37flashthinking') {
+            modelPref = 'gemini37flashthinking';
+        } else if (engine === 'glm' || engine === 'glm-5' || engine === 'glm5' || engine === 'glm_5_2') {
+            modelPref = 'glm_5_2';
         } else if (engine && engine !== 'auto') {
             modelPref = engine;
         }
