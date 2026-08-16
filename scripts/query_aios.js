@@ -68,7 +68,7 @@ async function main() {
     const baseUrl = 'http://127.0.0.1:3031';
 
     try {
-        if (uiOnly || provider === 'gemini') {
+        if (uiOnly) {
             const endpoint = provider === 'perplexity' ? `${baseUrl}/api/perplexity/prompt` : `${baseUrl}/api/gemini/prompt`;
             console.error(`[query_aios] Dispatching UI prompt to ${provider} window...`);
             const res = await fetch(endpoint, {
@@ -87,9 +87,12 @@ async function main() {
             process.exit(0);
         }
 
-        // Synchronous query evaluation for Perplexity
-        console.error(`[query_aios] Querying Perplexity in ai-os (model: ${rawModel}, timeout: ${timeoutSec}s)...`);
-        const res = await fetch(`${baseUrl}/api/perplexity/query`, {
+        // Synchronous query evaluation for Perplexity or Gemini
+        const queryEndpoint = provider === 'perplexity' ? `${baseUrl}/api/perplexity/query` : `${baseUrl}/api/gemini/query`;
+        const modelDisplay = provider === 'perplexity' ? rawModel : (rawModel || 'auto');
+        console.error(`[query_aios] Querying ${provider} in ai-os (model: ${modelDisplay}, timeout: ${timeoutSec}s)...`);
+        
+        const res = await fetch(queryEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -108,7 +111,7 @@ async function main() {
         const answer = data.response || '';
 
         if (!answer) {
-            throw new Error('Received empty response from Perplexity');
+            throw new Error(`Received empty response from ${provider}`);
         }
 
         if (outputPath) {

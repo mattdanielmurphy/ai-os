@@ -405,6 +405,8 @@ fn main() {
             // ~/projects/userscript-bundler/userscripts/gemini-enhancements/ and
             // rebuild with `cd ~/projects/userscript-bundler && node bundler.cjs`.
             let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js").unwrap_or_default();
+            let gemini_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/gemini-engine.js").unwrap_or_default();
+            let full_gemini_init_script = format!("{}\n{}", userscript_code, gemini_engine_code);
             let pplx_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
 
             // 1. Expanded Normal Gemini Window (App Launch Target)
@@ -414,7 +416,7 @@ fn main() {
                 tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap()),
             )
             .title("Gemini")
-            .initialization_script(&userscript_code)
+            .initialization_script(&full_gemini_init_script)
             .visible(true)
             .decorations(true)
             .transparent(false)

@@ -469,6 +469,76 @@ async fn handle_perplexity_query(
     }
 }
 
+async fn handle_gemini_query(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    Json(payload): Json<PromptDispatchPayload>,
+) -> Result<Json<QueryResponse>, (axum::http::StatusCode, String)> {
+    let win = app_handle.get_window("gemini_main")
+        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))?;
+
+    let query_id = format!("gemini_q_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let (tx, rx) = tokio::sync::oneshot::channel();
+
+    {
+        let mut callbacks = get_query_callbacks().lock().await;
+        callbacks.insert(query_id.clone(), tx);
+    }
+
+    let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
+    let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "auto".to_string())).unwrap_or_default();
+    let js_session = serde_json::to_string(&payload.session_id.unwrap_or_else(|| "default".to_string())).unwrap_or_default();
+    let js_query_id = serde_json::to_string(&query_id).unwrap_or_default();
+
+    let eval_script = format!(
+        r#"
+        (async function() {{
+            const qId = {};
+            try {{
+                const engine = window.__proximaGeminiUnified || window.__proximaGemini;
+                if (!engine || !engine.send) {{
+                    throw new Error('Gemini engine not initialized in webview');
+                }}
+                const answer = await engine.send({}, {}, null, {});
+                await fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ query_id: qId, response: answer }})
+                }});
+            }} catch (err) {{
+                await fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ query_id: qId, error: err.message || String(err) }})
+                }}).catch(function() {{}});
+            }}
+        }})();
+        "#,
+        js_query_id, js_prompt, js_model, js_session
+    );
+
+    let _ = win.eval(&eval_script);
+
+    match tokio::time::timeout(tokio::time::Duration::from_secs(180), rx).await {
+        Ok(Ok(Ok(response_text))) => {
+            Ok(Json(QueryResponse {
+                response: response_text,
+                query_id,
+            }))
+        }
+        Ok(Ok(Err(err_msg))) => {
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Gemini execution error: {}", err_msg)))
+        }
+        Ok(Err(_)) => {
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed before response".to_string()))
+        }
+        Err(_) => {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove(&query_id);
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 180 seconds".to_string()))
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Server spawn
 // ---------------------------------------------------------------------------
@@ -487,6 +557,8 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/gemini/sync", post(handle_gemini_sync))
             .route("/api/prompt", post(handle_prompt_dispatch))
             .route("/api/gemini/prompt", post(handle_prompt_dispatch))
+            .route("/api/gemini/query", post(handle_gemini_query))
+            .route("/api/gemini/callback", post(handle_perplexity_callback))
             .route("/api/perplexity/prompt", post(handle_perplexity_prompt))
             .route("/api/perplexity/query", post(handle_perplexity_query))
             .route("/api/perplexity/callback", post(handle_perplexity_callback))
