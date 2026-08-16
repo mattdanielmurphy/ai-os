@@ -36,12 +36,15 @@ async function main() {
     let outputPath = null;
     let timeoutSec = 180;
     let uiOnly = false;
+    let sessionId = null;
 
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--provider' || args[i] === '-p') {
             provider = (args[++i] || 'perplexity').toLowerCase();
         } else if (args[i] === '--model' || args[i] === '-m') {
             rawModel = (args[++i] || 'sonnet').toLowerCase();
+        } else if (args[i] === '--thread' || args[i] === '--session' || args[i] === '-s') {
+            sessionId = args[++i];
         } else if (args[i] === '--input' || args[i] === '-i') {
             inputFile = args[++i];
         } else if (args[i] === '--output' || args[i] === '-o') {
@@ -60,7 +63,7 @@ async function main() {
     }
 
     if (!message) {
-        console.error('Usage: node query_aios.js "<prompt>" [--provider perplexity|gemini] [--model sonnet|sonar] [--input <file>] [--output <file>] [--timeout <sec>] [--ui]');
+        console.error('Usage: node query_aios.js "<prompt>" [--provider perplexity|gemini] [--model sonnet|sonar|gemini|gpt|grok|kimi|glm] [--thread <id>] [--input <file>] [--output <file>] [--timeout <sec>] [--ui]');
         process.exit(1);
     }
 
@@ -74,7 +77,7 @@ async function main() {
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: message, model: resolvedModel }),
+                body: JSON.stringify({ prompt: message, model: resolvedModel, session_id: sessionId }),
                 signal: AbortSignal.timeout(timeoutSec * 1000)
             });
 
@@ -97,7 +100,8 @@ async function main() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 prompt: message,
-                model: resolvedModel
+                model: resolvedModel,
+                session_id: sessionId
             }),
             signal: AbortSignal.timeout(timeoutSec * 1000)
         });

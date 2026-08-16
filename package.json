@@ -13,5 +13,8 @@
   },
   "devDependencies": {
     "@rollup/rollup-darwin-x64": "^4.62.2"
+  },
+  "dependencies": {
+    "markdown-it": "^15.0.0"
   }
 }

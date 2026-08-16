@@ -29,7 +29,11 @@
     }
 
     function activateSession(sessionId) {
-        if (!sessionId) sessionId = 'default';
+        if (!sessionId || sessionId === 'default' || sessionId === 'new') {
+            _currentSessionId = _uuid();
+            _lastBackendUuid = null;
+            return;
+        }
         if (sessionId !== _currentSessionId) {
             _currentSessionId = sessionId;
             if (!_sessions[sessionId]) {

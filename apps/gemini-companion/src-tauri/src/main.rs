@@ -27,6 +27,42 @@ fn spawn_fresh_engine(
     pty::spawn_fresh_engine(project_path, engine, thread_id, app_handle, state)
 }
 
+#[derive(serde::Deserialize)]
+pub struct QueryCallbackPayload {
+    #[serde(alias = "queryId")]
+    pub query_id: Option<String>,
+    pub response: Option<String>,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn query_callback(
+    query_id: Option<String>,
+    queryId: Option<String>,
+    response: Option<String>,
+    error: Option<String>,
+    payload: Option<QueryCallbackPayload>,
+) -> Result<(), String> {
+    let q_id = query_id
+        .or(queryId)
+        .or_else(|| payload.as_ref().and_then(|p| p.query_id.clone()))
+        .unwrap_or_default();
+    let resp = response.or_else(|| payload.as_ref().and_then(|p| p.response.clone()));
+    let err = error.or_else(|| payload.as_ref().and_then(|p| p.error.clone()));
+
+    let mut callbacks = server::get_query_callbacks().lock().await;
+    if let Some(tx) = callbacks.remove(&q_id) {
+        if let Some(e) = err {
+            let _ = tx.send(Err(e));
+        } else {
+            let _ = tx.send(Ok(resp.unwrap_or_default()));
+        }
+        Ok(())
+    } else {
+        Err("Query ID not found or timed out".to_string())
+    }
+}
+
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
     std::panic::set_hook(Box::new(|panic_info| {
@@ -668,6 +704,7 @@ fn main() {
             session::get_quota,
             session::ensure_hermes_running,
             threads::search_project_threads,
+            query_callback,
         ])
         .run(context)
         .expect("error while running tauri application");
