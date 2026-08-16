@@ -6,6 +6,9 @@ const PPLX_MODEL_MAP = {
     'sonnet': 'claude50sonnetthinking',
     'sonar': 'turbo',
     'turbo': 'turbo',
+    'grok': 'grok46medium',
+    'grok-2': 'grok46medium',
+    'grok46medium': 'grok46medium',
     'auto': 'auto',
 };
 

@@ -9,6 +9,10 @@ const { getAgentHubToken, getAgentHubPort } = await import(path.join(PROXIMA_PAT
 const PERPLEXITY_MODEL_MAP = {
     'sonnet': 'claude50sonnetthinking',
     'sonar': 'turbo',
+    'turbo': 'turbo',
+    'grok': 'grok46medium',
+    'grok-2': 'grok46medium',
+    'grok46medium': 'grok46medium',
 };
 
 async function main() {
