@@ -231,6 +231,18 @@ async fn handle_socket(socket: WebSocket) {
                                     .insert(my_client_id.clone(), tx.clone());
                             }
                         }
+                        "query_callback" => {
+                            let q_id = val["query_id"]
+                                .as_str()
+                                .or_else(|| val["queryId"].as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            let resp = val["response"].as_str().map(|s| s.to_string());
+                            let err = val["error"].as_str().map(|s| s.to_string());
+                            tokio::spawn(async move {
+                                resolve_query_callback(&q_id, resp, err).await;
+                            });
+                        }
                         "invoke" => {
                             let mut payload = val.clone();
                             payload["client_id"] = serde_json::Value::String(
@@ -311,6 +323,26 @@ pub fn get_query_callbacks() -> &'static QueryCallbackMap {
     })
 }
 
+pub async fn resolve_query_callback(
+    q_id: &str,
+    resp: Option<String>,
+    err: Option<String>,
+) -> bool {
+    eprintln!("[RESOLVE_QUERY_CALLBACK] q_id={}, resp_len={:?}, err={:?}", q_id, resp.as_ref().map(|s| s.len()), err);
+    let mut callbacks = get_query_callbacks().lock().await;
+    if let Some(tx) = callbacks.remove(q_id) {
+        if let Some(e) = err {
+            let _ = tx.send(Err(e));
+        } else {
+            let _ = tx.send(Ok(resp.unwrap_or_default()));
+        }
+        true
+    } else {
+        eprintln!("[RESOLVE_QUERY_CALLBACK NOT FOUND] q_id={}", q_id);
+        false
+    }
+}
+
 async fn handle_prompt_dispatch(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(payload): Json<PromptDispatchPayload>,
@@ -379,15 +411,7 @@ async fn handle_perplexity_prompt(
 async fn handle_perplexity_callback(
     Json(payload): Json<PerplexityCallbackPayload>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
-    let mut callbacks = get_query_callbacks().lock().await;
-    if let Some(tx) = callbacks.remove(&payload.query_id) {
-        if let Some(err) = payload.error {
-            let _ = tx.send(Err(err));
-        } else if let Some(res) = payload.response {
-            let _ = tx.send(Ok(res));
-        } else {
-            let _ = tx.send(Err("Empty response from Perplexity".to_string()));
-        }
+    if resolve_query_callback(&payload.query_id, payload.response, payload.error).await {
         Ok("Callback received".to_string())
     } else {
         Err((axum::http::StatusCode::NOT_FOUND, "Query ID not found or timed out".to_string()))
@@ -433,12 +457,27 @@ async fn handle_perplexity_query(
 
             function sendDone(resp, err) {{
                 const msgObj = {{
+                    type: 'query_callback',
                     query_id: qId,
                     queryId: qId,
                     response: resp,
                     error: err,
                     payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
                 }};
+
+                try {{
+                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
+                    ws.onopen = function() {{
+                        ws.send(JSON.stringify(msgObj));
+                        setTimeout(function() {{ ws.close(); }}, 500);
+                    }};
+                }} catch(e) {{}}
+
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.event) {{
+                        window.__TAURI__.event.emit('query_callback_event', msgObj);
+                    }}
+                }} catch (e) {{}}
 
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
@@ -550,12 +589,27 @@ async fn handle_gemini_query(
 
             function sendDone(resp, err) {{
                 const msgObj = {{
+                    type: 'query_callback',
                     query_id: qId,
                     queryId: qId,
                     response: resp,
                     error: err,
                     payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
                 }};
+
+                try {{
+                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
+                    ws.onopen = function() {{
+                        ws.send(JSON.stringify(msgObj));
+                        setTimeout(function() {{ ws.close(); }}, 500);
+                    }};
+                }} catch(e) {{}}
+
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.event) {{
+                        window.__TAURI__.event.emit('query_callback_event', msgObj);
+                    }}
+                }} catch (e) {{}}
 
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
@@ -651,6 +705,7 @@ async fn handle_debug_ping(
         (function() {
             var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__proximaPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
             var msg = {
+                type: 'query_callback',
                 query_id: 'test_ping',
                 queryId: 'test_ping',
                 response: diag,
@@ -662,6 +717,16 @@ async fn handle_debug_ping(
                     error: null
                 }
             };
+            try {
+                var ws = new WebSocket('ws://127.0.0.1:3031/ws');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify(msg));
+                    setTimeout(function() { ws.close(); }, 500);
+                };
+            } catch(e) {}
+            if (window.__TAURI__ && window.__TAURI__.event) {
+                window.__TAURI__.event.emit('query_callback_event', msg);
+            }
             if (window.__TAURI__ && window.__TAURI__.invoke) {
                 window.__TAURI__.invoke('query_callback', msg).catch(function(e) {});
             }
@@ -711,6 +776,7 @@ async fn handle_debug_ping_gemini(
         (function() {
             var diag = 'URL=' + window.location.href + ' | GEMINI_UNIFIED=' + (typeof window.__proximaGeminiUnified !== 'undefined') + ' | GEMINI=' + (typeof window.__proximaGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
             var msg = {
+                type: 'query_callback',
                 query_id: 'test_ping_gemini',
                 queryId: 'test_ping_gemini',
                 response: diag,
@@ -722,6 +788,16 @@ async fn handle_debug_ping_gemini(
                     error: null
                 }
             };
+            try {
+                var ws = new WebSocket('ws://127.0.0.1:3031/ws');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify(msg));
+                    setTimeout(function() { ws.close(); }, 500);
+                };
+            } catch(e) {}
+            if (window.__TAURI__ && window.__TAURI__.event) {
+                window.__TAURI__.event.emit('query_callback_event', msg);
+            }
             if (window.__TAURI__ && window.__TAURI__.invoke) {
                 window.__TAURI__.invoke('query_callback', msg).catch(function(e) {});
             }
