@@ -16,6 +16,18 @@ const PERPLEXITY_MODEL_MAP = {
     'kimi': 'kimik3thinking',
     'k3': 'kimik3thinking',
     'kimik3thinking': 'kimik3thinking',
+    'gpt': 'gpt56_terra_thinking',
+    'gpt5': 'gpt56_terra_thinking',
+    'terra': 'gpt56_terra_thinking',
+    'gpt56_terra_thinking': 'gpt56_terra_thinking',
+    'gemini': 'gemini37flashthinking',
+    'gemini-3.7': 'gemini37flashthinking',
+    'flash-thinking': 'gemini37flashthinking',
+    'gemini37flashthinking': 'gemini37flashthinking',
+    'glm': 'glm_5_2',
+    'glm-5': 'glm_5_2',
+    'glm5': 'glm_5_2',
+    'glm_5_2': 'glm_5_2',
 };
 
 async function main() {

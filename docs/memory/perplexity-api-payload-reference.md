@@ -91,9 +91,12 @@
 ## 2. Key Learnings & Parameter Breakdown
 
 ### A. Verified Model Identifiers (as of 2026-08-15)
+- **OpenAI GPT (Thinking / Terra)**: `"gpt56_terra_thinking"` *(OpenAI Next-Gen / Terra codename)*
+- **Google Gemini 3.7 Flash (Thinking)**: `"gemini37flashthinking"`
 - **Claude 3.7 Sonnet (Thinking)**: `"claude50sonnetthinking"`
-- **xAI Grok (Thinking)**: `"grok46medium"` *(Crucial discovery: reveals thinking effort is preset to Medium)*
+- **xAI Grok (Thinking)**: `"grok46medium"` *(Preset to Medium thinking)*
 - **Moonshot AI Kimi K3 (Thinking)**: `"kimik3thinking"`
+- **Zhipu AI GLM-5.2**: `"glm_5_2"`
 - **Sonar (Perplexity Default)**: `"turbo"`
 
 ### B. Follow-up Thread State Management
