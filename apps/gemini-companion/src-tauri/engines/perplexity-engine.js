@@ -391,6 +391,23 @@
         console.log('[Proxima Perplexity] Conversation reset:', sessionId || _currentSessionId || 'current');
     }
 
+    window.injectAndSendPrompt = function (promptText) {
+        var ta = document.querySelector('textarea[placeholder*="Ask"], textarea[placeholder*="Search"], textarea');
+        if (ta) {
+            ta.focus();
+            ta.value = promptText;
+            ta.dispatchEvent(new Event('input', { bubbles: true }));
+            setTimeout(function () {
+                var btn = document.querySelector('button[aria-label*="Submit"], button[aria-label*="search"], button[aria-label*="Ask"], button[type="submit"]');
+                if (btn) {
+                    btn.click();
+                } else {
+                    ta.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                }
+            }, 100);
+        }
+    };
+
     window.__proximaPerplexity = { send: send, newConversation: newConversation, uploadFileToPerplexity: uploadFileToPerplexity };
     console.log('[Proxima] Perplexity engine loaded');
 })();

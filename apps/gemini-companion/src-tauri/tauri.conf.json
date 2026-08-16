@@ -54,6 +54,16 @@
           "domain": "gemini.google.com",
           "windows": ["gemini_main", "floating"],
           "enableTauriAPI": true
+        },
+        {
+          "domain": "www.perplexity.ai",
+          "windows": ["perplexity_main"],
+          "enableTauriAPI": true
+        },
+        {
+          "domain": "perplexity.ai",
+          "windows": ["perplexity_main"],
+          "enableTauriAPI": true
         }
       ]
     },

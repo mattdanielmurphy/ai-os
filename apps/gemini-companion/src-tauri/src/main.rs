@@ -72,7 +72,8 @@ fn main() {
         .add_native_item(tauri::MenuItem::Quit);
 
     let file_menu = tauri::Menu::new()
-        .add_item(tauri::CustomMenuItem::new("new_window", "New Window").accelerator("Cmd+N"))
+        .add_item(tauri::CustomMenuItem::new("new_window", "New Gemini Window").accelerator("Cmd+N"))
+        .add_item(tauri::CustomMenuItem::new("new_pplx_window", "New Perplexity Window").accelerator("Cmd+Shift+P"))
         .add_native_item(tauri::MenuItem::Separator)
         .add_native_item(tauri::MenuItem::CloseWindow);
 
@@ -96,7 +97,25 @@ fn main() {
         .add_native_item(tauri::MenuItem::Separator)
         .add_native_item(tauri::MenuItem::EnterFullScreen);
 
-    let actions_menu = tauri::Menu::new()
+    let window_menu = tauri::Menu::new()
+        .add_native_item(tauri::MenuItem::Minimize)
+        .add_native_item(tauri::MenuItem::Zoom)
+        .add_native_item(tauri::MenuItem::Separator)
+        .add_item(tauri::CustomMenuItem::new("focus_gemini", "Gemini Window").accelerator("Cmd+1"))
+        .add_item(tauri::CustomMenuItem::new("focus_perplexity", "Perplexity Window").accelerator("Cmd+2"))
+        .add_item(
+            tauri::CustomMenuItem::new("focus_coding", "Coding Harness Window")
+                .accelerator("Cmd+3"),
+        )
+        .add_item(
+            tauri::CustomMenuItem::new(
+                "toggle_quick_prompt",
+                "Toggle Quick Prompt Floating Window",
+            )
+            .accelerator("Cmd+Alt+Space"),
+        );
+
+    let coding_menu = tauri::Menu::new()
         .add_item(
             tauri::CustomMenuItem::new("new_engine", "Spawn Fresh Engine")
                 .accelerator("Cmd+Shift+N"),
@@ -110,23 +129,6 @@ fn main() {
                 .accelerator("Cmd+Shift+F"),
         );
 
-    let window_menu = tauri::Menu::new()
-        .add_native_item(tauri::MenuItem::Minimize)
-        .add_native_item(tauri::MenuItem::Zoom)
-        .add_native_item(tauri::MenuItem::Separator)
-        .add_item(tauri::CustomMenuItem::new("focus_gemini", "Gemini Window").accelerator("Cmd+1"))
-        .add_item(
-            tauri::CustomMenuItem::new("focus_coding", "Coding Harness Window")
-                .accelerator("Cmd+2"),
-        )
-        .add_item(
-            tauri::CustomMenuItem::new(
-                "toggle_quick_prompt",
-                "Toggle Quick Prompt Floating Window",
-            )
-            .accelerator("Cmd+Alt+Space"),
-        );
-
     let help_menu = tauri::Menu::new().add_item(tauri::CustomMenuItem::new(
         "help_docs",
         "AI-OS Documentation",
@@ -137,8 +139,8 @@ fn main() {
         .add_submenu(tauri::Submenu::new("File", file_menu))
         .add_submenu(tauri::Submenu::new("Edit", edit_menu))
         .add_submenu(tauri::Submenu::new("View", view_menu))
-        .add_submenu(tauri::Submenu::new("Actions", actions_menu))
         .add_submenu(tauri::Submenu::new("Window", window_menu))
+        .add_submenu(tauri::Submenu::new("Coding Engine", coding_menu))
         .add_submenu(tauri::Submenu::new("Help", help_menu));
 
     tauri::Builder::default()
@@ -403,6 +405,7 @@ fn main() {
             // ~/projects/userscript-bundler/userscripts/gemini-enhancements/ and
             // rebuild with `cd ~/projects/userscript-bundler && node bundler.cjs`.
             let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js").unwrap_or_default();
+            let pplx_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
 
             // 1. Expanded Normal Gemini Window (App Launch Target)
             let gemini_main_window = tauri::WindowBuilder::new(
@@ -421,7 +424,24 @@ fn main() {
 
             let _ = gemini_main_window.center();
 
-            // 2. Dedicated Floating Mini-Window Mode (Triggered only by Cmd+Option+Space)
+            // 2. Dedicated Perplexity Window
+            let perplexity_main_window = tauri::WindowBuilder::new(
+                &app_handle,
+                "perplexity_main",
+                tauri::WindowUrl::External("https://www.perplexity.ai".parse().unwrap()),
+            )
+            .title("Perplexity")
+            .initialization_script(&pplx_engine_code)
+            .visible(true)
+            .decorations(true)
+            .transparent(false)
+            .inner_size(1200.0, 760.0)
+            .build()
+            .unwrap();
+
+            let _ = perplexity_main_window.center();
+
+            // 3. Dedicated Floating Mini-Window Mode (Triggered only by Cmd+Option+Space)
             let full_floating_init_script = format!("{}\n{}", userscript_code, floating_init_script);
 
             let floating_window = tauri::WindowBuilder::new(
@@ -483,6 +503,28 @@ fn main() {
                 }
             }
 
+            // Check for pending Perplexity prompt file created when CLI launched app
+            let pending_pplx_prompt_path = std::path::Path::new(&home_dir).join(".ai-os").join("pending_pplx_prompt.txt");
+            if pending_pplx_prompt_path.exists() {
+                if let Ok(prompt) = std::fs::read_to_string(&pending_pplx_prompt_path) {
+                    let _ = std::fs::remove_file(&pending_pplx_prompt_path);
+                    let js_prompt = serde_json::to_string(&prompt).unwrap_or_default();
+                    let eval_script = format!(
+                        r#"
+                        (function() {{
+                            if (window.injectAndSendPrompt) {{
+                                window.injectAndSendPrompt({});
+                            }} else if (window.__proximaPerplexity && window.__proximaPerplexity.send) {{
+                                window.__proximaPerplexity.send({});
+                            }}
+                        }})();
+                        "#,
+                        js_prompt, js_prompt
+                    );
+                    let _ = perplexity_main_window.eval(&eval_script);
+                }
+            }
+
             // --- spawn servers ---
             proxy::spawn_proxy_server(app_handle.clone());
             server::spawn_axum_server(app_handle.clone());
@@ -507,6 +549,14 @@ fn main() {
                 "new_window" => {
                     if let Some(win) = app_handle.get_window("gemini_main") {
                         let _ = win.show();
+                        let _ = win.unminimize();
+                        let _ = win.set_focus();
+                    }
+                }
+                "new_pplx_window" => {
+                    if let Some(win) = app_handle.get_window("perplexity_main") {
+                        let _ = win.show();
+                        let _ = win.unminimize();
                         let _ = win.set_focus();
                     }
                 }
@@ -531,12 +581,21 @@ fn main() {
                 "focus_gemini" => {
                     if let Some(win) = app_handle.get_window("gemini_main") {
                         let _ = win.show();
+                        let _ = win.unminimize();
+                        let _ = win.set_focus();
+                    }
+                }
+                "focus_perplexity" => {
+                    if let Some(win) = app_handle.get_window("perplexity_main") {
+                        let _ = win.show();
+                        let _ = win.unminimize();
                         let _ = win.set_focus();
                     }
                 }
                 "focus_coding" => {
                     if let Some(win) = app_handle.get_window("main") {
                         let _ = win.show();
+                        let _ = win.unminimize();
                         let _ = win.set_focus();
                     }
                 }

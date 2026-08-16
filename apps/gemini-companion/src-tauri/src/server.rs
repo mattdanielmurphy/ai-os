@@ -9,6 +9,7 @@ use tower_http::cors::{CorsLayer, Any};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::collections::HashMap;
 use tauri::Manager;
 
@@ -289,6 +290,25 @@ async fn handle_socket(socket: WebSocket) {
 #[derive(serde::Deserialize)]
 pub struct PromptDispatchPayload {
     pub prompt: String,
+    pub model: Option<String>,
+    pub session_id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct PerplexityCallbackPayload {
+    pub query_id: String,
+    pub response: Option<String>,
+    pub error: Option<String>,
+}
+
+type QueryCallbackMap = Arc<tokio::sync::Mutex<HashMap<String, tokio::sync::oneshot::Sender<Result<String, String>>>>>;
+
+static QUERY_CALLBACKS: std::sync::OnceLock<QueryCallbackMap> = std::sync::OnceLock::new();
+
+fn get_query_callbacks() -> &'static QueryCallbackMap {
+    QUERY_CALLBACKS.get_or_init(|| {
+        Arc::new(tokio::sync::Mutex::new(HashMap::new()))
+    })
 }
 
 async fn handle_prompt_dispatch(
@@ -321,6 +341,134 @@ async fn handle_prompt_dispatch(
     }
 }
 
+async fn handle_perplexity_prompt(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    Json(payload): Json<PromptDispatchPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    if let Some(win) = app_handle.get_window("perplexity_main") {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+
+        let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
+        let eval_script = format!(
+            r#"
+            (function() {{
+                if (window.injectAndSendPrompt) {{
+                    window.injectAndSendPrompt({});
+                }} else {{
+                    const ta = document.querySelector('textarea');
+                    if (ta) {{
+                        ta.focus();
+                        ta.value = {};
+                        ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    }}
+                }}
+            }})();
+            "#,
+            js_prompt, js_prompt
+        );
+
+        let _ = win.eval(&eval_script);
+        Ok("Prompt dispatched to Perplexity window".to_string())
+    } else {
+        Err((axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))
+    }
+}
+
+async fn handle_perplexity_callback(
+    Json(payload): Json<PerplexityCallbackPayload>,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let mut callbacks = get_query_callbacks().lock().await;
+    if let Some(tx) = callbacks.remove(&payload.query_id) {
+        if let Some(err) = payload.error {
+            let _ = tx.send(Err(err));
+        } else if let Some(res) = payload.response {
+            let _ = tx.send(Ok(res));
+        } else {
+            let _ = tx.send(Err("Empty response from Perplexity".to_string()));
+        }
+        Ok("Callback received".to_string())
+    } else {
+        Err((axum::http::StatusCode::NOT_FOUND, "Query ID not found or timed out".to_string()))
+    }
+}
+
+#[derive(serde::Serialize)]
+pub struct QueryResponse {
+    pub response: String,
+    pub query_id: String,
+}
+
+async fn handle_perplexity_query(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    Json(payload): Json<PromptDispatchPayload>,
+) -> Result<Json<QueryResponse>, (axum::http::StatusCode, String)> {
+    let win = app_handle.get_window("perplexity_main")
+        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))?;
+
+    let query_id = format!("pplx_q_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let (tx, rx) = tokio::sync::oneshot::channel();
+
+    {
+        let mut callbacks = get_query_callbacks().lock().await;
+        callbacks.insert(query_id.clone(), tx);
+    }
+
+    let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
+    let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "claude50sonnetthinking".to_string())).unwrap_or_default();
+    let js_session = serde_json::to_string(&payload.session_id.unwrap_or_else(|| "default".to_string())).unwrap_or_default();
+    let js_query_id = serde_json::to_string(&query_id).unwrap_or_default();
+
+    let eval_script = format!(
+        r#"
+        (async function() {{
+            const qId = {};
+            try {{
+                if (!window.__proximaPerplexity || !window.__proximaPerplexity.send) {{
+                    throw new Error('Perplexity engine not initialized in webview');
+                }}
+                const answer = await window.__proximaPerplexity.send({}, {}, null, {});
+                await fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ query_id: qId, response: answer }})
+                }});
+            }} catch (err) {{
+                await fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ query_id: qId, error: err.message || String(err) }})
+                }}).catch(function() {{}});
+            }}
+        }})();
+        "#,
+        js_query_id, js_prompt, js_model, js_session
+    );
+
+    let _ = win.eval(&eval_script);
+
+    match tokio::time::timeout(tokio::time::Duration::from_secs(180), rx).await {
+        Ok(Ok(Ok(response_text))) => {
+            Ok(Json(QueryResponse {
+                response: response_text,
+                query_id,
+            }))
+        }
+        Ok(Ok(Err(err_msg))) => {
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Perplexity execution error: {}", err_msg)))
+        }
+        Ok(Err(_)) => {
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed before response".to_string()))
+        }
+        Err(_) => {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove(&query_id);
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 180 seconds".to_string()))
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Server spawn
 // ---------------------------------------------------------------------------
@@ -339,6 +487,9 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/gemini/sync", post(handle_gemini_sync))
             .route("/api/prompt", post(handle_prompt_dispatch))
             .route("/api/gemini/prompt", post(handle_prompt_dispatch))
+            .route("/api/perplexity/prompt", post(handle_perplexity_prompt))
+            .route("/api/perplexity/query", post(handle_perplexity_query))
+            .route("/api/perplexity/callback", post(handle_perplexity_callback))
             .layer(cors)
             .with_state(app_handle);
 
