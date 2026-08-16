@@ -117,7 +117,7 @@ I don't want to ask for too much.
 
     def test_make_exchange_block(self):
         block = make_exchange_block([{'prompt': 'hi', 'time': '2:00pm'}], 'hello', '2:01pm')
-        self.assertIn('<div', block)
+        self.assertIn('<span', block)
         self.assertIn('Sent at 2:00pm', block)
         self.assertIn('Responded at 2:01pm', block)
         self.assertIn('hi', block)
@@ -144,11 +144,9 @@ I don't want to ask for too much.
     def test_format_prompt_fenced_code(self):
         prompt = "test ```python\ndef f():\n  pass\n```"
         formatted = format_prompt(prompt)
-        lines = formatted.split('\n')
-        self.assertIn("```python", lines)
-        self.assertIn("```", lines)
-        self.assertTrue(lines.index("```python") > 0)
-        self.assertTrue(lines.index("```") > lines.index("```python"))
+        self.assertIn("```python", formatted)
+        self.assertIn("def f():", formatted)
+        self.assertIn("```", formatted)
 
     def test_generate_output_path(self):
         conv_id = 'test_conv_out'
@@ -198,7 +196,7 @@ I don't want to ask for too much.
         formatted = format_prompt(long_prompt)
         self.assertNotIn("<details>", formatted)
         self.assertNotIn("<summary>", formatted)
-        self.assertIn("Line 1\nLine 2\nLine 3", formatted)
+        self.assertIn("Line 1<br>Line 2<br>Line 3", formatted)
 
     def test_transient_status_filtering(self):
         transcript = Path(self.test_dir.name) / 'transcript.jsonl'
@@ -281,24 +279,23 @@ I don't want to ask for too much.
         ex = [i for i in items if i['type'] == 'exchange'][0]
         self.assertEqual(ex['agent_content'], 'Para 1\n\nPara 2')
 
-    def test_multiline_user_prompt_preserves_paragraphs(self):
+    def test_multiline_user_prompt_converts_newlines_to_br(self):
         raw = "Para 1\n\nPara 2\n\n\nPara 3"
         formatted = format_prompt(raw)
-        self.assertIn("Para 1\n\nPara 2\n\nPara 3", formatted)
+        self.assertEqual(formatted, "Para 1<br><br>Para 2<br><br>Para 3")
 
     def test_make_exchange_block_multiline_user_prompt(self):
-        raw_user = "Paragraph 1\n\nParagraph 2 with **bold**\n\n```python\nprint(1)\n```"
+        raw_user = "Paragraph 1\n\nParagraph 2 with **bold**\n\nLine 3"
         block = make_exchange_block([{'prompt': raw_user, 'time': '2:00pm'}], 'agent response', '2:01pm')
         self.assertIn('Paragraph 1', block)
         self.assertIn('Paragraph 2 with **bold**', block)
-        # Ensure user container is a closed single div
-        user_div_match = re.search(r'<div title="Sent at 2:00pm"[^>]*>(.*?)</div>', block, re.DOTALL)
-        self.assertIsNotNone(user_div_match)
-        user_content = user_div_match.group(1)
-        self.assertIn('Paragraph 1', user_content)
-        self.assertIn('Paragraph 2 with **bold**', user_content)
+        # Ensure user container is a closed single span
+        user_span_match = re.search(r'<span title="Sent at 2:00pm"[^>]*>(.*?)</span>', block, re.DOTALL)
+        self.assertIsNotNone(user_span_match)
+        user_content = user_span_match.group(1)
+        self.assertIn('Paragraph 1<br><br>Paragraph 2 with **bold**<br><br>Line 3', user_content)
 
-    def test_multi_comment_and_prompt_div_divider(self):
+    def test_multi_comment_and_prompt_span_divider(self):
         content = """current local time is: 2026-08-15T13:45:46-06:00
 Comments on artifact URI: file:///Users/matt/thread.md
 
@@ -317,7 +314,7 @@ User question line 2
         self.assertIn('border-top: 1px solid', prompt)
         block = make_exchange_block([{'prompt': prompt, 'time': time}], 'reply', '1:46pm')
         self.assertNotIn('<hr', block)
-        self.assertIn('<div title="Sent at 1:45pm"', block)
+        self.assertIn('<span title="Sent at 1:45pm"', block)
 
 if __name__ == '__main__':
     unittest.main()

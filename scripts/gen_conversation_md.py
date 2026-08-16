@@ -252,21 +252,20 @@ def normalize_headings(text: str) -> str:
     return '\n'.join(new_lines)
 
 
-def heal_markup_tags(text: str) -> str:
-    """Self-healing: balance open and closed div/span tags to prevent DOM corruption."""
+def heal_markup_spans(text: str) -> str:
+    """Self-healing: balance open and closed span tags to prevent DOM corruption."""
     if not text:
         return text
 
-    for tag in ['div', 'span']:
-        open_tags = len(re.findall(rf'<{tag}\b[^>]*>', text, re.IGNORECASE))
-        close_tags = len(re.findall(rf'</{tag}>', text, re.IGNORECASE))
+    open_spans = len(re.findall(r'<span\b[^>]*>', text, re.IGNORECASE))
+    close_spans = len(re.findall(r'</span>', text, re.IGNORECASE))
 
-        if open_tags > close_tags:
-            text = text + (f'\n</{tag}>' * (open_tags - close_tags))
-        elif close_tags > open_tags:
-            diff = close_tags - open_tags
-            for _ in range(diff):
-                text = re.sub(rf'</{tag}>\s*$', '', text, count=1, flags=re.IGNORECASE)
+    if open_spans > close_spans:
+        text = text + ('\n</span>' * (open_spans - close_spans))
+    elif close_spans > open_spans:
+        diff = close_spans - open_spans
+        for _ in range(diff):
+            text = re.sub(r'</span>\s*$', '', text, count=1, flags=re.IGNORECASE)
 
     return text
 
@@ -421,10 +420,10 @@ def extract_user_input(content: str):
         cmt_clean = decode_html_entities(cmt_clean).strip()
 
         if quote_lines:
-            quote_text = '\n'.join(quote_lines).strip()
-            quote_html = f'<div style="display: block; background: rgba(0, 0, 0, 0.25); border-left: 3px solid rgba(130, 115, 220, 0.7); padding: 6px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; opacity: 0.9;">\n\n{quote_text}\n\n</div>'
+            quote_text = '<br>'.join(quote_lines).strip()
+            quote_html = f'<span style="display: block; background: rgba(0, 0, 0, 0.25); border-left: 3px solid rgba(130, 115, 220, 0.7); padding: 6px 10px; margin-bottom: 8px; border-radius: 4px; font-size: 13px; opacity: 0.9; white-space: pre-wrap;">{quote_text}</span>'
             if cmt_clean:
-                formatted_parts.append(f"{quote_html}\n\n💬 **Comment**: {cmt_clean}")
+                formatted_parts.append(f"{quote_html}<br>💬 **Comment**: {cmt_clean}")
             else:
                 formatted_parts.append(quote_html)
         elif cmt_clean:
@@ -446,7 +445,7 @@ def extract_user_input(content: str):
             formatted_parts.append("✅ **Approved Plan/Artifact**")
 
     if len(formatted_parts) > 1:
-        divider = '\n\n<div style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);"></div>\n\n'
+        divider = '<span style="display: block; margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);"></span>'
         prompt = divider.join(formatted_parts).strip()
     elif len(formatted_parts) == 1:
         prompt = formatted_parts[0].strip()
@@ -618,32 +617,34 @@ def next_turn_number(history_dir: Path) -> int:
 # ─── Pure Markdown Generation ─────────────────────────────────────────────────
 
 def format_prompt(raw_prompt: str) -> str:
-    """Format a user prompt for display in pure markdown.
+    """Format a user prompt for display in pure markdown using span containers.
 
-    Preserves exact newlines, multiline formatting, and code blocks.
-    No HTML escaping, no <details> wrapping.
+    Preserves exact newlines, multiline formatting, and code blocks using <br>
+    so Markdown parsers do not break inline styled span containers into multiple paragraphs.
     """
     text = raw_prompt.strip()
 
-    # Ensure code blocks are on their own lines to prevent markdown bleed
-    text = re.sub(r'([^\n])```', r'\1\n```', text)
-    text = re.sub(r'```([^\n]*)\n([^\n])', r'```\1\n\n\2', text)
+    # Normalize newlines
+    text = text.replace('\r\n', '\n')
     text = re.sub(r'\n{3,}', '\n\n', text).strip()
     text = balance_code_fences(text)
     text = escape_currency_dollar_signs(text)
+
+    # Convert newlines to <br> to preserve multiline structure inside <span>
+    text = text.replace('\n', '<br>')
 
     return text
 
 
 def make_exchange_block(users: list, agent_content: str, agent_time: str, is_newest: bool = False, tool_action: str = None, transient_status: str = None) -> str:
-    """Build a single exchange block using styled div containers."""
+    """Build a single exchange block using styled span containers."""
     user_blocks = []
     for u in users:
         p = format_prompt(u['prompt']).strip()
         if p:
             user_blocks.append(p)
 
-    divider = '\n\n<div style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);"></div>\n\n'
+    divider = '<span style="display: block; margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);"></span>'
     user_md = divider.join(user_blocks) if len(user_blocks) > 1 else (user_blocks[0] if user_blocks else '')
     a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
@@ -659,23 +660,21 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
             agent_text = "✅ *Turn completed.*"
 
     user_time_str = f"Sent at {users[0]['time']}" if users and users[0].get('time') else "Sent at "
-    user_div = (
-        f'<div title="{user_time_str}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">\n\n'
-        f'{user_md}\n\n'
-        f'</div>'
+    user_span = (
+        f'<span title="{user_time_str}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_md}</span>'
     )
 
-    agent_div = (
-        f'<div title="Responded at {a_time}" style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 16px 20px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
+    agent_span = (
+        f'\n\n<span title="Responded at {a_time}" style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: none; border: 1.5px solid rgba(113, 100, 175, 0.35); padding: 16px 20px; border-radius: 14px 14px 14px 2px; line-height: 1.6; font-size: 14px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">\n\n'
         f'{agent_text}\n\n'
-        f'</div>'
+        f'</span>\n\n'
     )
 
     style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word;"'
     if is_newest:
         style = 'style="display: block; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-top: 8px; margin-bottom: 48px; overflow-wrap: anywhere; word-break: break-word;"'
 
-    return f'<div {style}>\n\n{user_div}\n\n{agent_div}\n\n</div>'
+    return f'<span {style}>\n\n{user_span}\n\n{agent_span}\n\n</span>'
 
 
 def get_subagent_progress(conv_id: str, app_data_dir: Path) -> str | None:
@@ -767,10 +766,10 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     doc_content = []
     
     # Thread Started Banner (placed at the top of the oldest exchange block)
-    banner = f'<div style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</div>'
+    banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
     # Outer container with custom styles
-    doc_content.append('<div style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
+    doc_content.append('<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
 
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
@@ -808,10 +807,10 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     # Metrics table at bottom (pinned)
     metrics = compute_thread_metrics(conv_id)
     metrics_table = format_metrics_table(metrics, conv_id)
-    pinned_metrics = f'<div style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table.strip()}\n\n</div>'
+    pinned_metrics = f'<span style="position: absolute; left: 0; right: 0; bottom: 0; width: 100cqw; padding: 0 2rem;">\n\n{metrics_table.strip()}\n\n</span>'
     doc_content.append(pinned_metrics)
 
-    doc_content.append('</div>')
+    doc_content.append('</span>')
 
     rendered_doc = '\n\n'.join(doc_content)
     try:
@@ -821,7 +820,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
         pass
 
     # Self-healing markup pass on rendered document
-    rendered_doc = heal_markup_tags(rendered_doc)
+    rendered_doc = heal_markup_spans(rendered_doc)
     rendered_doc = balance_code_fences(rendered_doc)
 
     tmp_path = output_path.with_name(f"{output_path.name}.tmp")
