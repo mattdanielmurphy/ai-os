@@ -299,11 +299,71 @@ async fn handle_socket(socket: WebSocket) {
     write_task.abort();
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct AttachmentPayload {
+    pub file_path: Option<String>,
+    pub file_base64: Option<String>,
+    pub filename: Option<String>,
+    pub mime_type: Option<String>,
+    pub image_token: Option<String>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct PromptDispatchPayload {
     pub prompt: String,
     pub model: Option<String>,
     pub session_id: Option<String>,
+    pub attachment: Option<AttachmentPayload>,
+    pub file_path: Option<String>,
+}
+
+fn guess_mime(filename: &str) -> String {
+    let lower = filename.to_lowercase();
+    if lower.ends_with(".png") { "image/png".to_string() }
+    else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") { "image/jpeg".to_string() }
+    else if lower.ends_with(".webp") { "image/webp".to_string() }
+    else if lower.ends_with(".gif") { "image/gif".to_string() }
+    else if lower.ends_with(".pdf") { "application/pdf".to_string() }
+    else if lower.ends_with(".txt") { "text/plain".to_string() }
+    else if lower.ends_with(".md") { "text/markdown".to_string() }
+    else if lower.ends_with(".json") { "application/json".to_string() }
+    else if lower.ends_with(".js") || lower.ends_with(".ts") { "application/javascript".to_string() }
+    else if lower.ends_with(".mp3") { "audio/mp3".to_string() }
+    else if lower.ends_with(".wav") { "audio/wav".to_string() }
+    else if lower.ends_with(".mp4") { "video/mp4".to_string() }
+    else { "application/octet-stream".to_string() }
+}
+
+fn prepare_attachment(
+    attachment: Option<AttachmentPayload>,
+    file_path: Option<String>,
+) -> Option<(String, String, String)> {
+    if let Some(att) = attachment {
+        if let Some(b64) = att.file_base64 {
+            let fname = att.filename.unwrap_or_else(|| "attachment.bin".to_string());
+            let mime = att.mime_type.unwrap_or_else(|| guess_mime(&fname));
+            return Some((b64, fname, mime));
+        }
+        if let Some(path_str) = att.file_path {
+            if let Ok(bytes) = std::fs::read(&path_str) {
+                let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+                let p = std::path::Path::new(&path_str);
+                let fname = att.filename.or_else(|| p.file_name().map(|n| n.to_string_lossy().to_string())).unwrap_or_else(|| "file".to_string());
+                let mime = att.mime_type.unwrap_or_else(|| guess_mime(&fname));
+                return Some((b64, fname, mime));
+            }
+        }
+    }
+    if let Some(path_str) = file_path {
+        if let Ok(bytes) = std::fs::read(&path_str) {
+            let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+            let p = std::path::Path::new(&path_str);
+            let fname = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "file".to_string());
+            let mime = guess_mime(&fname);
+            return Some((b64, fname, mime));
+        }
+    }
+    None
 }
 
 #[derive(serde::Deserialize)]
@@ -439,6 +499,16 @@ async fn handle_perplexity_query(
         callbacks.insert(query_id.clone(), tx);
     }
 
+    let att_data = prepare_attachment(payload.attachment, payload.file_path);
+    let (js_file_b64, js_filename, js_mime) = match att_data {
+        Some((b64, fname, mime)) => (
+            serde_json::to_string(&b64).unwrap_or_default(),
+            serde_json::to_string(&fname).unwrap_or_default(),
+            serde_json::to_string(&mime).unwrap_or_default(),
+        ),
+        None => ("null".to_string(), "null".to_string(), "null".to_string()),
+    };
+
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
     let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "claude50sonnetthinking".to_string())).unwrap_or_default();
     let js_session = match payload.session_id {
@@ -454,6 +524,9 @@ async fn handle_perplexity_query(
             const prompt = {};
             const model = {};
             const session = {};
+            const fileB64 = {};
+            const fileName = {};
+            const fileMime = {};
 
             function sendDone(resp, err) {{
                 const msgObj = {{
@@ -520,7 +593,18 @@ async fn handle_perplexity_query(
                     if (!window.__proximaPerplexity || !window.__proximaPerplexity.send) {{
                         throw new Error('Perplexity engine not initialized in webview. URL: ' + window.location.href);
                     }}
-                    const answer = await window.__proximaPerplexity.send(prompt, model, null, session);
+                    let attachmentsObj = null;
+                    if (fileB64 && fileName && fileMime) {{
+                        if (window.__proximaPerplexity.uploadFileToPerplexity) {{
+                            const s3Url = await window.__proximaPerplexity.uploadFileToPerplexity(fileB64, fileName, fileMime);
+                            attachmentsObj = {{
+                                imageToken: s3Url,
+                                filename: fileName,
+                                mimeType: fileMime
+                            }};
+                        }}
+                    }}
+                    const answer = await window.__proximaPerplexity.send(prompt, model, attachmentsObj, session);
                     sendDone(answer, null);
                 }} catch (err) {{
                     sendDone(null, err.message || String(err));
@@ -530,7 +614,7 @@ async fn handle_perplexity_query(
             run();
         }})();
         "#,
-        js_query_id, js_prompt, js_model, js_session
+        js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
     );
 
     let _ = win.eval(&eval_script);
@@ -571,6 +655,16 @@ async fn handle_gemini_query(
         callbacks.insert(query_id.clone(), tx);
     }
 
+    let att_data = prepare_attachment(payload.attachment, payload.file_path);
+    let (js_file_b64, js_filename, js_mime) = match att_data {
+        Some((b64, fname, mime)) => (
+            serde_json::to_string(&b64).unwrap_or_default(),
+            serde_json::to_string(&fname).unwrap_or_default(),
+            serde_json::to_string(&mime).unwrap_or_default(),
+        ),
+        None => ("null".to_string(), "null".to_string(), "null".to_string()),
+    };
+
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
     let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "auto".to_string())).unwrap_or_default();
     let js_session = match payload.session_id {
@@ -586,6 +680,9 @@ async fn handle_gemini_query(
             const prompt = {};
             const model = {};
             const session = {};
+            const fileB64 = {};
+            const fileName = {};
+            const fileMime = {};
 
             function sendDone(resp, err) {{
                 const msgObj = {{
@@ -653,7 +750,18 @@ async fn handle_gemini_query(
                     if (!engine || !engine.send) {{
                         throw new Error('Gemini engine not initialized in webview. URL: ' + window.location.href);
                     }}
-                    const answer = await engine.send(prompt, model, null, session);
+                    let attachmentsObj = null;
+                    if (fileB64 && fileName && fileMime) {{
+                        if (window.__proximaGemini && window.__proximaGemini.uploadFileToGoogle) {{
+                            const token = await window.__proximaGemini.uploadFileToGoogle(fileB64, fileName, fileMime);
+                            attachmentsObj = {{
+                                imageToken: token,
+                                filename: fileName,
+                                mimeType: fileMime
+                            }};
+                        }}
+                    }}
+                    const answer = await engine.send(prompt, model, attachmentsObj, session);
                     sendDone(answer, null);
                 }} catch (err) {{
                     sendDone(null, err.message || String(err));
@@ -663,7 +771,7 @@ async fn handle_gemini_query(
             run();
         }})();
         "#,
-        js_query_id, js_prompt, js_model, js_session
+        js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
     );
 
     let _ = win.eval(&eval_script);
@@ -686,6 +794,236 @@ async fn handle_gemini_query(
             callbacks.remove(&query_id);
             Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 180 seconds".to_string()))
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// OpenAI-Compatible REST Gateway (/v1/chat/completions & /v1/models)
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize, Debug)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: serde_json::Value,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct OpenAIChatRequest {
+    pub model: Option<String>,
+    pub messages: Vec<ChatMessage>,
+    pub stream: Option<bool>,
+    pub session_id: Option<String>,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OpenAIChoiceMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OpenAIChoice {
+    pub index: usize,
+    pub message: OpenAIChoiceMessage,
+    pub finish_reason: String,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OpenAIUsage {
+    pub prompt_tokens: usize,
+    pub completion_tokens: usize,
+    pub total_tokens: usize,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OpenAIChatResponse {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub model: String,
+    pub choices: Vec<OpenAIChoice>,
+    pub usage: OpenAIUsage,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OpenAIModelItem {
+    pub id: String,
+    pub object: String,
+    pub owned_by: String,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct OpenAIModelList {
+    pub object: String,
+    pub data: Vec<OpenAIModelItem>,
+}
+
+async fn handle_openai_models() -> Json<OpenAIModelList> {
+    Json(OpenAIModelList {
+        object: "list".to_string(),
+        data: vec![
+            OpenAIModelItem { id: "gemini".to_string(), object: "model".to_string(), owned_by: "google".to_string() },
+            OpenAIModelItem { id: "gemini-3.5-flash".to_string(), object: "model".to_string(), owned_by: "google".to_string() },
+            OpenAIModelItem { id: "gemini-3.1-pro".to_string(), object: "model".to_string(), owned_by: "google".to_string() },
+            OpenAIModelItem { id: "gemini-3.1-flash-lite".to_string(), object: "model".to_string(), owned_by: "google".to_string() },
+            OpenAIModelItem { id: "perplexity".to_string(), object: "model".to_string(), owned_by: "perplexity".to_string() },
+            OpenAIModelItem { id: "sonar".to_string(), object: "model".to_string(), owned_by: "perplexity".to_string() },
+            OpenAIModelItem { id: "sonnet".to_string(), object: "model".to_string(), owned_by: "perplexity".to_string() },
+            OpenAIModelItem { id: "claude50sonnetthinking".to_string(), object: "model".to_string(), owned_by: "perplexity".to_string() },
+        ],
+    })
+}
+
+async fn handle_openai_chat(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    Json(req): Json<OpenAIChatRequest>,
+) -> Result<axum::response::Response, (axum::http::StatusCode, String)> {
+    let mut combined_prompt = String::new();
+    let mut attachment: Option<AttachmentPayload> = None;
+
+    for msg in &req.messages {
+        let role = &msg.role;
+        match &msg.content {
+            serde_json::Value::String(s) => {
+                if !combined_prompt.is_empty() {
+                    combined_prompt.push_str("\n\n");
+                }
+                if role == "system" {
+                    combined_prompt.push_str(&format!("[System Instructions]:\n{}", s));
+                } else if role == "user" {
+                    combined_prompt.push_str(s);
+                } else {
+                    combined_prompt.push_str(&format!("[{role}]:\n{}", s));
+                }
+            }
+            serde_json::Value::Array(parts) => {
+                for p in parts {
+                    if let Some(t) = p.get("text").and_then(|v| v.as_str()) {
+                        if !combined_prompt.is_empty() {
+                            combined_prompt.push_str("\n\n");
+                        }
+                        combined_prompt.push_str(t);
+                    }
+                    if let Some(image_url_obj) = p.get("image_url") {
+                        if let Some(url) = image_url_obj.get("url").and_then(|v| v.as_str()) {
+                            if url.starts_with("data:") {
+                                if let Some((header, b64)) = url.split_once(',') {
+                                    let mime = header.trim_start_matches("data:").trim_end_matches(";base64");
+                                    attachment = Some(AttachmentPayload {
+                                        file_path: None,
+                                        file_base64: Some(b64.to_string()),
+                                        filename: Some("image.png".to_string()),
+                                        mime_type: Some(mime.to_string()),
+                                        image_token: None,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let model_str = req.model.clone().unwrap_or_else(|| "gemini".to_string()).to_lowercase();
+    let is_perplexity = model_str.contains("perplexity") || model_str == "sonar" || model_str == "sonnet" || model_str.contains("claude");
+
+    let dispatch_payload = PromptDispatchPayload {
+        prompt: combined_prompt,
+        model: req.model.clone(),
+        session_id: req.session_id.clone(),
+        attachment,
+        file_path: None,
+    };
+
+    let result_text = if is_perplexity {
+        let resp = handle_perplexity_query(AxumState(app_handle), Json(dispatch_payload)).await?;
+        resp.0.response
+    } else {
+        let resp = handle_gemini_query(AxumState(app_handle), Json(dispatch_payload)).await?;
+        resp.0.response
+    };
+
+    let created = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let resp_id = format!("chatcmpl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+
+    let is_stream = req.stream.unwrap_or(false);
+    if is_stream {
+        let chunk1 = serde_json::json!({
+            "id": resp_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": req.model.clone().unwrap_or_else(|| "gemini".to_string()),
+            "choices": [{
+                "index": 0,
+                "delta": {
+                    "role": "assistant",
+                    "content": result_text
+                },
+                "finish_reason": null
+            }]
+        });
+        let chunk2 = serde_json::json!({
+            "id": resp_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": req.model.unwrap_or_else(|| "gemini".to_string()),
+            "choices": [{
+                "index": 0,
+                "delta": {},
+                "finish_reason": "stop"
+            }]
+        });
+
+        let sse_body = format!(
+            "data: {}\n\ndata: {}\n\ndata: [DONE]\n\n",
+            serde_json::to_string(&chunk1).unwrap(),
+            serde_json::to_string(&chunk2).unwrap()
+        );
+
+        let response = axum::response::Response::builder()
+            .header("Content-Type", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .header("Connection", "keep-alive")
+            .body(axum::body::Body::from(sse_body))
+            .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        Ok(response)
+    } else {
+        let prompt_tokens = 50;
+        let completion_tokens = result_text.split_whitespace().count() * 4 / 3;
+        let response_obj = OpenAIChatResponse {
+            id: resp_id,
+            object: "chat.completion".to_string(),
+            created,
+            model: req.model.unwrap_or_else(|| "gemini".to_string()),
+            choices: vec![
+                OpenAIChoice {
+                    index: 0,
+                    message: OpenAIChoiceMessage {
+                        role: "assistant".to_string(),
+                        content: result_text,
+                    },
+                    finish_reason: "stop".to_string(),
+                }
+            ],
+            usage: OpenAIUsage {
+                prompt_tokens,
+                completion_tokens,
+                total_tokens: prompt_tokens + completion_tokens,
+            },
+        };
+
+        let response = axum::response::Response::builder()
+            .header("Content-Type", "application/json")
+            .body(axum::body::Body::from(serde_json::to_string(&response_obj).unwrap()))
+            .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        Ok(response)
     }
 }
 
@@ -856,6 +1194,8 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/perplexity/callback", post(handle_perplexity_callback))
             .route("/api/debug/ping", axum::routing::get(handle_debug_ping))
             .route("/api/debug/ping_gemini", axum::routing::get(handle_debug_ping_gemini))
+            .route("/v1/chat/completions", post(handle_openai_chat))
+            .route("/v1/models", axum::routing::get(handle_openai_models))
             .layer(cors)
             .with_state(app_handle);
 
