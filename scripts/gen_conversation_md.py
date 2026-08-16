@@ -445,7 +445,7 @@ def extract_user_input(content: str):
             formatted_parts.append("✅ **Approved Plan/Artifact**")
 
     if len(formatted_parts) > 1:
-        divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
+        divider = '\n<span style="display: block; margin: 8px 0; border-top: 1px solid rgba(130, 115, 220, 0.35);"></span>\n'
         prompt = divider.join(formatted_parts).strip()
     elif len(formatted_parts) == 1:
         prompt = formatted_parts[0].strip()
@@ -627,11 +627,14 @@ def format_prompt(raw_prompt: str) -> str:
     # Ensure code blocks are on their own lines to prevent markdown bleed
     text = re.sub(r'([^\n])```', r'\1\n```', text)
     text = re.sub(r'```([^\n]*)\n([^\n])', r'```\1\n\n\2', text)
-    text = re.sub(r'\n{3,}', '\n\n', text).strip()
     text = balance_code_fences(text)
     text = escape_currency_dollar_signs(text)
 
-    return text
+    # Sanitize empty/blank lines so Markdown parsers do not split the user container into multiple paragraphs.
+    # In CSS containers with white-space: pre-wrap, zero-width space on empty lines retains visual line breaks.
+    lines = text.splitlines()
+    sanitized_lines = [line if line.strip() else '\u200b' for line in lines]
+    return '\n'.join(sanitized_lines)
 
 
 def make_exchange_block(users: list, agent_content: str, agent_time: str, is_newest: bool = False, tool_action: str = None, transient_status: str = None) -> str:
@@ -642,7 +645,7 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
         if p:
             user_blocks.append(p)
 
-    divider = '\n<hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(130, 115, 220, 0.35);">\n'
+    divider = '\n<span style="display: block; margin: 8px 0; border-top: 1px solid rgba(130, 115, 220, 0.35);"></span>\n'
     user_md = divider.join(user_blocks) if len(user_blocks) > 1 else (user_blocks[0] if user_blocks else '')
     a_time = agent_time if agent_time else ''
     agent_text = clean_agent_response(agent_content)
@@ -658,8 +661,10 @@ def make_exchange_block(users: list, agent_content: str, agent_time: str, is_new
             agent_text = "✅ *Turn completed.*"
 
     user_time_str = f"Sent at {users[0]['time']}" if users and users[0].get('time') else "Sent at "
+    user_lines = user_md.splitlines()
+    user_sanitized = '\n'.join(line if line.strip() else '\u200b' for line in user_lines)
     user_span = (
-        f'<span title="{user_time_str}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_md}</span>'
+        f'<span title="{user_time_str}" style="display: block; width: fit-content; max-width: 80%; min-width: 0; margin-left: auto; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; text-align: left; background: rgba(85, 68, 197, 0.16); border: 1.5px solid rgba(85, 68, 197, 0.45); padding: 10px 14px; border-radius: 14px 14px 2px 14px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">{user_sanitized}</span>'
     )
 
     agent_span = (
