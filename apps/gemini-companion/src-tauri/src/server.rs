@@ -305,7 +305,7 @@ type QueryCallbackMap = Arc<tokio::sync::Mutex<HashMap<String, tokio::sync::ones
 
 static QUERY_CALLBACKS: std::sync::OnceLock<QueryCallbackMap> = std::sync::OnceLock::new();
 
-fn get_query_callbacks() -> &'static QueryCallbackMap {
+pub fn get_query_callbacks() -> &'static QueryCallbackMap {
     QUERY_CALLBACKS.get_or_init(|| {
         Arc::new(tokio::sync::Mutex::new(HashMap::new()))
     })
@@ -431,13 +431,15 @@ async fn handle_perplexity_query(
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
                         window.__TAURI__.invoke('query_callback', {{
+                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
                             queryId: qId,
                             query_id: qId,
                             response: resp,
                             error: err
-                        }}).catch(function() {{}});
+                        }}).catch(function(e) {{}});
                     }} else if (window.__TAURI_INVOKE__) {{
                         window.__TAURI_INVOKE__('query_callback', {{
+                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
                             query_id: qId,
                             queryId: qId,
                             response: resp,
@@ -522,13 +524,15 @@ async fn handle_gemini_query(
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
                         window.__TAURI__.invoke('query_callback', {{
+                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
                             queryId: qId,
                             query_id: qId,
                             response: resp,
                             error: err
-                        }}).catch(function() {{}});
+                        }}).catch(function(e) {{}});
                     }} else if (window.__TAURI_INVOKE__) {{
                         window.__TAURI_INVOKE__('query_callback', {{
+                            payload: {{ queryId: qId, query_id: qId, response: resp, error: err }},
                             query_id: qId,
                             queryId: qId,
                             response: resp,
