@@ -131,6 +131,7 @@
         var answer = '';
         var backendUuid = null;
 
+        var isCompleted = false;
         try {
             while (true) {
                 var chunk = await reader.read();
@@ -144,7 +145,11 @@
                     var line = lines[i].trim();
                     if (!line.startsWith('data:')) continue;
                     var data = line.slice(5).trim();
-                    if (!data || data === '[DONE]') continue;
+                    if (!data) continue;
+                    if (data === '[DONE]') {
+                        isCompleted = true;
+                        break;
+                    }
 
                     try {
                         var parsed = JSON.parse(data);
@@ -171,8 +176,13 @@
                         if (parsed.answer && typeof parsed.answer === 'string' && parsed.answer.length > answer.length) {
                             answer = parsed.answer;
                         }
+                        if (parsed.status === 'completed' || parsed.status === 'success' || parsed.step_type === 'final' || parsed.final === true) {
+                            isCompleted = true;
+                            break;
+                        }
                     } catch (e) { }
                 }
+                if (isCompleted) break;
             }
         } finally {
             try { reader.releaseLock(); } catch (e) { }
