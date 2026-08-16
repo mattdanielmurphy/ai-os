@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-08-16
+- **Strict Span-Only Styling Invariant & Multiline Markdown Fix:** Mandated `<span>` tags with `display: block;` exclusively across `thread.md` and custom markdown viewers. Resolved multiline prompt formatting degradation by converting prompt newlines to `<br>` / `<br><br>` within styled `<span>` containers, preserving continuous bubble styling across complex inputs. Updated `.rules/core_safety.md`, `AG_CONTEXT.md`, and compiled all agent rules.
+
 ## 2026-08-13
 - **Cost-Aware & Cache-Aware Thread Rotation System:** Implemented `scripts/thread_economics.py` calculating marginal financial breakeven against prompt cache write/read rates, hard context capacity caps (55% safety margin), and 1-hour cache TTL countdowns. Integrated live metrics into `scripts/postflight.py` and `scripts/check_thread_bloat.py`.
 
