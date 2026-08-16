@@ -105,10 +105,11 @@ def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity", work
         "commit_status": commit_status
     }
 
-def format_metrics_table(metrics: dict, conv_id: str = None, kanban_path: str = None, thread_path: str = None) -> str:
+def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
+    """Returns raw markdown table string. Must be surrounded by blank lines to render."""
     headers = ["Tokens", "Expiry", "Committed"]
     commit_badge = metrics.get('commit_status', {}).get('badge', '\U0001f7e2 Clean') if isinstance(metrics.get('commit_status'), dict) else '\U0001f7e2 Clean'
-    
+
     values = [
         f"~{metrics['token_display']} / ~{metrics['breakeven_str']} {metrics['indicator']}{metrics['brief_str']}",
         metrics['cache_display'],
@@ -122,40 +123,32 @@ def format_metrics_table(metrics: dict, conv_id: str = None, kanban_path: str = 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
     value_row = "| " + " | ".join(values) + " |"
-    table = f"{header_row}\n{separator_row}\n{value_row}"
+    return f"\n\n{header_row}\n{separator_row}\n{value_row}\n\n"
 
-    # Build toggle nav pill
-    toggle_html = ""
+
+def format_nav_toggle(kanban_path: str = None, thread_path: str = None) -> str:
+    """Returns a position:absolute pill HTML element for the footer nav toggle.
+    Designed to overlay inside the already-positioned pinned footer span
+    without wrapping the markdown table (which would break rendering)."""
     if kanban_path:
-        toggle_html = (
-            f'<span style="display: inline-block; font-size: 11px; font-weight: 600; '
+        return (
+            f'<span style="position: absolute; right: 2rem; bottom: 0.5rem; '
+            f'display: inline-block; font-size: 11px; font-weight: 600; '
             f'opacity: 0.7; padding: 3px 10px; border: 1px solid rgba(113,100,175,0.4); '
-            f'border-radius: 20px; text-decoration: none; white-space: nowrap; '
-            f'letter-spacing: 0.3px;">'
+            f'border-radius: 20px; white-space: nowrap; letter-spacing: 0.3px;">'
             f'<a href="file://{kanban_path}" style="text-decoration:none;">\U0001f4cb Kanban</a>'
             f'</span>'
         )
-    elif thread_path:
-        toggle_html = (
-            f'<span style="display: inline-block; font-size: 11px; font-weight: 600; '
+    if thread_path:
+        return (
+            f'<span style="position: absolute; right: 2rem; bottom: 0.5rem; '
+            f'display: inline-block; font-size: 11px; font-weight: 600; '
             f'opacity: 0.7; padding: 3px 10px; border: 1px solid rgba(113,100,175,0.4); '
-            f'border-radius: 20px; text-decoration: none; white-space: nowrap; '
-            f'letter-spacing: 0.3px;">'
+            f'border-radius: 20px; white-space: nowrap; letter-spacing: 0.3px;">'
             f'<a href="file://{thread_path}" style="text-decoration:none;">\U0001f4ac Thread</a>'
             f'</span>'
         )
-
-    if toggle_html:
-        nav = (
-            f'<span style="display: flex; align-items: center; justify-content: space-between; '
-            f'padding: 0.4rem 0 0.2rem 0;">'
-            f'<span style="flex: 1; min-width: 0;">{table}</span>'
-            f'<span style="padding-left: 1rem; flex-shrink: 0;">{toggle_html}</span>'
-            f'</span>'
-        )
-        return f"\n\n{nav}\n\n"
-
-    return f"\n\n{table}\n\n"
+    return ""
 
 def has_uncommitted_changes(repo_root: str) -> bool:
     import subprocess
