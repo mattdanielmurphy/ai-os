@@ -51,10 +51,10 @@
 
 <!-- RULE:STRICT_PLANNER_DISPATCH -->
 ## Strict Planner / Workflow Immediate Dispatch
-- **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/proxima-planner` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
+- **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/_plan-with-ai-os` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
 - **Workflow**: Immediately run the single planner command via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`) with `WaitMsBeforeAsync: 500`. It automatically handles git context, agent logs, prompt generation into `./tmp/planner_prompt.txt`, dispatches to Perplexity (Sonnet Thinking), and writes the plan to `./tmp/planner_output.txt`.
-- **Strict Perplexity Dispatch & Fallback Policy**: When `/proxima-planner` is invoked, the orchestrator MUST ONLY dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`). Never use Gemini 3.1 Pro for planning for any reason. Fall back to `agy` ONLY if Perplexity quota is 0, or if Matt specifically requests it; and when falling back to `agy`, ALWAYS use `Gemini 3.7 Flash (High)` for planning, NEVER 3.1 Pro.
-- **Connection Recovery**: If the query times out or fails, recover immediately with `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 300` (and ensure Proxima / Tauri is active).
+- **Strict Perplexity Dispatch & Fallback Policy**: When `/_plan-with-ai-os` is invoked, the orchestrator MUST ONLY dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`). Never use Gemini 3.1 Pro for planning for any reason. Fall back to `agy` ONLY if Perplexity quota is 0, or if Matt specifically requests it; and when falling back to `agy`, ALWAYS use `Gemini 3.7 Flash (High)` for planning, NEVER 3.1 Pro.
+- **Connection Recovery**: If the query times out or fails, recover immediately with `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 300` (and ensure ai-os companion is active).
 <!-- /RULE:STRICT_PLANNER_DISPATCH -->
 
 # Custom Skills Naming & Authoring Invariant
