@@ -190,8 +190,20 @@ async function main() {
         }
     }
 
+    const THINKING_MODELS = ['grok', 'grok-thinking', 'grok_thinking', 'grok-2', 'grok46medium', 'sonnet', 'claude50sonnetthinking', 'gemini', 'gemini-3.7', 'flash-thinking', 'gemini37flashthinking', 'kimi', 'k3', 'kimik3thinking', 'gpt', 'gpt5', 'terra', 'gpt56_terra_thinking', 'glm', 'glm-5', 'glm5', 'glm_5_2'];
+    const isThinkingModel = THINKING_MODELS.includes(rawModel) || isPlanMode;
+    const minAllowedTimeout = isThinkingModel ? 300 : 120;
+    const defaultTimeout = isThinkingModel ? 600 : 300;
+
+    if (timeoutSec !== null && timeoutSec < minAllowedTimeout) {
+        const userTimeout = timeoutSec;
+        timeoutSec = minAllowedTimeout;
+        const modelDisplay = rawModel || (provider === 'perplexity' ? 'grok' : 'default');
+        console.error(`[query_aios] Note: Requested timeout of ${userTimeout}s is too short for ${modelDisplay} (thinking models require adequate reasoning time). Enforcing minimum timeout floor of ${minAllowedTimeout}s.`);
+    }
+
     if (isPlanMode) {
-        if (!timeoutSec) timeoutSec = 600;
+        if (!timeoutSec) timeoutSec = defaultTimeout;
         if (!outputPath) outputPath = './tmp/planner_output.txt';
         if (message) {
             const generatedPrompt = buildPlannerPrompt(message, imageDesc);
@@ -201,7 +213,7 @@ async function main() {
             message = generatedPrompt;
         }
     } else {
-        if (!timeoutSec) timeoutSec = 180;
+        if (!timeoutSec) timeoutSec = defaultTimeout;
     }
 
     if (inputFile && fs.existsSync(inputFile)) {
