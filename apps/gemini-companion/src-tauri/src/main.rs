@@ -41,9 +41,10 @@ async fn query_callback(
     query_id: Option<String>,
     response: Option<String>,
     error: Option<String>,
+    err_msg: Option<String>,
     payload: Option<QueryCallbackPayload>,
 ) -> Result<(), String> {
-    eprintln!("[query_callback INVOKED] direct_id={:?}, has_payload={}", query_id, payload.is_some());
+    eprintln!("[query_callback INVOKED] direct_id={:?}, has_payload={}, err_msg={:?}", query_id, payload.is_some(), err_msg);
     let q_id = query_id
         .or_else(|| payload.as_ref().and_then(|p| p.query_id.clone()))
         .or_else(|| payload.as_ref().and_then(|p| p.payload.as_ref().and_then(|pp| pp.query_id.clone())))
@@ -51,7 +52,7 @@ async fn query_callback(
     let resp = response
         .or_else(|| payload.as_ref().and_then(|p| p.response.clone()))
         .or_else(|| payload.as_ref().and_then(|p| p.payload.as_ref().and_then(|pp| pp.response.clone())));
-    let err = error
+    let err = error.or(err_msg)
         .or_else(|| payload.as_ref().and_then(|p| p.error.clone()))
         .or_else(|| payload.as_ref().and_then(|p| p.payload.as_ref().and_then(|pp| pp.error.clone())));
 

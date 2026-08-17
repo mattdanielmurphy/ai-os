@@ -225,6 +225,12 @@ async function main() {
     const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'grok' : 'default');
     console.error(`[query_aios] Querying ${provider} via AI-OS (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s, plan: ${isPlanMode}, recover: ${recoverMode})...`);
 
+    const startTime = Date.now();
+    const heartbeat = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        console.error(`[query_aios] [${elapsed}s] Generating response via ${provider} (${modelDisplay})...`);
+    }, 4000);
+
     const baseUrl = 'http://127.0.0.1:3031';
 
     const serverReady = await pingAios(baseUrl);
@@ -277,22 +283,41 @@ async function main() {
         }
 
         const data = await queryRes.json();
+        clearInterval(heartbeat);
         const answer = data.response || '';
 
         if (!answer) {
             throw new Error(`Received empty response from AI-OS for ${provider}`);
         }
 
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        const chars = answer.length;
+        const words = answer.split(/\s+/).filter(w => w.length > 0).length;
+        const lines = answer.split('\n').length;
+
         if (outputPath) {
             fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
             fs.writeFileSync(outputPath, answer, 'utf8');
-            console.error(`[query_aios] Response written to ${outputPath}`);
-        } else {
-            console.log(answer);
+            console.error(`[query_aios] ✅ Final output received (${chars} chars, ${elapsed}s) and saved to ${outputPath}`);
         }
+
+        console.log('================================================================================');
+        console.log('🎉 [AI-OS QUERY COMPLETE — FINAL OUTPUT RECEIVED]');
+        console.log(`Provider: ${provider}`);
+        console.log(`Model: ${modelDisplay}`);
+        console.log(`Session / Thread ID: ${sessionId}`);
+        console.log(`Elapsed time: ${elapsed}s`);
+        console.log(`Character count: ${chars}`);
+        console.log(`Word count: ${words}`);
+        console.log(`Line count: ${lines}`);
+        if (outputPath) console.log(`Saved To: ${outputPath}`);
+        console.log('--------------------------------------------------------------------------------');
+        console.log(answer);
+        console.log('🏁 [END OF AI-OS FINAL OUTPUT]');
 
         process.exit(0);
     } catch (err) {
+        clearInterval(heartbeat);
         console.error(`[query_aios] Error: ${err.message}`);
         process.exit(1);
     }
