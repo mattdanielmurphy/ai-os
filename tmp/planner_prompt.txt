@@ -1,4 +1,4 @@
-User Request: Diagnose and fix why thread.md is not showing the agent's final completed turn response. Specifically analyze watch_transcripts.py and gen_conversation_md.py. Provide a deterministic implementation plan.
+User Request: User is returning to university after ~10 years away. Current situation: enrolled in 2 courses (CMPUT 174 and MUSIC 102). Context file: /Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/Financial/university-financial-brief.html. The brief recommends 3 courses/term for financial aid / timeline reasons. User also wants to get a part-time job, specifically eyeing restaurant serving for quick cash/tips, social interaction, and high earning potential, but finds job hunting and restaurant work intimidating. User proposes spending ~k on targeted therapy/life coaching/job-coaching right now to dramatically accelerate getting hired (e.g. 4 months earlier = net positive ROI), while keeping courseload at 2 classes for Term 1 to ensure a smooth academic transition, then stepping up to 3 courses in Term 2. Analyze this strategy, evaluate pros/cons/risks, structure a step-by-step roadmap to set Matt up for success in both school and landing the restaurant job, address the trade-off of 2 vs 3 courses (full-time status vs easing in), and recommend specific tactical next steps.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -79,16 +79,16 @@ File: 2026-06-25_15-36_openrouter-cost-tracking.md
 - OpenRouter API: `/credits` returns `total_usage` and `total_credits`; `/activity` with `limit=N` returns per-generation metadata but requires a management key.
 - State file `.last_usage` lives alongside the script, in `.gitignore`-friendly territory.
 
-File: 2026-06-25_16-12_shift-enter-newline.md
-- No `.pbxproj` changes needed — the project uses `PBXFileSystemSynchronizedRootGroup` which auto-discovers new files.
+File: 2026-06-25_15-55_replace-ambient-music-system.md
 
 ## What Didn't Work / Known Issues
-- N/A
+- Firefox's AudioContext autoplay policy may require user gesture — the existing toggle-button + M key pattern handles this via `toggle()`
+- The `shockwave` boolean threshold (`shockwaveEnergy > 3`) could be tuned — may fire too frequently at high mouse speeds
 
 ## Architecture Notes
-- SwiftTerm's `MacTerminalView` handles `insertNewline:` in `doCommand(by:)` which sends `cmdRet` (`[13]` = `\r`) to the child process.
-- Claude Code uses `\r` as "submit" and `\n` as "newline in prompt" — this is standard readline/line discipline behavior.
-- The `ClaudeTerminalView` intercepts before `interpretKeyEvents([event])` is called, so the AppKit text system never routes it to `insertNewline:`.
+- Web Audio API node lifetime: oscillator nodes created once at `initAudioContext()`, never stopped/restarted — frequencies changed via `frequency.linearRampToValueAtTime`
+- Feedback delay reverb is a well-known trick: 3 delays with staggered times and sub-unity feedback feeding into each other creates a rich diffuse tail
+- `exponentialRampToValueAtTime` must target a non-zero value (used 0.001 as the decay floor)
 
 
 --- Recent Thread History Summary ---
