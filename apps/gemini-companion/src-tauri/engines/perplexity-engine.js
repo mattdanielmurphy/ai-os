@@ -176,7 +176,7 @@
                             answer = parsed.answer;
                         }
                         if (answer && answer.length > 0) {
-                            if (parsed.final === true || parsed.text_completed === true || (parsed.status === 'completed' && !parsed.step_type)) {
+                            if (parsed.final === true || parsed.text_completed === true) {
                                 isCompleted = true;
                                 break;
                             }
