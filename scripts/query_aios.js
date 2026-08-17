@@ -110,8 +110,22 @@ function buildPlannerPrompt(userRequest, imageDesc = null) {
 
     const imageContext = imageDesc ? `\n--- Visual Context & Image Description ---\n${imageDesc}\n` : '';
 
+    // 4. Thread History Summary
+    let historyContext = '';
+    const tmpDir = path.resolve('./tmp');
+    if (fs.existsSync(tmpDir)) {
+        try {
+            const files = fs.readdirSync(tmpDir).filter(f => f.endsWith('.txt') && !f.includes('prompt') && !f.includes('output'));
+            if (files.length > 0) {
+                const latest = files.sort((a, b) => fs.statSync(path.join(tmpDir, b)).mtime - fs.statSync(path.join(tmpDir, a)).mtime)[0];
+                const content = fs.readFileSync(path.join(tmpDir, latest), 'utf8');
+                historyContext = `\n--- Recent Thread History Summary ---\n${content.slice(-1000)}\n`;
+            }
+        } catch (e) {}
+    }
+
     return `User Request: ${userRequest}
-${imageContext}${agContextStr}${repoInfo}${logContext}
+${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}
 
 Please act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
 
@@ -175,7 +189,7 @@ function sendAiosRequest(url, payload, timeoutSec) {
 async function main() {
     const args = process.argv.slice(2);
     let provider = 'perplexity';
-    let rawModel = 'grok';
+    let rawModel = 'gemini';
     let message = '';
     let inputFile = null;
     let outputPath = null;
@@ -233,7 +247,7 @@ async function main() {
     if (timeoutSec !== null && timeoutSec < minAllowedTimeout) {
         const userTimeout = timeoutSec;
         timeoutSec = minAllowedTimeout;
-        const modelDisplay = rawModel || (provider === 'perplexity' ? 'grok' : 'default');
+        const modelDisplay = rawModel || (provider === 'perplexity' ? 'gemini' : 'default');
         console.error(`[query_aios] Note: Requested timeout of ${userTimeout}s is too short for ${modelDisplay} (thinking models require adequate reasoning time). Enforcing minimum timeout floor of ${minAllowedTimeout}s.`);
     }
 
