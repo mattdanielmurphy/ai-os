@@ -46,9 +46,8 @@ def get_pplx_quota(force=False):
         except Exception:
             pass
 
-    cookie_header = get_pplx_cookies()
     if not cookie_header:
-        return {"status": "UNCONFIGURED", "message": "No Perplexity session cookies found in Proxima profile"}
+        return {"status": "UNCONFIGURED", "message": "No Perplexity session cookies found"}
 
     req = urllib.request.Request(
         "https://www.perplexity.ai/rest/rate-limit/all",

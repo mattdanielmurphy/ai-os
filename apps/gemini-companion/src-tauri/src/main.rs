@@ -559,8 +559,11 @@ fn main() {
                         (function() {{
                             if (window.injectAndSendPrompt) {{
                                 window.injectAndSendPrompt({});
-                            }} else if (window.__proximaPerplexity && window.__proximaPerplexity.send) {{
-                                window.__proximaPerplexity.send({});
+                            }} else {{
+                                const pplx = window.__aiosPerplexity || window.__proximaPerplexity;
+                                if (pplx && pplx.send) {{
+                                    pplx.send({});
+                                }}
                             }}
                         }})();
                         "#,

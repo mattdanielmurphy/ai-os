@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 
 const PPLX_MODEL_MAP = {
     'grok': 'grok46medium',
@@ -125,6 +125,18 @@ The plan MUST include:
 DO NOT provide full code implementations. Focus on structural details, signatures, and clear instructions so that downstream agents can implement the changes efficiently without guessing. Ensure all decisions are concrete and leave no gaps in requirements.`;
 }
 
+async function pingAios(baseUrl) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 1000);
+        const res = await fetch(`${baseUrl}/v1/models`, { signal: controller.signal }).catch(() => null);
+        clearTimeout(timeout);
+        return res && res.ok;
+    } catch {
+        return false;
+    }
+}
+
 async function main() {
     const args = process.argv.slice(2);
     let provider = 'perplexity';
@@ -211,9 +223,17 @@ async function main() {
     }
 
     const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'grok' : 'default');
-    console.error(`[query_aios] Querying ${provider} (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s, plan: ${isPlanMode}, recover: ${recoverMode})...`);
+    console.error(`[query_aios] Querying ${provider} via AI-OS (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s, plan: ${isPlanMode}, recover: ${recoverMode})...`);
 
     const baseUrl = 'http://127.0.0.1:3031';
+
+    const serverReady = await pingAios(baseUrl);
+    if (!serverReady) {
+        console.error(`\n[query_aios] ERROR: AI-OS is not running (http://127.0.0.1:3031 is unreachable).`);
+        console.error(`Please open or start AI-OS manually:`);
+        console.error(`  cd /Users/matt/projects/ai-os/apps/gemini-companion && bun tauri dev\n`);
+        process.exit(1);
+    }
 
     try {
         if (uiOnly) {
@@ -228,95 +248,39 @@ async function main() {
 
             if (!res.ok) {
                 const text = await res.text();
-                throw new Error(`Server returned ${res.status}: ${text}`);
+                throw new Error(`AI-OS server returned ${res.status}: ${text}`);
             }
 
             console.error(`[query_aios] Prompt successfully dispatched to ${provider} webview.`);
             process.exit(0);
         }
 
-        let answer = '';
+        const endpoint = baseProvider === 'gemini'
+            ? `${baseUrl}/api/gemini/query`
+            : `${baseUrl}/api/perplexity/query`;
 
-        // 1. Try querying native Tauri AI-OS server directly (port 3031)
-        try {
-            const pingController = new AbortController();
-            const pingTimeout = setTimeout(() => pingController.abort(), 1000);
-            const pingRes = await fetch(`${baseUrl}/v1/models`, { signal: pingController.signal }).catch(() => null);
-            clearTimeout(pingTimeout);
+        const queryRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: message,
+                model: resolvedModel,
+                session_id: sessionId,
+                file_path: filePath ? path.resolve(filePath) : null,
+            }),
+            signal: AbortSignal.timeout(timeoutSec * 1000)
+        });
 
-            if (pingRes && pingRes.ok && !recoverMode) {
-                console.error(`[query_aios] Connected to native Tauri AI-OS server on 127.0.0.1:3031`);
-                const endpoint = baseProvider === 'gemini'
-                    ? `${baseUrl}/api/gemini/query`
-                    : `${baseUrl}/api/perplexity/query`;
-
-                const queryRes = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: message,
-                        model: resolvedModel,
-                        session_id: sessionId,
-                        file_path: filePath ? path.resolve(filePath) : null,
-                    }),
-                    signal: AbortSignal.timeout(timeoutSec * 1000)
-                });
-
-                if (queryRes.ok) {
-                    const data = await queryRes.json();
-                    answer = data.response || '';
-                } else {
-                    const errText = await queryRes.text();
-                    console.error(`[query_aios] Tauri returned error (${queryRes.status}): ${errText}. Falling back to Proxima IPC...`);
-                }
-            }
-        } catch (tauriErr) {
-            // Fall back to Proxima IPC
+        if (!queryRes.ok) {
+            const errText = await queryRes.text();
+            throw new Error(`AI-OS server returned ${queryRes.status}: ${errText}`);
         }
 
-        // 2. Fallback to Proxima Electron IPC if answer is still empty
-        if (!answer) {
-            const PROXIMA_PATH = '/Users/matt/projects/external/Proxima';
-            const { IPCClient, AIProvider } = await import(path.join(PROXIMA_PATH, 'src/mcp/ipc-bridge.js'));
-            const { getAgentHubToken, getAgentHubPort } = await import(path.join(PROXIMA_PATH, 'src/mcp/helpers.js'));
-
-            const port = getAgentHubPort() || 19222;
-            const token = getAgentHubToken();
-            const client = new IPCClient(port, token);
-            const aiProvider = new AIProvider(baseProvider, client, () => true);
-
-            if (recoverMode) {
-                const startTime = Date.now();
-                const timeoutMs = timeoutSec * 1000;
-                while (Date.now() - startTime < timeoutMs) {
-                    try {
-                        const result = await aiProvider.executeScript(`
-                            (function() {
-                                var isStreaming = document.querySelector('.animate-pulse') || document.querySelector('[data-testid="loading"]');
-                                var markdownEl = document.querySelector('.prose') || document.querySelector('[data-testid="answer-content"]');
-                                return {
-                                    streaming: !!isStreaming,
-                                    text: markdownEl ? markdownEl.innerText : ''
-                                };
-                            })()
-                        `);
-                        if (result && result.text && !result.streaming) {
-                            answer = result.text;
-                            break;
-                        }
-                    } catch (e) {}
-                    await new Promise(r => setTimeout(r, 2000));
-                }
-                if (!answer && message) {
-                    answer = await aiProvider.chat(message, true, filePath, resolvedModel, sessionId);
-                }
-            } else {
-                answer = await aiProvider.chat(message, true, filePath, resolvedModel, sessionId);
-            }
-        }
+        const data = await queryRes.json();
+        const answer = data.response || '';
 
         if (!answer) {
-            throw new Error(`Received empty response from ${provider}`);
+            throw new Error(`Received empty response from AI-OS for ${provider}`);
         }
 
         if (outputPath) {

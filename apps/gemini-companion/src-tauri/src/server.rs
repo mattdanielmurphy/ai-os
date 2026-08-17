@@ -590,13 +590,14 @@ async fn handle_perplexity_query(
 
             async function run() {{
                 try {{
-                    if (!window.__proximaPerplexity || !window.__proximaPerplexity.send) {{
+                    const pplx = window.__aiosPerplexity || window.__proximaPerplexity;
+                    if (!pplx || !pplx.send) {{
                         throw new Error('Perplexity engine not initialized in webview. URL: ' + window.location.href);
                     }}
                     let attachmentsObj = null;
                     if (fileB64 && fileName && fileMime) {{
-                        if (window.__proximaPerplexity.uploadFileToPerplexity) {{
-                            const s3Url = await window.__proximaPerplexity.uploadFileToPerplexity(fileB64, fileName, fileMime);
+                        if (pplx.uploadFileToPerplexity) {{
+                            const s3Url = await pplx.uploadFileToPerplexity(fileB64, fileName, fileMime);
                             attachmentsObj = {{
                                 imageToken: s3Url,
                                 filename: fileName,
@@ -604,7 +605,7 @@ async fn handle_perplexity_query(
                             }};
                         }}
                     }}
-                    const answer = await window.__proximaPerplexity.send(prompt, model, attachmentsObj, session);
+                    const answer = await pplx.send(prompt, model, attachmentsObj, session);
                     sendDone(answer, null);
                 }} catch (err) {{
                     sendDone(null, err.message || String(err));
@@ -746,14 +747,14 @@ async fn handle_gemini_query(
 
             async function run() {{
                 try {{
-                    const engine = window.__proximaGeminiUnified || window.__proximaGemini;
+                    const engine = window.__aiosGeminiUnified || window.__aiosGemini || window.__proximaGeminiUnified || window.__proximaGemini;
                     if (!engine || !engine.send) {{
                         throw new Error('Gemini engine not initialized in webview. URL: ' + window.location.href);
                     }}
                     let attachmentsObj = null;
                     if (fileB64 && fileName && fileMime) {{
-                        if (window.__proximaGemini && window.__proximaGemini.uploadFileToGoogle) {{
-                            const token = await window.__proximaGemini.uploadFileToGoogle(fileB64, fileName, fileMime);
+                        if (engine.uploadFileToGoogle) {{
+                            const token = await engine.uploadFileToGoogle(fileB64, fileName, fileMime);
                             attachmentsObj = {{
                                 imageToken: token,
                                 filename: fileName,
@@ -1041,7 +1042,7 @@ async fn handle_debug_ping(
 
     let script = r#"
         (function() {
-            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__proximaPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
+            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined' || typeof window.__proximaPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
             var msg = {
                 type: 'query_callback',
                 query_id: 'test_ping',
@@ -1112,7 +1113,7 @@ async fn handle_debug_ping_gemini(
 
     let script = r#"
         (function() {
-            var diag = 'URL=' + window.location.href + ' | GEMINI_UNIFIED=' + (typeof window.__proximaGeminiUnified !== 'undefined') + ' | GEMINI=' + (typeof window.__proximaGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
+            var diag = 'URL=' + window.location.href + ' | GEMINI_UNIFIED=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__proximaGeminiUnified !== 'undefined') + ' | GEMINI=' + (typeof window.__aiosGemini !== 'undefined' || typeof window.__proximaGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
             var msg = {
                 type: 'query_callback',
                 query_id: 'test_ping_gemini',

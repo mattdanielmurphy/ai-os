@@ -10,7 +10,7 @@ async fn handle_status() -> Json<serde_json::Value> {
     Json(json!({
         "status": "ok",
         "port": 19223,
-        "version": "proxima-lite-0.1.0"
+        "version": "ai-os-0.1.0"
     }))
 }
 
@@ -94,14 +94,14 @@ pub async fn start_proxy_server(_app_handle: tauri::AppHandle) -> Result<(), Str
     let listener = match tokio::net::TcpListener::bind("127.0.0.1:19223").await {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("[Proxima-Lite] Failed to bind proxy port 19223 (is another instance running?): {}", e);
+            eprintln!("[AI-OS] Failed to bind proxy port 19223 (is another instance running?): {}", e);
             return Err(e.to_string());
         }
     };
 
-    println!("[Proxima-Lite] Proxy daemon running on http://127.0.0.1:19223");
+    println!("[AI-OS] Proxy daemon running on http://127.0.0.1:19223");
     if let Err(e) = axum::serve(listener, app).await {
-        eprintln!("[Proxima-Lite] Proxy daemon server error: {}", e);
+        eprintln!("[AI-OS] Proxy daemon server error: {}", e);
         return Err(e.to_string());
     }
 
