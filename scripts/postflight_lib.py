@@ -125,6 +125,8 @@ def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity", work
     compact_total = t_sys + compact_history_tokens
     savings_pct = int(((token_count - compact_total) / max(1, token_count)) * 100) if token_count > compact_total else 0
 
+    cost_comp = thread_economics.calculate_turn_cost_comparison(token_count, t_sys, compact_total)
+
     return {
         "token_display": token_display,
         "cache_display": cache_display,
@@ -135,6 +137,7 @@ def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity", work
         "commit_status": commit_status,
         "compact_display": format_tokens(compact_total),
         "savings_pct": savings_pct,
+        "cost_comp": cost_comp,
         "handoff_ready": token_count > 35000
     }
 
@@ -156,7 +159,9 @@ def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
     if conv_id and metrics.get('savings_pct', 0) > 25:
         headers.append("Handoff")
         handoff_url = f"http://127.0.0.1:3031/handoff?session={conv_id}"
-        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']})]({handoff_url})")
+        cost = metrics.get('cost_comp', {})
+        t1_vs_c = f"T1: ${cost.get('handoff', 0):.3f} vs C: ${cost.get('continuing', 0):.3f}"
+        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']} | {t1_vs_c})]({handoff_url})")
 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
