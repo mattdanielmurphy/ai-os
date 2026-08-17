@@ -1,11 +1,11 @@
 /**
- * Proxima — Perplexity Engine
+ * AI-OS — Perplexity Engine
  * Runs inside perplexity.ai BrowserView context. Sends queries via
  * /rest/sse/perplexity_ask and parses SSE blocks[].markdown_block.answer.
  * ⚠️ NOTE: parsed.text contains step JSON, NOT the answer — always use blocks[].
  */
 (function () {
-    if (window.__proximaPerplexity) return;
+    if (window.__aiosPerplexity) return;
 
     var TIMEOUT = 360000;
     var _sessionToken = null;
@@ -14,7 +14,7 @@
     var _currentSessionId = null;
     var _sessions = {};
     try {
-        var _savedPplxSessions = localStorage.getItem('proxima_perplexity_sessions');
+        var _savedPplxSessions = localStorage.getItem('aios_perplexity_sessions');
         if (_savedPplxSessions) {
             _sessions = JSON.parse(_savedPplxSessions);
         }
@@ -49,7 +49,7 @@
         _sessions[_currentSessionId].backendUuid = _lastBackendUuid;
         try {
             _pruneSessions();
-            localStorage.setItem('proxima_perplexity_sessions', JSON.stringify(_sessions));
+            localStorage.setItem('aios_perplexity_sessions', JSON.stringify(_sessions));
         } catch (e) { }
     }
 
@@ -412,9 +412,9 @@
         }
         _sessionToken = null;
         try {
-            localStorage.setItem('proxima_perplexity_sessions', JSON.stringify(_sessions));
+            localStorage.setItem('aios_perplexity_sessions', JSON.stringify(_sessions));
         } catch (e) { }
-        console.log('[Proxima Perplexity] Conversation reset:', sessionId || _currentSessionId || 'current');
+        console.log('[AI-OS Perplexity] Conversation reset:', sessionId || _currentSessionId || 'current');
     }
 
     window.injectAndSendPrompt = function (promptText) {
@@ -434,6 +434,6 @@
         }
     };
 
-    window.__proximaPerplexity = { send: send, newConversation: newConversation, uploadFileToPerplexity: uploadFileToPerplexity };
-    console.log('[Proxima] Perplexity engine loaded');
+    window.__aiosPerplexity = { send: send, newConversation: newConversation, uploadFileToPerplexity: uploadFileToPerplexity };
+    console.log('[AI-OS] Perplexity engine loaded');
 })();
