@@ -1,7 +1,4 @@
-User Request: When opening html files in Finder, macOS error dialog appears: 'The document university-financial-brief.html could not be opened. AIOSURLRouter cannot open files in the HTML Document format.' If inspector changes default app, it reverts back to AIOSURLRouter. We need AIOSURLRouter or the system configuration to properly handle HTML file documents and open them directly in the user's real default browser (or configure Info.plist / document types / application delegate so AIOSURLRouter can receive file open events and forward them to the real browser).
-
---- Visual Context & Image Description ---
-macOS error dialog: The document 'university-financial-brief.html' could not be opened. AIOSURLRouter cannot open files in the 'HTML Document' format.
+User Request: Diagnose and fix the root cause why thread.md is not showing the agent's final completed turn response. Specifically analyze watch_transcripts.py (file modification / debouncing / is_turn_completed trigger logic) and gen_conversation_md.py (parse_exchanges, transcript.jsonl vs transcript_full.jsonl reading, and how the final in-progress vs finalized turn is captured and rendered). Deliver a surgical, deterministic implementation plan to make thread.md reliably render the latest agent response immediately upon turn completion.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
