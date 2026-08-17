@@ -368,6 +368,7 @@ fn prepare_attachment(
 
 #[derive(serde::Deserialize)]
 pub struct PerplexityCallbackPayload {
+    #[serde(alias = "queryId")]
     pub query_id: String,
     pub response: Option<String>,
     pub error: Option<String>,
@@ -400,6 +401,89 @@ pub async fn resolve_query_callback(
     } else {
         eprintln!("[RESOLVE_QUERY_CALLBACK NOT FOUND] q_id={}", q_id);
         false
+    }
+}
+
+async fn wait_for_query_result(
+    win: &tauri::Window,
+    query_id: &str,
+    window_default_title: &str,
+    mut rx: tokio::sync::oneshot::Receiver<Result<String, String>>,
+    timeout_secs: u64,
+) -> Result<String, (axum::http::StatusCode, String)> {
+    let start_time = std::time::Instant::now();
+    let timeout_duration = std::time::Duration::from_secs(timeout_secs);
+    let res_prefix = format!("AIOS_RES_{}:", query_id);
+    let err_prefix = format!("AIOS_ERR_{}:", query_id);
+
+    loop {
+        if start_time.elapsed() > timeout_duration {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove(query_id);
+            let _ = win.set_title(window_default_title);
+            return Err((
+                axum::http::StatusCode::GATEWAY_TIMEOUT,
+                format!("Query {} timed out after {} seconds", query_id, timeout_secs),
+            ));
+        }
+
+        // 1. Check oneshot channel (non-blocking)
+        match rx.try_recv() {
+            Ok(Ok(response)) => {
+                let _ = win.set_title(window_default_title);
+                return Ok(response);
+            }
+            Ok(Err(err_msg)) => {
+                let _ = win.set_title(window_default_title);
+                return Err((
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Execution error: {}", err_msg),
+                ));
+            }
+            Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {
+                // Sender closed, check title bridge below
+            }
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
+                // Channel empty, check title bridge below
+            }
+        }
+
+        // 2. Check window title zero-network bridge
+        if let Ok(title) = win.title() {
+            if let Some(pos) = title.find(&res_prefix) {
+                let b64_str = &title[pos + res_prefix.len()..];
+                let decoded_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64_str)
+                    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Base64 decode error: {}", e)))?;
+                let json_str = String::from_utf8(decoded_bytes)
+                    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("UTF-8 parse error: {}", e)))?;
+                let payload: PerplexityCallbackPayload = serde_json::from_str(&json_str)
+                    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("JSON parse error: {}", e)))?;
+
+                let mut callbacks = get_query_callbacks().lock().await;
+                callbacks.remove(query_id);
+
+                let _ = win.set_title(window_default_title);
+
+                if let Some(err) = payload.error {
+                    return Err((
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("Execution error: {}", err),
+                    ));
+                }
+                return Ok(payload.response.unwrap_or_default());
+            } else if let Some(pos) = title.find(&err_prefix) {
+                let err_str = title[pos + err_prefix.len()..].to_string();
+                let mut callbacks = get_query_callbacks().lock().await;
+                callbacks.remove(query_id);
+                let _ = win.set_title(window_default_title);
+                return Err((
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Execution error: {}", err_str),
+                ));
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     }
 }
 
