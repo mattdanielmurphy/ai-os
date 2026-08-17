@@ -531,14 +531,12 @@ async fn handle_perplexity_query(
             const fileMime = {};
 
             function sendDone(resp, err) {{
-                function toB64(str) {{
-                    return btoa(unescape(encodeURIComponent(str || '')));
-                }}
-                if (err) {{
-                    document.title = 'AIOS_ERROR_START:' + qId + ':' + toB64(err) + ':AIOS_ERROR_END';
-                }} else {{
-                    document.title = 'AIOS_RESULT_START:' + qId + ':' + toB64(resp || '') + ':AIOS_RESULT_END';
-                }}
+                var payload = JSON.stringify({{ query_id: qId, response: resp || null, error: err || null }});
+                fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: payload
+                }}).catch(function(e) {{ console.error('[AI-OS] callback fetch failed:', e); }});
             }}
 
             async function run() {{
@@ -573,43 +571,27 @@ async fn handle_perplexity_query(
 
     let _ = win.eval(&eval_script);
 
-    use base64::Engine;
-    let start_time = std::time::Instant::now();
-    let prefix_success = format!("AIOS_RESULT_START:{}:", query_id);
-    let prefix_error = format!("AIOS_ERROR_START:{}:", query_id);
-
-    loop {
-        if start_time.elapsed() > std::time::Duration::from_secs(600) {
+    // Await the oneshot callback with a 600s timeout
+    match tokio::time::timeout(std::time::Duration::from_secs(600), rx).await {
+        Ok(Ok(Ok(response))) => {
+            Ok(Json(QueryResponse {
+                response,
+                query_id,
+            }))
+        }
+        Ok(Ok(Err(err_msg))) => {
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Perplexity execution error: {}", err_msg)))
+        }
+        Ok(Err(_)) => {
+            // oneshot sender was dropped without sending
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Query callback channel closed unexpectedly".to_string()))
+        }
+        Err(_) => {
+            // Timeout
             let mut callbacks = get_query_callbacks().lock().await;
             callbacks.remove(&query_id);
-            return Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()));
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
         }
-
-        if let Ok(title) = win.title() {
-            if title.starts_with(&prefix_success) {
-                let rest = &title[prefix_success.len()..];
-                if let Some(end_idx) = rest.rfind(":AIOS_RESULT_END") {
-                    let b64_str = &rest[..end_idx];
-                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
-                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
-                    let _ = win.set_title("Perplexity");
-                    return Ok(Json(QueryResponse {
-                        response: decoded_str,
-                        query_id,
-                    }));
-                }
-            } else if title.starts_with(&prefix_error) {
-                let rest = &title[prefix_error.len()..];
-                if let Some(end_idx) = rest.rfind(":AIOS_ERROR_END") {
-                    let b64_str = &rest[..end_idx];
-                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
-                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
-                    let _ = win.set_title("Perplexity");
-                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Perplexity execution error: {}", decoded_str)));
-                }
-            }
-        }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 
@@ -660,14 +642,12 @@ async fn handle_gemini_query(
             const fileMime = {};
 
             function sendDone(resp, err) {{
-                function toB64(str) {{
-                    return btoa(unescape(encodeURIComponent(str || '')));
-                }}
-                if (err) {{
-                    document.title = 'AIOS_ERROR_START:' + qId + ':' + toB64(err) + ':AIOS_ERROR_END';
-                }} else {{
-                    document.title = 'AIOS_RESULT_START:' + qId + ':' + toB64(resp || '') + ':AIOS_RESULT_END';
-                }}
+                var payload = JSON.stringify({{ query_id: qId, response: resp || null, error: err || null }});
+                fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: payload
+                }}).catch(function(e) {{ console.error('[AI-OS] callback fetch failed:', e); }});
             }}
 
             async function run() {{
@@ -702,43 +682,27 @@ async fn handle_gemini_query(
 
     let _ = win.eval(&eval_script);
 
-    use base64::Engine;
-    let start_time = std::time::Instant::now();
-    let prefix_success = format!("AIOS_RESULT_START:{}:", query_id);
-    let prefix_error = format!("AIOS_ERROR_START:{}:", query_id);
-
-    loop {
-        if start_time.elapsed() > std::time::Duration::from_secs(600) {
+    // Await the oneshot callback with a 600s timeout
+    match tokio::time::timeout(std::time::Duration::from_secs(600), rx).await {
+        Ok(Ok(Ok(response))) => {
+            Ok(Json(QueryResponse {
+                response,
+                query_id,
+            }))
+        }
+        Ok(Ok(Err(err_msg))) => {
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Gemini execution error: {}", err_msg)))
+        }
+        Ok(Err(_)) => {
+            // oneshot sender was dropped without sending
+            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Query callback channel closed unexpectedly".to_string()))
+        }
+        Err(_) => {
+            // Timeout
             let mut callbacks = get_query_callbacks().lock().await;
             callbacks.remove(&query_id);
-            return Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()));
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
         }
-
-        if let Ok(title) = win.title() {
-            if title.starts_with(&prefix_success) {
-                let rest = &title[prefix_success.len()..];
-                if let Some(end_idx) = rest.rfind(":AIOS_RESULT_END") {
-                    let b64_str = &rest[..end_idx];
-                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
-                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
-                    let _ = win.set_title("Gemini");
-                    return Ok(Json(QueryResponse {
-                        response: decoded_str,
-                        query_id,
-                    }));
-                }
-            } else if title.starts_with(&prefix_error) {
-                let rest = &title[prefix_error.len()..];
-                if let Some(end_idx) = rest.rfind(":AIOS_ERROR_END") {
-                    let b64_str = &rest[..end_idx];
-                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
-                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
-                    let _ = win.set_title("Gemini");
-                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Gemini execution error: {}", decoded_str)));
-                }
-            }
-        }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 
@@ -978,36 +942,42 @@ async fn handle_debug_ping(
     let win = app_handle.get_window("perplexity_main")
         .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))?;
 
+    let ping_id = format!("ping_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
     let (tx, rx) = tokio::sync::oneshot::channel();
     {
         let mut callbacks = get_query_callbacks().lock().await;
-        callbacks.insert("test_ping".to_string(), tx);
+        callbacks.insert(ping_id.clone(), tx);
     }
 
     let pplx_engine = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
+    let js_ping_id = serde_json::to_string(&ping_id).unwrap_or_default();
     let script = format!(
         r#"
         {}
         (function() {{
             var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
-            document.title = 'AIOS_PING_RESULT:' + diag;
+            var payload = JSON.stringify({{ query_id: {}, response: diag, error: null }});
+            fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: payload
+            }}).catch(function(e) {{ console.error('[AI-OS] ping callback failed:', e); }});
         }})();
         "#,
-        pplx_engine
+        pplx_engine, js_ping_id
     );
     let _ = win.eval(&script);
 
-    let start_time = std::time::Instant::now();
-    while start_time.elapsed() < std::time::Duration::from_secs(5) {
-        if let Ok(title) = win.title() {
-            if let Some(pos) = title.find("AIOS_PING_RESULT:") {
-                let diag = title[pos + "AIOS_PING_RESULT:".len()..].to_string();
-                return Ok(diag);
-            }
+    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(Ok(diag))) => Ok(diag),
+        Ok(Ok(Err(e))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e)),
+        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Ping callback channel closed".to_string())),
+        Err(_) => {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove(&ping_id);
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
         }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
-    Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
 }
 
 async fn handle_debug_ping_gemini(
@@ -1016,36 +986,42 @@ async fn handle_debug_ping_gemini(
     let win = app_handle.get_window("gemini_main")
         .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))?;
 
+    let ping_id = format!("ping_gemini_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
     let (tx, rx) = tokio::sync::oneshot::channel();
     {
         let mut callbacks = get_query_callbacks().lock().await;
-        callbacks.insert("test_ping_gemini".to_string(), tx);
+        callbacks.insert(ping_id.clone(), tx);
     }
 
     let gemini_engine = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/gemini-engine.js").unwrap_or_default();
+    let js_ping_id = serde_json::to_string(&ping_id).unwrap_or_default();
     let script = format!(
         r#"
         {}
         (function() {{
-            var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
-            document.title = 'AIOS_PING_RESULT:' + diag;
+            var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
+            var payload = JSON.stringify({{ query_id: {}, response: diag, error: null }});
+            fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: payload
+            }}).catch(function(e) {{ console.error('[AI-OS] ping callback failed:', e); }});
         }})();
         "#,
-        gemini_engine
+        gemini_engine, js_ping_id
     );
     let _ = win.eval(&script);
 
-    let start_time = std::time::Instant::now();
-    while start_time.elapsed() < std::time::Duration::from_secs(5) {
-        if let Ok(title) = win.title() {
-            if let Some(pos) = title.find("AIOS_PING_RESULT:") {
-                let diag = title[pos + "AIOS_PING_RESULT:".len()..].to_string();
-                return Ok(diag);
-            }
+    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(Ok(diag))) => Ok(diag),
+        Ok(Ok(Err(e))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e)),
+        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Ping callback channel closed".to_string())),
+        Err(_) => {
+            let mut callbacks = get_query_callbacks().lock().await;
+            callbacks.remove(&ping_id);
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
         }
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
-    Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
 }
 
 // ---------------------------------------------------------------------------
