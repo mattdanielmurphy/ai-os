@@ -2,6 +2,7 @@
 
 ## 2026-08-16
 - **Strict Span-Only Styling Invariant & Multiline Markdown Fix:** Mandated `<span>` tags with `display: block;` exclusively across `thread.md` and custom markdown viewers. Resolved multiline prompt formatting degradation by converting prompt newlines to `<br>` / `<br><br>` within styled `<span>` containers, preserving continuous bubble styling across complex inputs. Updated `.rules/core_safety.md`, `AG_CONTEXT.md`, and compiled all agent rules.
+- **Unified Single-Command Planner (`query_aios.js --plan`):** Consolidated the two-step planning workflow (`generate_planner_prompt.py` + `query_proxima.js`) into a single-step `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`. Automatically inspects git context and matching agent logs, formats and writes `./tmp/planner_prompt.txt`, dispatches the query directly to Perplexity Sonnet Thinking (or Tauri / Proxima IPC), and writes the output to `./tmp/planner_output.txt`. Updated `/proxima-planner` workflow and compiled agent rules.
 
 ## 2026-08-13
 - **Cost-Aware & Cache-Aware Thread Rotation System:** Implemented `scripts/thread_economics.py` calculating marginal financial breakeven against prompt cache write/read rates, hard context capacity caps (55% safety margin), and 1-hour cache TTL countdowns. Integrated live metrics into `scripts/postflight.py` and `scripts/check_thread_bloat.py`.

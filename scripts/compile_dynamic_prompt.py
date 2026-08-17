@@ -50,7 +50,7 @@ def apply_rule_filters(content: str, config: dict) -> str:
     # Dynamic settings interpolation
     high_reasoning_setting = settings.get("high_reasoning_model_default", {}).get("value", "perplexity")
     if high_reasoning_setting == "perplexity":
-        engine_str = "`node ~/projects/ai-os/scripts/query_proxima.js --provider perplexity` (Proxima Perplexity) by default, with `Gemini 3.7 Flash (High)` as a fallback"
+        engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity` (Proxima Perplexity) by default, with `Gemini 3.7 Flash (High)` as a fallback"
     elif high_reasoning_setting == "flash_high":
         engine_str = "`Gemini 3.7 Flash (High)` via `agymcp`"
     elif high_reasoning_setting == "sonnet":
