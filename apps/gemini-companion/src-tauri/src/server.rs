@@ -632,7 +632,8 @@ async fn handle_perplexity_query(
                             query_id: qId,
                             queryId: qId,
                             response: resp || null,
-                            error: err || null
+                            err_msg: err || null,
+                            payload: payload
                         }}));
                     }}
                 }} catch(e) {{}}
@@ -755,7 +756,8 @@ async fn handle_gemini_query(
                             query_id: qId,
                             queryId: qId,
                             response: resp || null,
-                            error: err || null
+                            err_msg: err || null,
+                            payload: payload
                         }}));
                     }}
                 }} catch(e) {{}}
@@ -1064,13 +1066,27 @@ async fn handle_debug_ping(
         {}
         (function() {{
             var qId = {};
-            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
+            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined' && typeof window.webkit.messageHandlers.ipc !== 'undefined');
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
             try {{
                 if (window.__TAURI__ && window.__TAURI__.invoke) {{
                     window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
                 }} else if (window.__TAURI_INVOKE__) {{
                     window.__TAURI_INVOKE__('query_callback', payload);
+                }}
+            }} catch(e) {{}}
+            try {{
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                    window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                        cmd: 'query_callback',
+                        callback: 0,
+                        error: 0,
+                        query_id: qId,
+                        queryId: qId,
+                        response: diag,
+                        err_msg: null,
+                        payload: payload
+                    }}));
                 }}
             }} catch(e) {{}}
             try {{
@@ -1116,13 +1132,27 @@ async fn handle_debug_ping_gemini(
         {}
         (function() {{
             var qId = {};
-            var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
+            var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined' && typeof window.webkit.messageHandlers.ipc !== 'undefined');
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
             try {{
                 if (window.__TAURI__ && window.__TAURI__.invoke) {{
                     window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
                 }} else if (window.__TAURI_INVOKE__) {{
                     window.__TAURI_INVOKE__('query_callback', payload);
+                }}
+            }} catch(e) {{}}
+            try {{
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                    window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                        cmd: 'query_callback',
+                        callback: 0,
+                        error: 0,
+                        query_id: qId,
+                        queryId: qId,
+                        response: diag,
+                        err_msg: null,
+                        payload: payload
+                    }}));
                 }}
             }} catch(e) {{}}
             try {{
