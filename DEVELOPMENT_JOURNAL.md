@@ -120,3 +120,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-08-17
 - **Tauri Native IPC Callback Bridge:** Configured webview query and debug ping handlers in `server.rs` to use `window.__TAURI__.invoke('query_callback', ...)` and `window.__TAURI_INVOKE__` to bypass WKWebView mixed-content HTTPS->HTTP localhost fetch blocks. [[log]](agent-logs/2026-08-17_01-28_tauri-native-ipc-callback-bridge.md)
+
+
+- **2026-08-17 13:50 (AIOSURLRouter HTML Opening Fix)**: Implemented `NSApplicationDelegate` document open handlers (`application(_:openFiles:)`, `application(_:openFile:)`, `application(_:open:)`) in `RouterApp.swift` so `AIOSURLRouter` forwards local `.html` files directly to Google Chrome when launched from Finder. Recompiled and registered `/Applications/AIOSURLRouter.app`.
