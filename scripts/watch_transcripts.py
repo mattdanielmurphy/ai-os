@@ -18,7 +18,7 @@ import json
 import re
 import time
 from pathlib import Path
-from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes
+from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes, extract_workspace_root
 
 
 
@@ -211,14 +211,17 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             # Auto-commit check (Trigger only once when the entire turn is completed)
             transcript_file = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
             if transcript_file.exists() and is_turn_completed(transcript_file):
-                workspace_root = Path("/Users/matt/projects/ai-os")
+                workspace_root = extract_workspace_root(transcript_path=transcript_file)
                 
                 # Check for cooldown per repository
                 last_commit_time = last_render_time.get(f"commit_{workspace_root}", 0)
                 if (now - last_commit_time) > 10:
                     if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
                         res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
-                        proc = subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)])
+                        proc = subprocess.Popen(
+                            [sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)],
+                            cwd=str(workspace_root)
+                        )
                         pending_commits[str(workspace_root)] = (proc, res_path, render_id)
                         last_render_time[f"commit_{workspace_root}"] = now
 
