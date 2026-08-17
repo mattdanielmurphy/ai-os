@@ -176,8 +176,9 @@
                         if (parsed.answer && typeof parsed.answer === 'string' && parsed.answer.length > answer.length) {
                             answer = parsed.answer;
                         }
-                        if (parsed.status === 'completed' || parsed.status === 'success' || parsed.step_type === 'final' || parsed.final === true) {
-                            // Do not break here; keep collecting blocks
+                        if (parsed.status === 'completed' || parsed.status === 'success' || parsed.step_type === 'final' || parsed.final === true || parsed.text_completed === true) {
+                            isCompleted = true;
+                            break;
                         }
                     } catch (e) { }
                 }
