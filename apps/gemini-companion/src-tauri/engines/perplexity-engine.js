@@ -172,11 +172,39 @@
                                 }
                             }
                         }
+                        if (parsed.text && typeof parsed.text === 'string') {
+                            try {
+                                var innerParsed = JSON.parse(parsed.text);
+                                if (innerParsed && innerParsed.answer && typeof innerParsed.answer === 'string' && innerParsed.answer.length > answer.length) {
+                                    answer = innerParsed.answer;
+                                } else if (innerParsed && innerParsed.text && typeof innerParsed.text === 'string' && innerParsed.text.length > answer.length) {
+                                    answer = innerParsed.text;
+                                } else if (parsed.text.length > answer.length) {
+                                    answer = parsed.text;
+                                }
+                            } catch(e) {
+                                if (parsed.text.length > answer.length) {
+                                    answer = parsed.text;
+                                }
+                            }
+                        }
                         if (parsed.answer && typeof parsed.answer === 'string' && parsed.answer.length > answer.length) {
                             answer = parsed.answer;
                         }
+                        if (parsed.output && typeof parsed.output === 'string' && parsed.output.length > answer.length) {
+                            answer = parsed.output;
+                        }
+                        if (parsed.content && typeof parsed.content === 'string' && parsed.content.length > answer.length) {
+                            answer = parsed.content;
+                        }
+                        if (parsed.response && typeof parsed.response === 'string' && parsed.response.length > answer.length) {
+                            answer = parsed.response;
+                        }
+                        if (parsed.completion && typeof parsed.completion === 'string' && parsed.completion.length > answer.length) {
+                            answer = parsed.completion;
+                        }
                         if (answer && answer.length > 0) {
-                            if (parsed.final === true || parsed.text_completed === true) {
+                            if (parsed.final === true || parsed.text_completed === true || (parsed.status === 'completed' && !parsed.step_type)) {
                                 isCompleted = true;
                                 break;
                             }
