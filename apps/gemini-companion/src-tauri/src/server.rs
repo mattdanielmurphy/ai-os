@@ -1115,7 +1115,7 @@ async fn handle_debug_ping(
         "#,
         pplx_engine
     );
-    let eval_res = win.eval(script);
+    let eval_res = win.eval(&script);
 
     match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
         Ok(Ok(Ok(resp))) => Ok(resp),
@@ -1212,7 +1212,7 @@ async fn handle_debug_ping_gemini(
         "#,
         gemini_engine
     );
-    let eval_res = win.eval(script);
+    let eval_res = win.eval(&script);
 
     match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
         Ok(Ok(Ok(resp))) => Ok(resp),
