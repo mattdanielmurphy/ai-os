@@ -617,7 +617,7 @@ async fn handle_perplexity_query(
             run();
         }})();
         "#,
-        js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
+        pplx_engine, js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
     );
 
     let _ = win.eval(&eval_script);
@@ -776,7 +776,7 @@ async fn handle_gemini_query(
             run();
         }})();
         "#,
-        js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
+        gemini_engine, js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
     );
 
     let _ = win.eval(&eval_script);
