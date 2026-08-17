@@ -111,10 +111,9 @@ DO NOT provide full code implementations. Focus on structural details, signature
     print("\n--- EXECUTION INSTRUCTIONS ---")
     print("1. Read the contents of ./tmp/planner_prompt.txt")
     print("2. Run the following command via `run_command` (with `WaitMsBeforeAsync: 500`):")
-    print("   node ~/projects/ai-os/scripts/query_proxima.js --provider perplexity --input ./tmp/planner_prompt.txt --output ./tmp/planner_output.txt --timeout 600")
+    print("   node ~/projects/ai-os/scripts/query_aios.js --plan \"<request>\"")
     print("3. CRITICAL: NEVER pass files to the planner. Context is accessed via GitHub connector and the textual prompt.")
-    print("4. IMPORTANT: Run the planner with a new thread by default: `node ~/projects/ai-os/scripts/query_proxima.js -p perplexity -i ./tmp/planner_prompt.txt -o ./tmp/planner_output.txt`.")
-    print("5. IMPORTANT: Do NOT perform the work yourself. Wait for Antigravity to notify you that the planning task is complete, then read ./tmp/planner_output.txt and delegate tasks to subagents.")
+    print("4. IMPORTANT: Wait for Antigravity to notify you that the planning task is complete, then read ./tmp/planner_output.txt and delegate tasks to subagents.")
 
 
 if __name__ == "__main__":

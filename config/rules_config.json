@@ -56,19 +56,19 @@
       "enabled": true,
       "description": "Emulate Hermes tool-use and anti-fabrication runtime directives"
     },
-    "proxima_guardrails": {
-      "name": "Proxima & Perplexity Integration Guardrails",
-      "tag": "PROXIMA_GUARDRAILS",
+    "aios_guardrails": {
+      "name": "ai-os & Perplexity Integration Guardrails",
+      "tag": "AIOS_GUARDRAILS",
       "file": "gemini_only.md",
       "enabled": true,
-      "description": "Upload quota rules and disabled providers for Proxima/Perplexity"
+      "description": "Upload quota rules and Perplexity integration guidelines for ai-os"
     },
     "strict_planner_dispatch": {
       "name": "Strict Planner / Workflow Immediate Dispatch",
       "tag": "STRICT_PLANNER_DISPATCH",
       "file": "core_safety.md",
       "enabled": true,
-      "description": "Enforce immediate planner dispatch on /proxima-planner"
+      "description": "Enforce immediate planner dispatch on /_plan-with-ai-os"
     }
   },
   "settings": {
