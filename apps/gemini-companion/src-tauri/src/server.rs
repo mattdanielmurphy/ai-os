@@ -516,9 +516,11 @@ async fn handle_perplexity_query(
         None => "null".to_string(),
     };
     let js_query_id = serde_json::to_string(&query_id).unwrap_or_default();
+    let pplx_engine = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
 
     let eval_script = format!(
         r#"
+        {}
         (function() {{
             const qId = {};
             const prompt = {};
@@ -534,6 +536,7 @@ async fn handle_perplexity_query(
                     queryId: qId,
                     response: resp,
                     errMsg: err,
+                    err_msg: err,
                     error: err
                 }};
 
@@ -553,26 +556,28 @@ async fn handle_perplexity_query(
 
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }}).catch(function() {{}});
+                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }});
+                        window.__TAURI_INVOKE__('query_callback', msgObj);
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage({{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
                             cmd: 'query_callback',
                             callback: 0,
                             error: 0,
+                            query_id: qId,
                             queryId: qId,
                             response: resp,
-                            errMsg: err
-                        }});
+                            errMsg: err,
+                            err_msg: err
+                        }}));
                     }}
                 }} catch (e) {{}}
 
@@ -670,9 +675,11 @@ async fn handle_gemini_query(
         None => "null".to_string(),
     };
     let js_query_id = serde_json::to_string(&query_id).unwrap_or_default();
+    let gemini_engine = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/gemini-engine.js").unwrap_or_default();
 
     let eval_script = format!(
         r#"
+        {}
         (function() {{
             const qId = {};
             const prompt = {};
@@ -688,6 +695,7 @@ async fn handle_gemini_query(
                     queryId: qId,
                     response: resp,
                     errMsg: err,
+                    err_msg: err,
                     error: err
                 }};
 
@@ -707,26 +715,28 @@ async fn handle_gemini_query(
 
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }}).catch(function() {{}});
+                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }});
+                        window.__TAURI_INVOKE__('query_callback', msgObj);
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage({{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
                             cmd: 'query_callback',
                             callback: 0,
                             error: 0,
+                            query_id: qId,
                             queryId: qId,
                             response: resp,
-                            errMsg: err
-                        }});
+                            errMsg: err,
+                            err_msg: err
+                        }}));
                     }}
                 }} catch (e) {{}}
 
@@ -1034,50 +1044,77 @@ async fn handle_debug_ping(
         callbacks.insert("test_ping".to_string(), tx);
     }
 
-    let script = r#"
-        (function() {
-            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined' || typeof window.__proximaPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
-            var msg = {
-                type: 'query_callback',
-                query_id: 'test_ping',
-                queryId: 'test_ping',
-                response: diag,
-                error: null,
-                payload: {
+    let pplx_engine = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
+    let script = format!(
+        r#"
+        {}
+        (function() {{
+            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
+            
+            function sendDone(resp, err) {{
+                const msgObj = {{
                     query_id: 'test_ping',
                     queryId: 'test_ping',
-                    response: diag,
-                    error: null
-                }
-            };
-            try {
-                var ws = new WebSocket('ws://127.0.0.1:3031/ws');
-                ws.onopen = function() {
-                    ws.send(JSON.stringify(msg));
-                    setTimeout(function() { ws.close(); }, 500);
-                };
-            } catch(e) {}
-            if (window.__TAURI__ && window.__TAURI__.event) {
-                window.__TAURI__.event.emit('query_callback_event', msg);
-            }
-            if (window.__TAURI__ && window.__TAURI__.invoke) {
-                window.__TAURI__.invoke('query_callback', msg).catch(function(e) {});
-            }
-            if (window.__TAURI_INVOKE__) {
-                window.__TAURI_INVOKE__('query_callback', msg);
-            }
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {
-                window.webkit.messageHandlers.ipc.postMessage({
-                    cmd: 'query_callback',
-                    callback: 0,
-                    error: 0,
-                    queryId: 'test_ping',
-                    response: diag,
-                    errMsg: null
-                });
-            }
-        })();
-    "#;
+                    response: resp,
+                    errMsg: err,
+                    err_msg: err,
+                    error: err
+                }};
+
+                try {{
+                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
+                    ws.onopen = function() {{
+                        ws.send(JSON.stringify(msgObj));
+                        setTimeout(function() {{ ws.close(); }}, 500);
+                    }};
+                }} catch(e) {{}}
+
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.event) {{
+                        window.__TAURI__.event.emit('query_callback_event', msgObj);
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', msgObj);
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                            cmd: 'query_callback',
+                            callback: 0,
+                            error: 0,
+                            query_id: 'test_ping',
+                            queryId: 'test_ping',
+                            response: resp,
+                            errMsg: err,
+                            err_msg: err
+                        }}));
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ query_id: 'test_ping', response: resp, error: err }})
+                    }}).catch(function() {{}});
+                }} catch (e) {{}}
+            }}
+            sendDone(diag, null);
+        }})();
+        "#,
+        pplx_engine
+    );
     let eval_res = win.eval(script);
 
     match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
@@ -1104,50 +1141,77 @@ async fn handle_debug_ping_gemini(
         callbacks.insert("test_ping_gemini".to_string(), tx);
     }
 
-    let script = r#"
-        (function() {
-            var diag = 'URL=' + window.location.href + ' | GEMINI_UNIFIED=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__proximaGeminiUnified !== 'undefined') + ' | GEMINI=' + (typeof window.__aiosGemini !== 'undefined' || typeof window.__proximaGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
-            var msg = {
-                type: 'query_callback',
-                query_id: 'test_ping_gemini',
-                queryId: 'test_ping_gemini',
-                response: diag,
-                error: null,
-                payload: {
+    let gemini_engine = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/gemini-engine.js").unwrap_or_default();
+    let script = format!(
+        r#"
+        {}
+        (function() {{
+            var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
+            
+            function sendDone(resp, err) {{
+                const msgObj = {{
                     query_id: 'test_ping_gemini',
                     queryId: 'test_ping_gemini',
-                    response: diag,
-                    error: null
-                }
-            };
-            try {
-                var ws = new WebSocket('ws://127.0.0.1:3031/ws');
-                ws.onopen = function() {
-                    ws.send(JSON.stringify(msg));
-                    setTimeout(function() { ws.close(); }, 500);
-                };
-            } catch(e) {}
-            if (window.__TAURI__ && window.__TAURI__.event) {
-                window.__TAURI__.event.emit('query_callback_event', msg);
-            }
-            if (window.__TAURI__ && window.__TAURI__.invoke) {
-                window.__TAURI__.invoke('query_callback', msg).catch(function(e) {});
-            }
-            if (window.__TAURI_INVOKE__) {
-                window.__TAURI_INVOKE__('query_callback', msg);
-            }
-            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {
-                window.webkit.messageHandlers.ipc.postMessage({
-                    cmd: 'query_callback',
-                    callback: 0,
-                    error: 0,
-                    queryId: 'test_ping_gemini',
-                    response: diag,
-                    errMsg: null
-                });
-            }
-        })();
-    "#;
+                    response: resp,
+                    errMsg: err,
+                    err_msg: err,
+                    error: err
+                }};
+
+                try {{
+                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
+                    ws.onopen = function() {{
+                        ws.send(JSON.stringify(msgObj));
+                        setTimeout(function() {{ ws.close(); }}, 500);
+                    }};
+                }} catch(e) {{}}
+
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.event) {{
+                        window.__TAURI__.event.emit('query_callback_event', msgObj);
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', msgObj);
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                            cmd: 'query_callback',
+                            callback: 0,
+                            error: 0,
+                            query_id: 'test_ping_gemini',
+                            queryId: 'test_ping_gemini',
+                            response: resp,
+                            errMsg: err,
+                            err_msg: err
+                        }}));
+                    }}
+                }} catch (e) {{}}
+
+                try {{
+                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ query_id: 'test_ping_gemini', response: resp, error: err }})
+                    }}).catch(function() {{}});
+                }} catch (e) {{}}
+            }}
+            sendDone(diag, null);
+        }})();
+        "#,
+        gemini_engine
+    );
     let eval_res = win.eval(script);
 
     match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
