@@ -57,6 +57,8 @@ def apply_rule_filters(content: str, config: dict) -> str:
         engine_str = "`Gemini 3.7 Flash (High)` via `agymcp`"
     elif high_reasoning_setting == "sonnet":
         engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity --model sonnet` (ai-os Sonnet Thinking)"
+    elif high_reasoning_setting in ["gemini", "gemini_flash", "flash"]:
+        engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity --model gemini` (ai-os Gemini Flash Thinking) by default, with `Gemini 3.7 Flash (High)` as a fallback"
     else:
         engine_str = str(high_reasoning_setting)
 
@@ -79,7 +81,33 @@ def compile_stub(platform: str = "antigravity") -> str:
 Run `python3 /Users/matt/projects/ai-os/scripts/preflight.py` at session start to retrieve your full system directive if not already provided.
 """
 
-def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", prompt_text: str = "", stub: bool = False) -> str:
+def detect_active_domains(workspace_root: Path, prompt_text: str = "") -> set:
+    domains = set()
+    p_lower = prompt_text.lower()
+
+    # 1. Inspect prompt keywords
+    if any(k in p_lower for k in ["ui", "css", "html", "react", "vue", "web", "frontend", "span", "thread.md"]):
+        domains.add("ui_web")
+    if any(k in p_lower for k in ["hammerspoon", "lua", "midi", "hotkey", "window", "axui"]):
+        domains.add("hammerspoon")
+    if any(k in p_lower for k in ["audio", "webaudio", "oscillator", "dsp", "sound", "synth"]):
+        domains.add("audio")
+    if any(k in p_lower for k in ["ios", "swift", "xcode", "apple", "reminders"]):
+        domains.add("ios")
+
+    # 2. Inspect workspace root & git files
+    if workspace_root and workspace_root.exists():
+        r_name = workspace_root.name.lower()
+        if "hammerspoon" in r_name or "midi" in r_name:
+            domains.add("hammerspoon")
+        if "ios" in r_name or "swift" in r_name:
+            domains.add("ios")
+        if "audio" in r_name or "sound" in r_name:
+            domains.add("audio")
+
+    return domains
+
+def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", prompt_text: str = "", stub: bool = False, workspace_root: Path = None) -> str:
     if stub and role.lower() != "leaf":
         return compile_stub(platform)
 
@@ -121,12 +149,12 @@ def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", pr
         if hermes_rules:
             sections.append(hermes_rules)
 
-    # Dynamic context based on prompt keywords
-    p_lower = prompt_text.lower()
-    if any(kw in p_lower for kw in ["mac", "hammerspoon", "tcc", "shortcut", "launchagent"]):
-        mac_rules = read_rule("mac_env", config)
-        if mac_rules:
-            sections.append(mac_rules)
+    # Dynamic domain rules
+    active_domains = detect_active_domains(workspace_root or PROJECT_ROOT, prompt_text)
+    for domain in sorted(list(active_domains)):
+        domain_rule = read_rule(domain, config)
+        if domain_rule:
+            sections.append(domain_rule)
 
     return "\n\n".join(sections)
 
@@ -137,7 +165,7 @@ def main():
     parser.add_argument("--prompt", default="", help="User prompt string for keyword matching")
 
     args = parser.parse_args()
-    compiled = compile_prompt(args.role, args.platform, args.prompt)
+    compiled = compile_prompt(args.role, args.platform, args.prompt, workspace_root=Path.cwd())
     print(compiled)
 
 if __name__ == "__main__":
