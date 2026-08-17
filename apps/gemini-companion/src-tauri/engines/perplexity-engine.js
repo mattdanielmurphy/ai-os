@@ -5,7 +5,6 @@
  * ⚠️ NOTE: parsed.text contains step JSON, NOT the answer — always use blocks[].
  */
 (function () {
-(function () {
 
     var TIMEOUT = 360000;
     var _sessionToken = null;
