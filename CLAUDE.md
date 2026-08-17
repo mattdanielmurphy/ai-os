@@ -50,9 +50,13 @@
 
 ## Strict Planner / Workflow Immediate Dispatch
 - **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/_plan-with-ai-os` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
-- **Workflow**: Immediately run the single planner command via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`) with `WaitMsBeforeAsync: 500`. It automatically handles git context, agent logs, prompt generation into `./tmp/planner_prompt.txt`, dispatches to Perplexity (Grok Thinking), and writes the plan to `./tmp/planner_output.txt`.
+- **Workflow**: Immediately run the single planner command via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`) with `WaitMsBeforeAsync: 500`. This is a **unified single-step command** that automatically: inspects Git context, reads agent logs, generates `./tmp/planner_prompt.txt`, dispatches to Perplexity (Grok Thinking), and writes the completed plan to `./tmp/planner_output.txt`. There is NO separate `generate_prompt.py` step — do NOT run any such script.
 - **Strict Perplexity Dispatch & Fallback Policy**: When `/_plan-with-ai-os` is invoked, the orchestrator MUST ONLY dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`). Never use Gemini 3.1 Pro for planning for any reason. Fall back to `agy` ONLY if Perplexity quota is 0, or if Matt specifically requests it; and when falling back to `agy`, ALWAYS use `Gemini 3.7 Flash (High)` for planning, NEVER 3.1 Pro.
-- **Connection Recovery**: If the query times out or fails, recover immediately with `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 300` (and ensure ai-os companion is active).
+- **ECONNREFUSED / Timeout Recovery — MANDATORY EXACT STEPS**:
+  1. If `query_aios.js` outputs `ECONNREFUSED` or times out, do NOT run any diagnostic commands (`pgrep`, `la status`, `grep`, etc.). IMMEDIATELY run the recover command:
+     `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 300`
+  2. If the recover command also fails with ECONNREFUSED, the ai-os companion is not running. Restart it with: `la start agy-proxy` and then retry the original plan command.
+  3. NEVER grep for port numbers, NEVER run `la status` without a name argument, NEVER run `pgrep` to diagnose connection failures. The only two valid responses to ECONNREFUSED are `--recover` and `la start agy-proxy`.
 
 # Custom Skills Naming & Authoring Invariant
 - **Rule**: When creating, authoring, or refactoring personal/custom skills for Matt in `~/projects/ai-os/skills/` or environment skill directories:
