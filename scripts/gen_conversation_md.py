@@ -482,10 +482,8 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                 agent_text = '\n\n'.join(t for t in accumulated_text if t.strip()).strip()
             elif history_turn_text:
                 agent_text = history_turn_text
-            elif latest_tool_action:
-                agent_text = f"✅ *Action completed: {latest_tool_action}*"
             else:
-                agent_text = latest_transient_status or ''
+                agent_text = (f"✅ *Action completed: {latest_tool_action}*" if latest_tool_action else latest_transient_status) or ''
 
             min_step = pending_users[0]['step']
             max_step = pending_users[-1]['step']
@@ -577,10 +575,10 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                     if cleaned:
                         if is_transient_status_line(cleaned):
                             latest_transient_status = cleaned
-                        elif has_tool_calls:
-                            pass
-                        else:
+                        elif not has_tool_calls:
                             accumulated_text = [cleaned]
+                            latest_tool_action = None
+                            latest_transient_status = None
 
     # Flush final turn at EOF
     flush_current_turn()
