@@ -51,11 +51,36 @@ def get_git_commit_status(repo_root: str = "/Users/matt/projects/ai-os") -> dict
     except Exception:
         return {"state": "error", "badge": "🔴 Error", "count": 0}
 
-def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity", workspace_root: str = "/Users/matt/projects/ai-os") -> dict:
+def extract_workspace_root(conv_id: str = None, transcript_path = None) -> Path:
+    """Extract project repository root from transcript tool calls or default to ai-os."""
+    import re
+    if transcript_path is None and conv_id:
+        from check_thread_bloat import find_transcript_file
+        transcript_path = find_transcript_file(conv_id=conv_id)
+        
+    try:
+        if transcript_path and Path(transcript_path).exists():
+            with open(transcript_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    matches = re.findall(r'/Users/matt/projects/([^/"\'\s\\]+)', line)
+                    for proj in matches:
+                        if proj and proj not in ('.git', 'tmp', 'node_modules', 'dist'):
+                            proj_path = Path(f"/Users/matt/projects/{proj}")
+                            if proj_path.is_dir() and (proj_path / ".git").exists():
+                                return proj_path
+    except Exception:
+        pass
+    return Path("/Users/matt/projects/ai-os")
+
+def compute_thread_metrics(conv_id: str = None, agent: str = "antigravity", workspace_root: str = None) -> dict:
     from agent_tokens import get_tokens
     import thread_economics
     from check_thread_bloat import find_transcript_file, get_sys_prompt_tokens
     from pplx_quota import get_pplx_quota
+
+    transcript_path = find_transcript_file(conv_id=conv_id)
+    if workspace_root is None:
+        workspace_root = str(extract_workspace_root(conv_id=conv_id, transcript_path=transcript_path))
 
     token_count, source = get_tokens(agent, conv_id=conv_id)
     token_display = format_tokens(token_count)
