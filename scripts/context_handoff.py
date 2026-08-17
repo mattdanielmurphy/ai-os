@@ -127,12 +127,48 @@ def get_recent_decisions(root_dir):
     return "No recent journal or agent log found."
 
 
+def launch_antigravity_handoff(payload_text: str):
+    import subprocess
+    # Copy payload to clipboard
+    try:
+        proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+        proc.communicate(input=payload_text.encode("utf-8"))
+    except Exception as e:
+        print(f"Clipboard error: {e}")
+
+    # Trigger Shift+Cmd+O twice in Antigravity
+    applescript = '''
+    tell application "Antigravity" to activate
+    repeat 10 times
+        tell application "System Events"
+            if frontmost of process "Antigravity" is true then exit repeat
+        end tell
+        delay 0.1
+    end repeat
+    delay 0.3
+    tell application "System Events"
+        key code 31 using {command down, shift down}
+        delay 0.3
+        key code 31 using {command down, shift down}
+        delay 0.6
+    end tell
+    '''
+    subprocess.run(["osascript", "-e", applescript])
+    print("[context_handoff] Triggered Antigravity new conversation via Shift+Cmd+O twice.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate context handoff document for thread restoration.")
     parser.add_argument("--goal", help="Override active goal description")
     parser.add_argument("--completed", help="Override completed items description")
     parser.add_argument("--next_steps", help="Override next steps description")
     parser.add_argument("--discoveries", help="Override key discoveries/decisions")
+    parser.add_argument(
+        "--compact-and-launch",
+        "--trigger-antigravity",
+        action="store_true",
+        help="Generate payload, copy to clipboard, and trigger new Antigravity thread.",
+    )
 
     args = parser.parse_args()
 
@@ -200,6 +236,12 @@ def main():
 
     print(f"Context handoff generated successfully at: {handoff_path}")
     print(f"HANDOFF_FILE_PATH={handoff_path}")
+
+    if args.compact_and_launch:
+        try:
+            launch_antigravity_handoff(content)
+        except Exception as e:
+            print(f"Error launching Antigravity: {e}")
 
 
 if __name__ == "__main__":
