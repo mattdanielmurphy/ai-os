@@ -16,3 +16,27 @@ Format: `&highlights=start-end:Title,start-end:Title` (use `+` for spaces)
 ```markdown
 [https://www.youtube.com/watch?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo](https://www.youtube.com/watch?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo)
 ```
+
+### Sharing with Others (Standalone Web Player)
+When sharing with folks who don't have Matt's userscript installed:
+```markdown
+[https://yt-highlight-reel.vercel.app/?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo](https://yt-highlight-reel.vercel.app/?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo)
+```
+
+---
+
+## Agent Curation Best Practices
+
+1. **Payoff Over Setup:**
+- Skip conversational preambles, general intros, and generic background.
+- Start the clip where the speaker states the *problem, metric, or technique*, and end it after the *solution/rule-of-thumb* is fully stated.
+
+2. **The "+15s Cliffhanger Check":**
+- Always inspect the 15–30 seconds immediately following a planned `end` timestamp.
+- If the speaker introduces a catch, counter-example, or crucial caveat (*"but the real issue is..."*, *"here is why that fails..."*), extend the segment through the resolution.
+
+3. **Continuous Thoughts & Natural Boundaries:**
+- Never cut mid-sentence. Start at the first word of the premise and close after the final concluding phrase.
+
+4. **Descriptive Labels:**
+- Use concise 2–4 word title descriptors (e.g., `:Shelf+Depth+Trap`, `:Waterproof+Liners`).
