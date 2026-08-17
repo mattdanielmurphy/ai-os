@@ -530,12 +530,11 @@ async fn handle_perplexity_query(
 
             function sendDone(resp, err) {{
                 const msgObj = {{
-                    type: 'query_callback',
                     query_id: qId,
                     queryId: qId,
                     response: resp,
-                    error: err,
-                    payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
+                    errMsg: err,
+                    error: err
                 }};
 
                 try {{
@@ -554,28 +553,26 @@ async fn handle_perplexity_query(
 
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
+                        window.__TAURI__.invoke('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }}).catch(function() {{}});
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', msgObj);
+                        window.__TAURI_INVOKE__('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }});
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                        window.webkit.messageHandlers.ipc.postMessage({{
                             cmd: 'query_callback',
                             callback: 0,
                             error: 0,
-                            query_id: qId,
                             queryId: qId,
                             response: resp,
-                            error: err,
-                            payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
-                        }}));
+                            errMsg: err
+                        }});
                     }}
                 }} catch (e) {{}}
 
@@ -687,12 +684,11 @@ async fn handle_gemini_query(
 
             function sendDone(resp, err) {{
                 const msgObj = {{
-                    type: 'query_callback',
                     query_id: qId,
                     queryId: qId,
                     response: resp,
-                    error: err,
-                    payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
+                    errMsg: err,
+                    error: err
                 }};
 
                 try {{
@@ -711,28 +707,26 @@ async fn handle_gemini_query(
 
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
+                        window.__TAURI__.invoke('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }}).catch(function() {{}});
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', msgObj);
+                        window.__TAURI_INVOKE__('query_callback', {{ queryId: qId, response: resp, errMsg: err, payload: msgObj }});
                     }}
                 }} catch (e) {{}}
 
                 try {{
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                        window.webkit.messageHandlers.ipc.postMessage({{
                             cmd: 'query_callback',
                             callback: 0,
                             error: 0,
-                            query_id: qId,
                             queryId: qId,
                             response: resp,
-                            error: err,
-                            payload: {{ query_id: qId, queryId: qId, response: resp, error: err }}
-                        }}));
+                            errMsg: err
+                        }});
                     }}
                 }} catch (e) {{}}
 
