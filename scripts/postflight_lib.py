@@ -163,12 +163,15 @@ def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
         c_cost = cost.get('continuing', 0)
         h_cost = cost.get('handoff', 0)
         
-        if h_cost <= c_cost:
-            cost_badge = f"-${c_cost - h_cost:.3f} T1"
+        c_tok = cost.get('continuing', 0)
+        h_tok = cost.get('handoff', 0)
+        
+        if c_tok >= h_tok:
+            cost_badge = f"-{int(((c_tok - h_tok)/max(1, c_tok))*100)}% cost T1"
         else:
-            cost_badge = f"+${h_cost - c_cost:.3f} T1"
+            cost_badge = f"+{int(((h_tok - c_tok)/max(1, c_tok))*100)}% cost T1"
             
-        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']}) \u00b7 {cost_badge}]({handoff_url})")
+        values.append(f"[\u26a1 -{metrics['savings_pct']}% context \u00b7 {cost_badge}]({handoff_url})")
 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
