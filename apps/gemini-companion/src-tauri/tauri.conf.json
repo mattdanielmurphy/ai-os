@@ -42,28 +42,9 @@
     },
     "windows": [
       {
-        "label": "main",
         "title": "ai-os",
         "width": 1000,
         "height": 800
-      },
-      {
-        "label": "gemini_main",
-        "title": "Gemini",
-        "width": 1200,
-        "height": 760
-      },
-      {
-        "label": "perplexity_main",
-        "title": "Perplexity",
-        "width": 1200,
-        "height": 760
-      },
-      {
-        "label": "floating",
-        "title": "Gemini Quick Prompt",
-        "width": 960,
-        "height": 324
       }
     ],
     "security": {
