@@ -415,6 +415,8 @@ async fn wait_for_query_result(
     let timeout_duration = std::time::Duration::from_secs(timeout_secs);
     let res_prefix = format!("AIOS_RES_{}:", query_id);
     let err_prefix = format!("AIOS_ERR_{}:", query_id);
+    let hash_res_prefix = format!("aios_res_{}_", query_id);
+    let hash_err_prefix = format!("aios_err_{}_", query_id);
 
     loop {
         if start_time.elapsed() > timeout_duration {
@@ -441,14 +443,41 @@ async fn wait_for_query_result(
                 ));
             }
             Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {
-                // Sender closed, check title bridge below
+                // Sender closed, check other channels below
             }
             Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
-                // Channel empty, check title bridge below
+                // Channel empty, check other channels below
             }
         }
 
-        // 2. Check window title zero-network bridge
+        // 2. Check window URL fragment hash bridge
+        let u = win.url();
+        if let Some(fragment) = u.fragment() {
+            if let Some(pos) = fragment.find(&hash_res_prefix) {
+                let b64_str = &fragment[pos + hash_res_prefix.len()..];
+                if let Ok(decoded_bytes) = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64_str) {
+                    if let Ok(resp_str) = String::from_utf8(decoded_bytes) {
+                        let mut callbacks = get_query_callbacks().lock().await;
+                        callbacks.remove(query_id);
+                        let _ = win.set_title(window_default_title);
+                        let _ = win.eval("try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {}");
+                        return Ok(resp_str);
+                    }
+                }
+            } else if let Some(pos) = fragment.find(&hash_err_prefix) {
+                let err_str = fragment[pos + hash_err_prefix.len()..].to_string();
+                let mut callbacks = get_query_callbacks().lock().await;
+                callbacks.remove(query_id);
+                let _ = win.set_title(window_default_title);
+                let _ = win.eval("try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {}");
+                return Err((
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Execution error: {}", err_str),
+                ));
+            }
+        }
+
+        // 3. Check window title zero-network bridge
         if let Ok(title) = win.title() {
             if let Some(pos) = title.find(&res_prefix) {
                 let b64_str = &title[pos + res_prefix.len()..];
@@ -485,6 +514,35 @@ async fn wait_for_query_result(
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     }
+}
+
+#[derive(serde::Deserialize)]
+pub struct BeaconQuery {
+    pub q: String,
+    pub d: Option<String>,
+    pub err: Option<String>,
+}
+
+async fn handle_beacon_callback(
+    axum::extract::Query(params): axum::extract::Query<BeaconQuery>,
+) -> axum::response::Response {
+    let resp = params.d.and_then(|b64| {
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64)
+            .ok()
+            .and_then(|bytes| String::from_utf8(bytes).ok())
+    });
+    resolve_query_callback(&params.q, resp, params.err).await;
+
+    let gif_bytes: [u8; 43] = [
+        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xff, 0xff, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x01, 0x44, 0x00, 0x3b, 0x00,
+    ];
+    axum::response::Response::builder()
+        .header("Content-Type", "image/gif")
+        .header("Access-Control-Allow-Origin", "*")
+        .body(axum::body::Body::from(gif_bytes.to_vec()))
+        .unwrap()
 }
 
 async fn handle_prompt_dispatch(
@@ -553,13 +611,15 @@ async fn handle_perplexity_prompt(
 }
 
 async fn handle_perplexity_callback(
-    Json(payload): Json<PerplexityCallbackPayload>,
+    body: axum::body::Bytes,
 ) -> Result<String, (axum::http::StatusCode, String)> {
-    if resolve_query_callback(&payload.query_id, payload.response, payload.error).await {
-        Ok("Callback received".to_string())
-    } else {
-        Err((axum::http::StatusCode::NOT_FOUND, "Query ID not found or timed out".to_string()))
+    let text = String::from_utf8_lossy(&body);
+    if let Ok(payload) = serde_json::from_str::<PerplexityCallbackPayload>(&text) {
+        if resolve_query_callback(&payload.query_id, payload.response, payload.error).await {
+            return Ok("Callback received".to_string());
+        }
     }
+    Err((axum::http::StatusCode::NOT_FOUND, "Query ID not found or timed out".to_string()))
 }
 
 #[derive(serde::Serialize)]
@@ -616,13 +676,24 @@ async fn handle_perplexity_query(
 
             function sendDone(resp, err) {{
                 var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
+                var jsonStr = JSON.stringify(payload);
+                var b64 = resp ? btoa(unescape(encodeURIComponent(resp))) : '';
+
                 try {{
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
-                    }} else if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', payload);
+                    if (navigator.sendBeacon) {{
+                        navigator.sendBeacon('http://127.0.0.1:3031/api/perplexity/callback', jsonStr);
                     }}
                 }} catch(e) {{}}
+
+                try {{
+                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {{ 'Content-Type': 'text/plain' }},
+                        body: jsonStr
+                    }}).catch(function() {{}});
+                }} catch(e) {{}}
+
                 try {{
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
                         window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
@@ -637,17 +708,25 @@ async fn handle_perplexity_query(
                         }}));
                     }}
                 }} catch(e) {{}}
+
                 try {{
-                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify(payload)
-                    }}).catch(function() {{}});
+                    if (err) {{
+                        location.hash = '#aios_err_' + qId + '_' + encodeURIComponent(err);
+                    }} else if (b64) {{
+                        location.hash = '#aios_res_' + qId + '_' + b64;
+                    }}
                 }} catch(e) {{}}
+
                 try {{
-                    var jsonStr = JSON.stringify(payload);
-                    var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
-                    document.title = 'AIOS_RES_' + qId + ':' + b64;
+                    if (b64) {{
+                        var img = new Image();
+                        img.src = 'http://127.0.0.1:3031/api/beacon?q=' + encodeURIComponent(qId) + '&d=' + encodeURIComponent(b64);
+                    }}
+                }} catch(e) {{}}
+
+                try {{
+                    var payloadB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                    document.title = 'AIOS_RES_' + qId + ':' + payloadB64;
                 }} catch(e) {{
                     document.title = 'AIOS_ERR_' + qId + ':' + (err || e.message);
                 }}
@@ -740,13 +819,24 @@ async fn handle_gemini_query(
 
             function sendDone(resp, err) {{
                 var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
+                var jsonStr = JSON.stringify(payload);
+                var b64 = resp ? btoa(unescape(encodeURIComponent(resp))) : '';
+
                 try {{
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
-                    }} else if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', payload);
+                    if (navigator.sendBeacon) {{
+                        navigator.sendBeacon('http://127.0.0.1:3031/api/gemini/callback', jsonStr);
                     }}
                 }} catch(e) {{}}
+
+                try {{
+                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {{ 'Content-Type': 'text/plain' }},
+                        body: jsonStr
+                    }}).catch(function() {{}});
+                }} catch(e) {{}}
+
                 try {{
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
                         window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
@@ -761,17 +851,25 @@ async fn handle_gemini_query(
                         }}));
                     }}
                 }} catch(e) {{}}
+
                 try {{
-                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify(payload)
-                    }}).catch(function() {{}});
+                    if (err) {{
+                        location.hash = '#aios_err_' + qId + '_' + encodeURIComponent(err);
+                    }} else if (b64) {{
+                        location.hash = '#aios_res_' + qId + '_' + b64;
+                    }}
                 }} catch(e) {{}}
+
                 try {{
-                    var jsonStr = JSON.stringify(payload);
-                    var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
-                    document.title = 'AIOS_RES_' + qId + ':' + b64;
+                    if (b64) {{
+                        var img = new Image();
+                        img.src = 'http://127.0.0.1:3031/api/beacon?q=' + encodeURIComponent(qId) + '&d=' + encodeURIComponent(b64);
+                    }}
+                }} catch(e) {{}}
+
+                try {{
+                    var payloadB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                    document.title = 'AIOS_RES_' + qId + ':' + payloadB64;
                 }} catch(e) {{
                     document.title = 'AIOS_ERR_' + qId + ':' + (err || e.message);
                 }}
@@ -897,42 +995,47 @@ async fn handle_openai_chat(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(req): Json<OpenAIChatRequest>,
 ) -> Result<axum::response::Response, (axum::http::StatusCode, String)> {
-    let mut combined_prompt = String::new();
-    let mut attachment: Option<AttachmentPayload> = None;
+    let raw_model = req.model.unwrap_or_else(|| "gemini".to_string());
+    let requested_model = raw_model.to_lowercase();
+    let is_pplx = requested_model.starts_with("perplexity") || requested_model == "sonar" || requested_model == "sonnet" || requested_model.contains("claude");
 
+    let prompt_text = req.messages.iter()
+        .map(|m| {
+            let role = match m.role.as_str() {
+                "system" => "System Instruction",
+                "user" => "User",
+                "assistant" => "Assistant",
+                _ => "Message",
+            };
+            let content_str = if let Some(s) = m.content.as_str() {
+                s.to_string()
+            } else {
+                m.content.to_string()
+            };
+            format!("{}: {}", role, content_str)
+        })
+        .collect::<Vec<String>>()
+        .join("\n\n");
+
+    let mut attachment_data: Option<AttachmentPayload> = None;
     for msg in &req.messages {
-        let role = &msg.role;
-        match &msg.content {
-            serde_json::Value::String(s) => {
-                if !combined_prompt.is_empty() {
-                    combined_prompt.push_str("\n\n");
-                }
-                if role == "system" {
-                    combined_prompt.push_str(&format!("[System Instructions]:\n{}", s));
-                } else if role == "user" {
-                    combined_prompt.push_str(s);
-                } else {
-                    combined_prompt.push_str(&format!("[{role}]:\n{}", s));
-                }
-            }
-            serde_json::Value::Array(parts) => {
-                for p in parts {
-                    if let Some(t) = p.get("text").and_then(|v| v.as_str()) {
-                        if !combined_prompt.is_empty() {
-                            combined_prompt.push_str("\n\n");
-                        }
-                        combined_prompt.push_str(t);
-                    }
-                    if let Some(image_url_obj) = p.get("image_url") {
-                        if let Some(url) = image_url_obj.get("url").and_then(|v| v.as_str()) {
-                            if url.starts_with("data:") {
-                                if let Some((header, b64)) = url.split_once(',') {
+        if let Some(arr) = msg.content.as_array() {
+            for part in arr {
+                if part.get("type").and_then(|t| t.as_str()) == Some("image_url") {
+                    if let Some(url_obj) = part.get("image_url") {
+                        if let Some(url_str) = url_obj.get("url").and_then(|u| u.as_str()) {
+                            if url_str.starts_with("data:") {
+                                let parts: Vec<&str> = url_str.splitn(2, ',').collect();
+                                if parts.len() == 2 {
+                                    let header = parts[0];
+                                    let b64 = parts[1];
                                     let mime = header.trim_start_matches("data:").trim_end_matches(";base64");
-                                    attachment = Some(AttachmentPayload {
-                                        file_path: None,
+                                    let ext = if mime.contains("png") { "png" } else { "jpg" };
+                                    attachment_data = Some(AttachmentPayload {
                                         file_base64: Some(b64.to_string()),
-                                        filename: Some("image.png".to_string()),
+                                        filename: Some(format!("upload.{}", ext)),
                                         mime_type: Some(mime.to_string()),
+                                        file_path: None,
                                         image_token: None,
                                     });
                                 }
@@ -941,99 +1044,104 @@ async fn handle_openai_chat(
                     }
                 }
             }
-            _ => {}
         }
     }
 
-    let model_str = req.model.clone().unwrap_or_else(|| "gemini".to_string()).to_lowercase();
-    let is_perplexity = model_str.contains("perplexity") || model_str == "sonar" || model_str == "sonnet" || model_str.contains("claude");
+    let session_id_str = req.session_id.unwrap_or_else(|| {
+        format!("session_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos())
+    });
 
     let dispatch_payload = PromptDispatchPayload {
-        prompt: combined_prompt,
-        model: req.model.clone(),
-        session_id: req.session_id.clone(),
-        attachment,
+        prompt: prompt_text,
+        model: Some(raw_model.clone()),
+        session_id: Some(session_id_str),
+        attachment: attachment_data,
         file_path: None,
     };
 
-    let result_text = if is_perplexity {
-        let resp = handle_perplexity_query(AxumState(app_handle), Json(dispatch_payload)).await?;
-        resp.0.response
-    } else {
-        let resp = handle_gemini_query(AxumState(app_handle), Json(dispatch_payload)).await?;
-        resp.0.response
-    };
+    if req.stream.unwrap_or(false) {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Result<String, String>>();
+        let is_pplx_clone = is_pplx;
+        let model_name = raw_model.clone();
+        let app_handle_clone = app_handle.clone();
 
-    let created = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
-    let resp_id = format!("chatcmpl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+        tokio::spawn(async move {
+            let res = if is_pplx_clone {
+                handle_perplexity_query(AxumState(app_handle_clone), Json(dispatch_payload)).await
+            } else {
+                handle_gemini_query(AxumState(app_handle_clone), Json(dispatch_payload)).await
+            };
 
-    let is_stream = req.stream.unwrap_or(false);
-    if is_stream {
-        let chunk1 = serde_json::json!({
-            "id": resp_id,
-            "object": "chat.completion.chunk",
-            "created": created,
-            "model": req.model.clone().unwrap_or_else(|| "gemini".to_string()),
-            "choices": [{
-                "index": 0,
-                "delta": {
-                    "role": "assistant",
-                    "content": result_text
-                },
-                "finish_reason": null
-            }]
-        });
-        let chunk2 = serde_json::json!({
-            "id": resp_id,
-            "object": "chat.completion.chunk",
-            "created": created,
-            "model": req.model.unwrap_or_else(|| "gemini".to_string()),
-            "choices": [{
-                "index": 0,
-                "delta": {},
-                "finish_reason": "stop"
-            }]
+            match res {
+                Ok(Json(q_res)) => {
+                    let chunk_id = format!("chatcmpl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+                    let chunk_obj = serde_json::json!({
+                        "id": chunk_id,
+                        "object": "chat.completion.chunk",
+                        "created": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                        "model": model_name,
+                        "choices": [{
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": q_res.response
+                            },
+                            "finish_reason": "stop"
+                        }]
+                    });
+                    let _ = tx.send(Ok(format!("data: {}\n\ndata: [DONE]\n\n", serde_json::to_string(&chunk_obj).unwrap())));
+                }
+                Err((_, err)) => {
+                    let _ = tx.send(Err(err));
+                }
+            }
         });
 
-        let sse_body = format!(
-            "data: {}\n\ndata: {}\n\ndata: [DONE]\n\n",
-            serde_json::to_string(&chunk1).unwrap(),
-            serde_json::to_string(&chunk2).unwrap()
-        );
+        let stream = futures_util::stream::unfold(rx, |mut rx| async move {
+            match rx.recv().await {
+                Some(Ok(data)) => Some((Ok(axum::body::Bytes::from(data)), rx)),
+                Some(Err(e)) => Some((Err(std::io::Error::new(std::io::ErrorKind::Other, e)), rx)),
+                None => None,
+            }
+        });
 
+        let body = axum::body::Body::from_stream(stream);
         let response = axum::response::Response::builder()
             .header("Content-Type", "text/event-stream")
             .header("Cache-Control", "no-cache")
             .header("Connection", "keep-alive")
-            .body(axum::body::Body::from(sse_body))
+            .body(body)
             .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
         Ok(response)
     } else {
-        let prompt_tokens = 50;
-        let completion_tokens = result_text.split_whitespace().count() * 4 / 3;
+        let resp = if is_pplx {
+            handle_perplexity_query(AxumState(app_handle), Json(dispatch_payload)).await?
+        } else {
+            handle_gemini_query(AxumState(app_handle), Json(dispatch_payload)).await?
+        };
+
+        let response_text = resp.0.response;
+        let resp_id = format!("chatcmpl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let response_obj = OpenAIChatResponse {
             id: resp_id,
             object: "chat.completion".to_string(),
-            created,
-            model: req.model.unwrap_or_else(|| "gemini".to_string()),
+            created: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            model: raw_model,
             choices: vec![
                 OpenAIChoice {
                     index: 0,
                     message: OpenAIChoiceMessage {
                         role: "assistant".to_string(),
-                        content: result_text,
+                        content: response_text.clone(),
                     },
                     finish_reason: "stop".to_string(),
                 }
             ],
             usage: OpenAIUsage {
-                prompt_tokens,
-                completion_tokens,
-                total_tokens: prompt_tokens + completion_tokens,
+                prompt_tokens: 0,
+                completion_tokens: response_text.split_whitespace().count(),
+                total_tokens: response_text.split_whitespace().count(),
             },
         };
 
@@ -1068,13 +1176,24 @@ async fn handle_debug_ping(
             var qId = {};
             var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined' && typeof window.webkit.messageHandlers.ipc !== 'undefined');
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
+            var jsonStr = JSON.stringify(payload);
+            var b64 = btoa(unescape(encodeURIComponent(diag)));
+
             try {{
-                if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
-                }} else if (window.__TAURI_INVOKE__) {{
-                    window.__TAURI_INVOKE__('query_callback', payload);
+                if (navigator.sendBeacon) {{
+                    navigator.sendBeacon('http://127.0.0.1:3031/api/perplexity/callback', jsonStr);
                 }}
             }} catch(e) {{}}
+
+            try {{
+                fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {{ 'Content-Type': 'text/plain' }},
+                    body: jsonStr
+                }}).catch(function() {{}});
+            }} catch(e) {{}}
+
             try {{
                 if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
                     window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
@@ -1089,17 +1208,19 @@ async fn handle_debug_ping(
                     }}));
                 }}
             }} catch(e) {{}}
+
             try {{
-                fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify(payload)
-                }}).catch(function() {{}});
+                location.hash = '#aios_res_' + qId + '_' + b64;
             }} catch(e) {{}}
+
             try {{
-                var jsonStr = JSON.stringify(payload);
-                var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
-                document.title = 'AIOS_RES_' + qId + ':' + b64;
+                var img = new Image();
+                img.src = 'http://127.0.0.1:3031/api/beacon?q=' + encodeURIComponent(qId) + '&d=' + encodeURIComponent(b64);
+            }} catch(e) {{}}
+
+            try {{
+                var payloadB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                document.title = 'AIOS_RES_' + qId + ':' + payloadB64;
             }} catch(e) {{
                 document.title = 'AIOS_ERR_' + qId + ':' + e.message;
             }}
@@ -1134,13 +1255,24 @@ async fn handle_debug_ping_gemini(
             var qId = {};
             var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined' && typeof window.webkit.messageHandlers.ipc !== 'undefined');
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
+            var jsonStr = JSON.stringify(payload);
+            var b64 = btoa(unescape(encodeURIComponent(diag)));
+
             try {{
-                if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
-                }} else if (window.__TAURI_INVOKE__) {{
-                    window.__TAURI_INVOKE__('query_callback', payload);
+                if (navigator.sendBeacon) {{
+                    navigator.sendBeacon('http://127.0.0.1:3031/api/gemini/callback', jsonStr);
                 }}
             }} catch(e) {{}}
+
+            try {{
+                fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {{ 'Content-Type': 'text/plain' }},
+                    body: jsonStr
+                }}).catch(function() {{}});
+            }} catch(e) {{}}
+
             try {{
                 if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
                     window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
@@ -1155,17 +1287,19 @@ async fn handle_debug_ping_gemini(
                     }}));
                 }}
             }} catch(e) {{}}
+
             try {{
-                fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify(payload)
-                }}).catch(function() {{}});
+                location.hash = '#aios_res_' + qId + '_' + b64;
             }} catch(e) {{}}
+
             try {{
-                var jsonStr = JSON.stringify(payload);
-                var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
-                document.title = 'AIOS_RES_' + qId + ':' + b64;
+                var img = new Image();
+                img.src = 'http://127.0.0.1:3031/api/beacon?q=' + encodeURIComponent(qId) + '&d=' + encodeURIComponent(b64);
+            }} catch(e) {{}}
+
+            try {{
+                var payloadB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                document.title = 'AIOS_RES_' + qId + ':' + payloadB64;
             }} catch(e) {{
                 document.title = 'AIOS_ERR_' + qId + ':' + e.message;
             }}
@@ -1201,6 +1335,7 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/perplexity/prompt", post(handle_perplexity_prompt))
             .route("/api/perplexity/query", post(handle_perplexity_query))
             .route("/api/perplexity/callback", post(handle_perplexity_callback))
+            .route("/api/beacon", axum::routing::get(handle_beacon_callback))
             .route("/api/debug/ping", axum::routing::get(handle_debug_ping))
             .route("/api/debug/ping_gemini", axum::routing::get(handle_debug_ping_gemini))
             .route("/v1/chat/completions", post(handle_openai_chat))
