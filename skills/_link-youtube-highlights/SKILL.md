@@ -42,6 +42,14 @@ Format: `&highlights=[{"start":42,"end":85,"title":"..."}]`
 https://www.youtube.com/watch?v=VIDEO_ID&highlights=%5B%7B%22start%22%3A42%2C%22end%22%3A85%2C%22title%22%3A%22Core+Problem%22%7D%5D
 ```
 
+## Sharing with Others (Standalone Web Player)
+
+When sharing a highlight reel with users who do NOT have Matt's userscript installed, format the link pointing to Matt's deployed web player:
+```markdown
+https://yt-highlight-reel.vercel.app/?v=VIDEO_ID&highlights=42-85:Intro,120-150:Solution
+```
+The web player automatically embeds the video, renders scrubber heatmaps, navigates soundbites, and handles automated skipping in any browser without needing extensions.
+
 ---
 
 ## Agent Curation Best Practices
