@@ -5,7 +5,7 @@
  * ⚠️ NOTE: parsed.text contains step JSON, NOT the answer — always use blocks[].
  */
 (function () {
-    if (window.__aiosPerplexity) return;
+(function () {
 
     var TIMEOUT = 360000;
     var _sessionToken = null;
@@ -436,6 +436,11 @@
         }
     };
 
-    window.__aiosPerplexity = { send: send, newConversation: newConversation, uploadFileToPerplexity: uploadFileToPerplexity };
+    window.__aiosPerplexity = {
+        send: send,
+        newConversation: newConversation,
+        uploadFileToPerplexity: uploadFileToPerplexity,
+        injectAndSendPrompt: injectAndSendPrompt
+    };
     console.log('[AI-OS] Perplexity engine loaded');
 })();
