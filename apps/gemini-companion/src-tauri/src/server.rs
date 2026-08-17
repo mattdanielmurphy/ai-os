@@ -1067,15 +1067,14 @@ async fn handle_debug_ping(
                 window.__TAURI_INVOKE__('query_callback', msg);
             }
             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {
-                window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({
+                window.webkit.messageHandlers.ipc.postMessage({
                     cmd: 'query_callback',
                     callback: 0,
                     error: 0,
-                    query_id: 'test_ping',
                     queryId: 'test_ping',
                     response: diag,
-                    payload: msg.payload
-                }));
+                    errMsg: null
+                });
             }
         })();
     "#;
@@ -1138,15 +1137,14 @@ async fn handle_debug_ping_gemini(
                 window.__TAURI_INVOKE__('query_callback', msg);
             }
             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {
-                window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({
+                window.webkit.messageHandlers.ipc.postMessage({
                     cmd: 'query_callback',
                     callback: 0,
                     error: 0,
-                    query_id: 'test_ping_gemini',
                     queryId: 'test_ping_gemini',
                     response: diag,
-                    payload: msg.payload
-                }));
+                    errMsg: null
+                });
             }
         })();
     "#;
