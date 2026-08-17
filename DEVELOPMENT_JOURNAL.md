@@ -8,6 +8,7 @@
 - Replaced Node.js global `fetch()` in `query_aios.js` with an `http.request`-based client with keep-alive, resolving Node.js/undici's internal 300s socket timeout bug (`TypeError: fetch failed`). Cleaned parameter payloads in debug pings.
 - Dynamic engine re-injection in `server.rs`: Injected fresh `perplexity-engine.js` and `gemini-engine.js` on every query evaluation so updates take effect live.
 - Fixed IPC callback serialization: Wrapped message payloads in `JSON.stringify({...})` with required Tauri `cmd`, `callback`, `error`, `query_id`, and `err_msg` fields for WKWebView IPC compatibility.
+- Implemented zero-network `document.title` IPC bridge with standard Base64 encoding between WKWebView and Rust in `server.rs`, bypassing CSP, CORS, and messageHandler limitations across all web origins.
 
 ## 2026-08-13
 - **Cost-Aware & Cache-Aware Thread Rotation System:** Implemented `scripts/thread_economics.py` calculating marginal financial breakeven against prompt cache write/read rates, hard context capacity caps (55% safety margin), and 1-hour cache TTL countdowns. Integrated live metrics into `scripts/postflight.py` and `scripts/check_thread_bloat.py`.
@@ -116,8 +117,3 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - **Flash Lite Recursion Fix:** Fixed an infinite subagent recursion loop by clarifying leaf agent delegation rules in gemini_only.md. Link to agent log: [2026-07-28_17-50_fix-flash-lite-recursion.md](agent-logs/2026-07-28_17-50_fix-flash-lite-recursion.md)
 - **Dynamic System Prompt & Unified Triage Gateway:** Implemented modular rule decomposition in `.rules/` and created `scripts/compile_dynamic_prompt.py`. Reduces system prompt token overhead from ~40k tokens to ~600-1,200 tokens per turn, and strips leaf subagent context of orchestrator bloat. [[log]](agent-logs/2026-07-28_21-07_dynamic-system-prompt-gateway.md)
 - Restarted LiteLLM proxy to apply DeepSeek official OpenRouter pin fix and verified live traffic.
-
-## 2026-08-13
-- **2026-08-13**: Configured Caddy reverse proxy as a macOS Launch Agent (`com.matt.agent.caddy`) providing HTTPS on `https://localhost:8082` for LLM backends.
-- **Postflight Thread Size & Perplexity Quota Injection:** Fixed `postflight.py` non-blocking stdin handling and thread token metrics calculation. Created `scripts/pplx_quota.py` to inject live Perplexity Pro/Research quota into `postflight.py` and `preflight.py`. Documented userscript directory locations in `AG_CONTEXT.md` and `macOS Environment.md`. [[log]](agent-logs/2026-08-13_18-36_postflight-thread-size-and-perplexity-quota.md)
-- **Atomic Thread Finalization & Self-Healing Watchdog:** Implemented atomic write-locking and integrity checksums for `thread.md` to prevent partial-save corruption, paired with a new `scripts/watchdog_sync.py` to auto-reconcile desynchronized states. Integrated Proxima Perplexity IPC for live-token quota tracking across all sub-agent threads. [[log]](agent-logs/2026-08-13_20-04_atomic-thread-watchdog-pplx-ipc.md)
