@@ -161,7 +161,7 @@ def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
         handoff_url = f"http://127.0.0.1:3031/handoff?session={conv_id}"
         cost = metrics.get('cost_comp', {})
         t1_vs_c = f"T1: ${cost.get('handoff', 0):.3f} vs C: ${cost.get('continuing', 0):.3f}"
-        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']} | {t1_vs_c})]({handoff_url})")
+        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']})]({handoff_url})")
 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"

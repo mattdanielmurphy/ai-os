@@ -93,11 +93,9 @@ def is_transient_status_line(s: str) -> bool:
     if '\n' in s or s.startswith('#') or s.startswith('-') or s.startswith('*') or s.startswith('|'):
         return False
     s_clean = s.strip()
-    if len(s_clean) > 160:
+    if len(s_clean) > 120:
         return False
-    if re.match(r'^(?:updating|running|checking|waiting|wait|verifying|restarting|generating|modifying|fetching|reading|analyzing|inspecting|cleaning|completed\s+task|subagent\s+updating|subagent\s+active|planner\s+is\s+still|plan\s+generation|generation\s+is\s+progressing|still\s+awaiting|streaming|gemini\s+\d.*streaming)[^\n]*$', s_clean, re.IGNORECASE):
-        return True
-    if re.match(r'^\s*(?:[-*+]\s*)?(?:📄\s*)?(?:Reference(?:\s+link)?(?:\s+to\s+(?:the\s+)?thread\s+artifact)?:\s*|Current\s+Thread:\s*)?\[`?(?:thread|conversation_response)\.md`?\]\([^\)]*\)\s*$', s_clean, re.IGNORECASE):
+    if s_clean.endswith('...') or re.match(r'^(?:\[query_aios\]|Subagent\s+"[^"]+"\s+defined|The\s+subagent\s+has\s+been\s+dispatched|The\s+subagent\s+is\s+creating|Dispatched\s+the\s+planner\s+query)[^\n]*$', s_clean, re.IGNORECASE):
         return True
     return False
 
