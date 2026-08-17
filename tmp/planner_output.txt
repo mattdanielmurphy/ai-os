@@ -1,142 +1,97 @@
-## What I Found (and Didn't Find)
+This implementation plan defines the addition of the `/api/health` diagnostic endpoint to the loopback HTTP daemon in `apps/gemini-companion/src-tauri/src/server.rs` and the FastAPI proxy in `services/agy-proxy/proxy.py`. The endpoint allows frontend components, background daemons, and orchestrator health probes to verify daemon liveness and runtime subsystem status.
 
-I searched the `mattdanielmurphy/ai-os` GitHub repo directly — full commit history search (`search_commits`), code search, and root/`config`/`docs` directory traversal. The only Hammerspoon-related commit in the entire repo history is a journal-only entry titled *"Add development journal entry for Hammerspoon QWERTY MIDI Controller"* (commit `4a1c35c`), which only touched `DEVELOPMENT_JOURNAL.md` by 4 lines — no `.lua` files, no Antigravity references, no submit/button/traversal logic anywhere in tracked history. A commit-message search for "Antigravity submit" across the repo returned zero results.
+## Architectural Strategy
 
-**Conclusion:** the real Hammerspoon config (almost certainly `~/.hammerspoon/init.lua` or a module under it) is a local, untracked dotfile that was never committed to `ai-os`. It is not recoverable through any of my connected tools (GitHub, Drive, OneDrive, Notion, Supabase) — none of them have filesystem access to your Mac's `~/.hammerspoon` directory or its Time Machine/git history. If a prior version survives, it would only be in local `.hammerspoon` git history (if you `git init`'d that folder), a Time Machine snapshot, or your shell/editor undo history — none of which I can query from here. So rather than guess at a "re-attempt" of code I can't verify, here is the concrete architecture to rebuild it correctly and to make sure it's never lost again.
+The health check route exposes a lightweight, non-blocking `GET /api/health` endpoint across the system's local server layers . For the Rust loopback daemon in `apps/gemini-companion`, the route matches incoming HTTP request paths and returns runtime metadata including process uptime, version, active session counts, and subsystem readiness states. For `services/agy-proxy`, a corresponding route is registered on the FastAPI application instance to validate proxy availability and CLI executable connectivity.
 
-## Root Cause of "Half-Assed" Regressions
+Both endpoints conform to standard REST conventions by returning HTTP 200 OK with a structured JSON payload when healthy, and HTTP 503 Service Unavailable if critical dependencies fail to initialize.
 
-Electron/Chromium apps (which Antigravity is, per the `ai-os` context describing it as an editable VS Code–style webview harness) **destroy and recreate their AXUIElement tree on every re-render**. A naive re-implementation typically caches the raw `hs.axuielement` object, which silently goes stale the moment the chat UI re-renders (new message, streaming token, resize) — this is almost certainly why "half-assed" attempts stop working after the first success: they cache the *reference*, not a *recoverable path* to it, and have no fallback when the reference dies.
+## Data Structures and State
 
-## 1. Architectural Strategy
+The endpoint introduces typed status response schemas in both Rust and Python server contexts.
 
-Use a **three-tier resolution strategy**, attempted in order, with the result of tier 2/3 always re-cached for tier 1's next use:
+```rust
+// Rust Loopback Daemon: apps/gemini-companion/src-tauri/src/types.rs (or server.rs)
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct SubsystemHealth {
+    pub pty_ready: bool,
+    pub session_store_ready: bool,
+    pub git_bridge_ready: bool,
+}
 
-1. **Tier 1 — Cached Path Replay (fast path).** Re-resolve a previously discovered element using a stored *structural path* (sequence of role+index steps from the window root), not the raw AX object. Validate liveness before acting.
-2. **Tier 2 — Heuristic Targeted Search (medium path).** If the cached path fails to resolve or the resolved element fails validation (disabled, off-screen, wrong role), run a bounded, attribute-filtered search starting from the most likely subtree (e.g., last known parent container) instead of the whole window.
-3. **Tier 3 — Full Intelligent Traversal (slow path, rare).** Full BFS/DFS from `AXWindow` root with role/subrole/description/position heuristics, depth and time limits, with the winning element's path immediately persisted to cache for tiers 1–2.
-
-Critically, **AXPress the button directly** rather than only sending the `cmd+return` keystroke. Sending keystrokes assumes the input field has real OS-level focus and that the app's own keybinding is correctly wired; directly invoking `AXPress` on the resolved submit button is deterministic regardless of Electron's internal focus/keybinding state — this is very likely why the "original" was described as working "every time."
-
-## 2. Data Structures & State Management
-
-Module-level cache table, one entry per distinct app window (keyed by window ID, since Antigravity may have multiple windows/profiles open):
-
-```
-AntigravityCache = {
-  [windowID] = {
-    path        = { {role="AXGroup", index=2}, {role="AXGroup", index=0}, {role="AXButton", index=1} }, -- structural breadcrumb from AXWindow root
-    axRef       = <hs.axuielement or nil>,   -- opportunistic hot cache, may be stale
-    signature   = "AXButton|Submit|enabled",  -- role+title+state fingerprint used to validate a resolved element is the *right* one
-    lastValidAt = <os.time() timestamp>,
-    lastAppPID  = <pid>,
-    failCount   = 0,  -- consecutive resolution failures; triggers full retraversal after threshold
-  }
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct HealthCheckResponse {
+    pub status: String,          // "ok" | "degraded" | "error"
+    pub version: String,         // Cargo package version
+    pub uptime_seconds: u64,     // Server instance uptime
+    pub active_threads: usize,   // Active managed PTY/session threads
+    pub subsystems: SubsystemHealth,
 }
 ```
 
-Persist `path`/`signature` (not `axRef`) to disk (`~/.hammerspoon/cache/antigravity_submit.json`) via `hs.json.encode`/`hs.settings.set` so the cache **survives Hammerspoon reloads**, not just app-session lifetime. This was very likely part of the "original" behavior — it "saved the button reference" durably, not just in RAM.
+```python
+# FastAPI Proxy Daemon: services/agy-proxy/proxy.py
+from pydantic import BaseModel
+from typing import Dict, Optional
 
-## 3. API / Interface Contracts
-
-```lua
--- module: antigravity_submit.lua
-local M = {}
-
--- Public entrypoint bound to the hotkey (e.g. cmd+enter)
-function M.submit() end                     -- returns boolean success
-
--- Tier 1
-function M.resolveFromCache(windowID) end   -- -> axuielement|nil, reason:string
-
--- Tier 2/3
-function M.search(root, predicate, opts) end
--- opts = { maxDepth=12, timeoutSec=1.5, startNode=nil (subtree hint) }
--- predicate(node) -> boolean; used for role/title/subrole matching
--- returns axuielement|nil, pathTable|nil
-
--- Validation
-function M.isElementValid(axRef, expectedSignature) end -- -> boolean
-function M.signatureOf(axRef) end                        -- -> string fingerprint
-
--- Cache lifecycle
-function M.cacheStore(windowID, pathTable, signature) end
-function M.cacheInvalidate(windowID) end
-function M.cacheLoadFromDisk() end
-function M.cacheFlushToDisk() end
-
--- Path replay
-function M.resolvePath(rootElement, pathTable) end -- -> axuielement|nil
+class ProxyHealthResponse(BaseModel):
+    status: str                  # "ok" | "error"
+    service: str                 # "agy-proxy"
+    version: str
+    agy_cli_available: bool      # Verifies local agy CLI binary existence
+    active_sessions: int
+    details: Optional[Dict[str, str]] = None
 ```
 
-Bind in `init.lua`:
-```lua
-hs.hotkey.bind({"cmd"}, "return", function() require("antigravity_submit").submit() end)
+## API Contracts and Interfaces
+
+The API interface contract is standardized for both consumer clients and monitoring scripts.
+
+- **HTTP Method:** `GET`
+- **Path:** `/api/health`
+- **Request Headers:** None required (`Accept: application/json` optional)
+- **Response Headers:** `Content-Type: application/json`, `Access-Control-Allow-Origin: *` (for Webview/CORS compatibility)
+- **Response Status Codes:**
+  - `200 OK`: Server running normally; all core subsystems initialized.
+  - `503 Service Unavailable`: Server running, but a critical prerequisite failed.
+
+```rust
+// Rust loopback request router contract
+pub fn handle_health_check(
+    state: &tauri::State<AppState>,
+    start_time: std::time::Instant
+) -> Result<HealthCheckResponse, ServerError>;
 ```
 
-## 4. Logic Flow & Algorithm
-
-```
-function submit():
-    win = frontmost Antigravity window
-    if not win: return false
-
-    entry = AntigravityCache[win:id()] or cacheLoadFromDisk()[win:id()]
-
-    # --- Tier 1: fast path ---
-    if entry and entry.path:
-        candidate = resolvePath(win.AXRoot, entry.path)
-        if candidate and isElementValid(candidate, entry.signature):
-            press(candidate); entry.axRef = candidate; entry.failCount = 0
-            return true
-        entry.failCount += 1
-
-    # --- Tier 2: heuristic subtree search ---
-    if entry and entry.path and entry.failCount < 3:
-        parentHint = resolvePath(win.AXRoot, sliceButLast(entry.path))
-        found, path = search(parentHint or win.AXRoot, isSubmitButton, {maxDepth=4, timeoutSec=0.5})
-        if found:
-            cacheStore(win:id(), path, signatureOf(found))
-            press(found); return true
-
-    # --- Tier 3: full traversal ---
-    found, path = search(win.AXRoot, isSubmitButton, {maxDepth=14, timeoutSec=2.0})
-    if found:
-        cacheStore(win:id(), path, signatureOf(found)); cacheFlushToDisk()
-        press(found); return true
-
-    # --- Fallback: raw keystroke, last resort ---
-    hs.eventtap.keyStroke({"cmd"}, "return")
-    notify("Antigravity: button not found, sent raw keystroke fallback")
-    return false
+```python
+# FastAPI route signature
+@app.get("/api/health", response_model=ProxyHealthResponse, tags=["Health"])
+async def get_health_status() -> ProxyHealthResponse:
+    ...
 ```
 
-`isSubmitButton(node)` predicate priority order (most to least reliable):
-1. `AXRole == "AXButton"` and `AXDescription`/`AXTitle` matches `"Submit"` or aria-label equivalent exactly.
-2. Role is button, sits inside the composer/input container (identifiable by proximity to an `AXTextArea`/`AXTextField` sibling), and is the last enabled actionable button in that container.
-3. Role is button with a recognizable icon glyph attribute (Chromium apps often expose `AXTitle` as empty but keep a stable `AXIdentifier`/DOM id if accessibility tree mirrors ARIA attributes — check `AXDOMIdentifier` if present, it's often the most stable of all).
+## Execution Logic and Flow
 
-`search()` should be a depth-limited BFS (not DFS) since submit buttons are shallow in the tree relative to page root, and BFS finds shallow matches faster while naturally bounding worst-case time — this matters because the original was described as fast/reliable, and unbounded recursive DFS over an Electron AX tree can take seconds and hang the hotkey.
+The server evaluates internal subsystem state before building and serializing the response payload.
 
-## 5. Error Handling & Edge Cases
+1. **Request Ingress:** The HTTP request arrives at the loopback server dispatch loop.
+2. **Path Matching:** The router checks if `request.method() == Method::Get` and `request.path() == "/api/health"`.
+3. **Subsystem Verification:**
+   - Query global application state for lock contention or thread liveness.
+   - Calculate elapsed process uptime from the recorded startup timestamp `Instant::now()`.
+   - In `proxy.py`, execute a non-blocking `shutil.which("agy")` check to confirm binary availability.
+4. **Payload Construction:** Map the gathered states into `HealthCheckResponse` or `ProxyHealthResponse`.
+5. **Serialization and Dispatch:** Serialize the payload to JSON format, attach CORS and content-type headers, and return HTTP 200.
 
-| Failure Mode | Mitigation |
-|---|---|
-| AX object stale after re-render | Never trust `axRef` alone — path replay + signature check on every use |
-| Accessibility permission revoked/not granted | Check `hs.accessibilityState()` at module load; alert user with System Settings deep link if false |
-| Multiple Antigravity windows/profiles | Cache keyed by `win:id()`, never global |
-| Button temporarily disabled (empty input, streaming in progress) | `isElementValid` checks `AXEnabled == true`; if disabled, don't cache-invalidate, just fall through to keystroke fallback or no-op with a subtle notification |
-| App not frontmost when hotkey fires | Guard clause: if `hs.application.frontmostApplication():bundleID()` doesn't match Antigravity's bundle ID, pass the keystroke through natively (`return false` from hotkey callback isn't supported in Hammerspoon — instead re-post the event via `hs.eventtap`) |
-| Antigravity ships a UI update that reshuffles DOM/AX tree structure | `failCount` threshold forces Tier 3 full retraversal instead of repeatedly failing Tier 1/2; also expose a manual `hs.hotkey` (e.g. `cmd+shift+r`) to force `cacheInvalidate()` |
-| Traversal takes too long and blocks the UI thread | Hard `timeoutSec` cutoff using `hs.timer` wall-clock checks inside the BFS loop, not just depth limits |
-| Signature collides with a different button after a UI change | Signature should combine role + normalized title/description + relative sibling-index, not title alone |
+## Error Handling and Implementation Steps
 
-## 6. Implementation Steps
+Any failure during status aggregation must degrade gracefully without crashing the server loop.
 
-1. **Create `~/.hammerspoon/modules/antigravity_submit.lua`** implementing the full contract above (cache, search, path resolve, submit).
-2. **Create `~/.hammerspoon/cache/` directory** for `antigravity_submit.json` persistent cache; add `.gitignore` entry if this folder becomes version-controlled.
-3. **Modify `~/.hammerspoon/init.lua`**: add `require("antigravity_submit")` and bind the `cmd+return` hotkey scoped to Antigravity's bundle ID (guard with `hs.application.watcher` or bundle-ID check inside the callback).
-4. **Add an `hs.window.filter` watcher** for the Antigravity app that calls `cacheInvalidate(win:id())` on `windowDestroyed`/`windowUnfocused` after a longer idle period, keeping the on-disk cache lean.
-5. **Bring `~/.hammerspoon` under version control and symlink it into `ai-os`**, e.g. `~/projects/ai-os/config/hammerspoon` → `~/.hammerspoon`, following the repo's existing multi-way symlink/skills-sync pattern described in `AG_CONTEXT.md`. This is the actual fix for "we lost the original implementation" — it currently isn't tracked anywhere, so any future regression is unrecoverable again by design.
-6. **Add a `DEVELOPMENT_JOURNAL.md` entry** documenting this restoration and the caching architecture, consistent with the repo's Universal Learning Protocol, so a future agent session doesn't reintroduce the naive raw-reference-caching bug.
-7. **Test matrix before declaring done**: fresh Antigravity launch, mid-stream re-render, window re-focus after Space switch, second Antigravity window open, Accessibility permission freshly granted — confirm Tier 1 hits are used after the first successful Tier 3 traversal in each case.
+- **Lock Contention:** If acquiring read locks on `AppState` times out or fails, return `status: "degraded"` with partial metrics rather than dropping the socket connection.
+- **Serialization Failures:** Fall back to a static string literal JSON response `{"status":"ok"}` if struct serialization fails.
+- **File Modifications (Execution Order):**
+  1. `apps/gemini-companion/src-tauri/src/types.rs`: Add `SubsystemHealth` and `HealthCheckResponse` structs with `Serialize`/`Deserialize` derives.
+  2. `apps/gemini-companion/src-tauri/src/server.rs`: Record server initialization timestamp in `AppState` or the server listener loop. Add the `/api/health` branch to the request match block, dispatching the response with standard CORS headers.
+  3. `services/agy-proxy/proxy.py`: Define `ProxyHealthResponse` Pydantic model and attach `@app.get("/api/health")` checking CLI binary existence and active session counts.
+  4. `apps/gemini-companion/src/utils/health.ts` (optional client helper): Export a ping function `checkServerHealth(): Promise<boolean>` for UI status indicators.
+  5. `scripts/preflight.py` (or test runner): Add verification test cases sending `GET /api/health` to validate HTTP 200 responses.
