@@ -9,6 +9,7 @@
 2. **Generic Tech Hues:** Avoid default unthinking indigo/violet/purple accents unless explicitly specified by a brand design system.
 3. **Slop Decoration:** No unearned glassmorphism/backdrop blurs without real surface depth, no accent left-rail strips on cards, no icon toppers centered over every heading, and no monument stat numbers taking up storytelling space.
 4. **Compositional Defaulting:** Never default to centered hero + 3 identical card tiles. Commit to a surface archetype before writing layout or tokens.
+5. **Unsolicited Dark Mode Defaulting:** Banned. NEVER default HTML pages, dashboards, cheat sheets, or web artifacts to dark mode unless explicitly requested by the user. Default to clean, high-contrast, editorial light/paper surfaces or support system theme adaptation (`@media (prefers-color-scheme: dark)`).
 
 ## Preferred Design Systems & Workflow
 1. **Claude Design Doctrine (`claude-design`):**
