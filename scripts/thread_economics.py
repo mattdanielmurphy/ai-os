@@ -31,6 +31,24 @@ def get_last_activity_time(transcript_path: str = None) -> float:
             pass
     return time.time()
 
+def calculate_turn_cost_comparison(token_count, t_sys, compact_total):
+    write_multiplier = 1.25
+    read_multiplier = 0.10
+    
+    continuing_cost = (0.90 * token_count * read_multiplier) + (0.10 * token_count * write_multiplier)
+    handoff_cost = (t_sys * read_multiplier) + ((compact_total - t_sys) * write_multiplier)
+    
+    ratio = (continuing_cost / handoff_cost) if handoff_cost > 0 else 0
+    # Simple breakeven: if continuing_cost > handoff_cost * 1.1 (10% threshold)
+    is_advantageous = continuing_cost > handoff_cost
+    
+    return {
+        "continuing": continuing_cost,
+        "handoff": handoff_cost,
+        "ratio": ratio,
+        "is_advantageous": is_advantageous
+    }
+
 def calculate_thread_economics(t_current: int, t_sys: int, last_write_ts: float = None, model_name: str = None) -> dict:
     write_multiplier = 1.25
     read_multiplier = 0.10
