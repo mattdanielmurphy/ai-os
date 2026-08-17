@@ -263,13 +263,13 @@ async function main() {
     let resolvedModel = null;
     const baseProvider = (provider || '').split(':')[0].toLowerCase();
     if (baseProvider === 'perplexity') {
-        const requestedModel = (rawModel || 'grok').toLowerCase();
+        const requestedModel = (rawModel || 'gemini').toLowerCase();
         resolvedModel = PPLX_MODEL_MAP[requestedModel] || requestedModel;
     } else {
         resolvedModel = rawModel || null;
     }
 
-    const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'grok' : 'default');
+    const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'gemini' : 'default');
     const startTime = Date.now();
     console.error(`[query_aios] Querying ${provider} via AI-OS (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s)... (waiting for response)`);
 
