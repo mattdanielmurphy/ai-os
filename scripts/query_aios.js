@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 import crypto from 'crypto';
 import { execSync, spawn } from 'child_process';
@@ -128,7 +129,7 @@ DO NOT provide full code implementations. Focus on structural details, signature
 async function pingAios(baseUrl) {
     return new Promise((resolve) => {
         const url = `${baseUrl}/v1/models`;
-        const req = require('http').get(url, (res) => {
+        const req = http.get(url, (res) => {
             resolve(res.statusCode === 200);
         });
         req.on('error', () => resolve(false));
@@ -153,7 +154,7 @@ function sendAiosRequest(url, payload, timeoutSec) {
             timeout: timeoutSec * 1000,
         };
 
-        const req = require('http').request(options, (res) => {
+        const req = http.request(options, (res) => {
             let body = '';
             res.on('data', (chunk) => body += chunk);
             res.on('end', () => {
