@@ -1,4 +1,4 @@
-User Request: I'd like to be able to edit the javascript injected into the webview and immediately see results without having to build to my iPhone or the simulator because it takes WAY too long to see changes that way. But I'd like to ensure that the view I see is going to look exactly how it will look on the iphone, with the same dimensions and scaling etc.
+User Request: 1. Add a Session Compaction & Handoff Delta calculation to thread.md with a 1-click clickable handoff action that uses Antigravity automation plumbing (Shift+Cmd+O twice, focus, paste prompt/handoff summary) and restores/fixes the Cmd+Enter programmatic submission helper. 2. Architect a background self-assessment & rule-evolution feedback loop (via watch_transcripts.py / background evaluator) that reviews transcript turns, detects context bloat / rule violations / keyword mismatches, and dynamically tunes/prunes rules and context injection.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
