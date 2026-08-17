@@ -366,11 +366,26 @@ async function main() {
 
     const baseUrl = 'http://127.0.0.1:3031';
 
-    const serverReady = await pingAios(baseUrl);
+    let serverReady = await pingAios(baseUrl);
     if (!serverReady) {
-        console.error(`\n[query_aios] ERROR: AI-OS is not running (http://127.0.0.1:3031 is unreachable).`);
-        console.error(`Please open or start AI-OS manually:`);
-        console.error(`  cd /Users/matt/projects/ai-os/apps/gemini-companion && bun tauri dev\n`);
+        console.error(`[query_aios] 🔄 AI-OS server at http://127.0.0.1:3031 is not responding. Auto-starting via launch agent...`);
+        try {
+            execSync('la restart aios-server 2>/dev/null || la start aios-server 2>/dev/null', { stdio: 'ignore' });
+        } catch (e) {}
+
+        for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 500));
+            serverReady = await pingAios(baseUrl);
+            if (serverReady) {
+                console.error(`[query_aios] ✅ AI-OS server is online.`);
+                break;
+            }
+        }
+    }
+
+    if (!serverReady) {
+        console.error(`\n[query_aios] ERROR: AI-OS server is unreachable (http://127.0.0.1:3031).`);
+        console.error(`Check status with: la status aios-server or tail logs at ~/.ai-os/logs/companion_server.error.log\n`);
         process.exit(1);
     }
 

@@ -1343,9 +1343,37 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .layer(cors)
             .with_state(app_handle);
 
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:3031")
-            .await
-            .unwrap();
-        axum::serve(listener, app).await.unwrap();
+        let mut listener = None;
+        let addr: std::net::SocketAddr = "127.0.0.1:3031".parse().unwrap();
+
+        for attempt in 1..=10 {
+            let socket_res = (|| -> std::io::Result<tokio::net::TcpListener> {
+                let socket = tokio::net::TcpSocket::new_v4()?;
+                let _ = socket.set_reuseaddr(true);
+                let _ = socket.set_reuseport(true);
+                socket.bind(addr)?;
+                socket.listen(1024)
+            })();
+
+            match socket_res {
+                Ok(l) => {
+                    eprintln!("[AI-OS AXUM] Successfully bound 127.0.0.1:3031 on attempt {}", attempt);
+                    listener = Some(l);
+                    break;
+                }
+                Err(e) => {
+                    eprintln!("[AI-OS AXUM WARN] Attempt {}/10 to bind 127.0.0.1:3031 failed: {}. Retrying in 500ms...", attempt, e);
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                }
+            }
+        }
+
+        if let Some(listener) = listener {
+            if let Err(e) = axum::serve(listener, app).await {
+                eprintln!("[AI-OS AXUM ERROR] Axum server exited: {}", e);
+            }
+        } else {
+            eprintln!("[AI-OS AXUM FATAL] Could not bind 127.0.0.1:3031 after 10 attempts.");
+        }
     });
 }
