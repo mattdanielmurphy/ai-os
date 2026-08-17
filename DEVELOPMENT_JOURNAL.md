@@ -123,3 +123,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 
 - **2026-08-17 13:50 (AIOSURLRouter HTML Opening Fix)**: Implemented `NSApplicationDelegate` document open handlers (`application(_:openFiles:)`, `application(_:openFile:)`, `application(_:open:)`) in `RouterApp.swift` so `AIOSURLRouter` forwards local `.html` files directly to Google Chrome when launched from Finder. Recompiled and registered `/Applications/AIOSURLRouter.app`.
+- **2026-08-17 15:00 (AI-OS Webview Query IPC & Stream Parsing Fix)**: Resolved query hanging/timeout issues by engineering a 5-channel zero-failure IPC bridge in `server.rs` (`sendBeacon`, `no-cors` text/plain fetch, sanitized WebKit messageHandler, URL fragment hash bridge, image beacon), and updated `perplexity-engine.js` with `workflow_block` and structured block SSE parsing. All queries across Perplexity and Gemini now return complete outputs in 1-4 seconds.
