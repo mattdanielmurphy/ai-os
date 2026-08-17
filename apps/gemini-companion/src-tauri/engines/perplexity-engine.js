@@ -130,6 +130,7 @@
         var answer = '';
         var backendUuid = null;
 
+        var rawChunks = [];
         var isCompleted = false;
         try {
             while (true) {
@@ -145,6 +146,7 @@
                     if (!line.startsWith('data:')) continue;
                     var data = line.slice(5).trim();
                     if (!data) continue;
+                    rawChunks.push(data);
                     if (data === '[DONE]') {
                         isCompleted = true;
                         break;
@@ -155,22 +157,58 @@
                         if (parsed.backend_uuid) {
                             backendUuid = parsed.backend_uuid;
                         }
+
+                        // 1. Check blocks (workflow_block, markdown_block, etc.)
                         if (parsed.blocks && Array.isArray(parsed.blocks)) {
                             for (var bi = 0; bi < parsed.blocks.length; bi++) {
                                 var block = parsed.blocks[bi];
-                                if (block.markdown_block && block.markdown_block.answer && typeof block.markdown_block.answer === 'string') {
-                                    var blockAnswer = block.markdown_block.answer;
-                                    if (blockAnswer.length > answer.length) {
-                                        answer = blockAnswer;
+                                if (!block) continue;
+
+                                // Workflow block (Perplexity 2025/2026 format)
+                                if (block.workflow_block && block.workflow_block.steps) {
+                                    for (var si = 0; si < block.workflow_block.steps.length; si++) {
+                                        var step = block.workflow_block.steps[si];
+                                        if (step && step.items && Array.isArray(step.items)) {
+                                            for (var ii = 0; ii < step.items.length; ii++) {
+                                                var item = step.items[ii];
+                                                if (item && item.payload && item.payload.text_payload) {
+                                                    var tp = item.payload.text_payload;
+                                                    if (tp.text && typeof tp.text === 'string' && tp.text.length > answer.length) {
+                                                        answer = tp.text;
+                                                    }
+                                                    if (tp.chunks && Array.isArray(tp.chunks)) {
+                                                        var joined = tp.chunks.join('');
+                                                        if (joined.length > answer.length) {
+                                                            answer = joined;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                                if (block.markdown_block && block.markdown_block.chunks && Array.isArray(block.markdown_block.chunks)) {
-                                    var chunked = block.markdown_block.chunks.join('');
-                                    if (chunked.length > answer.length) {
-                                        answer = chunked;
+
+                                // Markdown block (Perplexity legacy format)
+                                if (block.markdown_block) {
+                                    if (block.markdown_block.answer && typeof block.markdown_block.answer === 'string' && block.markdown_block.answer.length > answer.length) {
+                                        answer = block.markdown_block.answer;
+                                    }
+                                    if (block.markdown_block.chunks && Array.isArray(block.markdown_block.chunks)) {
+                                        var joined = block.markdown_block.chunks.join('');
+                                        if (joined.length > answer.length) {
+                                            answer = joined;
+                                        }
                                     }
                                 }
                             }
+                        }
+
+                        // 2. Direct string / JSON fields
+                        if (parsed.answer && typeof parsed.answer === 'string' && parsed.answer.length > answer.length) {
+                            answer = parsed.answer;
+                        }
+                        if (parsed.output && typeof parsed.output === 'string' && parsed.output.length > answer.length) {
+                            answer = parsed.output;
                         }
                         if (parsed.text && typeof parsed.text === 'string') {
                             try {
@@ -188,21 +226,7 @@
                                 }
                             }
                         }
-                        if (parsed.answer && typeof parsed.answer === 'string' && parsed.answer.length > answer.length) {
-                            answer = parsed.answer;
-                        }
-                        if (parsed.output && typeof parsed.output === 'string' && parsed.output.length > answer.length) {
-                            answer = parsed.output;
-                        }
-                        if (parsed.content && typeof parsed.content === 'string' && parsed.content.length > answer.length) {
-                            answer = parsed.content;
-                        }
-                        if (parsed.response && typeof parsed.response === 'string' && parsed.response.length > answer.length) {
-                            answer = parsed.response;
-                        }
-                        if (parsed.completion && typeof parsed.completion === 'string' && parsed.completion.length > answer.length) {
-                            answer = parsed.completion;
-                        }
+
                         if (answer && answer.length > 0) {
                             if (parsed.final === true || parsed.text_completed === true || (parsed.status === 'completed' && !parsed.step_type)) {
                                 isCompleted = true;
