@@ -164,7 +164,7 @@ def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
         h_cost = cost.get('handoff', 0)
         
         if h_cost <= c_cost:
-            cost_badge = "T1: Cheaper" if c_cost - h_cost < 0.0001 else f"-${c_cost - h_cost:.3f}"
+            cost_badge = f"-${c_cost - h_cost:.3f} T1"
         else:
             cost_badge = f"+${h_cost - c_cost:.3f} T1"
             
