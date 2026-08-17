@@ -20,7 +20,7 @@ Format: `&highlights=start-end:Title,start-end:Title` (use `+` for spaces)
 ### Sharing with Others (Standalone Web Player)
 When sharing with folks who don't have Matt's userscript installed:
 ```markdown
-[https://yt-highlight-reel.vercel.app/?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo](https://yt-highlight-reel.vercel.app/?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo)
+[https://yt.mattmurphy.ca/?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo](https://yt.mattmurphy.ca/?v=VIDEO_ID&highlights=0:42-1:25:Core+Problem,2:00-2:30:Demo)
 ```
 
 ---
