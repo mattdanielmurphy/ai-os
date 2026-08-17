@@ -531,12 +531,25 @@ async fn handle_perplexity_query(
             const fileMime = {};
 
             function sendDone(resp, err) {{
-                var payload = JSON.stringify({{ query_id: qId, response: resp || null, error: err || null }});
-                fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: payload
-                }}).catch(function(e) {{ console.error('[AI-OS] callback fetch failed:', e); }});
+                var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
+                            console.error('[AI-OS] Tauri invoke error:', e);
+                        }});
+                    }} else if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', payload);
+                    }}
+                }} catch(e) {{
+                    console.error('[AI-OS] Tauri IPC invocation failed:', e);
+                }}
+                try {{
+                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify(payload)
+                    }}).catch(function() {{}});
+                }} catch(e) {{}}
             }}
 
             async function run() {{
@@ -642,12 +655,25 @@ async fn handle_gemini_query(
             const fileMime = {};
 
             function sendDone(resp, err) {{
-                var payload = JSON.stringify({{ query_id: qId, response: resp || null, error: err || null }});
-                fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: payload
-                }}).catch(function(e) {{ console.error('[AI-OS] callback fetch failed:', e); }});
+                var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
+                try {{
+                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
+                            console.error('[AI-OS] Tauri invoke error:', e);
+                        }});
+                    }} else if (window.__TAURI_INVOKE__) {{
+                        window.__TAURI_INVOKE__('query_callback', payload);
+                    }}
+                }} catch(e) {{
+                    console.error('[AI-OS] Tauri IPC invocation failed:', e);
+                }}
+                try {{
+                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify(payload)
+                    }}).catch(function() {{}});
+                }} catch(e) {{}}
             }}
 
             async function run() {{
@@ -955,13 +981,25 @@ async fn handle_debug_ping(
         r#"
         {}
         (function() {{
+            var qId = {};
             var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
-            var payload = JSON.stringify({{ query_id: {}, response: diag, error: null }});
-            fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }},
-                body: payload
-            }}).catch(function(e) {{ console.error('[AI-OS] ping callback failed:', e); }});
+            var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
+            try {{
+                if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
+                        console.error('[AI-OS] ping invoke error:', e);
+                    }});
+                }} else if (window.__TAURI_INVOKE__) {{
+                    window.__TAURI_INVOKE__('query_callback', payload);
+                }}
+            }} catch(e) {{}}
+            try {{
+                fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }}).catch(function() {{}});
+            }} catch(e) {{}}
         }})();
         "#,
         pplx_engine, js_ping_id
@@ -999,13 +1037,25 @@ async fn handle_debug_ping_gemini(
         r#"
         {}
         (function() {{
+            var qId = {};
             var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGeminiUnified !== 'undefined' || typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
-            var payload = JSON.stringify({{ query_id: {}, response: diag, error: null }});
-            fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }},
-                body: payload
-            }}).catch(function(e) {{ console.error('[AI-OS] ping callback failed:', e); }});
+            var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
+            try {{
+                if (window.__TAURI__ && window.__TAURI__.invoke) {{
+                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
+                        console.error('[AI-OS] ping invoke error:', e);
+                    }});
+                }} else if (window.__TAURI_INVOKE__) {{
+                    window.__TAURI_INVOKE__('query_callback', payload);
+                }}
+            }} catch(e) {{}}
+            try {{
+                fetch('http://127.0.0.1:3031/api/gemini/callback', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(payload)
+                }}).catch(function() {{}});
+            }} catch(e) {{}}
         }})();
         "#,
         gemini_engine, js_ping_id
