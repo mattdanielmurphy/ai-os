@@ -73,8 +73,8 @@
   },
   "settings": {
     "high_reasoning_model_default": {
-      "value": "grok",
-      "options": ["grok", "perplexity", "flash_high", "sonnet"],
+      "value": "gemini",
+      "options": ["grok", "perplexity", "flash_high", "sonnet", "gemini"],
       "description": "Default high-reasoning engine for planning and stuck bug escalation"
     }
   }
