@@ -618,15 +618,24 @@ async fn handle_perplexity_query(
                 var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
-                            console.error('[AI-OS] Tauri invoke error:', e);
-                        }});
+                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
                     }} else if (window.__TAURI_INVOKE__) {{
                         window.__TAURI_INVOKE__('query_callback', payload);
                     }}
-                }} catch(e) {{
-                    console.error('[AI-OS] Tauri IPC invocation failed:', e);
-                }}
+                }} catch(e) {{}}
+                try {{
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                            cmd: 'query_callback',
+                            callback: 0,
+                            error: 0,
+                            query_id: qId,
+                            queryId: qId,
+                            response: resp || null,
+                            error: err || null
+                        }}));
+                    }}
+                }} catch(e) {{}}
                 try {{
                     fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
                         method: 'POST',
@@ -634,6 +643,13 @@ async fn handle_perplexity_query(
                         body: JSON.stringify(payload)
                     }}).catch(function() {{}});
                 }} catch(e) {{}}
+                try {{
+                    var jsonStr = JSON.stringify(payload);
+                    var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                    document.title = 'AIOS_RES_' + qId + ':' + b64;
+                }} catch(e) {{
+                    document.title = 'AIOS_ERR_' + qId + ':' + (err || e.message);
+                }}
             }}
 
             async function run() {{
@@ -668,28 +684,11 @@ async fn handle_perplexity_query(
 
     let _ = win.eval(&eval_script);
 
-    // Await the oneshot callback with a 600s timeout
-    match tokio::time::timeout(std::time::Duration::from_secs(600), rx).await {
-        Ok(Ok(Ok(response))) => {
-            Ok(Json(QueryResponse {
-                response,
-                query_id,
-            }))
-        }
-        Ok(Ok(Err(err_msg))) => {
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Perplexity execution error: {}", err_msg)))
-        }
-        Ok(Err(_)) => {
-            // oneshot sender was dropped without sending
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Query callback channel closed unexpectedly".to_string()))
-        }
-        Err(_) => {
-            // Timeout
-            let mut callbacks = get_query_callbacks().lock().await;
-            callbacks.remove(&query_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
-        }
-    }
+    let response = wait_for_query_result(&win, &query_id, "Perplexity", rx, 600).await?;
+    Ok(Json(QueryResponse {
+        response,
+        query_id,
+    }))
 }
 
 async fn handle_gemini_query(
@@ -742,15 +741,24 @@ async fn handle_gemini_query(
                 var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
                 try {{
                     if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
-                            console.error('[AI-OS] Tauri invoke error:', e);
-                        }});
+                        window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
                     }} else if (window.__TAURI_INVOKE__) {{
                         window.__TAURI_INVOKE__('query_callback', payload);
                     }}
-                }} catch(e) {{
-                    console.error('[AI-OS] Tauri IPC invocation failed:', e);
-                }}
+                }} catch(e) {{}}
+                try {{
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
+                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
+                            cmd: 'query_callback',
+                            callback: 0,
+                            error: 0,
+                            query_id: qId,
+                            queryId: qId,
+                            response: resp || null,
+                            error: err || null
+                        }}));
+                    }}
+                }} catch(e) {{}}
                 try {{
                     fetch('http://127.0.0.1:3031/api/gemini/callback', {{
                         method: 'POST',
@@ -758,6 +766,13 @@ async fn handle_gemini_query(
                         body: JSON.stringify(payload)
                     }}).catch(function() {{}});
                 }} catch(e) {{}}
+                try {{
+                    var jsonStr = JSON.stringify(payload);
+                    var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                    document.title = 'AIOS_RES_' + qId + ':' + b64;
+                }} catch(e) {{
+                    document.title = 'AIOS_ERR_' + qId + ':' + (err || e.message);
+                }}
             }}
 
             async function run() {{
@@ -792,28 +807,11 @@ async fn handle_gemini_query(
 
     let _ = win.eval(&eval_script);
 
-    // Await the oneshot callback with a 600s timeout
-    match tokio::time::timeout(std::time::Duration::from_secs(600), rx).await {
-        Ok(Ok(Ok(response))) => {
-            Ok(Json(QueryResponse {
-                response,
-                query_id,
-            }))
-        }
-        Ok(Ok(Err(err_msg))) => {
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Gemini execution error: {}", err_msg)))
-        }
-        Ok(Err(_)) => {
-            // oneshot sender was dropped without sending
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Query callback channel closed unexpectedly".to_string()))
-        }
-        Err(_) => {
-            // Timeout
-            let mut callbacks = get_query_callbacks().lock().await;
-            callbacks.remove(&query_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
-        }
-    }
+    let response = wait_for_query_result(&win, &query_id, "Gemini", rx, 600).await?;
+    Ok(Json(QueryResponse {
+        response,
+        query_id,
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -1070,9 +1068,7 @@ async fn handle_debug_ping(
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
             try {{
                 if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
-                        console.error('[AI-OS] ping invoke error:', e);
-                    }});
+                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
                 }} else if (window.__TAURI_INVOKE__) {{
                     window.__TAURI_INVOKE__('query_callback', payload);
                 }}
@@ -1084,22 +1080,20 @@ async fn handle_debug_ping(
                     body: JSON.stringify(payload)
                 }}).catch(function() {{}});
             }} catch(e) {{}}
+            try {{
+                var jsonStr = JSON.stringify(payload);
+                var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                document.title = 'AIOS_RES_' + qId + ':' + b64;
+            }} catch(e) {{
+                document.title = 'AIOS_ERR_' + qId + ':' + e.message;
+            }}
         }})();
         "#,
         pplx_engine, js_ping_id
     );
     let _ = win.eval(&script);
 
-    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
-        Ok(Ok(Ok(diag))) => Ok(diag),
-        Ok(Ok(Err(e))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e)),
-        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Ping callback channel closed".to_string())),
-        Err(_) => {
-            let mut callbacks = get_query_callbacks().lock().await;
-            callbacks.remove(&ping_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
-        }
-    }
+    wait_for_query_result(&win, &ping_id, "Perplexity", rx, 5).await
 }
 
 async fn handle_debug_ping_gemini(
@@ -1126,9 +1120,7 @@ async fn handle_debug_ping_gemini(
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
             try {{
                 if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{
-                        console.error('[AI-OS] ping invoke error:', e);
-                    }});
+                    window.__TAURI__.invoke('query_callback', payload).catch(function(e) {{}});
                 }} else if (window.__TAURI_INVOKE__) {{
                     window.__TAURI_INVOKE__('query_callback', payload);
                 }}
@@ -1140,22 +1132,20 @@ async fn handle_debug_ping_gemini(
                     body: JSON.stringify(payload)
                 }}).catch(function() {{}});
             }} catch(e) {{}}
+            try {{
+                var jsonStr = JSON.stringify(payload);
+                var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+                document.title = 'AIOS_RES_' + qId + ':' + b64;
+            }} catch(e) {{
+                document.title = 'AIOS_ERR_' + qId + ':' + e.message;
+            }}
         }})();
         "#,
         gemini_engine, js_ping_id
     );
     let _ = win.eval(&script);
 
-    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
-        Ok(Ok(Ok(diag))) => Ok(diag),
-        Ok(Ok(Err(e))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e)),
-        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Ping callback channel closed".to_string())),
-        Err(_) => {
-            let mut callbacks = get_query_callbacks().lock().await;
-            callbacks.remove(&ping_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
-        }
-    }
+    wait_for_query_result(&win, &ping_id, "Gemini", rx, 5).await
 }
 
 // ---------------------------------------------------------------------------
