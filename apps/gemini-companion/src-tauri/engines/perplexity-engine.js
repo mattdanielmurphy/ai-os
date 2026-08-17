@@ -177,8 +177,7 @@
                             answer = parsed.answer;
                         }
                         if (parsed.status === 'completed' || parsed.status === 'success' || parsed.step_type === 'final' || parsed.final === true) {
-                            isCompleted = true;
-                            break;
+                            // Do not break here; keep collecting blocks
                         }
                     } catch (e) { }
                 }

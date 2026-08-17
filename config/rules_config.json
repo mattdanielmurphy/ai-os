@@ -4,7 +4,7 @@
       "name": "Flash-Lite Edit Delegation (Antigravity Native)",
       "tag": "FLASH_LITE_DELEGATION",
       "file": "gemini_only.md",
-      "enabled": false,
+      "enabled": true,
       "description": "Enforce delegating all file writes and edits to a flash_lite subagent in Antigravity"
     },
     "agymcp_delegation": {

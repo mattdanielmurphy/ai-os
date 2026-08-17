@@ -14,7 +14,7 @@
   "tauri": {
     "macOSPrivateApi": true,
     "allowlist": {
-      "all": false,
+      "all": true,
       "fs": {
         "all": false,
         "exists": true,
@@ -42,9 +42,28 @@
     },
     "windows": [
       {
+        "label": "main",
         "title": "ai-os",
         "width": 1000,
         "height": 800
+      },
+      {
+        "label": "gemini_main",
+        "title": "Gemini",
+        "width": 1200,
+        "height": 760
+      },
+      {
+        "label": "perplexity_main",
+        "title": "Perplexity",
+        "width": 1200,
+        "height": 760
+      },
+      {
+        "label": "floating",
+        "title": "Gemini Quick Prompt",
+        "width": 960,
+        "height": 324
       }
     ],
     "security": {
@@ -52,17 +71,17 @@
       "dangerousRemoteDomainIpcAccess": [
         {
           "domain": "gemini.google.com",
-          "windows": ["gemini_main", "floating"],
+          "windows": ["gemini_main", "perplexity_main", "floating", "main"],
           "enableTauriAPI": true
         },
         {
           "domain": "www.perplexity.ai",
-          "windows": ["perplexity_main"],
+          "windows": ["gemini_main", "perplexity_main", "floating", "main"],
           "enableTauriAPI": true
         },
         {
           "domain": "perplexity.ai",
-          "windows": ["perplexity_main"],
+          "windows": ["gemini_main", "perplexity_main", "floating", "main"],
           "enableTauriAPI": true
         }
       ]

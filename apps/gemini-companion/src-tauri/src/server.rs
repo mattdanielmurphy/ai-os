@@ -620,7 +620,7 @@ async fn handle_perplexity_query(
 
     let _ = win.eval(&eval_script);
 
-    match tokio::time::timeout(tokio::time::Duration::from_secs(180), rx).await {
+    match tokio::time::timeout(tokio::time::Duration::from_secs(600), rx).await {
         Ok(Ok(Ok(response_text))) => {
             Ok(Json(QueryResponse {
                 response: response_text,
@@ -636,7 +636,7 @@ async fn handle_perplexity_query(
         Err(_) => {
             let mut callbacks = get_query_callbacks().lock().await;
             callbacks.remove(&query_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 180 seconds".to_string()))
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
         }
     }
 }
@@ -777,7 +777,7 @@ async fn handle_gemini_query(
 
     let _ = win.eval(&eval_script);
 
-    match tokio::time::timeout(tokio::time::Duration::from_secs(180), rx).await {
+    match tokio::time::timeout(tokio::time::Duration::from_secs(600), rx).await {
         Ok(Ok(Ok(response_text))) => {
             Ok(Json(QueryResponse {
                 response: response_text,
@@ -793,7 +793,7 @@ async fn handle_gemini_query(
         Err(_) => {
             let mut callbacks = get_query_callbacks().lock().await;
             callbacks.remove(&query_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 180 seconds".to_string()))
+            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
         }
     }
 }
