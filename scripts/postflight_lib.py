@@ -160,8 +160,15 @@ def format_metrics_table(metrics: dict, conv_id: str = None) -> str:
         headers.append("Handoff")
         handoff_url = f"http://127.0.0.1:3031/handoff?session={conv_id}"
         cost = metrics.get('cost_comp', {})
-        t1_vs_c = f"T1: ${cost.get('handoff', 0):.3f} vs C: ${cost.get('continuing', 0):.3f}"
-        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']})]({handoff_url})")
+        c_cost = cost.get('continuing', 0)
+        h_cost = cost.get('handoff', 0)
+        
+        if h_cost <= c_cost:
+            cost_badge = "T1: Cheaper" if c_cost - h_cost < 0.0001 else f"-${c_cost - h_cost:.3f}"
+        else:
+            cost_badge = f"+${h_cost - c_cost:.3f} T1"
+            
+        values.append(f"[\u26a1 -{metrics['savings_pct']}% (~{metrics['compact_display']}) \u00b7 {cost_badge}]({handoff_url})")
 
     header_row = "| " + " | ".join(headers) + " |"
     separator_row = "| " + " | ".join([":---"] * len(headers)) + " |"
