@@ -1,4 +1,4 @@
-User Request: Diagnose and fix the root cause why thread.md is not showing the agent's final completed turn response. Specifically analyze watch_transcripts.py (file modification / debouncing / is_turn_completed trigger logic) and gen_conversation_md.py (parse_exchanges, transcript.jsonl vs transcript_full.jsonl reading, and how the final in-progress vs finalized turn is captured and rendered). Deliver a surgical, deterministic implementation plan to make thread.md reliably render the latest agent response immediately upon turn completion.
+User Request: Diagnose and fix why thread.md is not showing the agent's final completed turn response. Specifically analyze watch_transcripts.py and gen_conversation_md.py. Provide a deterministic implementation plan.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -79,17 +79,40 @@ File: 2026-06-25_15-36_openrouter-cost-tracking.md
 - OpenRouter API: `/credits` returns `total_usage` and `total_credits`; `/activity` with `limit=N` returns per-generation metadata but requires a management key.
 - State file `.last_usage` lives alongside the script, in `.gitignore`-friendly territory.
 
-File: 2026-06-25_15-55_replace-ambient-music-system.md
+File: 2026-06-25_16-12_shift-enter-newline.md
+- No `.pbxproj` changes needed — the project uses `PBXFileSystemSynchronizedRootGroup` which auto-discovers new files.
 
 ## What Didn't Work / Known Issues
-- Firefox's AudioContext autoplay policy may require user gesture — the existing toggle-button + M key pattern handles this via `toggle()`
-- The `shockwave` boolean threshold (`shockwaveEnergy > 3`) could be tuned — may fire too frequently at high mouse speeds
+- N/A
 
 ## Architecture Notes
-- Web Audio API node lifetime: oscillator nodes created once at `initAudioContext()`, never stopped/restarted — frequencies changed via `frequency.linearRampToValueAtTime`
-- Feedback delay reverb is a well-known trick: 3 delays with staggered times and sub-unity feedback feeding into each other creates a rich diffuse tail
-- `exponentialRampToValueAtTime` must target a non-zero value (used 0.001 as the decay floor)
+- SwiftTerm's `MacTerminalView` handles `insertNewline:` in `doCommand(by:)` which sends `cmdRet` (`[13]` = `\r`) to the child process.
+- Claude Code uses `\r` as "submit" and `\n` as "newline in prompt" — this is standard readline/line discipline behavior.
+- The `ClaudeTerminalView` intercepts before `interpretKeyEvents([event])` is called, so the AppKit text system never routes it to `insertNewline:`.
 
+
+--- Recent Thread History Summary ---
+ite(json.dumps({'type': 'USER_INPUT', 'content': '<USER_REQUEST>hi</USER_REQUEST>'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Para 1'}) + '\n')
+            f.write(json.dumps({'type': 'PLANNER_RESPONSE', 'content': 'Para 2'}) + '\n')
+        
+        items = parse_exchanges(transcript)
+        ex = [i for i in items if i['type'] == 'exchange'][0]
+        self.assertEqual(ex['agent_content'], 'Para 1\n\nPara 2')
+
+    def test_subagent_thought_rendering(self):
+        # Issue 3: Sub-agent thoughts rendered
+        from gen_conversation_md import make_exchange_block_with_progress
+        base = "#### 🤖 Agent\n\nFinal output"
+        progress = "🔄 **Subagent Activity**: Running test"
+        block = make_exchange_block_with_progress([], "Final output", "", progress)
+        self.assertIn(progress, block)
+        self.assertIn("🔄 **Subagent Active**: 🔄 **Subagent Activity**: Running test", block)
+
+if __name__ == '__main__':
+    unittest.main()
+
+```
 
 
 Please act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
