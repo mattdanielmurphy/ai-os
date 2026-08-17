@@ -176,9 +176,11 @@
                         if (parsed.answer && typeof parsed.answer === 'string' && parsed.answer.length > answer.length) {
                             answer = parsed.answer;
                         }
-                        if (parsed.status === 'completed' || parsed.status === 'success' || parsed.step_type === 'final' || parsed.final === true || parsed.text_completed === true) {
-                            isCompleted = true;
-                            break;
+                        if (answer && answer.length > 0) {
+                            if (parsed.final === true || parsed.text_completed === true || (parsed.status === 'completed' && !parsed.step_type)) {
+                                isCompleted = true;
+                                break;
+                            }
                         }
                     } catch (e) { }
                 }
