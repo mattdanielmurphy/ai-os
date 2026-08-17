@@ -1,4 +1,17 @@
-User Request: User is returning to university after ~10 years away. Current situation: enrolled in 2 courses (CMPUT 174 and MUSIC 102). Context file: /Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/Financial/university-financial-brief.html. The brief recommends 3 courses/term for financial aid / timeline reasons. User also wants to get a part-time job, specifically eyeing restaurant serving for quick cash/tips, social interaction, and high earning potential, but finds job hunting and restaurant work intimidating. User proposes spending ~k on targeted therapy/life coaching/job-coaching right now to dramatically accelerate getting hired (e.g. 4 months earlier = net positive ROI), while keeping courseload at 2 classes for Term 1 to ensure a smooth academic transition, then stepping up to 3 courses in Term 2. Analyze this strategy, evaluate pros/cons/risks, structure a step-by-step roadmap to set Matt up for success in both school and landing the restaurant job, address the trade-off of 2 vs 3 courses (full-time status vs easing in), and recommend specific tactical next steps.
+User Request: Context document: /Users/matt/Library/Mobile%20Documents/iCloud~md~obsidian/Documents/Personal/Financial/university-financial-brief.html
+
+User is returning to university after ~10 years away.
+Current situation:
+- Enrolled in 2 courses to start (CMPUT 174 and MUSIC 102 - World Music).
+- Goal: Smooth transition back into academic life.
+- Conflict/Tension: The university financial brief indicates 3 courses/term is needed for full-time/financial aid optimization and program pace.
+- Job Situation: User wants to get a part-time job, specifically eyeing restaurant serving (for quick tips/cash, leveraging good bedside manner/attention to detail, social benefits), but finds job hunting and restaurant work intimidating.
+- Proposed Strategy: Keep courseload at 2 classes for Term 1, spend ~,000 on a targeted therapist / life coach / job coach right now to dramatically accelerate landing the restaurant job (gaining 4 months of income that easily offsets the k investment), and then increase courseload to 3 classes in Term 2 once stabilized.
+
+Analyze this strategy in depth:
+1. Evaluate the financial and academic trade-offs (2 vs 3 courses, financial aid implications, coaching ROI).
+2. Detail how to set Matt up for success with actionable milestones.
+3. Provide concrete recommendations on hiring the right coach/therapist vs. alternative execution tactics.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
