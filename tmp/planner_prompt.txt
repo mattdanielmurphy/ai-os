@@ -1,4 +1,4 @@
-User Request: test query
+User Request: I'd like to be able to edit the javascript injected into the webview and immediately see results without having to build to my iPhone or the simulator because it takes WAY too long to see changes that way. But I'd like to ensure that the view I see is going to look exactly how it will look on the iphone, with the same dimensions and scaling etc.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -55,6 +55,18 @@ IMPORTANT: You have access to my authenticated GitHub account via your GitHub co
 
 --- Relevant Agent Logs ---
 
+File: 2026-06-24_23-14_level-2-global-harness.md
+- The `bin/triage` creation from the previous session step was already executable and correctly positioned.
+
+## What Didn't Work / Known Issues
+- `pnpm link --global` without a directory argument fails (`ERR_PNPM_LINK_BAD_PARAMS`). The correct invocation is `pnpm link --global .` — documented in `FEATURES.md`.
+- The `ai-os` package does not appear in `pnpm ls --global` output (likely because it's linked from a local path rather than installed from a registry). The symlink exists and resolves correctly despite this display quirk.
+
+## Architecture Notes
+- `bin/ai-os` uses `exec claude "$@"` (not subprocess) to hand off PID and signals cleanly to the native Claude Code process.
+- The home-directory symlink guardrail only fires when `pwd` equals `$HOME`, preventing accidental symlink creation in subdirectories.
+- Using `"packageManager": "pnpm@11.2.2"` in `package.json` enforces pnpm via Corepack (`pnpm@11.2.2` matches the locally installed version).
+
 File: 2026-06-25_15-36_openrouter-cost-tracking.md
 - No external pip dependencies needed.
 - The `/credits` endpoint works with a standard API key (no management key required, unlike `/activity`).
@@ -67,28 +79,16 @@ File: 2026-06-25_15-36_openrouter-cost-tracking.md
 - OpenRouter API: `/credits` returns `total_usage` and `total_credits`; `/activity` with `limit=N` returns per-generation metadata but requires a management key.
 - State file `.last_usage` lives alongside the script, in `.gitignore`-friendly territory.
 
-File: 2026-06-27_00-31_relocate-engine-toggle-and-fix-clipping.md
-## What Worked
-- Relocating the toggle structure was successful and `src/main.ts` DOM query selectors target `input[name="engine"]` which matches the relocated elements automatically.
-- Adjusting `#terminal-container` classes correctly prevents visual text drawing rows underneath the input text area.
+File: 2026-06-25_15-55_replace-ambient-music-system.md
 
 ## What Didn't Work / Known Issues
-- None.
+- Firefox's AudioContext autoplay policy may require user gesture — the existing toggle-button + M key pattern handles this via `toggle()`
+- The `shockwave` boolean threshold (`shockwaveEnergy > 3`) could be tuned — may fire too frequently at high mouse speeds
 
 ## Architecture Notes
-- The terminal fit addon dynamically sizes xterm.js columns and rows to fill `#terminal-container`. Adding bottom padding (`pb-6`) limits the visible dimension calculation of the terminal container, keeping the rows constrained and clear of the bottom prompt input textarea.
-
-
-File: 2026-06-27_01-52_sidebar-project-tabs-and-terminal-mode.md
-* Project sidebar automatically updates recency sorts on localStorage and styles tabs with distinct, randomly-assigned pastel colors.
-* Command mode intercepts and forwards direct raw PTY writes correctly when typing '!'.
-
-## What Didn't Work / Known Issues
-* None detected.
-
-## Architecture Notes
-* In-memory console buffer `terminalBuffers` avoids re-reading logs recursively while maintaining high UI performance.
-* Setting `$PWD` dynamically via Tauri's `portable_pty` CWD spawning allows shells to open immediately in their respective project directories.
+- Web Audio API node lifetime: oscillator nodes created once at `initAudioContext()`, never stopped/restarted — frequencies changed via `frequency.linearRampToValueAtTime`
+- Feedback delay reverb is a well-known trick: 3 delays with staggered times and sub-unity feedback feeding into each other creates a rich diffuse tail
+- `exponentialRampToValueAtTime` must target a non-zero value (used 0.001 as the decay floor)
 
 
 
