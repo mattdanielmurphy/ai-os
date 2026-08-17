@@ -16,9 +16,14 @@ import subprocess
 import time
 import json
 import re
-import time
 from pathlib import Path
 from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes, extract_workspace_root
+
+try:
+    from transcript_evaluator import evaluate_turn, run_batch_synthesis_check
+except ImportError:
+    evaluate_turn = None
+    run_batch_synthesis_check = None
 
 
 
@@ -211,6 +216,21 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             # Auto-commit check (Trigger only once when the entire turn is completed)
             transcript_file = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
             if transcript_file.exists() and is_turn_completed(transcript_file):
+                # Run background micro-evaluator
+                if evaluate_turn:
+                    try:
+                        with open(transcript_file, 'r', encoding='utf-8', errors='ignore') as tf:
+                            all_lines = tf.readlines()
+                            turn_idx = sum(1 for l in all_lines if '"type":"USER_INPUT"' in l)
+                            for l in reversed(all_lines):
+                                if '"type":"PLANNER_RESPONSE"' in l:
+                                    evaluate_turn(json.loads(l), render_id, turn_idx)
+                                    if run_batch_synthesis_check:
+                                        run_batch_synthesis_check(render_id, turn_idx)
+                                    break
+                    except Exception as e:
+                        print(f"Evaluation error: {e}")
+
                 workspace_root = extract_workspace_root(transcript_path=transcript_file)
                 
                 # Check for cooldown per repository
