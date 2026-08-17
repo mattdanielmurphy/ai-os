@@ -126,15 +126,49 @@ DO NOT provide full code implementations. Focus on structural details, signature
 }
 
 async function pingAios(baseUrl) {
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 1000);
-        const res = await fetch(`${baseUrl}/v1/models`, { signal: controller.signal }).catch(() => null);
-        clearTimeout(timeout);
-        return res && res.ok;
-    } catch {
-        return false;
-    }
+    return new Promise((resolve) => {
+        const url = `${baseUrl}/v1/models`;
+        const req = require('http').get(url, (res) => {
+            resolve(res.statusCode === 200);
+        });
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+        req.setTimeout(2000);
+    });
+}
+
+function sendAiosRequest(url, payload, timeoutSec) {
+    return new Promise((resolve, reject) => {
+        const u = new URL(url);
+        const data = JSON.stringify(payload);
+        const options = {
+            hostname: u.hostname,
+            port: u.port,
+            path: u.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data),
+            },
+            timeout: timeoutSec * 1000,
+        };
+
+        const req = require('http').request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try { resolve(JSON.parse(body)); } catch (e) { resolve(body); }
+                } else {
+                    reject(new Error(`Server returned ${res.statusCode}: ${body}`));
+                }
+            });
+        });
+        req.on('error', reject);
+        req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
+        req.write(data);
+        req.end();
+    });
 }
 
 async function main() {
@@ -252,18 +286,7 @@ async function main() {
         if (uiOnly) {
             const endpoint = baseProvider === 'perplexity' ? `${baseUrl}/api/perplexity/prompt` : `${baseUrl}/api/gemini/prompt`;
             console.error(`[query_aios] Dispatching UI prompt to ${provider} window...`);
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: message, model: resolvedModel, session_id: sessionId }),
-                signal: AbortSignal.timeout(timeoutSec * 1000)
-            });
-
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(`AI-OS server returned ${res.status}: ${text}`);
-            }
-
+            await sendAiosRequest(endpoint, { prompt: message, model: resolvedModel, session_id: sessionId }, timeoutSec);
             console.error(`[query_aios] Prompt successfully dispatched to ${provider} webview.`);
             process.exit(0);
         }
@@ -272,24 +295,12 @@ async function main() {
             ? `${baseUrl}/api/gemini/query`
             : `${baseUrl}/api/perplexity/query`;
 
-        const queryRes = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt: message,
-                model: resolvedModel,
-                session_id: sessionId,
-                file_path: filePath ? path.resolve(filePath) : null,
-            }),
-            signal: AbortSignal.timeout(timeoutSec * 1000)
-        });
-
-        if (!queryRes.ok) {
-            const errText = await queryRes.text();
-            throw new Error(`AI-OS server returned ${queryRes.status}: ${errText}`);
-        }
-
-        const data = await queryRes.json();
+        const data = await sendAiosRequest(endpoint, {
+            prompt: message,
+            model: resolvedModel,
+            session_id: sessionId,
+            file_path: filePath ? path.resolve(filePath) : null,
+        }, timeoutSec);
         const answer = data.response || '';
 
         if (!answer) {
