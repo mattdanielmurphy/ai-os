@@ -32,11 +32,11 @@ const PPLX_MODEL_MAP = {
     'auto': 'auto',
 };
 
-function extractAndInlineReferencedFiles(text) {
+const MAX_PROMPT_CHARS = 35000; // Perplexity character limit is ~40k; 35k ensures safe ceiling including formatting
+
+function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHARS) {
     if (!text) return { inlinedText: '', attachedFilePath: null };
 
-    // Matches absolute paths (/Users/..., /tmp/..., etc.) or file:// URLs or relative paths mentioned in text
-    // Matches patterns like /Users/matt/... or file:///Users/matt/... or relative paths with extensions
     const pathRegex = /(?:file:\/\/)?(\/(?:Users|Volumes|private|tmp|var)[^\s"'`<>]+)/g;
     const matches = new Set();
     let m;
@@ -45,26 +45,30 @@ function extractAndInlineReferencedFiles(text) {
         try {
             rawPath = decodeURIComponent(rawPath);
         } catch (e) {}
-        // Clean trailing punctuation
         rawPath = rawPath.replace(/[.,:;!?\)]+$/, '');
         matches.add(rawPath);
     }
 
     let inlinedSections = [];
     let candidateAttachment = null;
-    const MAX_INLINE_BYTES = 500 * 1024; // 500KB per file
+    let currentInlinedChars = 0;
 
     for (const filePath of matches) {
         try {
             if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
                 const stat = fs.statSync(filePath);
-                if (stat.size <= MAX_INLINE_BYTES) {
-                    const content = fs.readFileSync(filePath, 'utf8');
-                    inlinedSections.push(`\n--- Referenced File Context: ${filePath} ---\n${content}\n--- End of ${path.basename(filePath)} ---\n`);
-                    console.error(`[query_aios] 📎 Automatically inlined referenced file: ${filePath} (${stat.size} bytes)`);
+                const content = fs.readFileSync(filePath, 'utf8');
+                const fileHeader = `\n--- Referenced File Context: ${filePath} ---\n`;
+                const fileFooter = `\n--- End of ${path.basename(filePath)} ---\n`;
+                const formattedSection = `${fileHeader}${content}${fileFooter}`;
+
+                if (currentInlinedChars + formattedSection.length <= availableBudget) {
+                    inlinedSections.push(formattedSection);
+                    currentInlinedChars += formattedSection.length;
+                    console.error(`[query_aios] 📎 Automatically inlined referenced file: ${filePath} (${stat.size} bytes, fits in prompt budget)`);
                 } else if (!candidateAttachment) {
                     candidateAttachment = filePath;
-                    console.error(`[query_aios] ⚠️ File ${filePath} is too large to inline (${stat.size} bytes). Selected as attachment.`);
+                    console.error(`[query_aios] ⚠️ File ${filePath} (${stat.size} bytes / ${content.length} chars) exceeds available prompt budget (${availableBudget} chars). Selected as attachment.`);
                 }
             }
         } catch (e) {
@@ -93,10 +97,46 @@ function buildPlannerPrompt(userRequest, imageDesc = null) {
         // Non-git or error
     }
 
-    // 0. Auto-resolve referenced files in userRequest
-    const { inlinedText } = extractAndInlineReferencedFiles(userRequest);
+    // 1. Base instructions template length calculation
+    const baseInstructions = `\n\nPlease act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
 
-    // 1. Keyword match agent logs
+The plan MUST include:
+1. Architectural Strategy: High-level overview of the proposed approach.
+2. Data Structures & State Management: Define new data structures or changes to existing state.
+3. API/Interface Contracts: Define function signatures, classes, and expected interface contracts.
+4. Logic Flow & Algorithms: Step-by-step pseudo-code or logic description for the main execution flow.
+5. Error Handling & Edge Cases: Identify potential failure points and mitigation strategies.
+6. Implementation Steps: A list of specific files to modify and the required changes in each, ordered for execution.
+
+DO NOT provide full code implementations. Focus on structural details, signatures, and clear instructions so that downstream agents can implement the changes efficiently without guessing. Ensure all decisions are concrete and leave no gaps in requirements.`;
+
+    const imageContext = imageDesc ? `\n--- Visual Context & Image Description ---\n${imageDesc}\n` : '';
+
+    // 2. AG_CONTEXT.md
+    let agContextStr = '';
+    const agPaths = [path.resolve('./AG_CONTEXT.md'), gitRoot ? path.join(gitRoot, 'AG_CONTEXT.md') : null].filter(Boolean);
+    for (const p of agPaths) {
+        if (fs.existsSync(p)) {
+            try {
+                agContextStr = '\n--- AG_CONTEXT.md ---\n' + fs.readFileSync(p, 'utf8') + '\n';
+                break;
+            } catch (e) {}
+        }
+    }
+
+    // 3. GitHub Connector info
+    let repoInfo = '';
+    if (repoName) {
+        repoInfo = (
+            `\n--- GitHub Connector Context ---\n` +
+            `Target Private Repository: '${repoName}'\n` +
+            `IMPORTANT: You have access to my authenticated GitHub account via your GitHub connector. ` +
+            `Please use your GitHub connector to directly read, search, and inspect the codebase, files, and documentation ` +
+            `in my repository '${repoName}' (including private files and configs) as needed to construct this plan.\n`
+        );
+    }
+
+    // 4. Keyword match agent logs
     let logContext = '';
     const logDirs = [path.resolve('./agent-logs'), gitRoot ? path.join(gitRoot, 'agent-logs') : null].filter(Boolean);
     const keywords = (userRequest.toLowerCase().match(/\w+/g) || []).filter(w => w.length > 3);
@@ -133,33 +173,7 @@ function buildPlannerPrompt(userRequest, imageDesc = null) {
         }
     }
 
-    // 2. AG_CONTEXT.md
-    let agContextStr = '';
-    const agPaths = [path.resolve('./AG_CONTEXT.md'), gitRoot ? path.join(gitRoot, 'AG_CONTEXT.md') : null].filter(Boolean);
-    for (const p of agPaths) {
-        if (fs.existsSync(p)) {
-            try {
-                agContextStr = '\n--- AG_CONTEXT.md ---\n' + fs.readFileSync(p, 'utf8') + '\n';
-                break;
-            } catch (e) {}
-        }
-    }
-
-    // 3. GitHub Connector info
-    let repoInfo = '';
-    if (repoName) {
-        repoInfo = (
-            `\n--- GitHub Connector Context ---\n` +
-            `Target Private Repository: '${repoName}'\n` +
-            `IMPORTANT: You have access to my authenticated GitHub account via your GitHub connector. ` +
-            `Please use your GitHub connector to directly read, search, and inspect the codebase, files, and documentation ` +
-            `in my repository '${repoName}' (including private files and configs) as needed to construct this plan.\n`
-        );
-    }
-
-    const imageContext = imageDesc ? `\n--- Visual Context & Image Description ---\n${imageDesc}\n` : '';
-
-    // 4. Thread History Summary
+    // 5. Thread History Summary
     let historyContext = '';
     const tmpDir = path.resolve('./tmp');
     if (fs.existsSync(tmpDir)) {
@@ -173,20 +187,20 @@ function buildPlannerPrompt(userRequest, imageDesc = null) {
         } catch (e) {}
     }
 
-    return `User Request: ${userRequest}
-${inlinedText}${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}
+    // Calculate fixed overhead chars
+    const fixedOverhead = userRequest.length + imageContext.length + agContextStr.length + repoInfo.length + logContext.length + historyContext.length + baseInstructions.length;
+    const remainingBudget = Math.max(0, MAX_PROMPT_CHARS - fixedOverhead);
 
-Please act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
+    // Auto-resolve referenced files in userRequest respecting remaining budget
+    const { inlinedText, attachedFilePath } = extractAndInlineReferencedFiles(userRequest, remainingBudget);
 
-The plan MUST include:
-1. Architectural Strategy: High-level overview of the proposed approach.
-2. Data Structures & State Management: Define new data structures or changes to existing state.
-3. API/Interface Contracts: Define function signatures, classes, and expected interface contracts.
-4. Logic Flow & Algorithms: Step-by-step pseudo-code or logic description for the main execution flow.
-5. Error Handling & Edge Cases: Identify potential failure points and mitigation strategies.
-6. Implementation Steps: A list of specific files to modify and the required changes in each, ordered for execution.
+    const fullPrompt = `User Request: ${userRequest}
+${inlinedText}${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}${baseInstructions}`;
 
-DO NOT provide full code implementations. Focus on structural details, signatures, and clear instructions so that downstream agents can implement the changes efficiently without guessing. Ensure all decisions are concrete and leave no gaps in requirements.`;
+    return {
+        prompt: fullPrompt,
+        attachedFilePath: attachedFilePath
+    };
 }
 
 async function pingAios(baseUrl) {
@@ -304,11 +318,15 @@ async function main() {
         if (!timeoutSec) timeoutSec = defaultTimeout;
         if (!outputPath) outputPath = './tmp/planner_output.txt';
         if (message) {
-            const generatedPrompt = buildPlannerPrompt(message, imageDesc);
+            const { prompt: generatedPrompt, attachedFilePath } = buildPlannerPrompt(message, imageDesc);
             fs.mkdirSync('./tmp', { recursive: true });
             fs.writeFileSync('./tmp/planner_prompt.txt', generatedPrompt, 'utf8');
-            console.error(`[query_aios] Planner prompt generated at ./tmp/planner_prompt.txt`);
+            console.error(`[query_aios] Planner prompt generated at ./tmp/planner_prompt.txt (${generatedPrompt.length} chars)`);
             message = generatedPrompt;
+            if (!filePath && attachedFilePath) {
+                filePath = attachedFilePath;
+                console.error(`[query_aios] 📎 Attached file parameter set: ${filePath}`);
+            }
         }
     } else {
         if (!timeoutSec) timeoutSec = defaultTimeout;
