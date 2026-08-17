@@ -510,7 +510,7 @@ async fn handle_perplexity_query(
     };
 
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
-    let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "claude50sonnetthinking".to_string())).unwrap_or_default();
+    let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "grok46medium".to_string())).unwrap_or_default();
     let js_session = match payload.session_id {
         Some(s) => serde_json::to_string(&s).unwrap_or_else(|_| "null".to_string()),
         None => "null".to_string(),

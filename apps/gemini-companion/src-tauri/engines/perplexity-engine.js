@@ -285,13 +285,13 @@
         var sessionToken = _getSessionToken();
         var frontendUuid = _uuid();
 
-        var modelPref = 'claude50sonnetthinking';
+        var modelPref = 'grok46medium';
         if (engine === 'sonar' || engine === 'turbo') {
             modelPref = 'turbo';
+        } else if (engine === 'grok' || engine === 'grok-2' || engine === 'grok46medium' || engine === 'grok-thinking' || engine === 'grok_thinking') {
+            modelPref = 'grok46medium';
         } else if (engine === 'sonnet' || engine === 'claude50sonnetthinking') {
             modelPref = 'claude50sonnetthinking';
-        } else if (engine === 'grok' || engine === 'grok-2' || engine === 'grok46medium') {
-            modelPref = 'grok46medium';
         } else if (engine === 'kimi' || engine === 'k3' || engine === 'kimik3thinking') {
             modelPref = 'kimik3thinking';
         } else if (engine === 'gpt' || engine === 'gpt5' || engine === 'terra' || engine === 'gpt56_terra_thinking') {

@@ -5,12 +5,14 @@ import crypto from 'crypto';
 import { execSync } from 'child_process';
 
 const PPLX_MODEL_MAP = {
+    'grok': 'grok46medium',
+    'grok-thinking': 'grok46medium',
+    'grok_thinking': 'grok46medium',
+    'grok-2': 'grok46medium',
+    'grok46medium': 'grok46medium',
     'sonnet': 'claude50sonnetthinking',
     'sonar': 'turbo',
     'turbo': 'turbo',
-    'grok': 'grok46medium',
-    'grok-2': 'grok46medium',
-    'grok46medium': 'grok46medium',
     'kimi': 'kimik3thinking',
     'k3': 'kimik3thinking',
     'kimik3thinking': 'kimik3thinking',
@@ -126,7 +128,7 @@ DO NOT provide full code implementations. Focus on structural details, signature
 async function main() {
     const args = process.argv.slice(2);
     let provider = 'perplexity';
-    let rawModel = 'sonnet';
+    let rawModel = 'grok';
     let message = '';
     let inputFile = null;
     let outputPath = null;
@@ -202,13 +204,13 @@ async function main() {
     let resolvedModel = null;
     const baseProvider = (provider || '').split(':')[0].toLowerCase();
     if (baseProvider === 'perplexity') {
-        const requestedModel = (rawModel || 'sonnet').toLowerCase();
+        const requestedModel = (rawModel || 'grok').toLowerCase();
         resolvedModel = PPLX_MODEL_MAP[requestedModel] || requestedModel;
     } else {
         resolvedModel = rawModel || null;
     }
 
-    const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'sonnet' : 'default');
+    const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'grok' : 'default');
     console.error(`[query_aios] Querying ${provider} (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s, plan: ${isPlanMode}, recover: ${recoverMode})...`);
 
     const baseUrl = 'http://127.0.0.1:3031';
