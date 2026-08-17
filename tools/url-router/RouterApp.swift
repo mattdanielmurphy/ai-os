@@ -10,6 +10,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    private func openInRealBrowser(urls: [URL]) {
+        guard !urls.isEmpty else {
+            exit(0)
+        }
+
+        if let chromeURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            NSWorkspace.shared.open(urls, withApplicationAt: chromeURL, configuration: configuration) { _, _ in
+                exit(0)
+            }
+        } else {
+            for url in urls {
+                NSWorkspace.shared.open(url)
+            }
+            exit(0)
+        }
+    }
+
+    func application(_ sender: NSApplication, openFiles filenames: [String]) {
+        let urls = filenames.map { URL(fileURLWithPath: $0) }
+        openInRealBrowser(urls: urls)
+    }
+
+    func application(_ sender: NSApplication, openFile filename: String) -> Bool {
+        let url = URL(fileURLWithPath: filename)
+        openInRealBrowser(urls: [url])
+        return true
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        openInRealBrowser(urls: urls)
+    }
+
     @objc func handleGetURL(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         guard let urlString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue else {
             exit(0)
@@ -50,7 +84,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             exit(0)
         } else {
             var targetURLString = urlString
-            if !targetURLString.lowercased().hasPrefix("http://") && !targetURLString.lowercased().hasPrefix("https://") {
+            if targetURLString.lowercased().hasPrefix("file://") {
+                if let fileURL = URL(string: targetURLString) {
+                    openInRealBrowser(urls: [fileURL])
+                    return
+                }
+            } else if !targetURLString.lowercased().hasPrefix("http://") && !targetURLString.lowercased().hasPrefix("https://") {
                 targetURLString = "https://" + targetURLString
             }
             
@@ -58,16 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 exit(0)
             }
             
-            if let chromeURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") {
-                let configuration = NSWorkspace.OpenConfiguration()
-                configuration.activates = true
-                NSWorkspace.shared.open([finalURL], withApplicationAt: chromeURL, configuration: configuration) { _, _ in
-                    exit(0)
-                }
-            } else {
-                NSWorkspace.shared.open(finalURL)
-                exit(0)
-            }
+            openInRealBrowser(urls: [finalURL])
         }
     }
 }
