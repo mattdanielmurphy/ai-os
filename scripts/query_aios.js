@@ -32,6 +32,52 @@ const PPLX_MODEL_MAP = {
     'auto': 'auto',
 };
 
+function extractAndInlineReferencedFiles(text) {
+    if (!text) return { inlinedText: '', attachedFilePath: null };
+
+    // Matches absolute paths (/Users/..., /tmp/..., etc.) or file:// URLs or relative paths mentioned in text
+    // Matches patterns like /Users/matt/... or file:///Users/matt/... or relative paths with extensions
+    const pathRegex = /(?:file:\/\/)?(\/(?:Users|Volumes|private|tmp|var)[^\s"'`<>]+)/g;
+    const matches = new Set();
+    let m;
+    while ((m = pathRegex.exec(text)) !== null) {
+        let rawPath = m[1];
+        try {
+            rawPath = decodeURIComponent(rawPath);
+        } catch (e) {}
+        // Clean trailing punctuation
+        rawPath = rawPath.replace(/[.,:;!?\)]+$/, '');
+        matches.add(rawPath);
+    }
+
+    let inlinedSections = [];
+    let candidateAttachment = null;
+    const MAX_INLINE_BYTES = 500 * 1024; // 500KB per file
+
+    for (const filePath of matches) {
+        try {
+            if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+                const stat = fs.statSync(filePath);
+                if (stat.size <= MAX_INLINE_BYTES) {
+                    const content = fs.readFileSync(filePath, 'utf8');
+                    inlinedSections.push(`\n--- Referenced File Context: ${filePath} ---\n${content}\n--- End of ${path.basename(filePath)} ---\n`);
+                    console.error(`[query_aios] 📎 Automatically inlined referenced file: ${filePath} (${stat.size} bytes)`);
+                } else if (!candidateAttachment) {
+                    candidateAttachment = filePath;
+                    console.error(`[query_aios] ⚠️ File ${filePath} is too large to inline (${stat.size} bytes). Selected as attachment.`);
+                }
+            }
+        } catch (e) {
+            // Ignore unreadable or non-existent file paths
+        }
+    }
+
+    return {
+        inlinedText: inlinedSections.join('\n'),
+        attachedFilePath: candidateAttachment
+    };
+}
+
 function buildPlannerPrompt(userRequest, imageDesc = null) {
     let gitRoot = null;
     let repoName = null;
@@ -46,6 +92,9 @@ function buildPlannerPrompt(userRequest, imageDesc = null) {
     } catch (e) {
         // Non-git or error
     }
+
+    // 0. Auto-resolve referenced files in userRequest
+    const { inlinedText } = extractAndInlineReferencedFiles(userRequest);
 
     // 1. Keyword match agent logs
     let logContext = '';
@@ -125,7 +174,7 @@ function buildPlannerPrompt(userRequest, imageDesc = null) {
     }
 
     return `User Request: ${userRequest}
-${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}
+${inlinedText}${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}
 
 Please act as a senior architect and systems planner. Analyze the request and output a detailed, actionable implementation plan for the orchestrator.
 
@@ -267,6 +316,16 @@ async function main() {
 
     if (inputFile && fs.existsSync(inputFile)) {
         message = fs.readFileSync(inputFile, 'utf8');
+    }
+
+    if (message && !isPlanMode) {
+        const { inlinedText, attachedFilePath } = extractAndInlineReferencedFiles(message);
+        if (inlinedText) {
+            message = `${message}\n${inlinedText}`;
+        }
+        if (!filePath && attachedFilePath) {
+            filePath = attachedFilePath;
+        }
     }
 
     if (!message && !recoverMode) {
