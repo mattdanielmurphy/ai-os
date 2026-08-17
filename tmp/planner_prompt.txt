@@ -1,4 +1,4 @@
-User Request: Add a health check route /api/health to the server
+User Request: My dad wants help getting a job. Please find the gemini thread where we discussed this idea in pretty great detail and came up with some good ideas, and create some docs in this folder. He's applying to the following positions: Construction Manager, Construction Superintendent, Quality Advisor, Project Manager, QA/QC Coordinator, Project Coordinator, Major Project Lead, Electrical Superintendent, Project Advisor, QA Manager, Electrical Project Manager. First, he wanted me to just go over his resume and improve it. It's probably not a bad resume but it's also probably not perfectly ideal either. Everything can always be improved. First, find all relevant gemini threads, and save them here as md files (just the conversations, not the tool calls and thinking etc). Then create a gh repo, push all, then message gemini flash on perplexity to consider the resume, and then in a separate parallel call, get an implementation plan for quick first steps to try and help him. i think the first thing we want to do is figure out how to send messages to his linkedin contacts and keep track of who was last spoken to when, when we should follow up, etc. But we want something that's simple, that works really well, so we can get started today or tomorrow rather than trying to build the 'perfect' system that takes me a week to get reliable enough to trust it. Resume file: /Users/matt/projects/job-applier/Darryl Murphy CV - Aug 12, 26 (Construction Superintendent - Brunel).docx
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -55,6 +55,18 @@ IMPORTANT: You have access to my authenticated GitHub account via your GitHub co
 
 --- Relevant Agent Logs ---
 
+File: 2026-06-24_23-14_level-2-global-harness.md
+- The `bin/triage` creation from the previous session step was already executable and correctly positioned.
+
+## What Didn't Work / Known Issues
+- `pnpm link --global` without a directory argument fails (`ERR_PNPM_LINK_BAD_PARAMS`). The correct invocation is `pnpm link --global .` — documented in `FEATURES.md`.
+- The `ai-os` package does not appear in `pnpm ls --global` output (likely because it's linked from a local path rather than installed from a registry). The symlink exists and resolves correctly despite this display quirk.
+
+## Architecture Notes
+- `bin/ai-os` uses `exec claude "$@"` (not subprocess) to hand off PID and signals cleanly to the native Claude Code process.
+- The home-directory symlink guardrail only fires when `pwd` equals `$HOME`, preventing accidental symlink creation in subdirectories.
+- Using `"packageManager": "pnpm@11.2.2"` in `package.json` enforces pnpm via Corepack (`pnpm@11.2.2` matches the locally installed version).
+
 File: 2026-06-25_15-36_openrouter-cost-tracking.md
 - No external pip dependencies needed.
 - The `/credits` endpoint works with a standard API key (no management key required, unlike `/activity`).
@@ -67,28 +79,16 @@ File: 2026-06-25_15-36_openrouter-cost-tracking.md
 - OpenRouter API: `/credits` returns `total_usage` and `total_credits`; `/activity` with `limit=N` returns per-generation metadata but requires a management key.
 - State file `.last_usage` lives alongside the script, in `.gitignore`-friendly territory.
 
-File: 2026-06-25_16-12_shift-enter-newline.md
-- No `.pbxproj` changes needed — the project uses `PBXFileSystemSynchronizedRootGroup` which auto-discovers new files.
+File: 2026-06-25_15-55_replace-ambient-music-system.md
 
 ## What Didn't Work / Known Issues
-- N/A
+- Firefox's AudioContext autoplay policy may require user gesture — the existing toggle-button + M key pattern handles this via `toggle()`
+- The `shockwave` boolean threshold (`shockwaveEnergy > 3`) could be tuned — may fire too frequently at high mouse speeds
 
 ## Architecture Notes
-- SwiftTerm's `MacTerminalView` handles `insertNewline:` in `doCommand(by:)` which sends `cmdRet` (`[13]` = `\r`) to the child process.
-- Claude Code uses `\r` as "submit" and `\n` as "newline in prompt" — this is standard readline/line discipline behavior.
-- The `ClaudeTerminalView` intercepts before `interpretKeyEvents([event])` is called, so the AppKit text system never routes it to `insertNewline:`.
-
-
-File: 2026-06-26_17-11_phase-2-anchoring-toggle.md
-* `FEATURES.md`:
-  * Appended Phase 1 & 2 details to the features and operations ledger.
-
-## What Worked
-* Vite builds successfully. CSS styles are compiled properly.
-* Input routing correctly checks selection and formats string before calling PTY.
-
-## What Didn't Work / Known Issues
-* None observed. Ready for verification of the Tauri dev setup with the new configuration.
+- Web Audio API node lifetime: oscillator nodes created once at `initAudioContext()`, never stopped/restarted — frequencies changed via `frequency.linearRampToValueAtTime`
+- Feedback delay reverb is a well-known trick: 3 delays with staggered times and sub-unity feedback feeding into each other creates a rich diffuse tail
+- `exponentialRampToValueAtTime` must target a non-zero value (used 0.001 as the decay floor)
 
 
 --- Recent Thread History Summary ---
