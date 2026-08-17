@@ -531,63 +531,14 @@ async fn handle_perplexity_query(
             const fileMime = {};
 
             function sendDone(resp, err) {{
-                const msgObj = {{
-                    query_id: qId,
-                    queryId: qId,
-                    response: resp,
-                    errMsg: err,
-                    err_msg: err,
-                    error: err
-                }};
-
-                try {{
-                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
-                    ws.onopen = function() {{
-                        ws.send(JSON.stringify(msgObj));
-                        setTimeout(function() {{ ws.close(); }}, 500);
-                    }};
-                }} catch(e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.event) {{
-                        window.__TAURI__.event.emit('query_callback_event', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
-                            cmd: 'query_callback',
-                            callback: 0,
-                            error: 0,
-                            query_id: qId,
-                            queryId: qId,
-                            response: resp,
-                            errMsg: err,
-                            err_msg: err
-                        }}));
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ query_id: qId, response: resp, error: err }})
-                    }}).catch(function() {{}});
-                }} catch (e) {{}}
+                function toB64(str) {{
+                    return btoa(unescape(encodeURIComponent(str || '')));
+                }}
+                if (err) {{
+                    document.title = 'AIOS_ERROR_START:' + qId + ':' + toB64(err) + ':AIOS_ERROR_END';
+                }} else {{
+                    document.title = 'AIOS_RESULT_START:' + qId + ':' + toB64(resp || '') + ':AIOS_RESULT_END';
+                }}
             }}
 
             async function run() {{
@@ -622,24 +573,43 @@ async fn handle_perplexity_query(
 
     let _ = win.eval(&eval_script);
 
-    match tokio::time::timeout(tokio::time::Duration::from_secs(600), rx).await {
-        Ok(Ok(Ok(response_text))) => {
-            Ok(Json(QueryResponse {
-                response: response_text,
-                query_id,
-            }))
-        }
-        Ok(Ok(Err(err_msg))) => {
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Perplexity execution error: {}", err_msg)))
-        }
-        Ok(Err(_)) => {
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed before response".to_string()))
-        }
-        Err(_) => {
+    use base64::Engine;
+    let start_time = std::time::Instant::now();
+    let prefix_success = format!("AIOS_RESULT_START:{}:", query_id);
+    let prefix_error = format!("AIOS_ERROR_START:{}:", query_id);
+
+    loop {
+        if start_time.elapsed() > std::time::Duration::from_secs(600) {
             let mut callbacks = get_query_callbacks().lock().await;
             callbacks.remove(&query_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
+            return Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()));
         }
+
+        if let Ok(title) = win.title() {
+            if title.starts_with(&prefix_success) {
+                let rest = &title[prefix_success.len()..];
+                if let Some(end_idx) = rest.rfind(":AIOS_RESULT_END") {
+                    let b64_str = &rest[..end_idx];
+                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
+                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
+                    let _ = win.set_title("Perplexity");
+                    return Ok(Json(QueryResponse {
+                        response: decoded_str,
+                        query_id,
+                    }));
+                }
+            } else if title.starts_with(&prefix_error) {
+                let rest = &title[prefix_error.len()..];
+                if let Some(end_idx) = rest.rfind(":AIOS_ERROR_END") {
+                    let b64_str = &rest[..end_idx];
+                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
+                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
+                    let _ = win.set_title("Perplexity");
+                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Perplexity execution error: {}", decoded_str)));
+                }
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 
@@ -690,63 +660,14 @@ async fn handle_gemini_query(
             const fileMime = {};
 
             function sendDone(resp, err) {{
-                const msgObj = {{
-                    query_id: qId,
-                    queryId: qId,
-                    response: resp,
-                    errMsg: err,
-                    err_msg: err,
-                    error: err
-                }};
-
-                try {{
-                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
-                    ws.onopen = function() {{
-                        ws.send(JSON.stringify(msgObj));
-                        setTimeout(function() {{ ws.close(); }}, 500);
-                    }};
-                }} catch(e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.event) {{
-                        window.__TAURI__.event.emit('query_callback_event', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
-                            cmd: 'query_callback',
-                            callback: 0,
-                            error: 0,
-                            query_id: qId,
-                            queryId: qId,
-                            response: resp,
-                            errMsg: err,
-                            err_msg: err
-                        }}));
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ query_id: qId, response: resp, error: err }})
-                    }}).catch(function() {{}});
-                }} catch (e) {{}}
+                function toB64(str) {{
+                    return btoa(unescape(encodeURIComponent(str || '')));
+                }}
+                if (err) {{
+                    document.title = 'AIOS_ERROR_START:' + qId + ':' + toB64(err) + ':AIOS_ERROR_END';
+                }} else {{
+                    document.title = 'AIOS_RESULT_START:' + qId + ':' + toB64(resp || '') + ':AIOS_RESULT_END';
+                }}
             }}
 
             async function run() {{
@@ -781,24 +702,43 @@ async fn handle_gemini_query(
 
     let _ = win.eval(&eval_script);
 
-    match tokio::time::timeout(tokio::time::Duration::from_secs(600), rx).await {
-        Ok(Ok(Ok(response_text))) => {
-            Ok(Json(QueryResponse {
-                response: response_text,
-                query_id,
-            }))
-        }
-        Ok(Ok(Err(err_msg))) => {
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Gemini execution error: {}", err_msg)))
-        }
-        Ok(Err(_)) => {
-            Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed before response".to_string()))
-        }
-        Err(_) => {
+    use base64::Engine;
+    let start_time = std::time::Instant::now();
+    let prefix_success = format!("AIOS_RESULT_START:{}:", query_id);
+    let prefix_error = format!("AIOS_ERROR_START:{}:", query_id);
+
+    loop {
+        if start_time.elapsed() > std::time::Duration::from_secs(600) {
             let mut callbacks = get_query_callbacks().lock().await;
             callbacks.remove(&query_id);
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()))
+            return Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Query timed out after 600 seconds".to_string()));
         }
+
+        if let Ok(title) = win.title() {
+            if title.starts_with(&prefix_success) {
+                let rest = &title[prefix_success.len()..];
+                if let Some(end_idx) = rest.rfind(":AIOS_RESULT_END") {
+                    let b64_str = &rest[..end_idx];
+                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
+                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
+                    let _ = win.set_title("Gemini");
+                    return Ok(Json(QueryResponse {
+                        response: decoded_str,
+                        query_id,
+                    }));
+                }
+            } else if title.starts_with(&prefix_error) {
+                let rest = &title[prefix_error.len()..];
+                if let Some(end_idx) = rest.rfind(":AIOS_ERROR_END") {
+                    let b64_str = &rest[..end_idx];
+                    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(b64_str).unwrap_or_default();
+                    let decoded_str = String::from_utf8(decoded_bytes).unwrap_or_default();
+                    let _ = win.set_title("Gemini");
+                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Gemini execution error: {}", decoded_str)));
+                }
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 }
 
@@ -1050,83 +990,24 @@ async fn handle_debug_ping(
         {}
         (function() {{
             var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined');
-            
-            function sendDone(resp, err) {{
-                const msgObj = {{
-                    query_id: 'test_ping',
-                    queryId: 'test_ping',
-                    response: resp,
-                    errMsg: err,
-                    err_msg: err,
-                    error: err
-                }};
-
-                try {{
-                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
-                    ws.onopen = function() {{
-                        ws.send(JSON.stringify(msgObj));
-                        setTimeout(function() {{ ws.close(); }}, 500);
-                    }};
-                }} catch(e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.event) {{
-                        window.__TAURI__.event.emit('query_callback_event', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
-                            cmd: 'query_callback',
-                            callback: 0,
-                            error: 0,
-                            query_id: 'test_ping',
-                            queryId: 'test_ping',
-                            response: resp,
-                            errMsg: err,
-                            err_msg: err
-                        }}));
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    fetch('http://127.0.0.1:3031/api/perplexity/callback', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ query_id: 'test_ping', response: resp, error: err }})
-                    }}).catch(function() {{}});
-                }} catch (e) {{}}
-            }}
-            sendDone(diag, null);
+            document.title = 'AIOS_PING_RESULT:' + diag;
         }})();
         "#,
         pplx_engine
     );
-    let eval_res = win.eval(&script);
+    let _ = win.eval(&script);
 
-    match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
-        Ok(Ok(Ok(resp))) => Ok(resp),
-        Ok(Ok(Err(err))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err)),
-        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed".to_string())),
-        Err(_) => {
-            let mut callbacks = get_query_callbacks().lock().await;
-            callbacks.remove("test_ping");
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, format!("Ping timed out. eval_res={:?}", eval_res)))
+    let start_time = std::time::Instant::now();
+    while start_time.elapsed() < std::time::Duration::from_secs(5) {
+        if let Ok(title) = win.title() {
+            if let Some(pos) = title.find("AIOS_PING_RESULT:") {
+                let diag = title[pos + "AIOS_PING_RESULT:".len()..].to_string();
+                return Ok(diag);
+            }
         }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
+    Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
 }
 
 async fn handle_debug_ping_gemini(
@@ -1147,83 +1028,24 @@ async fn handle_debug_ping_gemini(
         {}
         (function() {{
             var diag = 'URL=' + window.location.href + ' | GEMINI=' + (typeof window.__aiosGemini !== 'undefined') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined');
-            
-            function sendDone(resp, err) {{
-                const msgObj = {{
-                    query_id: 'test_ping_gemini',
-                    queryId: 'test_ping_gemini',
-                    response: resp,
-                    errMsg: err,
-                    err_msg: err,
-                    error: err
-                }};
-
-                try {{
-                    const ws = new WebSocket('ws://127.0.0.1:3031/ws');
-                    ws.onopen = function() {{
-                        ws.send(JSON.stringify(msgObj));
-                        setTimeout(function() {{ ws.close(); }}, 500);
-                    }};
-                }} catch(e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.event) {{
-                        window.__TAURI__.event.emit('query_callback_event', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {{
-                        window.__TAURI__.invoke('query_callback', msgObj).catch(function() {{}});
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.__TAURI_INVOKE__) {{
-                        window.__TAURI_INVOKE__('query_callback', msgObj);
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ipc) {{
-                        window.webkit.messageHandlers.ipc.postMessage(JSON.stringify({{
-                            cmd: 'query_callback',
-                            callback: 0,
-                            error: 0,
-                            query_id: 'test_ping_gemini',
-                            queryId: 'test_ping_gemini',
-                            response: resp,
-                            errMsg: err,
-                            err_msg: err
-                        }}));
-                    }}
-                }} catch (e) {{}}
-
-                try {{
-                    fetch('http://127.0.0.1:3031/api/gemini/callback', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ query_id: 'test_ping_gemini', response: resp, error: err }})
-                    }}).catch(function() {{}});
-                }} catch (e) {{}}
-            }}
-            sendDone(diag, null);
+            document.title = 'AIOS_PING_RESULT:' + diag;
         }})();
         "#,
         gemini_engine
     );
-    let eval_res = win.eval(&script);
+    let _ = win.eval(&script);
 
-    match tokio::time::timeout(tokio::time::Duration::from_secs(5), rx).await {
-        Ok(Ok(Ok(resp))) => Ok(resp),
-        Ok(Ok(Err(err))) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err)),
-        Ok(Err(_)) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Channel closed".to_string())),
-        Err(_) => {
-            let mut callbacks = get_query_callbacks().lock().await;
-            callbacks.remove("test_ping_gemini");
-            Err((axum::http::StatusCode::GATEWAY_TIMEOUT, format!("Ping timed out. eval_res={:?}", eval_res)))
+    let start_time = std::time::Instant::now();
+    while start_time.elapsed() < std::time::Duration::from_secs(5) {
+        if let Ok(title) = win.title() {
+            if let Some(pos) = title.find("AIOS_PING_RESULT:") {
+                let diag = title[pos + "AIOS_PING_RESULT:".len()..].to_string();
+                return Ok(diag);
+            }
         }
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
+    Err((axum::http::StatusCode::GATEWAY_TIMEOUT, "Ping timed out".to_string()))
 }
 
 // ---------------------------------------------------------------------------
