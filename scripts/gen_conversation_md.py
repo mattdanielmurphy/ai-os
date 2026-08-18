@@ -95,7 +95,7 @@ def is_transient_status_line(s: str) -> bool:
     s_clean = s.strip()
     if len(s_clean) > 120:
         return False
-    if s_clean.endswith('...') or re.match(r'^(?:\[query_aios\]|Subagent\s+"[^"]+"\s+defined|The\s+subagent\s+has\s+been\s+dispatched|The\s+subagent\s+is\s+creating|Dispatched\s+the\s+planner\s+query)[^\n]*$', s_clean, re.IGNORECASE):
+    if s_clean.endswith('...') or re.search(r'(?:streaming\s+(?:its\s+)?reasoning|\[query_aios\]|Subagent\s+"[^"]+"\s+defined|The\s+subagent\s+has\s+been\s+dispatched|The\s+subagent\s+is\s+creating|Dispatched\s+the\s+planner\s+query|Wait(?:ing)?\s+for\s+subagent|Completed\s+task-\d+)', s_clean, re.IGNORECASE):
         return True
     return False
 
@@ -576,7 +576,7 @@ def parse_exchanges(transcript_path: Path, conv_id: str = '', app_data_dir: Path
                         if is_transient_status_line(cleaned):
                             latest_transient_status = cleaned
                         elif not has_tool_calls:
-                            accumulated_text = [cleaned]
+                            accumulated_text.append(cleaned)
                             latest_tool_action = None
                             latest_transient_status = None
 

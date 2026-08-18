@@ -168,18 +168,23 @@ def step_git():
     return "Git: Skipped (no git repository)"
 
 def step_watcher():
+    plist_path = os.path.expanduser("~/Library/LaunchAgents/com.matt.agent.watch-transcripts.plist")
     _, pgrep_code = run_cmd(["pgrep", "-f", "watch_transcripts.py"], timeout=1)
     if pgrep_code != 0:
-        watch_script = "/Users/matt/projects/ai-os/scripts/watch_transcripts.py"
-        subprocess.Popen(
-            f"nohup python3 {watch_script} --daemon > /dev/null 2>&1 &",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
-            start_new_session=True
-        )
-        return "Watcher: Started watch_transcripts daemon"
+        if os.path.exists(plist_path):
+            run_cmd(["launchctl", "load", "-w", plist_path], timeout=3)
+            return "Watcher: Loaded watch-transcripts LaunchAgent"
+        else:
+            watch_script = "/Users/matt/projects/ai-os/scripts/watch_transcripts.py"
+            subprocess.Popen(
+                f"nohup python3 {watch_script} --daemon > /dev/null 2>&1 &",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True
+            )
+            return "Watcher: Started watch_transcripts daemon"
     return "Watcher: Running"
 
 def step_hammerspoon_errors():
