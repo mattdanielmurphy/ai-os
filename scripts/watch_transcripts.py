@@ -17,6 +17,11 @@ import time
 import json
 import re
 from pathlib import Path
+
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
 from postflight_lib import compute_thread_metrics, format_metrics_table, has_uncommitted_changes, extract_workspace_root
 
 try:
@@ -25,9 +30,6 @@ except ImportError:
     evaluate_turn = None
     run_batch_synthesis_check = None
 
-
-
-SCRIPTS_DIR = Path(__file__).resolve().parent
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
 GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 
@@ -36,29 +38,46 @@ COOLDOWN = 0.05
 DEFAULT_POLLING = 0.1
 
 
+def log_msg(msg: str):
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {msg}", flush=True)
+
 
 _subagent_cache = {}
 _last_dir_scan = 0
 _cached_active_convs = {}
 _cached_sub_map = {}
+_conv_brain_map = {}
+_last_scanned_brain_dir = None
 
-def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, dict]:
+
+def get_brain_dir_for_conv(conv_id: str, default: Path = BRAIN_DIR) -> Path:
+    return _conv_brain_map.get(conv_id, default)
+
+
+def get_active_convs(brain_dir: Path, max_age_secs: int = 1800, force_rescan: bool = False) -> tuple[dict, dict]:
     """Find active conversations and map subagent conv_ids to parent conv_ids.
     
     Returns ({conv_id: (mtime, size)}, subagent_to_parent_map).
     """
-    global _last_dir_scan, _cached_active_convs, _cached_sub_map
+    global _last_dir_scan, _cached_active_convs, _cached_sub_map, _conv_brain_map, _last_scanned_brain_dir
     now = time.time()
 
-    # Full directory discovery only every 2 seconds
-    if (now - _last_dir_scan) > 2.0:
+    # Full directory discovery only every 2 seconds or if brain_dir changed
+    if force_rescan or (now - _last_dir_scan) > 2.0 or brain_dir != _last_scanned_brain_dir:
         _last_dir_scan = now
+        _last_scanned_brain_dir = brain_dir
         active = {}
         subagent_to_parent = {}
         if not brain_dir.exists():
             return active, subagent_to_parent
 
-        for brain_dir_path in [brain_dir, Path.home() / ".gemini" / "antigravity-cli" / "brain"]:
+        scan_dirs = [brain_dir]
+        cli_brain = Path.home() / ".gemini" / "antigravity-cli" / "brain"
+        if cli_brain != brain_dir and cli_brain.exists():
+            scan_dirs.append(cli_brain)
+
+        for brain_dir_path in scan_dirs:
             if not brain_dir_path.exists():
                 continue
             for conv_dir in brain_dir_path.iterdir():
@@ -70,10 +89,13 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
                         stat = transcript.stat()
                         if (now - stat.st_mtime) < max_age_secs:
                             active[conv_dir.name] = (stat.st_mtime, stat.st_size)
+                            _conv_brain_map[conv_dir.name] = brain_dir_path
                             
                             cached = _subagent_cache.get(conv_dir.name)
                             if cached and cached[0] == stat.st_mtime and cached[1] == stat.st_size:
                                 subagent_to_parent.update(cached[2])
+                                for sub_cid in cached[2]:
+                                    _conv_brain_map[sub_cid] = brain_dir_path
                             else:
                                 sub_map = {}
                                 try:
@@ -84,6 +106,7 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
                                                 for m in matches:
                                                     if m != conv_dir.name:
                                                         sub_map[m] = conv_dir.name
+                                                        _conv_brain_map[m] = brain_dir_path
                                 except Exception:
                                     pass
                                 _subagent_cache[conv_dir.name] = (stat.st_mtime, stat.st_size, sub_map)
@@ -97,7 +120,8 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800) -> tuple[dict, d
     # Fast path on 50ms ticks: only stat previously known active conversations
     active = {}
     for cid in list(_cached_active_convs.keys()):
-        transcript = brain_dir / cid / ".system_generated" / "logs" / "transcript.jsonl"
+        b_dir = _conv_brain_map.get(cid, brain_dir)
+        transcript = b_dir / cid / ".system_generated" / "logs" / "transcript.jsonl"
         if transcript.exists():
             try:
                 stat = transcript.stat()
@@ -122,7 +146,7 @@ def render(conv_id: str, brain_dir: Path) -> bool:
     try:
         gen_conversation_md.generate(conv_id, "Conversation", app_data_dir)
     except Exception as e:
-        print(f"gen_conversation_md failed: {e}")
+        log_msg(f"gen_conversation_md failed for {conv_id}: {e}")
         return False
         
     # 2. Render Discussions.html (main threads only)
@@ -142,7 +166,7 @@ def render(conv_id: str, brain_dir: Path) -> bool:
                 if not out_file.exists() or out_file.read_text(encoding='utf-8', errors='ignore') != html:
                     out_file.write_text(html, encoding='utf-8')
         except Exception as e:
-            print(f"discussions_html failed: {e}")
+            log_msg(f"discussions_html failed for {conv_id}: {e}")
     return True
 
 
@@ -158,9 +182,13 @@ def is_turn_completed(transcript_path: Path) -> bool:
             f.seek(size - buffer_size)
             lines = f.read().decode('utf-8', errors='ignore').strip().split('\n')
             for line in reversed(lines):
-                if not line.strip():
+                line = line.strip()
+                if not line:
                     continue
-                obj = json.loads(line)
+                try:
+                    obj = json.loads(line)
+                except Exception:
+                    continue
                 t = obj.get('type')
                 if t == 'PLANNER_RESPONSE':
                     # Completed turn if no tool calls were made in this planner response
@@ -168,10 +196,10 @@ def is_turn_completed(transcript_path: Path) -> bool:
                 elif t == 'USER_INPUT':
                     # User just asked something, agent hasn't responded yet
                     return False
-                else:
-                    # Tool execution result -> turn still in progress
+                elif t in ('MODEL', 'SYSTEM', 'USER_EXPLICIT'):
                     return False
-    except Exception:
+    except Exception as e:
+        log_msg(f"is_turn_completed check error: {e}")
         return False
     return False
 
@@ -185,7 +213,8 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
     # Map of conv_id to (mtime, size) including subagents for comparison
     full_state = {**current}
     for sub, parent in sub_map.items():
-        sub_dir = brain_dir / sub
+        sub_brain = _conv_brain_map.get(sub, brain_dir)
+        sub_dir = sub_brain / sub
         if sub_dir.exists():
             t = sub_dir / ".system_generated" / "logs" / "transcript.jsonl"
             if t.exists():
@@ -198,6 +227,7 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
     for conv_id, (mtime, size) in full_state.items():
         # Identify which conv to render (if subagent, render parent)
         render_id = sub_map.get(conv_id, conv_id)
+        target_brain = _conv_brain_map.get(render_id, brain_dir)
         
         prev = last_state.get(conv_id)
 
@@ -207,14 +237,14 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             if (now - last_t) < COOLDOWN:
                 continue
 
-            print(f"Update detected ({conv_id[:8]}... -> {render_id[:8]}...): Re-rendering.")
-            if render(render_id, brain_dir):
-                print(f"  OK.")
+            log_msg(f"Update detected ({conv_id[:8]}... -> {render_id[:8]}...): Re-rendering.")
+            if render(render_id, target_brain):
+                log_msg(f"  OK.")
             last_state[conv_id] = (mtime, size)
             last_render_time[render_id] = now
 
             # Auto-commit check (Trigger only once when the entire turn is completed)
-            transcript_file = brain_dir / render_id / ".system_generated" / "logs" / "transcript.jsonl"
+            transcript_file = target_brain / render_id / ".system_generated" / "logs" / "transcript.jsonl"
             if transcript_file.exists() and is_turn_completed(transcript_file):
                 # Run background micro-evaluator
                 if evaluate_turn:
@@ -229,32 +259,39 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
                                         run_batch_synthesis_check(render_id, turn_idx)
                                     break
                     except Exception as e:
-                        print(f"Evaluation error: {e}")
+                        log_msg(f"Evaluation error: {e}")
 
                 workspace_root = extract_workspace_root(transcript_path=transcript_file)
-                
-                # Check for cooldown per repository
-                last_commit_time = last_render_time.get(f"commit_{workspace_root}", 0)
-                if (now - last_commit_time) > 10:
-                    if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
-                        res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
-                        proc = subprocess.Popen(
-                            [sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)],
-                            cwd=str(workspace_root)
-                        )
-                        pending_commits[str(workspace_root)] = (proc, res_path, render_id)
-                        last_render_time[f"commit_{workspace_root}"] = now
+                if workspace_root and workspace_root.exists():
+                    # Check for cooldown per repository
+                    last_commit_time = last_render_time.get(f"commit_{workspace_root}", 0)
+                    if (now - last_commit_time) > 10:
+                        if has_uncommitted_changes(str(workspace_root)) and str(workspace_root) not in pending_commits:
+                            res_path = commit_results_dir / f"{render_id}_{int(now)}.json"
+                            try:
+                                proc = subprocess.Popen(
+                                    [sys.executable, str(SCRIPTS_DIR / "auto_commit.py"), "--result-path", str(res_path)],
+                                    cwd=str(workspace_root)
+                                )
+                                pending_commits[str(workspace_root)] = (proc, res_path, render_id, target_brain)
+                                last_render_time[f"commit_{workspace_root}"] = now
+                            except Exception as e:
+                                log_msg(f"Failed to spawn auto_commit for {workspace_root}: {e}")
 
     # Check pending commits
-    for repo_path, (proc, res_path, conv_id) in list(pending_commits.items()):
+    for repo_path, item in list(pending_commits.items()):
+        proc = item[0]
+        res_path = item[1]
+        conv_id = item[2]
+        c_brain = item[3] if len(item) > 3 else brain_dir
         if proc.poll() is not None:
             if res_path.exists():
                 try:
                     res = json.loads(res_path.read_text())
                     if res.get("status") == "committed":
-                        render(conv_id, brain_dir)
+                        render(conv_id, c_brain)
                 except Exception as e:
-                    print(f"Result processing failed: {e}")
+                    log_msg(f"Result processing failed: {e}")
             del pending_commits[repo_path]
 
     # Clean up stale entries
@@ -272,7 +309,7 @@ def process_updates(last_state: dict, last_render_time: dict, summarized_threads
             try:
                 subprocess.Popen([sys.executable, str(SCRIPTS_DIR / "summarize_thread.py"), conv_id])
             except Exception as e:
-                print(f"summarize_thread failed: {e}")
+                log_msg(f"summarize_thread failed: {e}")
 
     return newest_mtime
 
@@ -285,7 +322,7 @@ def main():
     parser.add_argument("--daemon", action="store_true", help="Run in continuous loop")
     parser.add_argument("--once", action="store_true", help="Run once and exit")
     parser.add_argument("--interval", type=float, default=DEFAULT_POLLING,
-        help="Poll interval in seconds (default: 0.4)"
+        help="Poll interval in seconds (default: 0.1)"
     )
     args = parser.parse_args()
 
@@ -303,7 +340,7 @@ def main():
         last_state = {**active}
         last_render_time = {}
         summarized_threads = set(active.keys()) | set(sub_map.keys())
-        print(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
+        log_msg(f"Watching {args.brain_dir} for changes... ({len(last_state)} active conversations)")
         try:
             while True:
                 newest_mtime = process_updates(last_state, last_render_time, summarized_threads, args.brain_dir, pending_commits, commit_results_dir)
@@ -322,7 +359,7 @@ def main():
                 
                 time.sleep(sleep_interval)
         except KeyboardInterrupt:
-            print("Stopping.")
+            log_msg("Stopping.")
     else:
         parser.print_help()
 
