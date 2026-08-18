@@ -368,13 +368,13 @@ async function main() {
 
     let serverReady = await pingAios(baseUrl);
     if (!serverReady) {
-        console.error(`[query_aios] 🔄 AI-OS server at http://127.0.0.1:3031 is not responding. Auto-starting via launch agent...`);
+        console.error(`[query_aios] 🔄 AI-OS server at http://127.0.0.1:3031 is not responding. Starting via launch agent...`);
         try {
-            execSync('la restart aios-server 2>/dev/null || la start aios-server 2>/dev/null', { stdio: 'ignore' });
+            execSync('la start aios-server 2>/dev/null', { stdio: 'ignore' });
         } catch (e) {}
 
-        for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 500));
+        for (let i = 0; i < 60; i++) {
+            await new Promise(r => setTimeout(r, 1000));
             serverReady = await pingAios(baseUrl);
             if (serverReady) {
                 console.error(`[query_aios] ✅ AI-OS server is online.`);
