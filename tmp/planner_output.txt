@@ -1,159 +1,188 @@
-Antigravity IDE fails to surface injected conversation threads because the sidebar does not parse raw conversation database files or disk directories directly; instead, it renders history from a dual-index architecture in `state.vscdb` filtered by normalized workspace URIs. To restore visibility, conversation files must be formatted as valid trajectory protobufs, encoded as Base64 payloads under `antigravityUnifiedStateSync.trajectorySummaries`, mirrored in JSON format under `chat.ChatSessionStore.index`, and bound to matching workspace paths.
+The Antigravity history sidebar went blank because modifying `state.vscdb` while the IDE process was active triggered an in-memory state overwrite, or corrupted the JSON schema expected by the UI session index. Non-destructive recovery requires verifying the SQLite backup and bridging persistent NDJSON transcripts from `~/.gemini/antigravity-cli/brain/` back into the database.
 
-## Architecture and Storage Comparison
+## Architectural Strategy
 
-Antigravity.app (legacy standalone runner) and Antigravity IDE (VS Code/Electron harness) diverge significantly in how they persist, index, and query trajectory histories.
+Antigravity IDE stores UI session metadata in an SQLite3 database (`state.vscdb`) within VS Code workspace and global storage directories. When the database is modified externally while Antigravity is running, VS Code's `SQLiteStorageDatabase` service overwrites external changes on shutdown or fails to parse malformed JSON payloads, resetting the sidebar view.
 
-| Dimension | Antigravity.app (Classic) | Antigravity IDE (VS Code Fork) |
-| :--- | :--- | :--- |
-| **Primary State DB** | `~/Library/Application Support/Antigravity/User/globalStorage/state.vscdb` | `~/Library/Application Support/Antigravity IDE/User/globalStorage/state.vscdb` |
-| **Workspace Scoping** | Global flat list without workspace partitioning | Scoped to `workspaceStorage/<hash>/state.vscdb` and strict `workspaceUri` matching |
-| **Conversation Payloads** | `~/.gemini/antigravity/conversations/*.pb` or `.db` logs | `~/.gemini/antigravity-ide/conversations/<uuid>.pb` Protobuf binaries |
-| **Global Summary Index** | `agyhub_summaries_proto.pb` file on disk | `antigravityUnifiedStateSync.trajectorySummaries` (Base64 Proto in SQLite) |
-| **Sidebar Session Index** | Optional / decoupled UI list | `chat.ChatSessionStore.index` (JSON array in SQLite) |
-| **Query Mechanism** | File scanner reads `.pb` summaries directly | SQLite `ItemTable` query on launch + live in-memory state sync |
-
-The failure occurred due to four missing linkages:
-- Conversation persistence expects binary Protobuf files serialized as `TrajectoryProto` at `<uuid>.pb`, not SQLite `.db` tables.
-- In `state.vscdb`, `ItemTable` requires Base64-encoded Protobuf strings rather than raw disk paths or unencoded protobuf byte dumps.
-- The VS Code chat container requires companion records inside `chat.ChatSessionStore.index` containing session metadata matching the UUIDs.
-- The trajectory protobuf contains an explicit `workspaceUri` (field 9) that must match the exact URL-normalized path of the open project (e.g., `file:///Users/matt/projects/ai-os`).
-
-## Data Schemas and State Management
-
-State rehydration requires synchronizing three specific data models across disk and SQLite tables.
-
-```protobuf
-// TrajectorySummariesProto schema for state.vscdb ItemTable
-message TrajectorySummariesProto {
-  repeated TrajectorySummary summaries = 1;
-}
-
-message TrajectorySummary {
-  string trajectory_id = 1;         // UUIDv4 matching <uuid>.pb file name
-  string title = 2;                 // Human-readable conversation title
-  int64 created_timestamp_ms = 3;   // Unix epoch milliseconds
-  int64 updated_timestamp_ms = 4;   // Unix epoch milliseconds
-  int32 turn_count = 5;             // Total user/assistant exchange turns
-  string model_name = 6;            // e.g. "gemini-2.5-pro" or "claude-3-7-sonnet"
-  string status = 7;                // e.g. "COMPLETED", "IDLE"
-  string workspace_uri = 9;         // file:///Users/matt/projects/ai-os
-}
+```
+┌─────────────────────────────────────────────────────────┐
+│              Ground Truth: CLI Brain Logs               │
+│          (~/.gemini/antigravity-cli/brain/)             │
+└────────────┬──────────────────────────────┬─────────────┘
+             │                              │
+             ▼                              ▼
+┌─────────────────────────┐    ┌─────────────────────────┐
+│   Hermes SQLite State   │    │  Antigravity state.vscdb│
+│   (~/.hermes/state.db)  │◄──►│  (ItemTable Key-Value)  │
+└─────────────────────────┘    └─────────────────────────┘
 ```
 
-```typescript
-// VS Code Session Store Schema (chat.ChatSessionStore.index)
-interface ChatSessionStoreEntry {
-  sessionId: string;                // Must match trajectory_id UUID
-  title: string;                    // Title displayed in tree view
-  creationDate: number;             // Timestamp in ms
-  lastMessageDate: number;          // Timestamp in ms
-  isImported?: boolean;             // Set true for externally bridged sessions
-  initialLocation: "panel" | "editing-session";
-}
+The recovery architecture uses a **fail-safe** three-stage pipeline:
+- Freeze and Snapshot: Terminate all running Antigravity IDE and sync processes, then create immutable timestamped snapshots of `state.vscdb`, `state.vscdb.backup`, and WAL journals.
+- Integrity Verification: Run SQLite PRAGMA checks on `state.vscdb.backup` to check if previous index keys are intact.
+- Transitive Transcript Bridging: If the backup is corrupted or stale, parse ground-truth NDJSON session files in `~/.gemini/antigravity-cli/brain/` and Hermes `~/.hermes/state.db` to reconstruct the `ItemTable` index without losing conversation continuity.
 
-interface ChatSessionStoreIndex {
-  version: number;                  // Typically 1
-  sessions: ChatSessionStoreEntry[];
-}
-```
+| Storage Layer | Location | Format | Recovery Role |
+| :--- | :--- | :--- | :--- |
+| Active IDE State | `~/Library/Application Support/Antigravity/.../state.vscdb` | SQLite3 (`ItemTable`) | Target database for UI history display  |
+| IDE Backup | `~/Library/Application Support/Antigravity/.../state.vscdb.backup` | SQLite3 (`ItemTable`) | Immediate rollback source  |
+| Ground Truth Brain | `~/.gemini/antigravity-cli/brain/<uuid>/` | NDJSON & Markdown | Immutable primary source for reconstruction  |
+| Hermes Unified DB | `~/.hermes/state.db` | SQLite3 (FTS5) | Cross-platform metadata and search index |
 
-## Interface Contracts and Signatures
+## Data Structures & State Management
 
-A dedicated bridge utility (`scripts/antigravity_storage_migrator.py`) will manage trajectory transformation and SQLite index injection.
+The recovery engine defines structured schema representations to validate and serialize state entries across storage boundaries.
 
 ```python
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
-from pathlib import Path
-from dataclasses import dataclass
 
 @dataclass
-class TrajectoryMetadata:
-    trajectory_id: str
+class SessionSummary:
+    session_id: str
     title: str
-    created_at_ms: int
-    updated_at_ms: int
-    turn_count: int
-    workspace_path: Path
-    model_name: str
+    created_at: int  # Epoch ms
+    updated_at: int  # Epoch ms
+    message_count: int
+    first_query: str
+    model_provider: str
+    transcript_path: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-class TrajectoryConverter:
-    """Transforms SQLite/NDJSON transcripts into Antigravity Trajectory .pb binaries."""
-    def parse_source_transcript(self, source_db_or_ndjson: Path) -> Dict[str, Any]:
-        """Reads raw conversation events from Hermes/Agy database or brain files."""
+@dataclass
+class VscdbChatIndex:
+    version: int = 1
+    entries: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+@dataclass
+class TrajectorySummaryPayload:
+    trajectories: List[Dict[str, Any]] = field(default_factory=list)
+    last_active_id: Optional[str] = None
+```
+
+The `ItemTable` schema in `state.vscdb` consists of `(key TEXT PRIMARY KEY, value BLOB/TEXT)`. The critical keys governing history sidebar visibility include:
+- `antigravityUnifiedStateSync.trajectorySummaries`: Stores trajectory metadata, user goals, and timestamps displayed in the agent panel.
+- `chat.ChatSessionStore.index`: VS Code standard chat history registry containing session IDs and label mappings.
+- `interactive.sessions`: Workspace-level session mapping containing message identifiers and execution status.
+
+## API & Interface Contracts
+
+The recovery and bridging toolchain exposes discrete, testable components.
+
+```python
+class AntigravityStateInspector:
+    """Inspects and validates integrity of state.vscdb and its backup."""
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+
+    def check_sqlite_integrity(self) -> bool:
+        """Runs PRAGMA integrity_check and verifies ItemTable schema."""
         ...
 
-    def compile_trajectory_proto(self, transcript_data: Dict[str, Any]) -> bytes:
-        """Serializes exchange history into native Antigravity TrajectoryProto bytes."""
+    def extract_index_keys(self) -> Dict[str, Any]:
+        """Reads and deserializes chat/trajectory keys from ItemTable."""
         ...
 
-class AntigravityStateInjector:
-    """Manages SQLite state.vscdb transaction injection and index syncing."""
-    def __init__(self, global_storage_path: Path, workspace_storage_path: Optional[Path] = None):
+    def count_valid_sessions(self) -> int:
+        """Returns the number of discoverable sessions in the database."""
         ...
 
-    def read_existing_trajectories(self) -> List[TrajectoryMetadata]:
-        """Decodes base64 protobuf from antigravityUnifiedStateSync.trajectorySummaries."""
+
+class BrainTranscriptParser:
+    """Extracts ground-truth conversations from ~/.gemini/antigravity-cli/brain/."""
+    def __init__(self, brain_dir: str):
+        self.brain_dir = brain_dir
+
+    def discover_sessions(self) -> List[SessionSummary]:
+        """Scans disk for session directories containing transcript.ndjson."""
         ...
 
-    def update_trajectory_index(self, trajectories: List[TrajectoryMetadata]) -> None:
-        """Encodes proto to Base64 and executes atomic UPSERT on ItemTable."""
+    def parse_session_metadata(self, session_id: str) -> Optional[SessionSummary]:
+        """Extracts title, timestamps, and exchange count from NDJSON entries."""
         ...
 
-    def update_chat_session_store(self, trajectories: List[TrajectoryMetadata]) -> None:
-        """Merges entries into chat.ChatSessionStore.index JSON payload."""
+
+class VscdbRecoveryEngine:
+    """Performs transactional restoration and index bridging into state.vscdb."""
+    def __init__(self, target_db_path: str, backup_db_path: str, brain_dir: str):
+        self.target_db_path = target_db_path
+        self.backup_db_path = backup_db_path
+        self.brain_dir = brain_dir
+
+    def create_snapshot(self, snapshot_dir: str) -> str:
+        """Copies target, backup, and WAL files to an immutable directory."""
         ...
 
-    def reconcile_workspace_storage(self, workspace_path: Path, session_ids: List[str]) -> None:
-        """Updates workspace-specific state.vscdb if workspace partition is active."""
+    def restore_from_backup_file(self) -> bool:
+        """Copies backup over target if backup passes verification."""
+        ...
+
+    def rebuild_index_from_brain(self, sessions: List[SessionSummary]) -> None:
+        """Synthesizes valid JSON payloads and writes them to ItemTable."""
+        ...
+
+    def verify_restoration(self) -> bool:
+        """Validates that ItemTable contains valid JSON with non-zero sessions."""
         ...
 ```
 
-## Execution Logic and Pipeline Algorithm
+## Logic Flow & Recovery Algorithm
 
-The sync pipeline executes four synchronous stages to guarantee transaction consistency and prevent Antigravity IDE launch overwrites.
+The recovery process proceeds through a strict verification hierarchy.
 
-```text
-Algorithm: Antigravity Trajectory Rehydration Pipeline
-
-1. Process Lock & Pre-flight Inspection
-   a. Check if "Antigravity IDE" or "antigravity" process is active; prompt termination if running.
-   b. Locate global storage: ~/Library/Application Support/Antigravity IDE/User/globalStorage/state.vscdb.
-   c. Create timestamped backup of state.vscdb.
-
-2. Protobuf File Ingestion & Compilation
-   a. Scan input source directories (~/.gemini/antigravity/brain/, ~/.hermes/state.db, or .db files).
-   b. For each conversation:
-      i. Extract conversation UUID, exchanges, metadata, and timestamps.
-      ii. Serialize message blocks into TrajectoryProto.
-      iii. Write binary payload to ~/.gemini/antigravity-ide/conversations/<uuid>.pb.
-
-3. Global Database Synchronization
-   a. Open SQLite connection to state.vscdb.
-   b. Fetch current value of 'antigravityUnifiedStateSync.trajectorySummaries'.
-   c. Decode existing Base64 payload into TrajectorySummariesProto message.
-   d. Upsert newly compiled trajectories, enforcing normalized workspace URI (file:// + absolute path).
-   e. Re-serialize message to bytes, Base64-encode, and write back to ItemTable.
-   f. Fetch current value of 'chat.ChatSessionStore.index'.
-   g. Parse JSON array; append missing ChatSessionStoreEntry objects.
-   h. Write updated JSON string to ItemTable.
-
-4. Workspace Index Reconcile & Verify
-   a. Compute workspace MD5 storage hash or locate matching workspaceStorage/<hash>/workspace.json.
-   b. If workspace state.vscdb exists, verify session keys are present.
-   c. Run PRAGMA integrity_check and commit transaction.
+```
+[Start Recovery]
+       │
+       ▼
+[1. Process Lock Check] ──(Running)──► [Terminate Antigravity & Sync Daemons]
+       │ (Not Running)
+       ▼
+[2. Snapshot Current State] ──► Write to ~/.ai-os/recovery/<timestamp>/
+       │
+       ▼
+[3. Inspect state.vscdb.backup]
+       │
+   ├───┴───────────────────────────────────────────┐
+   │ Backup Valid & Contains Sessions              │ Backup Empty / Corrupt
+   ▼                                               ▼
+[Restore File Directly]               [4. Scan ~/.gemini/.../brain/ & Hermes DB]
+   │                                               │
+   │                                               ▼
+   │                                  [Extract Session Titles & Timestamps]
+   │                                               │
+   │                                               ▼
+   │                                  [Synthesize Trajectory & Index JSON]
+   │                                               │
+   │                                               ▼
+   │                                  [Transactional Write to ItemTable]
+   └───┬───────────────────────────────────────────┘
+       │
+       ▼
+[5. Vacuum & Checkpoint SQLite WAL]
+       │
+       ▼
+[6. Verify Keys & Launch Antigravity]
 ```
 
-## Edge Cases and Implementation Steps
+### Execution Flow Details
+1. Process Verification: Assert no running instance of `Antigravity`, `Electron`, or background thread sync workers hold open SQLite file handles.
+2. Cold Snapshotting: Copy `state.vscdb`, `state.vscdb.backup`, `state.vscdb-wal`, and `state.vscdb-shm` into `~/.ai-os/recovery/<timestamp>/`.
+3. Backup Assessment: Run `PRAGMA integrity_check;` on `state.vscdb.backup`. Check if keys `antigravityUnifiedStateSync.trajectorySummaries` and `chat.ChatSessionStore.index` exist, are non-empty, and contain valid JSON with session count greater than zero.
+4. Transitive Rebuilding (Fallback/Bridge Path): If the backup is blank, iterate through `~/.gemini/antigravity-cli/brain/<uuid>/`. Parse `task.md` or the first user message in `transcript.ndjson` to extract titles, create timestamps, and construct standard trajectory objects.
+5. Atomic Transaction: Open `state.vscdb` with SQLite WAL mode, begin an exclusive transaction, insert or update the rebuilt JSON values into `ItemTable`, commit, and execute `PRAGMA wal_checkpoint(TRUNCATE);`.
+6. Restart and Sync: Start Antigravity IDE and verify that the sidebar renders all historical threads.
 
-### Edge Cases and Failure Handling
-- **Workspace URI Encoding Mismatches:** File URIs on macOS must be normalized (e.g., standard `file:///Users/...` without double-slashes or unencoded non-alphanumeric chars) to prevent sidebar exclusion filters.
-- **Database Lock Collision:** `state.vscdb` uses SQLite WAL mode. If Antigravity IDE is open during injection, changes will be dropped or overwritten on graceful shutdown. The injector must verify file locks before execution.
-- **Orphan Protobuf Dropping:** If a `.pb` file exists on disk but is omitted from `chat.ChatSessionStore.index`, the UI ignores it. Both indices must be updated in a single atomic script transaction.
+## Execution Steps & Edge Cases
+
+### Edge Cases and Failure Modes
+- Database Lock Contention: If Antigravity is open during write operations, SQLite returns `sqlite3.OperationalError: database is locked`. The runner must check for active PIDs and exit before modifying disk files.
+- Overwritten Backup File: If Antigravity remained open after the sidebar went blank, it may have mirrored the empty state into `state.vscdb.backup`. The script must inspect entry counts rather than assuming the backup is valid.
+- JSON Schema Drift: Antigravity updates may alter expected keys in `ItemTable`. The engine writes both legacy VS Code chat keys (`chat.ChatSessionStore.index`, `interactive.sessions`) and Antigravity-specific keys (`antigravityUnifiedStateSync.trajectorySummaries`) to maintain backward compatibility.
+- Character Encoding & Special Chars: Brain transcripts can contain code blocks and null characters that break JSON parsing. Payloads must be sanitized and serialized with `json.dumps(..., ensure_ascii=False)`.
 
 ### Ordered Implementation Steps
-- Create `scripts/antigravity_storage_migrator.py` implementing `TrajectoryConverter` and `AntigravityStateInjector`.
-- Update `scripts/sync_threads.py` to trigger `antigravity_storage_migrator.py` during periodic sync runs.
-- Add trajectory proto definitions under `crates/aios-core` or `scripts/proto/trajectory.proto` to ensure standardized serialization.
-- Integrate a preflight process check verifying that Antigravity IDE is closed before running automated state modifications.
-- Add unit tests in `tests/test_antigravity_storage_migrator.py` validating protobuf Base64 encoding and JSON session index format compatibility.
+1. Create Recovery Script `scripts/restore_antigravity_state.py`: Implement `AntigravityStateInspector`, `BrainTranscriptParser`, and `VscdbRecoveryEngine` with CLI flags (`--dry-run`, `--verify-backup`, `--rebuild-from-brain`).
+2. Update Transcript Synchronization `scripts/sync_threads.py`: Add an automatic pre-write integrity check that refuses to sync into `state.vscdb` if Antigravity's process lock is detected.
+3. Enhance Title Extraction `scripts/extract_antigravity_titles.py`: Ensure trajectory title fallbacks read from `task.md`, `walkthrough.md`, or the initial `USER_INPUT` event in `transcript.ndjson`.
+4. Register Verification Command in `bin/ai-os`: Add `ai-os recover-history` subcommand to provide a single non-destructive command for developers encountering blank sidebars.
+5. Create Integration Test `tests/test_state_recovery.py`: Mock corrupted `state.vscdb` files and verify that the restoration script recovers session indices without data loss.
