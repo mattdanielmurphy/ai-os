@@ -1,4 +1,4 @@
-User Request: Please check this UI mockup at file:///Users/matt/projects/ai-os/tmp/test_screenshot.png
+User Request: Investigate and fix issues where: 1. Multiple image attachments were not handled (only one attachment was supported/passed). 2. Perplexity/Gemini companion file upload failed to attach or render images properly in Perplexity/Gemini webviews. Check transcript in conversation 0d53eed7-c272-4176-9f64-5e16e89c0850 and server.rs / perplexity-engine.js / query_aios.js.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
