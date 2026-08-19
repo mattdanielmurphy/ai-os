@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-08-19
+- **Exported Recent Antigravity Threads to Markdown:** Created `scripts/export_recent_threads.py` to extract 1,625 conversation transcripts from the past 31 days into structured, named Markdown files with YAML frontmatter under `docs/antigravity-threads/` (`YYYY-MM-DD_<title>--[<id>].md`). Decoded titles directly from `agyhub_summaries_proto.pb` and JSON metadata for instant `@`-referencing in the IDE. [[log]](agent-logs/2026-08-19_16-45_export-recent-antigravity-threads.md)
 - **Fixed `query_aios.js` Screenshot Attachments & Context-Aware Thread Auto-Resumption:** Added binary image detection and `--screenshot` / `--image` / `-f` attachment handling in `query_aios.js` so screenshots are passed as binary payload attachments rather than attempting UTF-8 prompt inlining. Implemented Antigravity thread-scoped auto-resumption (`~/.ai-os/thread_map.json`), automatically binding planner threads to `ANTIGRAVITY_CONVERSATION_ID` (defaulting to a new thread on turn 1, auto-resuming ongoing threads on turn 2+) with explicit override flags (`--new-thread`, `--resume <id>`, `--no-resume`). [[log]](agent-logs/2026-08-19_16-31_query-aios-screenshots-and-thread-autoresume.md)
 
 ## 2026-08-17
