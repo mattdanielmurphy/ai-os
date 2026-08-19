@@ -826,6 +826,13 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     rendered_doc = heal_markup_spans(rendered_doc)
     rendered_doc = balance_code_fences(rendered_doc)
 
+    try:
+        from sanitize_thread import SecretSanitizer
+        sanitizer = SecretSanitizer()
+        rendered_doc = sanitizer.sanitize_content(rendered_doc).cleaned_text
+    except Exception as e:
+        print(f"Warning during secret sanitization: {e}", file=sys.stderr)
+
     tmp_path = output_path.with_name(f"{output_path.name}.tmp")
     tmp_path.write_text(rendered_doc, encoding='utf-8')
     tmp_path.replace(output_path)

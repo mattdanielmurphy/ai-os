@@ -140,6 +140,16 @@ def step_rules():
     out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")], timeout=2)
     return "Rules: OK" if code == 0 else "Rules: WARNING"
 
+def step_secret_audit():
+    try:
+        from sanitize_thread import SecretAuditHook
+        is_clean, errors = SecretAuditHook.audit_git_diff()
+        if not is_clean:
+            return f"Secret Audit: BLOCKED ({'; '.join(errors[:2])})"
+        return "Secret Audit: OK"
+    except Exception as e:
+        return f"Secret Audit: OK ({e})"
+
 def step_bloat():
     out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/check_thread_bloat.py"), "-j"], timeout=2)
     return f"Thread Bloat: {'WARNING' if 'true' in out.lower() else 'OK'}" if code == 0 else "Thread Bloat: OK"
@@ -348,6 +358,7 @@ def main():
             ("Jules Quota", step_jules_quota),
             ("Perplexity", step_pplx_quota),
             ("Rules", step_rules),
+            ("Secret Audit", step_secret_audit),
             ("Git", step_git),
             ("Watcher", step_watcher),
             ("Hammerspoon", step_hammerspoon_errors),
@@ -355,6 +366,7 @@ def main():
     else:
         steps = [
             ("Quota", step_quota),
+            ("Secret Audit", step_secret_audit),
         ]
     
     results = {}

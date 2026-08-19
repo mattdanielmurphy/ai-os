@@ -288,6 +288,9 @@ def export_threads(days: int = 31, output_dir: Path = DEFAULT_OUTPUT_DIR) -> int
 
     print(f"Found {len(convs)} user conversations from the past {days} days.")
 
+    from sanitize_thread import SecretSanitizer
+    sanitizer = SecretSanitizer()
+
     exported = 0
     for conv_id, info in convs.items():
         date_str = info["date"].strftime("%Y-%m-%d")
@@ -315,10 +318,11 @@ def export_threads(days: int = 31, output_dir: Path = DEFAULT_OUTPUT_DIR) -> int
             content = extract_clean_transcript_md(info["t_file"], title, conv_id, date_str)
 
         if content:
-            target_path.write_text(content, encoding="utf-8")
+            sanitized_res = sanitizer.sanitize_content(content)
+            target_path.write_text(sanitized_res.cleaned_text, encoding="utf-8")
             exported += 1
 
-    print(f"[SUCCESS] Exported {exported} conversation markdown files to {output_dir}")
+    print(f"[SUCCESS] Exported {exported} sanitized conversation markdown files to {output_dir}")
     return exported
 
 
