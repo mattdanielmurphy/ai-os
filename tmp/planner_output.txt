@@ -1,167 +1,158 @@
-This plan details the architectural and implementation design to resolve screenshot attachment failures and introduce contextual auto-resumption of planner threads in `query_aios`.
+The conversation history lock occurs because Antigravity IDE encountered a deserialization crash in its extension host after unformatted data was written directly into the SQLite database while the application was active. Direct modification of `state.vscdb` violated the IDE's internal state schema and bypassed the active process memory cache, triggering a safety error boundary that disabled the past conversations UI and halted the `@conversation:` completion provider.
 
-## Architectural Strategy
+## Root Cause Diagnosis
 
-The `query_aios` tool bridges agent interactions with the AI-OS runtime and planner sessions. 
+The UI lock state is the downstream result of three distinct failure modes interacting across the database, extension host, and renderer tiers:
 
-For screenshot handling, failures stem from inconsistent handling of local file paths, base64 payloads, and MIME-type validation during IPC or HTTP transmission to the companion daemon. The revised strategy normalizes screenshot inputs into a structured media payload, standardizing resolution, base64 encoding, MIME sniffing, and payload verification before transmission.
+1. SQLite Lock Contention and Memory Divergence: Antigravity IDE maintains an open SQLite connection with write-ahead logging to `state.vscdb`. Modifying this file externally while the IDE process runs desynchronizes the in-memory memento cache and leaves incomplete WAL transactions, causing read timeouts or corruption flags.
+2. Schema Deserialization Exceptions: Antigravity IDE expects strict TypeScript schemas under `ItemTable` keys like `workbench.panel.aichat.view.aichat.chatdata` and `interactive.sessions`. Raw injection from `Antigravity.app` threads omitted critical metadata fields, such as `bubbleId`, `workspaceId`, `generationUUID`, and `schemaVersion`, causing `JSON.parse` or Zod runtime validation to throw unhandled exceptions.
+3. UI Error Boundary Activation: When the conversation list component fails to hydrate the deserialized session tree, it catches the exception and renders an inactive, fallback state. This applies the CSS rule `cursor: not-allowed` across thread elements and prevents the extension host from registering the `@conversation:` mention provider.
 
-For thread management, `query_aios` will bind Antigravity thread contexts to underlying planner threads using a persistent mapping registry (`~/.hermes/aios_thread_map.json` or `~/.gemini/antigravity-cli/brain/thread_links.json`). When invoked within an active Antigravity session, `query_aios` inspects the environment or session metadata:
-- If the Antigravity thread ID has no prior linked planner thread, it provisions a fresh planner thread and stores the mapping.
-- If an ongoing planner thread is mapped to that Antigravity thread ID, it defaults to resuming the existing thread.
-- Explicit CLI flags (`--new-thread`, `--no-resume`, `--resume-thread <id>`, `--screenshot <path>`) allow agents and callers to override default resolution rules.
+| Issue Vector | Raw Injection Mechanism | Failure Symptom in IDE |
+| :--- | :--- | :--- |
+| Concurrency | Direct write during runtime | WAL corruption, lock error, stale state  |
+| Schema Integrity | Missing required IDE JSON fields | Extension host runtime TypeError  |
+| Workspace Scope | Missing hash association | `@conversation:` completion provider failure |
+| UI State | Unhandled hydration rejection | Disabled crosshair cursor (`not-allowed`)  |
 
-## State Management
+## Architectural Strategy and Contracts
 
-The thread registry tracks lifecycle states, timestamps, and bi-directional thread mappings.
+The safe approach replaces raw database modification with an offline, validated synchronization bridge that normalizes `Antigravity.app` NDJSON transcripts and Hermes SQLite entries into the exact schema required by Antigravity IDE.
 
-### Thread Association Schema (`aios_thread_map.json`)
+The bridge operates strictly when Antigravity IDE is stopped, or alternatively interfaces through a dedicated background Language Server Protocol (LSP) / VS Code extension API that supplies conversation references dynamically.
+
 ```typescript
-interface ThreadMappingEntry {
-  antigravity_thread_id: string;
-  planner_thread_id: string;
-  created_at: string;
-  last_active_at: string;
-  turn_count: number;
-  metadata?: {
-    model?: string;
-    last_status?: string;
-  };
+// Interface contract for IDE Chat Data Memento
+export interface IDEConversationMemento {
+  version: number;
+  activeSessionId: string | null;
+  sessions: Record<string, IDESessionRecord>;
 }
 
-interface ThreadRegistryState {
-  version: "1.0.0";
-  mappings: Record<string, ThreadMappingEntry>;
+export interface IDESessionRecord {
+  id: string;
+  tabId: string;
+  workspaceHash: string;
+  title: string;
+  createdAt: number;
+  lastUpdatedAt: number;
+  turns: IDETurnRecord[];
+  metadata: Record<string, unknown>;
 }
-```
 
-### Media Attachment Schema
-```typescript
-interface ScreenshotAttachmentPayload {
-  source_type: "file_path" | "base64" | "clipboard";
-  mime_type: "image/png" | "image/jpeg" | "image/webp";
-  data_base64: string;
-  file_path?: string;
-  byte_size: number;
-  sha256: string;
-}
-```
-
-## Interface Contracts
-
-### CLI Option Schema (`query_aios.js`)
-```typescript
-interface QueryAIOsCliFlags {
-  prompt: string;
-  screenshot?: string;            // File path, URL, or base64 string
-  newThread?: boolean;           // Force start of a new planner thread (--new-thread, -n)
-  resumeThread?: string;         // Explicit planner thread ID to resume (--resume <id>, -r <id>)
-  noResume?: boolean;            // Disable auto-resumption without forcing map update (--no-resume)
-  antigravityThreadId?: string;  // Explicit Antigravity thread ID context override (--ag-thread <id>)
-  timeout?: number;              // Request timeout in milliseconds
+export interface IDETurnRecord {
+  turnId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: number;
+  bubbleId: string;
+  contextPointers?: string[];
 }
 ```
 
-### Core Function Signatures
-```typescript
-// scripts/query_aios.js / lib/attachments.js
-function resolveScreenshotAttachment(inputPathOrPayload: string): Promise<ScreenshotAttachmentPayload>;
+```python
+# Interface contract for Bridge Adapter
+class AntigravityBridgeAdapter:
+    def check_ide_running(self) -> bool:
+        """Returns True if Antigravity IDE processes are running."""
+        ...
 
-// scripts/query_aios.js / lib/thread_resolver.js
-function resolvePlannerThreadId(
-  agThreadId: string | null,
-  flags: QueryAIOsCliFlags,
-  registryPath?: string
-): Promise<{ plannerThreadId: string | null; isResume: boolean }>;
+    def extract_app_threads(self, source_path: str) -> list[dict]:
+        """Extracts and parses NDJSON or SQLite threads from Antigravity.app."""
+        ...
 
-function updateThreadMapping(
-  agThreadId: string,
-  plannerThreadId: string,
-  registryPath?: string
-): Promise<void>;
+    def normalize_to_ide_schema(self, raw_threads: list[dict], workspace_hash: str) -> dict:
+        """Converts raw app records into the strongly-typed IDE memento schema."""
+        ...
 
-// scripts/query_aios.js / lib/client.js
-function executeQueryAIOs(
-  prompt: string,
-  options: {
-    plannerThreadId?: string | null;
-    screenshot?: ScreenshotAttachmentPayload;
-    timeout?: number;
+    def atomic_safe_write(self, target_db_path: str, memento_payload: dict) -> bool:
+        """Backs up state.vscdb and writes updated records using transactions."""
+        ...
+```
+
+## Data Structures and Schemas
+
+Antigravity IDE stores its state inside `~/Library/Application Support/Antigravity/User/workspaceStorage/<workspace-hash>/state.vscdb` (and the corresponding `globalStorage/state.vscdb`). The primary table is `ItemTable`, defined as:
+
+```sql
+CREATE TABLE IF NOT EXISTS ItemTable (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+```
+
+The key `workbench.panel.aichat.view.aichat.chatdata` holds a serialized JSON object containing all chat sessions and their associated bubble trees. The transformation must map incoming Antigravity.app events into this structure:
+
+```json
+{
+  "version": 3,
+  "sessions": {
+    "conv-uuid-1234": {
+      "id": "conv-uuid-1234",
+      "title": "Agentic Architecture Discussion",
+      "createdAt": 1771500000000,
+      "lastUpdatedAt": 1771500050000,
+      "workspaceId": "a1b2c3d4e5f6",
+      "bubbles": [
+        {
+          "id": "bubble-001",
+          "type": "user",
+          "text": "Explain context sync protocol",
+          "timestamp": 1771500000000
+        },
+        {
+          "id": "bubble-002",
+          "type": "ai",
+          "text": "The context sync protocol synchronizes live turns...",
+          "timestamp": 1771500050000
+        }
+      ]
+    }
   }
-): Promise<{ status: string; response: string; plannerThreadId: string }>;
+}
 ```
 
-## Logic Flow
+## Logic Flow and Algorithms
 
-```
-1. CLI Argument Parsing & Context Discovery
-   ├── Parse flags: --prompt, --screenshot, --new-thread, --resume, --no-resume, --ag-thread
-   ├── Resolve current Antigravity thread ID:
-   │   ├── Check --ag-thread flag
-   │   ├── Check process.env.ANTIGRAVITY_THREAD_ID or process.env.HERMES_THREAD_ID
-   │   └── Check active session log directory ~/.gemini/antigravity-cli/brain/
-   └── If no AG thread ID detected -> agThreadId = null (standalone mode)
+The safe import procedure coordinates process verification, data normalization, database backup, and atomic writing:
 
-2. Planner Thread Resolution Algorithm
-   ├── IF flags.resumeThread IS provided:
-   │   └── Target plannerThreadId = flags.resumeThread (Explicit Override)
-   ├── ELSE IF flags.newThread IS TRUE:
-   │   └── Target plannerThreadId = null (Create New Thread)
-   ├── ELSE IF flags.noResume IS TRUE:
-   │   └── Target plannerThreadId = null (One-off Execution)
-   ├── ELSE IF agThreadId is present:
-   │   ├── Read registry from ~/.hermes/aios_thread_map.json
-   │   ├── IF registry contains entry for agThreadId:
-   │   │   └── Target plannerThreadId = entry.planner_thread_id (Auto-Resume)
-   │   └── ELSE:
-   │       └── Target plannerThreadId = null (Auto-New)
-   └── ELSE:
-       └── Target plannerThreadId = null
+1. Process Guard: Query the system process table for `antigravity` or `electron` binary instances matching the IDE. If active, abort and instruct the user to close the IDE before writing to avoid database locks.
+2. Workspace Hash Resolution: Compute or read the target workspace hash from `workspaceStorage` to ensure conversation records are correctly bound to the active workspace.
+3. Transcript Parsing: Ingest NDJSON session logs from `~/.gemini/antigravity-cli/brain/` and SQLite records from `~/.hermes/state.db`.
+4. Schema Transformation: Transform turns and messages into standard IDE bubbles, populating default UUIDs, timestamp integers, and schema version identifiers.
+5. Backup Creation: Copy existing `state.vscdb` to `state.vscdb.backup.<timestamp>` prior to executing transactions.
+6. Transactional Upsert: Open a connection to SQLite, parse existing records under `workbench.panel.aichat.view.aichat.chatdata`, merge new thread entries without overwriting existing IDs, and execute an `UPSERT` statement inside an explicit transaction.
+7. Post-Write Verification: Read back the updated row and run a validation parse on the JSON payload before committing changes to disk.
 
-3. Screenshot Processing Pipeline
-   ├── IF flags.screenshot IS provided:
-   │   ├── Check if valid absolute or relative file path:
-   │   │   ├── Resolve to absolute path via path.resolve()
-   │   │   ├── Validate file existence via fs.statSync()
-   │   │   ├── Verify file size <= 10MB limit
-   │   │   ├── Read file buffer -> detect MIME type via magic bytes (PNG/JPEG/WebP)
-   │   │   └── Encode to standard base64 string
-   │   ├── ELSE IF string starts with "data:image/":
-   │   │   └── Parse base64 header and extract buffer
-   │   └── Package into standard ScreenshotAttachmentPayload
-   └── Attach payload to IPC / API dispatch body
-
-4. Execution & Post-Turn State Synchronization
-   ├── Dispatch request to AI-OS loopback / daemon with prompt, target thread ID, and attachment
-   ├── Receive response containing updated active plannerThreadId
-   └── IF agThreadId is present AND flags.noResume is NOT TRUE:
-       └── Update thread mapping registry with (agThreadId -> plannerThreadId, turn_count + 1, timestamp)
+```python
+# Pseudo-code for Safe Execution Flow
+def run_safe_import(workspace_path, app_source_path):
+    adapter = AntigravityBridgeAdapter()
+    if adapter.check_ide_running():
+        raise ProcessLookupError("Antigravity IDE must be closed before importing.")
+    
+    workspace_hash = get_workspace_hash(workspace_path)
+    db_path = get_storage_path(workspace_hash)
+    
+    raw_threads = adapter.extract_app_threads(app_source_path)
+    normalized = adapter.normalize_to_ide_schema(raw_threads, workspace_hash)
+    
+    success = adapter.atomic_safe_write(db_path, normalized)
+    return success
 ```
 
-## Edge Cases
+## Edge Cases and Implementation Steps
 
-- **File Path Resolution Errors:** Screenshot paths from relative subdirectories fail if executed from varying working directories. All paths must be normalized against `process.cwd()` and tested with `fs.existsSync()` before constructing payloads.
-- **Malformed Images or Unsupported Formats:** If a user passes an SVG or non-image file, reject before API transmission with a clear validation error detailing supported image formats.
-- **Stale or Purged Planner Threads:** If `query_aios` attempts to resume a planner thread that has expired or was removed on the backend, catch the 404/Not Found response, invalidate the cache entry in `aios_thread_map.json`, and automatically retry as a new thread.
-- **Concurrent Turn Collisions:** Use atomic file writes or lightweight lock files when reading/updating `aios_thread_map.json` to avoid race conditions across parallel subagent executions.
-- **Headless Environments without Antigravity ID:** When run outside Antigravity (e.g., standard CLI or CI), default gracefully to standalone single-shot or explicit thread IDs without crashing on missing environment keys.
+Handling corrupt or partially written states requires specific fallback routines to preserve data integrity:
 
-## Implementation Steps
+- Corrupted Database Recovery: If `state.vscdb` is unreadable, quarantine the file to `state.vscdb.corrupted.<timestamp>` and initialize a clean database structure from template.
+- Missing Hash Directory: If `workspaceStorage/<hash>` does not exist yet, resolve the global database path or trigger initial directory initialization.
+- Lock Timeouts: Use SQLite timeout configurations (`PRAGMA busy_timeout = 5000;`) to avoid instantaneous failure on slow disk locks.
+- Schema Version Drift: Inspect the version field of existing `chatdata` records; if newer than known formats, preserve raw extra keys to avoid breaking downstream features.
 
-- **Step 1: Attachment Normalizer Module (`scripts/lib/attachment_helper.js`)**
-  - Implement `resolveScreenshotAttachment` to handle absolute/relative path resolution, buffer conversion, MIME type sniffing, and base64 packaging with boundary checks.
-- **Step 2: Thread Mapping Registry Manager (`scripts/lib/thread_resolver.js`)**
-  - Implement read, write, and invalidate functions for `~/.hermes/aios_thread_map.json`.
-  - Implement Antigravity thread ID detection via environment variables and CLI argument fallback.
-  - Implement thread ID selection rules respecting `--new-thread`, `--resume <id>`, and `--no-resume`.
-- **Step 3: Update Main CLI Harness (`scripts/query_aios.js`)**
-  - Add argument flags: `--screenshot`, `--new-thread` (`-n`), `--resume` (`-r`), `--no-resume`, and `--ag-thread`.
-  - Wire attachment normalizer into request payload assembly.
-  - Wire thread resolver into conversation lifecycle logic and handle automatic 404 retry fallback.
-  - Update mapping state on successful turn completion.
-- **Step 4: Update AI-OS / Hermes Skills & Tools Configuration (`skills/ai-os/`, `tools/`)**
-  - Update tool description schemas and skill documentation with the new flags and attachment examples.
-- **Step 5: Unit & Integration Tests (`tests/test_query_aios.py` or Jest suites)**
-  - Test screenshot attachment with valid paths, missing paths, and raw base64 strings.
-  - Test auto-resume on consecutive invocations with the same `ANTIGRAVITY_THREAD_ID`.
-  - Test thread reset behavior when passing `--new-thread` on an existing thread.
+### Execution Plan
+
+1. Create Bridge Script: Implement `scripts/sync_antigravity_ide.py` encapsulating process checks, schema mapping, and transactional SQLite writers.
+2. Update Ingestion CLI: Modify `scripts/ingest_antigravity_sessions.py` to route IDE synchronization through `sync_antigravity_ide.py` instead of performing direct database mutations.
+3. Add Recovery Command: Add a recovery routine in `bin/ai-os` (`ai-os recover-ide-state`) that restores `state.vscdb` from the latest valid backup when the cursor UI locks.
+4. Verify Mention Provider: Launch Antigravity IDE and verify that past conversation items are clickable and typing `@conversation:` populates the mention picker.
