@@ -1,54 +1,129 @@
-A complete template for your architect-mode planner prompt has been generated and saved.
+Yes, migrating threads from **Antigravity.app** to **Antigravity IDE** is completely feasible because both applications share the same underlying storage formats: Protobuf (`.pb`) conversation files, NDJSON/JSONL brain artifacts, and VS Code SQLite (`state.vscdb`) key-value tables. The reason they do not appear automatically is that Google partitioned the standalone desktop app and the dedicated IDE into distinct filesystem roots and database paths.
 
-## Planner Prompt (`./tmp/planner_prompt.txt`)
+Here is the architectural implementation plan to migrate and reconcile the thread history.
 
-```text
-You are an expert software architect and technical planner.
+## Strategy and Feasibility Overview
 
-Your goal is to analyze the user's requirements, brainstorm implementation details, and produce a structured, high-signal, scoped implementation plan before any code is written.
+Google separated the Antigravity desktop app from Antigravity IDE, altering the storage locations on macOS:
+- Desktop app storage: `~/.gemini/antigravity/` and `~/Library/Application Support/Antigravity/`
+- IDE storage: `~/.gemini/antigravity-ide/` and `~/Library/Application Support/Antigravity IDE/`
 
----
+The migration requires a three-tier synchronization strategy:
+- Copy raw conversation Protobuf (`.pb`) files and brain artifact directories (`brain/<thread_id>/`) into the IDE directory tree.
+- Update workspace storage databases (`state.vscdb`) across all workspace hash folders, replacing hardcoded legacy paths (`/antigravity` to `/antigravity-ide`).
+- Perform a binary Protobuf merge on the `ItemTable` key `antigravityUnifiedStateSync.trajectorySummaries` inside the global storage database (`state.vscdb`), ensuring legacy and current thread indexes coexist without dropping recent chats.
 
-### Operating Principles
-1. No Unsolicited Code Dumps: Do not write final production code in this mode. Produce architectural blueprints, specifications, interfaces, and discrete task checklists.
-2. Atomic & Scoped Slices: Break down tasks into small, independently testable "build slices" rather than one monolithic phase.
-3. Branching & Worktree Strategy:
-   - Default small or sequential changes to `main`.
-   - For distinct, parallel, or wide-ranging scopes, specify dedicated feature branch names and recommend `git worktree` isolation.
-4. Interactive Brainstorming: Highlight ambiguous trade-offs, edge cases, and dependency chains early to invite collaboration before execution.
-
----
-
-### Output Structure
-
-1. Architecture & Scope Overview
-   - Summary of the problem, constraints, and target outcomes.
-   - Key architectural decisions and component boundaries.
-
-2. File Tree & Interface Changes
-   - Affected files (new, modified, or deleted).
-   - Core types, interfaces, schemas, or API signatures.
-
-3. Step-by-Step Implementation Slices (Checklist)
-   - Ordered list of actionable steps.
-   - For each slice:
-     - Exact goal and files touched.
-     - Verification / test criteria (unit test, manual CLI command, sanity check).
-
-4. Risk Analysis & Edge Cases
-   - Failure modes, performance concerns, or boundary conditions to watch out for during `/build`.
-
-5. Transition to Build
-   - Provide the specific prompt or instruction ready to pass directly to the `/build` executor.
+```
+┌──────────────────────────────────────┐       ┌──────────────────────────────────────────┐
+│           Antigravity.app            │       │             Antigravity IDE              │
+├──────────────────────────────────────┤       ├──────────────────────────────────────────┤
+│ ~/.gemini/antigravity/               │       │ ~/.gemini/antigravity-ide/               │
+│   ├── conversations/*.pb             │ ────► │   ├── conversations/*.pb                 │
+│   └── brain/<id>/                    │       │   └── brain/<id>/                        │
+│                                      │       │                                          │
+│ ~/Library/Application Support/       │       │ ~/Library/Application Support/           │
+│   └── Antigravity/User/              │       │   └── Antigravity IDE/User/              │
+│       ├── globalStorage/state.vscdb  │ ─Merge│       ├── globalStorage/state.vscdb      │
+│       └── workspaceStorage/*/        │ ─Path►│       └── workspaceStorage/*/            │
+└──────────────────────────────────────┘       └──────────────────────────────────────────┘
 ```
 
-## Quick CLI Usage
+## Data Structures and State
 
-You can write this prompt to your local temp directory or pipe it directly into your CLI tools:
+The migration module tracks source and destination environments using typed schema records:
 
-```bash
-mkdir -p ./tmp
-cat << 'EOF' > ./tmp/planner_prompt.txt
-<paste prompt content here>
-EOF
+```python
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional, Set
+
+@dataclass(frozen=True)
+class MigrationPaths:
+    source_gemini_dir: Path       # ~/.gemini/antigravity
+    target_gemini_dir: Path       # ~/.gemini/antigravity-ide
+    source_app_support: Path      # ~/Library/Application Support/Antigravity
+    target_app_support: Path      # ~/Library/Application Support/Antigravity IDE
+    backup_dir: Path              # ~/.gemini/backups/antigravity_migration_<timestamp>
+
+@dataclass
+class TrajectorySummaryRecord:
+    trajectory_id: str
+    raw_bytes: bytes
+
+@dataclass
+class MigrationManifest:
+    copied_conversations: List[str] = field(default_factory=list)
+    copied_brain_dirs: List[str] = field(default_factory=list)
+    migrated_workspaces: List[str] = field(default_factory=list)
+    merged_summary_count: int = 0
+    skipped_existing: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
 ```
+
+## Interface Contracts and Flow
+
+The migration service exposes modular migration and parsing utilities:
+
+```python
+class AntigravityMigrator:
+    def __init__(self, paths: MigrationPaths, dry_run: bool = False) -> None: ...
+
+    def assert_ide_closed(self) -> bool:
+        """Verifies no Antigravity or Antigravity IDE processes are holding SQLite locks."""
+        ...
+
+    def create_safety_backup(self) -> Path:
+        """Snapshots both source and target state.vscdb files and directories."""
+        ...
+
+    def copy_file_artifacts(self, manifest: MigrationManifest) -> None:
+        """Copies conversations (.pb), annotations (.pbtxt), and brain folders."""
+        ...
+
+    def parse_protobuf_varint(self, stream: bytes, offset: int) -> tuple[int, int]:
+        """Decodes length-delimited protobuf varints, returning (value, new_offset)."""
+        ...
+
+    def extract_trajectory_summaries(self, b64_payload: str) -> Dict[str, bytes]:
+        """Parses repeated summary messages and extracts UUID trajectory identifiers."""
+        ...
+
+    def merge_global_state_db(self, manifest: MigrationManifest) -> None:
+        """Merges trajectory summaries and rewrites configuration paths in global state.vscdb."""
+        ...
+
+    def migrate_workspace_storage(self, manifest: MigrationManifest) -> None:
+        """Iterates over workspaceStorage folders, migrating item tables and paths."""
+        ...
+
+    def execute(self) -> MigrationManifest:
+        """Runs the end-to-end migration lifecycle."""
+        ...
+```
+
+### Execution Algorithm
+- Verify with `pgrep -fi "Antigravity"` that neither `Antigravity.app` nor `Antigravity IDE` is actively running.
+- Initialize `MigrationPaths` pointing to macOS standard application paths and create timestamped backups of `state.vscdb` and conversation directories.
+- Iterate over files in `~/.gemini/antigravity/conversations/` (`*.pb`) and copy missing items to `~/.gemini/antigravity-ide/conversations/`.
+- Iterate over subdirectories in `~/.gemini/antigravity/brain/` and synchronize directory trees into `~/.gemini/antigravity-ide/brain/` using non-destructive copies.
+- Open source and target `User/globalStorage/state.vscdb` via `sqlite3`.
+- Query `ItemTable` for `antigravityUnifiedStateSync.trajectorySummaries`.
+- Base64-decode both payloads, iterate through repeated field tag `0x0A` wire records, extract the 36-character UUID at offset 2, and deduplicate entries into a map.
+- Re-encode the unified summary map into varint-length delimited wire format, Base64-encode, and write back into the target `ItemTable`.
+- Query other Antigravity keys (e.g., `history.recentlyOpenedPathsList`), apply regex path rewriting (`/\\.gemini/antigravity(?!-ide)` to `~/.gemini/antigravity-ide`), and upsert into the destination database.
+- Iterate through each folder in `User/workspaceStorage/`, read `state.vscdb`, apply regex path replacements on all string values, and save to the matching destination workspace storage folder.
+
+## Error Handling and Edge Cases
+
+- **Active Process Database Locks**: SQLite files locked by a running IDE instance cause partial writes or get clobbered upon IDE shutdown. Mitigation: Enforce strict process termination checks before opening database connections.
+- **Malformed or Corrupted Protobuf Payloads**: A corrupted Base64 blob in the source database must not invalidate existing IDE summaries. Mitigation: Wrap protobuf stream unpacking in `try/except` blocks, falling back to preserving existing target records if a frame fails parsing.
+- **Double-Suffix Regex Suffixing**: Naive path replacement can corrupt paths into `antigravity-ide-ide`. Mitigation: Use negative lookahead assertions `(?<!-ide)antigravity(?!-ide)` and `Antigravity(?! IDE)`.
+- **Missing Workspace Hash Mapping**: If a workspace has not been opened yet in the IDE, workspace storage folders may not exist. Mitigation: Automatically provision target directory paths and create initialized `ItemTable` tables.
+- **Hermes Thread Sync Compatibility**: The `ai-os` Hermes sync daemon monitors `~/.gemini/antigravity-cli/brain/` [AG_CONTEXT.md]. Mitigation: Update thread ingestion paths in `ai-os` configuration to inspect both `antigravity-cli` and `antigravity-ide`.
+
+## Step-by-Step Implementation Plan
+
+- **Step 1: Create Migration Script (`scripts/migrate_antigravity_threads.py`)**: Implement the `AntigravityMigrator` class containing safe SQLite transaction management, path regex transformations, and Protobuf summary merging.
+- **Step 2: Add CLI Wrapper (`bin/ai-os-migrate-threads`)**: Expose a runnable CLI subcommand (`ai-os migrate-threads [--dry-run] [--force]`) that handles preflight process verification, displays progress metrics, and prints the summary manifest.
+- **Step 3: Update AI-OS Ingestion Scripts (`scripts/ingest_antigravity_sessions.py` & `scripts/sync_threads.py`)**: Add fallback path resolution so `ai-os` tools scan `~/.gemini/antigravity-ide/brain/` alongside `~/.gemini/antigravity-cli/brain/` and legacy `~/.gemini/antigravity/brain/`.
+- **Step 4: Update Unit and Integration Tests (`tests/test_antigravity_migration.py`)**: Add test fixtures with synthetic SQLite `state.vscdb` databases and mocked Protobuf wire streams to validate lossless merging and idempotent rerun safety.
