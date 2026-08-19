@@ -1,1 +1,209 @@
-Please try again later.
+This implementation plan establishes a comprehensive security architecture that eliminates direct `.env` reads through runtime interception and dedicated metadata-only tools, while securing the antigravity thread synchronization pipeline against credential leakage.
+
+## Architectural Strategy & Policy Analysis
+
+The security architecture addresses secrets protection across two primary attack surfaces: agent tool execution environments and persistent conversation logs synced to Git repositories. To prevent accidental leakage, agents must never inspect raw `.env` files directly, and thread transcript synchronizers must scrub sensitive patterns prior to persistence.
+
+```
++-----------------------------------------------------------------------------------+
+|                              AGENT EXECUTION BOUNDARY                             |
+|                                                                                   |
+|  [ Agent Command / Tool ]                                                         |
+|         |                                                                         |
+|         +--> (Read .env / cat .env) -------> [ EnvGuard Hook ] ---> BLOCKED       |
+|         |                                                                         |
+|         +--> (Query key existence) --------> [ aios-env Tool ] ---> Key Metadata  |
+|                                                                                   |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+|                            ANTIGRAVITY SYNC PIPELINE                              |
+|                                                                                   |
+|  [ Raw NDJSON / CLI Logs ]                                                        |
+|         |                                                                         |
+|         v                                                                         |
+|  [ SecretSanitizer Pipeline ]                                                     |
+|         |--> Regex Scanner (High-entropy keys, JWTs, Bearer tokens)               |
+|         |--> Known Environment Hash Table Redaction                               |
+|         v                                                                         |
+|  [ Redacted Markdown / SQLite ] ---> [ Git / Remote GitHub Sync ]                  |
+|                                                                                   |
++-----------------------------------------------------------------------------------+
+```
+
+### Thread Syncing Policy Analysis
+
+Syncing execution transcripts (`~/.gemini/antigravity-cli/brain/` and `gen_conversation_md.py`) to GitHub carries leakage risks even within private repositories. Private repositories can be made public unintentionally, shared with third-party extensions, or exposed via CI actions.
+
+| Sync Dimension | Raw Sync (Unsafe) | Pure Gitignore (Opaque) | Redacted Sync (Recommended) |
+|---|---|---|---|
+| Secret Exposure Risk | High (secrets live forever in git commit history) | Zero local-to-remote leakage | Low (deterministic sanitization before staging) |
+| Auditability & Search | High across remote devices | Minimal (local machine only) | High across both remote and local databases |
+| Knowledge Persistence | Preserves all context | Blocks remote transcript archiving | Retains full conversational reasoning safely |
+| Invalidation Overhead | Extreme (requires git history rewriting) | Zero (no remote commits) | Low (handled via local preflight validation) |
+
+The enforced policy mandates **Redacted Thread Sync** backed by strict local pre-commit blocking:
+- Git tracking of conversation markdown files is permitted only after passing through the `SecretSanitizer` pipeline.
+- Raw NDJSON logs containing raw shell sessions remain strictly `.gitignore`'d in `~/.gemini/antigravity-cli/brain/` and `agent-logs/raw/`.
+- If an active key is ever detected in a staged diff, the preflight hook aborts execution and generates an automated revocation advisory.
+
+## Data Structures & State Management
+
+The secret management subsystem requires structured schemas to manage environment access safely and define redaction models.
+
+```python
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Dict, List, Optional, Set
+
+class SecretClassification(Enum):
+    API_KEY = "api_key"
+    BEARER_TOKEN = "bearer_token"
+    DATABASE_URI = "database_uri"
+    PRIVATE_KEY = "private_key"
+    GENERIC_SECRET = "generic_secret"
+
+@dataclass(frozen=True)
+class EnvMetadata:
+    key: str
+    is_set: bool
+    length: int
+    classification: SecretClassification
+    file_path: str
+
+@dataclass
+class RedactionPattern:
+    name: str
+    pattern: str
+    classification: SecretClassification
+    replacement_template: str = "[REDACTED_{classification}]"
+
+@dataclass
+class SanitizationResult:
+    cleaned_text: str
+    secrets_found_count: int
+    detected_types: Set[SecretClassification] = field(default_factory=set)
+    audit_trail: List[Dict[str, str]] = field(default_factory=list)
+```
+
+## API & Interface Contracts
+
+The following classes and function interfaces define contracts across the environment manager, sanitization engine, and validation hooks.
+
+```python
+class EnvGuard:
+    """Interception hook and helper utility for environment variable inspection."""
+
+    @staticmethod
+    def is_blocked_path(path: str) -> bool:
+        """Determines if the targeted path is a protected environment file."""
+        ...
+
+    @staticmethod
+    def inspect_keys(env_path: str = ".env") -> List[EnvMetadata]:
+        """Returns keys and metadata (length, presence) without exposing raw values."""
+        ...
+
+    @staticmethod
+    def validate_command(command: str) -> bool:
+        """Scans shell commands to block direct reads like cat .env or grep .env."""
+        ...
+
+
+class SecretSanitizer:
+    """High-performance stream and text sanitizer for scrubbing credentials."""
+
+    def __init__(self, custom_patterns: Optional[List[RedactionPattern]] = None) -> None:
+        ...
+
+    def register_env_secrets(self, env_files: List[str]) -> None:
+        """Loads actual local secret values in-memory to build an exact-match redaction dictionary."""
+        ...
+
+    def sanitize_content(self, text: str) -> SanitizationResult:
+        """Applies exact-match redaction and heuristic regex filtering across text."""
+        ...
+
+    def sanitize_file(self, input_path: str, output_path: Optional[str] = None) -> SanitizationResult:
+        """Reads a file, scrubs sensitive tokens, and writes the sanitized output."""
+        ...
+
+
+class SecretAuditHook:
+    """Pre-commit and preflight audit verification."""
+
+    @staticmethod
+    def audit_staged_diff() -> bool:
+        """Fails preflight if any unstaged or staged diff introduces raw secrets."""
+        ...
+```
+
+## Logic Flow & Algorithms
+
+The security lifecycle operates across three automated execution paths: access interception, safe environment inspection, and transcript sanitization.
+
+### Path A: Runtime Environment File Interception
+
+```
+1. Receive command or tool call (e.g. read_file, exec_command).
+2. Normalize target path and resolve symlinks using realpath().
+3. If target matches pattern r'(^|/)(\.env|\.env\..*)$':
+     a. Intercept operation.
+     b. Log access violation to agent session audit log.
+     c. Raise PermissionError: "Direct access to .env is forbidden. Use aios-env tool instead."
+4. If tool is exec_command / bash:
+     a. Tokenize command string.
+     b. Check AST / token sequence for forbidden read operations:
+        ['cat', 'head', 'tail', 'less', 'more', 'view', 'grep', 'awk', 'sed'] targeting .env patterns.
+     c. If matched, block command execution and return descriptive permission error.
+```
+
+### Path B: Safe Environment Tool Workflow (`aios-env`)
+
+```
+1. Agent requires verification of environment setup.
+2. Agent invokes safe tool: `aios-env list` or `aios-env check --key GEMINI_API_KEY`.
+3. Tool parses `.env` without echoing values to standard output:
+     - Output key name, presence (True/False), character length, and masking preview (e.g. `AIzaSy...4xQ`).
+4. To run scripts requiring environment variables, agent executes standard subshell processes:
+     - Runtime loads variables into child process memory via `dotenv` without printing to terminal or logs.
+```
+
+### Path C: Transcript Sanitization and Sync Pipeline
+
+```
+1. Daemon triggers `sync_threads.py` on NDJSON transcript update.
+2. Read raw NDJSON session records.
+3. Ingest active `.env` files into `SecretSanitizer` exact-match dictionary (in-memory only).
+4. For each turn in transcript (User, Model, Tool Output):
+     a. Apply exact-match replacement against all loaded environment values.
+     b. Apply regex rules for structured tokens (e.g., `ghp_[A-Za-z0-9]{36}`, `sk-[A-Za-z0-9_-]{48}`).
+     c. Substitute detected matches with structured tokens: `[REDACTED_API_KEY:SHA256_PREFIX]`.
+5. Write sanitized conversational exchange to `thread.md` or Hermes SQLite `~/.hermes/state.db`.
+6. Run `SecretAuditHook.audit_staged_diff()` before committing to git remote.
+```
+
+## Edge Cases & Implementation Steps
+
+Robust credential protection must guard against alternative read vectors and complex log formats.
+
+### Edge Cases & Mitigation Strategies
+
+- **Obfuscated and Encoded Secrets:** Base64 or URL-encoded strings in URLs or tool payloads are detected by decoding common token lengths during `SecretSanitizer` scanning.
+- **Subshell and Tool Bypasses:** Direct subshells (e.g., `python -c "print(open('.env').read())"`) bypass static shell regexes. Mitigation requires combining CLI command checks with runtime file system permission locks (`chmod 600 .env`) and mandatory preflight diff scanning before git commits.
+- **Multi-File Environment Variations:** Files like `.env.local`, `.env.production`, `.env.test`, and `.env.backup` are matched against the regex `(?i)\.env(\.[a-z0-9_-]+)*$`.
+- **Git Index Exposure:** Inadvertently staging `.env` files is blocked at both `.gitignore` and `preflight.py` levels with non-zero exit code gates.
+
+### Implementation Steps
+
+- Modify `tools/` and `scripts/`:
+  - Create `scripts/env_guard.py` implementing `EnvGuard` and the `aios-env` CLI helper for safe key metadata inspection.
+  - Create `scripts/sanitize_thread.py` implementing `SecretSanitizer` with exact-match hashing and token regex filters.
+- Update `scripts/sync_threads.py`, `scripts/watch_transcripts.py`, and `scripts/gen_conversation_md.py`:
+  - Integrate `SecretSanitizer` into the transcript pipeline before writing markdown or persisting to `~/.hermes/state.db`.
+- Enhance Quality Gates in `scripts/preflight.py` and `scripts/postflight_lib.py`:
+  - Add a preflight secret audit step that scans staged git diffs and blocks any commit containing raw secrets or `.env` files.
+- Update Domain Knowledge & Invariants:
+  - Update `AG_CONTEXT.md` under **Key Architecture & Domain Rules** to include the zero-tolerance `.env` direct read policy and the redacted thread sync invariant.
+  - Record the architectural decision and rationale in `DEVELOPMENT_JOURNAL.md`.
