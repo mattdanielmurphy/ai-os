@@ -1,129 +1,158 @@
-Yes, migrating threads from **Antigravity.app** to **Antigravity IDE** is completely feasible because both applications share the same underlying storage formats: Protobuf (`.pb`) conversation files, NDJSON/JSONL brain artifacts, and VS Code SQLite (`state.vscdb`) key-value tables. The reason they do not appear automatically is that Google partitioned the standalone desktop app and the dedicated IDE into distinct filesystem roots and database paths.
+Direct UNIX symlinks are intentionally prohibited by the system architecture because individual agent CLIs atomically overwrite and unlink target paths during updates. Instead, synchronization is managed through an event-driven multi-way synchronization engine (`sync_skills.py` driven by `watch_skills.sh`) that acts as a live virtual link across all platforms, backed by an automated canary verification test.
 
-Here is the architectural implementation plan to migrate and reconcile the thread history.
+## Architectural Strategy and Invariants
 
-## Strategy and Feasibility Overview
-
-Google separated the Antigravity desktop app from Antigravity IDE, altering the storage locations on macOS:
-- Desktop app storage: `~/.gemini/antigravity/` and `~/Library/Application Support/Antigravity/`
-- IDE storage: `~/.gemini/antigravity-ide/` and `~/Library/Application Support/Antigravity IDE/`
-
-The migration requires a three-tier synchronization strategy:
-- Copy raw conversation Protobuf (`.pb`) files and brain artifact directories (`brain/<thread_id>/`) into the IDE directory tree.
-- Update workspace storage databases (`state.vscdb`) across all workspace hash folders, replacing hardcoded legacy paths (`/antigravity` to `/antigravity-ide`).
-- Perform a binary Protobuf merge on the `ItemTable` key `antigravityUnifiedStateSync.trajectorySummaries` inside the global storage database (`state.vscdb`), ensuring legacy and current thread indexes coexist without dropping recent chats.
+Raw filesystem symlinks fail across heterogeneous AI environments because tools like Claude Code, Hermes, Antigravity (`agy`), and Gemini frequently perform atomic file writes (`write-temp -> rename -> overwrite`). This pattern replaces symbolic links with concrete files or creates broken pointers when directory trees shift.
 
 ```
-┌──────────────────────────────────────┐       ┌──────────────────────────────────────────┐
-│           Antigravity.app            │       │             Antigravity IDE              │
-├──────────────────────────────────────┤       ├──────────────────────────────────────────┤
-│ ~/.gemini/antigravity/               │       │ ~/.gemini/antigravity-ide/               │
-│   ├── conversations/*.pb             │ ────► │   ├── conversations/*.pb                 │
-│   └── brain/<id>/                    │       │   └── brain/<id>/                        │
-│                                      │       │                                          │
-│ ~/Library/Application Support/       │       │ ~/Library/Application Support/           │
-│   └── Antigravity/User/              │       │   └── Antigravity IDE/User/              │
-│       ├── globalStorage/state.vscdb  │ ─Merge│       ├── globalStorage/state.vscdb      │
-│       └── workspaceStorage/*/        │ ─Path►│       └── workspaceStorage/*/            │
-└──────────────────────────────────────┘       └──────────────────────────────────────────┘
+       ┌────────────────────────────────────────────────────────┐
+       │             fswatch Multi-Directory Monitor            │
+       └──────┬──────────────┬──────────────┬─────────────┬─────┘
+              │              │              │             │
+              ▼              ▼              ▼             ▼
+      ~/projects/ai-os   ~/.claude      ~/.hermes     ~/.gemini
+          /skills/        /skills/       /skills/   /config/skills/
+              ▲              ▲              ▲             ▲
+              └──────────────┴──────┬───────┴─────────────┘
+                                    │
+                     sync_skills.py (SHA-256 Mesh)
 ```
 
-## Data Structures and State
+The system implements an event-driven mesh topology where `~/projects/ai-os/skills/` acts as the canonical git repository root alongside peer directories (`~/.hermes/skills`, `~/.claude/skills`, `~/.gemini/config/skills`, `~/.agents/skills`, `~/.agy/skills`). The `sync_skills.py` script computes content hashes, prevents recursive loopbacks via transactional locks, and propagates file creations, mutations, and deletions across all platform directories.
 
-The migration module tracks source and destination environments using typed schema records:
+| Platform Path | Primary Harness | Sync Modality | Conflict Resolution |
+| :--- | :--- | :--- | :--- |
+| `~/projects/ai-os/skills/` | Repository Root (Git) | Source of Truth | Repo Anchor Override |
+| `~/.claude/skills/` | Claude Code CLI | Bi-directional Mesh | Latest mtime + SHA-256 |
+| `~/.hermes/skills/` | Hermes Agent & WebUI | Bi-directional Mesh | Latest mtime + SHA-256 |
+| `~/.gemini/config/skills/` | Antigravity / Gemini Shell | Bi-directional Mesh | Latest mtime + SHA-256 |
+| `~/.agents/skills/` | Local Agent Runtime | Bi-directional Mesh | Latest mtime + SHA-256 |
+| `~/.agy/skills/` | Local CLI Daemon | Bi-directional Mesh | Latest mtime + SHA-256 |
+
+## State Management and Data Structures
+
+The synchronization engine maintains state in `~/.ai-os/skills_sync_state.json` to track file digests, timestamps, and active sync operations.
+
+```json
+{
+  "version": 1,
+  "last_global_sync": "2026-08-19T16:08:00Z",
+  "lock_file": "/tmp/ai_os_skills_sync.lock",
+  "watched_roots": [
+    "/Users/matt/projects/ai-os/skills",
+    "/Users/matt/.claude/skills",
+    "/Users/matt/.hermes/skills",
+    "/Users/matt/.gemini/config/skills",
+    "/Users/matt/.agents/skills",
+    "/Users/matt/.agy/skills"
+  ],
+  "file_registry": {
+    "search-clipboard.md": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mtime_ns": 1724083680000000000,
+      "origin": "/Users/matt/projects/ai-os/skills/search-clipboard.md"
+    }
+  }
+}
+```
+
+State changes occur only when a file content hash changes or when an entry is unlinked, preventing cascade loops when updating timestamps.
+
+## API and Interface Contracts
+
+The synchronization components expose strict CLI interfaces and Python classes for orchestrating changes and handling background daemon notifications.
 
 ```python
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 
-@dataclass(frozen=True)
-class MigrationPaths:
-    source_gemini_dir: Path       # ~/.gemini/antigravity
-    target_gemini_dir: Path       # ~/.gemini/antigravity-ide
-    source_app_support: Path      # ~/Library/Application Support/Antigravity
-    target_app_support: Path      # ~/Library/Application Support/Antigravity IDE
-    backup_dir: Path              # ~/.gemini/backups/antigravity_migration_<timestamp>
+class SkillRecord:
+    name: str
+    relative_path: Path
+    sha256: str
+    mtime_ns: int
 
-@dataclass
-class TrajectorySummaryRecord:
-    trajectory_id: str
-    raw_bytes: bytes
-
-@dataclass
-class MigrationManifest:
-    copied_conversations: List[str] = field(default_factory=list)
-    copied_brain_dirs: List[str] = field(default_factory=list)
-    migrated_workspaces: List[str] = field(default_factory=list)
-    merged_summary_count: int = 0
-    skipped_existing: List[str] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
+class SyncEngine:
+    state_file: Path
+    watched_dirs: List[Path]
+    lock_path: Path
+    
+    def __init__(self, config_path: Optional[Path] = None) -> None: ...
+    def scan_directory(self, target_dir: Path) -> Dict[str, SkillRecord]: ...
+    def compute_sha256(self, file_path: Path) -> str: ...
+    def acquire_lock(self, timeout_sec: float = 5.0) -> bool: ...
+    def release_lock(self) -> None: ...
+    def sync_file(self, source_path: Path, changed_event: str) -> bool: ...
+    def reconcile_all(self) -> Dict[str, List[str]]: ...
 ```
 
-## Interface Contracts and Flow
+CLI entry point contracts for orchestrator execution:
+- `python3 scripts/sync_skills.py --reconcile`: Full state synchronization pass across all configured directories.
+- `python3 scripts/sync_skills.py --sync-file <path> --event <created|modified|deleted>`: Granular single-file update invoked by the filesystem watcher.
+- `python3 scripts/sync_skills.py --test-canary`: Automated verification routine that creates, mutates, and deletes a test skill while verifying propagation across all ecosystem paths.
 
-The migration service exposes modular migration and parsing utilities:
+## Logic Flow and Algorithms
 
-```python
-class AntigravityMigrator:
-    def __init__(self, paths: MigrationPaths, dry_run: bool = False) -> None: ...
+Execution flow splits into daemon-driven event processing and full reconciliation passes.
 
-    def assert_ide_closed(self) -> bool:
-        """Verifies no Antigravity or Antigravity IDE processes are holding SQLite locks."""
-        ...
-
-    def create_safety_backup(self) -> Path:
-        """Snapshots both source and target state.vscdb files and directories."""
-        ...
-
-    def copy_file_artifacts(self, manifest: MigrationManifest) -> None:
-        """Copies conversations (.pb), annotations (.pbtxt), and brain folders."""
-        ...
-
-    def parse_protobuf_varint(self, stream: bytes, offset: int) -> tuple[int, int]:
-        """Decodes length-delimited protobuf varints, returning (value, new_offset)."""
-        ...
-
-    def extract_trajectory_summaries(self, b64_payload: str) -> Dict[str, bytes]:
-        """Parses repeated summary messages and extracts UUID trajectory identifiers."""
-        ...
-
-    def merge_global_state_db(self, manifest: MigrationManifest) -> None:
-        """Merges trajectory summaries and rewrites configuration paths in global state.vscdb."""
-        ...
-
-    def migrate_workspace_storage(self, manifest: MigrationManifest) -> None:
-        """Iterates over workspaceStorage folders, migrating item tables and paths."""
-        ...
-
-    def execute(self) -> MigrationManifest:
-        """Runs the end-to-end migration lifecycle."""
-        ...
+```
+[File Event Detected (fswatch)]
+               │
+               ▼
+   [Acquire /tmp Lockfile]
+               │
+      ├── [Locked?] ──> Debounce and retry
+      │
+      ▼
+   [Extract Relative Skill Path]
+               │
+      ├── [Event == 'deleted']
+      │        │
+      │        ▼
+      │   Remove matching relative paths across all peer dirs
+      │   Update skills_sync_state.json
+      │
+      └── [Event in ('created', 'modified')]
+               │
+               ▼
+          Compute SHA-256 of modified file
+               │
+          ├── [SHA Matches State?] ──> Skip (Loopback Suppression)
+          │
+          └── [SHA Differs]
+                   │
+                   ▼
+              Atomically write payload to all peer targets (write temp -> os.replace)
+              Update skills_sync_state.json with new digest
+               │
+               ▼
+   [Release Lockfile & Log Transaction]
 ```
 
-### Execution Algorithm
-- Verify with `pgrep -fi "Antigravity"` that neither `Antigravity.app` nor `Antigravity IDE` is actively running.
-- Initialize `MigrationPaths` pointing to macOS standard application paths and create timestamped backups of `state.vscdb` and conversation directories.
-- Iterate over files in `~/.gemini/antigravity/conversations/` (`*.pb`) and copy missing items to `~/.gemini/antigravity-ide/conversations/`.
-- Iterate over subdirectories in `~/.gemini/antigravity/brain/` and synchronize directory trees into `~/.gemini/antigravity-ide/brain/` using non-destructive copies.
-- Open source and target `User/globalStorage/state.vscdb` via `sqlite3`.
-- Query `ItemTable` for `antigravityUnifiedStateSync.trajectorySummaries`.
-- Base64-decode both payloads, iterate through repeated field tag `0x0A` wire records, extract the 36-character UUID at offset 2, and deduplicate entries into a map.
-- Re-encode the unified summary map into varint-length delimited wire format, Base64-encode, and write back into the target `ItemTable`.
-- Query other Antigravity keys (e.g., `history.recentlyOpenedPathsList`), apply regex path rewriting (`/\\.gemini/antigravity(?!-ide)` to `~/.gemini/antigravity-ide`), and upsert into the destination database.
-- Iterate through each folder in `User/workspaceStorage/`, read `state.vscdb`, apply regex path replacements on all string values, and save to the matching destination workspace storage folder.
+To eliminate race conditions, file writing uses temporary file creation with atomic replacement (`os.replace`) so partial writes cannot be read by concurrent agent processes.
 
-## Error Handling and Edge Cases
+## Verification Test and Implementation Plan
 
-- **Active Process Database Locks**: SQLite files locked by a running IDE instance cause partial writes or get clobbered upon IDE shutdown. Mitigation: Enforce strict process termination checks before opening database connections.
-- **Malformed or Corrupted Protobuf Payloads**: A corrupted Base64 blob in the source database must not invalidate existing IDE summaries. Mitigation: Wrap protobuf stream unpacking in `try/except` blocks, falling back to preserving existing target records if a frame fails parsing.
-- **Double-Suffix Regex Suffixing**: Naive path replacement can corrupt paths into `antigravity-ide-ide`. Mitigation: Use negative lookahead assertions `(?<!-ide)antigravity(?!-ide)` and `Antigravity(?! IDE)`.
-- **Missing Workspace Hash Mapping**: If a workspace has not been opened yet in the IDE, workspace storage folders may not exist. Mitigation: Automatically provision target directory paths and create initialized `ItemTable` tables.
-- **Hermes Thread Sync Compatibility**: The `ai-os` Hermes sync daemon monitors `~/.gemini/antigravity-cli/brain/` [AG_CONTEXT.md]. Mitigation: Update thread ingestion paths in `ai-os` configuration to inspect both `antigravity-cli` and `antigravity-ide`.
+### Edge Cases and Mitigations
+- Incomplete writes during large file sync are resolved using SHA-256 checksum comparison prior to atomic replacement.
+- Rapid file modifications are managed by a 200ms debounce buffer inside `watch_skills.sh`.
+- Stale lockfiles from abnormal process exits are automatically cleared if the holding process ID is dead or lock age exceeds 10 seconds.
+- Missing target directories are created automatically with standard permissions (`0o755`).
 
-## Step-by-Step Implementation Plan
+### Implementation Steps
 
-- **Step 1: Create Migration Script (`scripts/migrate_antigravity_threads.py`)**: Implement the `AntigravityMigrator` class containing safe SQLite transaction management, path regex transformations, and Protobuf summary merging.
-- **Step 2: Add CLI Wrapper (`bin/ai-os-migrate-threads`)**: Expose a runnable CLI subcommand (`ai-os migrate-threads [--dry-run] [--force]`) that handles preflight process verification, displays progress metrics, and prints the summary manifest.
-- **Step 3: Update AI-OS Ingestion Scripts (`scripts/ingest_antigravity_sessions.py` & `scripts/sync_threads.py`)**: Add fallback path resolution so `ai-os` tools scan `~/.gemini/antigravity-ide/brain/` alongside `~/.gemini/antigravity-cli/brain/` and legacy `~/.gemini/antigravity/brain/`.
-- **Step 4: Update Unit and Integration Tests (`tests/test_antigravity_migration.py`)**: Add test fixtures with synthetic SQLite `state.vscdb` databases and mocked Protobuf wire streams to validate lossless merging and idempotent rerun safety.
+1. Update `scripts/sync_skills.py`
+   - Implement `SkillRecord` and `SyncEngine` with SHA-256 caching and atomic file replication.
+   - Add loop prevention check against `skills_sync_state.json` to prevent recursive event firing.
+   - Implement the `--test-canary` verification command.
+
+2. Update `scripts/watch_skills.sh`
+   - Configure `fswatch` to monitor `~/projects/ai-os/skills`, `~/.claude/skills`, `~/.hermes/skills`, `~/.gemini/config/skills`, `~/.agents/skills`, and `~/.agy/skills`.
+   - Route batch filesystem events to `scripts/sync_skills.py --sync-file`.
+
+3. Execute End-to-End Canary Verification Test
+   - The orchestrator invokes `python3 scripts/sync_skills.py --test-canary`.
+   - Test step 1: Write `canary_sync_probe.md` to `~/projects/ai-os/skills/`.
+   - Test step 2: Assert existence and identical SHA-256 hash in all 5 target platform skill directories.
+   - Test step 3: Update `canary_sync_probe.md` inside `~/.hermes/skills/` and verify content propagation back to the repository and all other peers.
+   - Test step 4: Remove `canary_sync_probe.md` and confirm deletion across the entire network.
