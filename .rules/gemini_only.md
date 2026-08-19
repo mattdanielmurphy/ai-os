@@ -71,6 +71,6 @@ When running under Gemini/Antigravity without Hermes' active daemon, you MUST em
 - **Codebase & Large Repositories Context Policy**:
   - **Single / Short Files & Notes**: Automatically inlined by `query_aios.js` into prompt text.
   - **Multi-File Codebases**: Push changes to GitHub and instruct the planner to inspect the repository via the authenticated GitHub connector.
-  - **Screenshots & Visual Assets**: Upload quota is 50/week on a rolling window. If remaining upload quota is > 25 AND a screenshot contains complex visual elements that cannot be easily/accurately transcribed into text, passing the image file to Perplexity is permitted. If quota is <= 25 or the visual content is easily describable, the orchestrator MUST act as the vision provider and describe it textually in the prompt instead of uploading.
+- **Screenshots & Visual Assets**: Upload quota is 50/week on a rolling window. If remaining upload quota is > 25 and the user provides a visual artifact/screenshot for layout critique, debugging, or planning, the orchestrator MUST pass the image via `--files` directly to the planner. If quota is <= 25 or the visual content is easily describable, the orchestrator MUST act as the vision provider and describe it textually in the prompt instead of uploading.
 - **Async Recovery on Timeout**: If the planning query times out, do NOT abandon the query. Immediately run `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 600` to retrieve the finished output.
 <!-- /RULE:AIOS_GUARDRAILS -->
