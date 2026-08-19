@@ -1,4 +1,4 @@
-User Request: can you just add a symlink so whatever platform I use, everything is always in sync? Maybe try one test and I'll verify it worked
+User Request: Symlinking conversation .db files and injecting agyhub_summaries_proto.pb into Antigravity IDE globalStorage state.vscdb did not make threads visible in the Antigravity IDE history sidebar. Investigate how Antigravity IDE loads, indexes, and queries trajectory history, compare Antigravity.app storage architecture with Antigravity IDE, and determine the exact missing linkage.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
