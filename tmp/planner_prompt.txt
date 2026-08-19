@@ -1,4 +1,4 @@
-User Request: Investigate and fix issues where: 1. Multiple image attachments were not supported (only one was attached). 2. Perplexity/Gemini companion file upload failed to attach or render images properly in Perplexity/Gemini webviews. Check transcript in conversation 0d53eed7-c272-4176-9f64-5e16e89c0850 and server.rs / perplexity-engine.js / query_aios.js.
+User Request: Address secrets exposure and protection in ai-os: 1. Prevent agents from ever reading raw .env files directly (e.g. cat .env, view_file on .env), enforcing strict .env tool usage without direct secret leakage. 2. Analyze the policy around syncing antigravity threads to git/GitHub (private repo vs secret leakage vs revoking vs gitignore), establish rock-solid guardrails against secret access, and update rules/learnings accordingly.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
