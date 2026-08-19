@@ -43,7 +43,7 @@ function isImageFile(filePath) {
 }
 
 function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHARS) {
-    if (!text) return { inlinedText: '', attachedFilePath: null, attachedImagePath: null };
+    if (!text) return { inlinedText: '', attachedFilePath: null, attachedImagePaths: [] };
 
     const pathRegex = /(?:file:\/\/)?(\/(?:Users|Volumes|private|tmp|var)[^\s"'`<>]+)/g;
     const matches = new Set();
@@ -59,7 +59,7 @@ function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHAR
 
     let inlinedSections = [];
     let candidateAttachment = null;
-    let candidateImage = null;
+    let candidateImages = [];
     let currentInlinedChars = 0;
 
     for (const filePath of matches) {
@@ -68,9 +68,9 @@ function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHAR
                 const stat = fs.statSync(filePath);
 
                 if (isImageFile(filePath)) {
-                    if (!candidateImage) {
-                        candidateImage = filePath;
-                        console.error(`[query_aios] 🖼️ Detected referenced image/screenshot: ${filePath} (${stat.size} bytes). Selected as image attachment.`);
+                    if (!candidateImages.includes(filePath)) {
+                        candidateImages.push(filePath);
+                        console.error(`[query_aios] 🖼️ Detected referenced image/screenshot: ${filePath} (${stat.size} bytes). Added to image attachments.`);
                     }
                     continue;
                 }
@@ -97,7 +97,7 @@ function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHAR
     return {
         inlinedText: inlinedSections.join('\n'),
         attachedFilePath: candidateAttachment,
-        attachedImagePath: candidateImage
+        attachedImagePaths: candidateImages
     };
 }
 
@@ -211,7 +211,7 @@ DO NOT provide full code implementations. Focus on structural details, signature
     const remainingBudget = Math.max(0, MAX_PROMPT_CHARS - fixedOverhead);
 
     // Auto-resolve referenced files in userRequest respecting remaining budget
-    const { inlinedText, attachedFilePath, attachedImagePath } = extractAndInlineReferencedFiles(userRequest, remainingBudget);
+    const { inlinedText, attachedFilePath, attachedImagePaths } = extractAndInlineReferencedFiles(userRequest, remainingBudget);
 
     const fullPrompt = `User Request: ${userRequest}
 ${inlinedText}${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}${baseInstructions}`;
@@ -219,7 +219,7 @@ ${inlinedText}${imageContext}${agContextStr}${repoInfo}${logContext}${historyCon
     return {
         prompt: fullPrompt,
         attachedFilePath: attachedFilePath,
-        attachedImagePath: attachedImagePath
+        attachedImagePaths: attachedImagePaths
     };
 }
 
@@ -378,7 +378,7 @@ async function main() {
     let isPlanMode = false;
     let imageDesc = null;
     let recoverMode = false;
-    let filePath = null;
+    let filePaths = [];
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
@@ -395,7 +395,10 @@ async function main() {
         } else if (arg === '--image-desc') {
             imageDesc = args[++i];
         } else if (arg === '--screenshot' || arg === '--image' || arg === '--file' || arg === '--files' || arg === '-f') {
-            filePath = args[++i];
+            const nextArg = args[++i];
+            if (nextArg) {
+                filePaths.push(nextArg);
+            }
         } else if (arg === '--thread' || arg === '--session' || arg === '-s' || arg === '-c' || arg === '--continue' || arg === '--resume' || arg === '-r') {
             const nextArg = args[i + 1];
             if (nextArg && !nextArg.startsWith('-')) {
@@ -445,19 +448,19 @@ async function main() {
         if (!timeoutSec) timeoutSec = defaultTimeout;
         if (!outputPath) outputPath = './tmp/planner_output.txt';
         if (message) {
-            const { prompt: generatedPrompt, attachedFilePath, attachedImagePath } = buildPlannerPrompt(message, imageDesc);
+            const { prompt: generatedPrompt, attachedFilePath, attachedImagePaths } = buildPlannerPrompt(message, imageDesc);
             fs.mkdirSync('./tmp', { recursive: true });
             fs.writeFileSync('./tmp/planner_prompt.txt', generatedPrompt, 'utf8');
             console.error(`[query_aios] Planner prompt generated at ./tmp/planner_prompt.txt (${generatedPrompt.length} chars)`);
             message = generatedPrompt;
-            if (!filePath) {
-                if (attachedImagePath) {
-                    filePath = attachedImagePath;
-                    console.error(`[query_aios] 🖼️ Attached screenshot parameter set: ${filePath}`);
-                } else if (attachedFilePath) {
-                    filePath = attachedFilePath;
-                    console.error(`[query_aios] 📎 Attached file parameter set: ${filePath}`);
+            if (attachedImagePaths && attachedImagePaths.length > 0) {
+                for (const imgP of attachedImagePaths) {
+                    if (!filePaths.includes(imgP)) filePaths.push(imgP);
                 }
+                console.error(`[query_aios] 🖼️ Attached screenshot parameter(s) set: ${attachedImagePaths.join(', ')}`);
+            } else if (attachedFilePath && !filePaths.includes(attachedFilePath)) {
+                filePaths.push(attachedFilePath);
+                console.error(`[query_aios] 📎 Attached file parameter set: ${attachedFilePath}`);
             }
         }
     } else {
@@ -469,16 +472,16 @@ async function main() {
     }
 
     if (message && !isPlanMode) {
-        const { inlinedText, attachedFilePath, attachedImagePath } = extractAndInlineReferencedFiles(message);
+        const { inlinedText, attachedFilePath, attachedImagePaths } = extractAndInlineReferencedFiles(message);
         if (inlinedText) {
             message = `${message}\n${inlinedText}`;
         }
-        if (!filePath) {
-            if (attachedImagePath) {
-                filePath = attachedImagePath;
-            } else if (attachedFilePath) {
-                filePath = attachedFilePath;
+        if (attachedImagePaths && attachedImagePaths.length > 0) {
+            for (const imgP of attachedImagePaths) {
+                if (!filePaths.includes(imgP)) filePaths.push(imgP);
             }
+        } else if (attachedFilePath && !filePaths.includes(attachedFilePath)) {
+            filePaths.push(attachedFilePath);
         }
     }
 
@@ -487,15 +490,16 @@ async function main() {
         process.exit(1);
     }
 
-    if (filePath) {
-        const resolvedPath = path.resolve(filePath);
+    let verifiedFilePaths = [];
+    for (const f of filePaths) {
+        const resolvedPath = path.resolve(f);
         if (!fs.existsSync(resolvedPath)) {
             console.error(`[query_aios] ❌ Attached file does not exist: ${resolvedPath}`);
             process.exit(1);
         }
-        filePath = resolvedPath;
-        const stat = fs.statSync(filePath);
-        console.error(`[query_aios] 📎 Confirmed attachment: ${filePath} (${stat.size} bytes)`);
+        const stat = fs.statSync(resolvedPath);
+        verifiedFilePaths.push(resolvedPath);
+        console.error(`[query_aios] 📎 Confirmed attachment: ${resolvedPath} (${stat.size} bytes)`);
     }
 
     let resolvedModel = null;
@@ -553,7 +557,8 @@ async function main() {
             prompt: message,
             model: resolvedModel,
             session_id: sessionId,
-            file_path: filePath || null,
+            file_path: verifiedFilePaths.length > 0 ? verifiedFilePaths[0] : null,
+            file_paths: verifiedFilePaths.length > 0 ? verifiedFilePaths : null,
         }, timeoutSec);
         const answer = data.response || '';
 
