@@ -1,17 +1,16 @@
 ---
-id: fix-tauri-backend-bugs
-status: review
-priority: high
+id: "fix-tauri-backend-bugs"
+status: "review"
+priority: "high"
 assignee: null
-epic: simplify-tauri-backend-modules
+epic: "simplify-tauri-backend-modules"
 dueDate: null
-created: 2026-07-20T01:30:00-06:00
-modified: 2026-07-20T13:38:00-06:00
+created: "2026-07-20T01:30:00-06:00"
+modified: "2026-07-20T13:38:00-06:00"
 completedAt: null
-labels: [bug, tauri, backend]
-order: 2
+labels: ["bug", "tauri", "backend"]
+order: "a5"
 ---
-
 # Fix Tauri Backend Bugs
 
 Fix the remaining reliability issues after Phase 1 (module split) and Phase 2 (dead code removal).
