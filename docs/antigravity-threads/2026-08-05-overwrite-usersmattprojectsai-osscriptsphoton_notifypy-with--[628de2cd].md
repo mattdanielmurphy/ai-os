@@ -38,7 +38,7 @@ def send_photon_message(text: str, recipient: str = None) -> bool:
     project_secret = os.getenv("PHOTON_PROJECT_SECRET")
     
     if not recipient:
-        recipient = os.getenv("PHOTON_PHONE_NUMBER") or os.getenv("PHOTON_HOME_CHANNEL") or "+18259775250"
+        recipient = os.getenv("PHOTON_PHONE_NUMBER") or os.getenv("PHOTON_HOME_CHANNEL") or "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]"
     
     if not project_id or not project_secret:
         print("Error: PHOTON_PROJECT_ID and PHOTON_PROJECT_SECRET must be set.")

@@ -15,8 +15,8 @@ Requirements:
 1. It should load credentials from `/Users/matt/.hermes/.env` or accept environment variables:
    - PHOTON_PROJECT_ID
    - PHOTON_PROJECT_SECRET
-   - PHOTON_PHONE_NUMBER / PHOTON_HOME_CHANNEL (default "+18259775250")
-2. Function `send_photon_message(text: str, recipient: str = "+18259775250") -> bool`
+   - PHOTON_PHONE_NUMBER / PHOTON_HOME_CHANNEL (default "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]")
+2. Function `send_photon_message(text: str, recipient: str = "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]") -> bool`
 3. Since Python doesn't have an official HTTP REST endpoint for Photon (it uses spectrum-ts / Node sidecar), `send_photon_message` should run a quick Node inline script or call the node module `spectrum-ts` to send the message.
    Specifically, Node inline snippet:
    ```javascript

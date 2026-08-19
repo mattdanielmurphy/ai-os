@@ -170,7 +170,7 @@ The following code has been modified to include a line number before every line,
 147:     local ffmpeg_path="/Users/matt/audio-orchestrator-ffmpeg/bin/ffmpeg"
 148:     local temp_download_dir="$HOME/Downloads"
 149:     local final_dir="/Users/matt/Library/CloudStorage/CloudMounter-MattMurphy/YouTube"
-150:     local GEMINI_API_KEY='AIzaSyDGTxxfyC07UmHen9WQU8ItZCJHVm7PX1g'
+150:     local GEMINI_API_KEY='[REDACTED_GOOGLE_API_KEY]'
 The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
 
 Created At: 2026-08-07T20:08:26-06:00

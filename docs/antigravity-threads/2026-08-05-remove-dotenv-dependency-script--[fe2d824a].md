@@ -38,7 +38,7 @@ The following code has been modified to include a line number before every line,
 14:     project_secret = os.getenv("PHOTON_PROJECT_SECRET")
 15:     
 16:     if not recipient:
-17:         recipient = os.getenv("PHOTON_PHONE_NUMBER") or os.getenv("PHOTON_HOME_CHANNEL") or "+18259775250"
+17:         recipient = os.getenv("PHOTON_PHONE_NUMBER") or os.getenv("PHOTON_HOME_CHANNEL") or "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]"
 18:     
 19:     if not project_id or not project_secret:
 20:         print("Error: PHOTON_PROJECT_ID and PHOTON_PROJECT_SECRET must be set.")

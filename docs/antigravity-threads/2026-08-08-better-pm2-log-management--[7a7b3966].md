@@ -1353,9 +1353,9 @@ import os
 import sys
 import subprocess
 
-def send_photon_message(text: str, recipient: str = '+18259775250') -> bool:
-    project_id = os.getenv('PHOTON_PROJECT_ID', 'f8db2b93-77ed-4efc-824c-7771891440e2')
-    project_secret = os.getenv('PHOTON_PROJECT_SECRET', 'HIZBy7MsKCXyoI6DJ34iUrdQe-ZHgNjBfS8XzsiXtCk')
+def send_photon_message(text: str, recipient: str = '[REDACTED_SECRET:PHOTON_HOME_CHANNEL]') -> bool:
+    project_id = os.getenv('PHOTON_PROJECT_ID', '[REDACTED_SECRET:PHOTON_PROJECT_ID]')
+    project_secret = os.getenv('PHOTON_PROJECT_SECRET', '[REDACTED_SECRET:PHOTON_PROJECT_SECRET]')
 
     escaped_text = text.replace(chr(92), chr(92)+chr(92)).replace(chr(39), chr(92)+chr(39)).replace(chr(10), chr(92)+'n')
     escaped_recipient = recipient.replace(chr(92), chr(92)+chr(92)).replace(chr(39), chr(92)+chr(39))
@@ -2663,19 +2663,19 @@ drwx------ 2 ubuntu ubuntu 4096 Jun 13 23:32 update-notifier-@qwen-code
 github.com:
     users:
         mattdanielmurphy:
-            oauth_token: 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
+            oauth_token: [REDACTED_GITHUB_TOKEN]
     git_protocol: https
     user: mattdanielmurphy
-    oauth_token: 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
+    oauth_token: [REDACTED_GITHUB_TOKEN]
 
 Created At: 2026-08-08T14:58:06-06:00
 Completed At: 2026-08-08T14:58:07-06:00
 
 				The command exited with code 0.
 				Output:
-				PERSONAL_GITHUB_TOKEN=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
-BOT_GITHUB_TOKEN=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
-OPENROUTER_API_KEY="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"
+				PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 
 Created At: 2026-08-08T14:58:08-06:00
 Completed At: 2026-08-08T14:58:09-06:00

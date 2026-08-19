@@ -40,7 +40,8 @@ I'm getting messages like this:
 **Issues & Blockers:**
 - **No new errors, rate limits, or CI failures** reported in this window. The system appears to be running smoothly, though no new tasks were dispatched.
 
-**Summary:** The mission is in a holding pattern—no new tasks were launched, but a large batch of PRs (16) was successfully merged. The quota is being used efficiently, with 41 sessions logged overall. No blockers to report.Here’s your executive summary for the last 3 hours:
+**Summary:** The mission is in a holding pattern—no new tasks were launched, but a large batch of PRs (16) was successfully merged. The quota is being used efficiently, with 41 sessions logged overall. No blockers to report.
+Here’s your executive summary for the last 3 hours:
 
 ---
 
@@ -1120,9 +1121,9 @@ import sys
 import subprocess
 from pathlib import Path
 
-def send_photon_message(text: str, recipient: str = "+18259775250") -> bool:
-    project_id = os.getenv("PHOTON_PROJECT_ID", "f8db2b93-77ed-4efc-824c-7771891440e2")
-    project_secret = os.getenv("PHOTON_PROJECT_SECRET", "HIZBy7MsKCXyoI6DJ34iUrdQe-ZHgNjBfS8XzsiXtCk")
+def send_photon_message(text: str, recipient: str = "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]") -> bool:
+    project_id = os.getenv("PHOTON_PROJECT_ID", "[REDACTED_SECRET:PHOTON_PROJECT_ID]")
+    project_secret = os.getenv("PHOTON_PROJECT_SECRET", "[REDACTED_SECRET:PHOTON_PROJECT_SECRET]")
 
     escaped_text = text.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
     escaped_recipient = recipient.replace('\\', '\\\\').replace("'", "\\'")
@@ -1338,27 +1339,27 @@ Completed At: 2026-08-07T12:06:59-06:00
 3|periodic | 📊 3h Work Summary:
 3|periodic | • Dispatched 45 task(s).
 3|periodic | • Merged PRs: 24 external bounty PR(s).
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • Dispatched 55 task(s).
 3|periodic | • Merged PRs: 24 external bounty PR(s).
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • Dispatched 21 task(s).
 3|periodic | • Merged PRs: 24 external bounty PR(s).
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • Dispatched 32 task(s).
 3|periodic | • Merged PRs: 24 external bounty PR(s).
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • Dispatched 46 task(s).
 3|periodic | • Merged PRs: 24 external bounty PR(s).
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 🚀 **Mission Status: Quota Burner – Executive Summary (Last 3 Hours)**
 3|periodic | 
@@ -1558,9 +1559,9 @@ Completed At: 2026-08-07T12:13:27-06:00
 
 				The command exited with code 0.
 				Output:
-				PERSONAL_GITHUB_TOKEN=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
-BOT_GITHUB_TOKEN=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
-OPENROUTER_API_KEY="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"
+				PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
 
 Created At: 2026-08-07T12:13:28-06:00

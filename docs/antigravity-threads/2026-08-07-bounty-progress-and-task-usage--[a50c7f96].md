@@ -1147,7 +1147,8 @@ Completed At: 2026-08-06T19:47:13-06:00
 				From https://github.com/mattdanielmurphy/jules-burner
  * branch            main       -> FETCH_HEAD
    f16a252..5a9d904  main       -> origin/main
-Rebasing (1/1)Successfully rebased and updated refs/heads/main.
+Rebasing (1/1)
+Successfully rebased and updated refs/heads/main.
 To https://github.com/mattdanielmurphy/jules-burner.git
    5a9d904..cadb1dc  main -> main
 
@@ -1217,7 +1218,7 @@ PM2        | 2026-08-06T19:47:16: PM2 log: App [pr-merge-checker:1] exited with 
 4|jules-bu | $ bun run src/index.ts
 4|jules-bu
 <truncated 4229 bytes>
-riodic | Message sent successfully to +18259775250
+riodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • [staging-bounty_01HWJNZ5HQMVG2TCW6XHQQJ3QT] Migration generation drops and creates columns instead of altering resulting in data loss (x34)
@@ -1314,32 +1315,32 @@ Completed At: 2026-08-06T19:51:55-06:00
 				Output:
 				<truncated 256 lines>
 3|periodic |   → Fix issue: [Feature]: verification gated release policy for auth-captu
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • [staging-bounty_01HWJNZ5HQMVG2TCW6XHQQJ3QT] Migration generation drops and creates columns instead of altering resulting in data loss (x9)
 3|periodic |   → Fix issue: Migration generation drops and creates columns instead of a
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • [staging-bounty_01HWJNZ5HQMVG2TCW6XHQQJ3QT] Migration generation drops and creates columns instead of altering resulting in data loss (x17)
 3|periodic |   → Fix issue: Migration generation drops and creates columns instead of a
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • [staging-bounty_01HWJNZ5HQMVG2TCW6XHQQJ3QT] Migration generation drops and creates columns instead of altering resulting in data loss (x21)
 3|periodic |   → Fix issue: Migration generation drops and creates columns instead of a
 3|periodic | • [staging-bounty_136] Security: define vulnerability reporting and supported-version policy
 3|periodic |   → Fix issue: Security: define vulnerability reporting and supported-vers
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • No task dispatches executed in window.
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • No task dispatches executed in window.
-3|periodic | Message sent successfully to +18259775250
+3|periodic | Message sent successfully to [REDACTED_SECRET:PHOTON_HOME_CHANNEL]
 3|periodic | Summary output:
 3|periodic | 📊 3h Work Summary:
 3|periodic | • No task dispatches execu
@@ -3189,8 +3190,8 @@ Completed At: 2026-08-06T20:18:36-06:00
 
 				The command exited with code 0.
 				Output:
-				PERSONAL_GITHUB_TOKEN=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
-BOT_GITHUB_TOKEN=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
+				PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
 export GOG_KEYRING_BACKEND=file
 export GOG_KEYRING_PASSPHRASE="Silly.Tone.Opinion.4Smile"
 export GOG_KEYRING_BACKEND=file
@@ -3541,7 +3542,7 @@ Completed At: 2026-08-06T20:19:13-06:00
 
 				The command exited with code 0.
 				Output:
-				    local GEMINI_API_KEY='AIzaSyDGTxxfyC07UmHen9WQU8ItZCJHVm7PX1g'
+				    local GEMINI_API_KEY='[REDACTED_GOOGLE_API_KEY]'
     local GEMINI_API_URL='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
         echo "Sending request to Gemini API..."
         local response=$(curl -s -X POST "${GEMINI_API_URL}?key=$api_key" -H "Content-Type: application/json" -d "{\"contents\": [{\"parts\": [{\"text\": \"$prompt\"}]}]}")
@@ -3550,7 +3551,7 @@ aliases[gemini]='bun install -g @google/gemini-cli@latest; gemini'
 aliases[geminid]='node ~/git/gemini-cli/packages/cli'
 export ANTHROPIC_API_KEY="using-openrouter"
 export GEMINI_API_KEY="AQ.Ab8RN6LQpffC0PPqWUyKxlM8JaSOsM_GlUZFCku23SaTOVQDLw"
-export OPENROUTER_API_KEY="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"
+export OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 
 Created At: 2026-08-06T20:19:15-06:00
 Completed At: 2026-08-06T20:19:15-06:00
@@ -3562,7 +3563,7 @@ Completed At: 2026-08-06T20:19:15-06:00
 
 Created At: 2026-08-06T20:19:19-06:00
 Tool is running as a background task with task id: a50c7f96-5f08-4c4e-82e3-d475dc73889b/task-242
-Task Description: ssh oracle-minecraft-server "python3 -c 'import urllib.request, json, os; key = \"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\"; req = urllib.request.Request(\"https://openrouter.ai/api/v1/chat/completions\", data=json.dumps({\"model\": \"deepseek/deepseek-v4-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say hello in plain english\"}]}).encode(), headers={\"Authorization\": f\"Bearer {key}\", \"Content-Type\": \"application/json\"}); print(json.loads(urllib.request.urlopen(req).read())[\"choices\"][0][\"message\"][\"content\"])'"
+Task Description: ssh oracle-minecraft-server "python3 -c 'import urllib.request, json, os; key = \"[REDACTED_SECRET:OPENROUTER_API_KEY]\"; req = urllib.request.Request(\"https://openrouter.ai/api/v1/chat/completions\", data=json.dumps({\"model\": \"deepseek/deepseek-v4-flash\", \"messages\": [{\"role\": \"user\", \"content\": \"Say hello in plain english\"}]}).encode(), headers={\"Authorization\": f\"Bearer {key}\", \"Content-Type\": \"application/json\"}); print(json.loads(urllib.request.urlopen(req).read())[\"choices\"][0][\"message\"][\"content\"])'"
 Task logs are available at: file:///Users/matt/.gemini/antigravity/brain/a50c7f96-5f08-4c4e-82e3-d475dc73889b/.system_generated/tasks/task-242.log
 
 Created At: 2026-08-06T20:19:28-06:00

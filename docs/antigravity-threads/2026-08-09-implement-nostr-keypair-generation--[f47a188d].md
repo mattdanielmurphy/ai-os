@@ -78,9 +78,9 @@ Total Lines: 9
 Total Bytes: 444
 Showing lines 1 to 9
 The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
-1: PERSONAL_GITHUB_TOKEN=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
-2: BOT_GITHUB_TOKEN=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
-3: OPENROUTER_API_KEY="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"
+1: PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+2: BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+3: OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 4: 
 5: # Alby / Lightning Wallet Configuration
 6: ALBY_API_TOKEN=NWIZODI2ZTGTYJKWYS0ZNMY5LWEYYJITZMJKYTVJMJVKYZZL

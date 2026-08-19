@@ -591,9 +591,9 @@ import sys
 import subprocess
 from pathlib import Path
 
-def send_photon_message(text: str, recipient: str = "+18259775250") -> bool:
-    project_id = os.getenv("PHOTON_PROJECT_ID", "f8db2b93-77ed-4efc-824c-7771891440e2")
-    project_secret = os.getenv("PHOTON_PROJECT_SECRET", "HIZBy7MsKCXyoI6DJ34iUrdQe-ZHgNjBfS8XzsiXtCk")
+def send_photon_message(text: str, recipient: str = "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]") -> bool:
+    project_id = os.getenv("PHOTON_PROJECT_ID", "[REDACTED_SECRET:PHOTON_PROJECT_ID]")
+    project_secret = os.getenv("PHOTON_PROJECT_SECRET", "[REDACTED_SECRET:PHOTON_PROJECT_SECRET]")
 
     escaped_text = text.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
     escaped_recipient = recipient.replace('\\', '\\\\').replace("'", "\\'")

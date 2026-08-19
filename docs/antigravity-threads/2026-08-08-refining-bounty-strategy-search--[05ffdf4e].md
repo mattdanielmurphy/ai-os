@@ -995,9 +995,9 @@ Completed At: 2026-08-08T00:06:01-06:00
     jules_sessions = []
     jules_bin = os.path.expanduser
 <truncated 4230 bytes>
-(text: str, recipient: str = "+18259775250") -> bool:
-    project_id = os.getenv("PHOTON_PROJECT_ID", "f8db2b93-77ed-4efc-824c-7771891440e2")
-    project_secret = os.getenv("PHOTON_PROJECT_SECRET", "HIZBy7MsKCXyoI6DJ34iUrdQe-ZHgNjBfS8XzsiXtCk")
+(text: str, recipient: str = "[REDACTED_SECRET:PHOTON_HOME_CHANNEL]") -> bool:
+    project_id = os.getenv("PHOTON_PROJECT_ID", "[REDACTED_SECRET:PHOTON_PROJECT_ID]")
+    project_secret = os.getenv("PHOTON_PROJECT_SECRET", "[REDACTED_SECRET:PHOTON_PROJECT_SECRET]")
 
     escaped_text = text.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n')
     escaped_recipient = recipient.replace('\\', '\\\\').replace("'", "\\'")
@@ -1111,7 +1111,7 @@ Completed At: 2026-08-08T00:06:02-06:00
         try:
             res = subprocess.run([jules_bin, "remote", "list",
 <truncated 4245 bytes>
-nv('PHOTON_PROJECT_SECRET', 'HIZBy7MsKCXyoI6DJ34iUrdQe-ZHgNjBfS8XzsiXtCk')
+nv('PHOTON_PROJECT_SECRET', '[REDACTED_SECRET:PHOTON_PROJECT_SECRET]')
 
     escaped_text = text.replace(chr(92), chr(92)+chr(92)).replace(chr(39), chr(92)+chr(39)).replace(chr(10), chr(92)+'n')
     escaped_recipient = recipient.replace(chr(92), chr(92)+chr(92)).replace(chr(39), chr(92)+chr(39))
