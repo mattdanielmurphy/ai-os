@@ -64,9 +64,9 @@ Total Lines: 4
 Total Bytes: 269
 Showing lines 1 to 4
 The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
-1: PERSONAL_GITHUB_TOKEN=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
-2: BOT_GITHUB_TOKEN=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
-3: OPENROUTER_API_KEY="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"
+1: PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+2: BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+3: OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 4: 
 The above content shows the entire, complete file contents of the requested file.
 
@@ -77,9 +77,9 @@ Total Lines: 4
 Total Bytes: 269
 Showing lines 1 to 4
 The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
-1: PERSONAL_GITHUB_TOKEN=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
-2: BOT_GITHUB_TOKEN=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
-3: OPENROUTER_API_KEY="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"
+1: PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+2: BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+3: OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 4: 
 The above content shows the entire, complete file contents of the requested file.
 
@@ -88,9 +88,9 @@ Completed At: 2026-08-08T20:54:32-06:00
 The following changes were made by the replace_file_content tool to: /Volumes/127.0.0.1/projects/jules-burner/.env. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
 [diff_block_start]
 @@ -1,4 +1,10 @@
- PERSONAL_GITHUB_TOKEN=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
- BOT_GITHUB_TOKEN=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
- OPENROUTER_API_KEY="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"
+ PERSONAL_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+ BOT_GITHUB_TOKEN=[REDACTED_GITHUB_TOKEN]
+ OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 +
 +# Alby / Lightning Wallet Configuration
 +ALBY_API_TOKEN=

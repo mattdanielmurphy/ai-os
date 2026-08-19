@@ -12,7 +12,7 @@ source: "antigravity"
 Please edit `/Users/matt/projects/jules-burner/tests/staging/staging.test.ts`.
 
 Replace line 49:
-`addedContent: ['const key = "ghp_1234567890abcdefghijklmnopqrstuvwxyz";'],`
+`addedContent: ['const key = "[REDACTED_GITHUB_TOKEN]";'],`
 with:
 `addedContent: ['SECRET_KEY = "dummy_secret_key_for_testing";'],`
 
@@ -30,7 +30,7 @@ The following changes were made by the replace_file_content tool to: /Users/matt
          filesChanged: ["src/config.ts"],
          deletedFiles: [],
          hasBinaryBlobs: false,
--        addedContent: ['const key = "ghp_1234567890abcdefghijklmnopqrstuvwxyz";'],
+-        addedContent: ['const key = "[REDACTED_GITHUB_TOKEN]";'],
 +        addedContent: ['SECRET_KEY = "dummy_secret_key_for_testing";'],
        };
  

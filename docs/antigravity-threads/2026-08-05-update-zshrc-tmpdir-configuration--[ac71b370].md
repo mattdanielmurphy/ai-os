@@ -26,7 +26,7 @@ Total Lines: 280
 Total Bytes: 10197
 Showing lines 20 to 30
 The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
-20: export OPENROUTER_API_KEY="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"
+20: export OPENROUTER_API_KEY="[REDACTED_SECRET:OPENROUTER_API_KEY]"
 21: export JULES_API_KEY="AQ.Ab8RN6KfTY0T1ydawkHYFSleT-cWUdkGx_RB5QbBbf3mVdF9rw" # iammattmurphy@gmail.com
 22: export JULES_API_KEY_ALT="AQ.Ab8RN6K8ibxtNsp5YjP9y3aSrgC3sP9VXk-gegogAkZcRbTWBQ" # darryl.l.murphy@gmail.com
 23: export TMDB_API_KEY="01dbbbc2ddffb8f54cf7ecb628af0d77"

@@ -458,7 +458,7 @@ index 7faaabc..10ff239 100644
          filesChanged: ["src/config.ts"],
          deletedFiles: [],
          hasBinaryBlobs: false,
--        addedContent: ['const key = "ghp_1234567890abcdefghijklmnopqrstuvwxyz";'],
+-        addedContent: ['const key = "[REDACTED_GITHUB_TOKEN]";'],
 +        addedContent: ['SECRET_KEY = "dummy_secret_key_for_testing";'],
        };
  
@@ -567,7 +567,7 @@ Git push completed successfully!
 I have resolved the GitHub Secret Scanning alert for [`tests/staging/staging.test.ts`](file:///Users/matt/projects/jules-burner/tests/staging/staging.test.ts).
 
 ### Summary of Actions Taken:
-1. **Identified Issue**: `tests/staging/staging.test.ts` contained a synthetic token string formatted as `ghp_` followed by 36 characters (`ghp_1234567890abcdefghijklmnopqrstuvwxyz`), which matched GitHub's active Secret Scanning pattern for Personal Access Tokens.
+1. **Identified Issue**: `tests/staging/staging.test.ts` contained a synthetic token string formatted as `ghp_` followed by 36 characters (`[REDACTED_GITHUB_TOKEN]`), which matched GitHub's active Secret Scanning pattern for Personal Access Tokens.
 2. **Fixed Code**: Delegated file editing via `flash_lite` subagent to replace the synthetic token string in the unit test with a non-sensitive format (`SECRET_KEY = "dummy_secret_key_for_testing"`).
 3. **Verification**:
    - Ran `bun test` — verified all 27 unit tests across 6 test suites passed cleanly.
