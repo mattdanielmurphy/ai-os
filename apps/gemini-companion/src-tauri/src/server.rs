@@ -314,7 +314,9 @@ pub struct PromptDispatchPayload {
     pub model: Option<String>,
     pub session_id: Option<String>,
     pub attachment: Option<AttachmentPayload>,
+    pub attachments: Option<Vec<AttachmentPayload>>,
     pub file_path: Option<String>,
+    pub file_paths: Option<Vec<String>>,
 }
 
 fn guess_mime(filename: &str) -> String {
@@ -334,36 +336,74 @@ fn guess_mime(filename: &str) -> String {
     else { "application/octet-stream".to_string() }
 }
 
-fn prepare_attachment(
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct PreparedAttachment {
+    pub file_base64: String,
+    pub filename: String,
+    pub mime_type: String,
+}
+
+fn prepare_attachments_list(
     attachment: Option<AttachmentPayload>,
+    attachments: Option<Vec<AttachmentPayload>>,
     file_path: Option<String>,
-) -> Option<(String, String, String)> {
-    if let Some(att) = attachment {
+    file_paths: Option<Vec<String>>,
+) -> Vec<PreparedAttachment> {
+    let mut list = Vec::new();
+
+    if let Some(atts) = attachments {
+        for att in atts {
+            if let Some(b64) = att.file_base64 {
+                let fname = att.filename.unwrap_or_else(|| "attachment.bin".to_string());
+                let mime = att.mime_type.unwrap_or_else(|| guess_mime(&fname));
+                list.push(PreparedAttachment { file_base64: b64, filename: fname, mime_type: mime });
+            } else if let Some(path_str) = att.file_path {
+                if let Ok(bytes) = std::fs::read(&path_str) {
+                    let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+                    let p = std::path::Path::new(&path_str);
+                    let fname = att.filename.or_else(|| p.file_name().map(|n| n.to_string_lossy().to_string())).unwrap_or_else(|| "file".to_string());
+                    let mime = att.mime_type.unwrap_or_else(|| guess_mime(&fname));
+                    list.push(PreparedAttachment { file_base64: b64, filename: fname, mime_type: mime });
+                }
+            }
+        }
+    } else if let Some(att) = attachment {
         if let Some(b64) = att.file_base64 {
             let fname = att.filename.unwrap_or_else(|| "attachment.bin".to_string());
             let mime = att.mime_type.unwrap_or_else(|| guess_mime(&fname));
-            return Some((b64, fname, mime));
-        }
-        if let Some(path_str) = att.file_path {
+            list.push(PreparedAttachment { file_base64: b64, filename: fname, mime_type: mime });
+        } else if let Some(path_str) = att.file_path {
             if let Ok(bytes) = std::fs::read(&path_str) {
                 let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
                 let p = std::path::Path::new(&path_str);
                 let fname = att.filename.or_else(|| p.file_name().map(|n| n.to_string_lossy().to_string())).unwrap_or_else(|| "file".to_string());
                 let mime = att.mime_type.unwrap_or_else(|| guess_mime(&fname));
-                return Some((b64, fname, mime));
+                list.push(PreparedAttachment { file_base64: b64, filename: fname, mime_type: mime });
             }
         }
     }
-    if let Some(path_str) = file_path {
+
+    if let Some(paths) = file_paths {
+        for path_str in paths {
+            if let Ok(bytes) = std::fs::read(&path_str) {
+                let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+                let p = std::path::Path::new(&path_str);
+                let fname = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "file".to_string());
+                let mime = guess_mime(&fname);
+                list.push(PreparedAttachment { file_base64: b64, filename: fname, mime_type: mime });
+            }
+        }
+    } else if let Some(path_str) = file_path {
         if let Ok(bytes) = std::fs::read(&path_str) {
             let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
             let p = std::path::Path::new(&path_str);
             let fname = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "file".to_string());
             let mime = guess_mime(&fname);
-            return Some((b64, fname, mime));
+            list.push(PreparedAttachment { file_base64: b64, filename: fname, mime_type: mime });
         }
     }
-    None
+
+    list
 }
 
 #[derive(serde::Deserialize)]
@@ -643,15 +683,8 @@ async fn handle_perplexity_query(
         callbacks.insert(query_id.clone(), tx);
     }
 
-    let att_data = prepare_attachment(payload.attachment, payload.file_path);
-    let (js_file_b64, js_filename, js_mime) = match att_data {
-        Some((b64, fname, mime)) => (
-            serde_json::to_string(&b64).unwrap_or_default(),
-            serde_json::to_string(&fname).unwrap_or_default(),
-            serde_json::to_string(&mime).unwrap_or_default(),
-        ),
-        None => ("null".to_string(), "null".to_string(), "null".to_string()),
-    };
+    let atts_list = prepare_attachments_list(payload.attachment, payload.attachments, payload.file_path, payload.file_paths);
+    let js_attachments = serde_json::to_string(&atts_list).unwrap_or_else(|_| "[]".to_string());
 
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
     let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "grok46medium".to_string())).unwrap_or_default();
@@ -670,9 +703,7 @@ async fn handle_perplexity_query(
             const prompt = {};
             const model = {};
             const session = {};
-            const fileB64 = {};
-            const fileName = {};
-            const fileMime = {};
+            const rawAttachments = {};
 
             function sendDone(resp, err) {{
                 var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
@@ -738,18 +769,23 @@ async fn handle_perplexity_query(
                     if (!pplx || !pplx.send) {{
                         throw new Error('Perplexity engine not initialized in webview. URL: ' + window.location.href);
                     }}
-                    let attachmentsObj = null;
-                    if (fileB64 && fileName && fileMime) {{
-                        if (pplx.uploadFileToPerplexity) {{
-                            const s3Url = await pplx.uploadFileToPerplexity(fileB64, fileName, fileMime);
-                            attachmentsObj = {{
-                                imageToken: s3Url,
-                                filename: fileName,
-                                mimeType: fileMime
-                            }};
+                    let attachmentsArray = [];
+                    if (Array.isArray(rawAttachments) && rawAttachments.length > 0) {{
+                        for (let i = 0; i < rawAttachments.length; i++) {{
+                            const att = rawAttachments[i];
+                            if (att && att.file_base64 && att.filename && att.mime_type) {{
+                                if (pplx.uploadFileToPerplexity) {{
+                                    const s3Url = await pplx.uploadFileToPerplexity(att.file_base64, att.filename, att.mime_type);
+                                    attachmentsArray.push({{
+                                        imageToken: s3Url,
+                                        filename: att.filename,
+                                        mimeType: att.mime_type
+                                    }});
+                                }}
+                            }}
                         }}
                     }}
-                    const answer = await pplx.send(prompt, model, attachmentsObj, session);
+                    const answer = await pplx.send(prompt, model, attachmentsArray, session);
                     sendDone(answer, null);
                 }} catch (err) {{
                     sendDone(null, err.message || String(err));
@@ -759,7 +795,7 @@ async fn handle_perplexity_query(
             run();
         }})();
         "#,
-        pplx_engine, js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
+        pplx_engine, js_query_id, js_prompt, js_model, js_session, js_attachments
     );
 
     let _ = win.eval(&eval_script);
@@ -786,15 +822,8 @@ async fn handle_gemini_query(
         callbacks.insert(query_id.clone(), tx);
     }
 
-    let att_data = prepare_attachment(payload.attachment, payload.file_path);
-    let (js_file_b64, js_filename, js_mime) = match att_data {
-        Some((b64, fname, mime)) => (
-            serde_json::to_string(&b64).unwrap_or_default(),
-            serde_json::to_string(&fname).unwrap_or_default(),
-            serde_json::to_string(&mime).unwrap_or_default(),
-        ),
-        None => ("null".to_string(), "null".to_string(), "null".to_string()),
-    };
+    let atts_list = prepare_attachments_list(payload.attachment, payload.attachments, payload.file_path, payload.file_paths);
+    let js_attachments = serde_json::to_string(&atts_list).unwrap_or_else(|_| "[]".to_string());
 
     let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
     let js_model = serde_json::to_string(&payload.model.unwrap_or_else(|| "auto".to_string())).unwrap_or_default();
@@ -813,9 +842,7 @@ async fn handle_gemini_query(
             const prompt = {};
             const model = {};
             const session = {};
-            const fileB64 = {};
-            const fileName = {};
-            const fileMime = {};
+            const rawAttachments = {};
 
             function sendDone(resp, err) {{
                 var payload = {{ query_id: qId, queryId: qId, response: resp || null, error: err || null }};
@@ -881,18 +908,19 @@ async fn handle_gemini_query(
                     if (!engine || !engine.send) {{
                         throw new Error('Gemini engine not initialized in webview. URL: ' + window.location.href);
                     }}
-                    let attachmentsObj = null;
-                    if (fileB64 && fileName && fileMime) {{
-                        if (engine.uploadFileToGoogle) {{
-                            const token = await engine.uploadFileToGoogle(fileB64, fileName, fileMime);
-                            attachmentsObj = {{
-                                imageToken: token,
-                                filename: fileName,
-                                mimeType: fileMime
-                            }};
+                    let attachmentsArray = [];
+                    if (Array.isArray(rawAttachments) && rawAttachments.length > 0) {{
+                        for (let i = 0; i < rawAttachments.length; i++) {{
+                            const att = rawAttachments[i];
+                            if (att && att.file_base64 && att.filename && att.mime_type) {{
+                                if (engine.uploadFileToGoogle) {{
+                                    const tokenObj = await engine.uploadFileToGoogle(att.file_base64, att.filename, att.mime_type);
+                                    attachmentsArray.push(tokenObj);
+                                }}
+                            }}
                         }}
                     }}
-                    const answer = await engine.send(prompt, model, attachmentsObj, session);
+                    const answer = await engine.send(prompt, model, attachmentsArray, session);
                     sendDone(answer, null);
                 }} catch (err) {{
                     sendDone(null, err.message || String(err));
@@ -902,7 +930,7 @@ async fn handle_gemini_query(
             run();
         }})();
         "#,
-        gemini_engine, js_query_id, js_prompt, js_model, js_session, js_file_b64, js_filename, js_mime
+        gemini_engine, js_query_id, js_prompt, js_model, js_session, js_attachments
     );
 
     let _ = win.eval(&eval_script);
@@ -1056,7 +1084,9 @@ async fn handle_openai_chat(
         model: Some(raw_model.clone()),
         session_id: Some(session_id_str),
         attachment: attachment_data,
+        attachments: None,
         file_path: None,
+        file_paths: None,
     };
 
     if req.stream.unwrap_or(false) {

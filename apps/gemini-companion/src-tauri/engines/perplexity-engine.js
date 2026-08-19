@@ -357,10 +357,21 @@
             modelPref = engine;
         }
 
+        var attachmentsArray = [];
+        if (Array.isArray(attachments)) {
+            for (var a = 0; a < attachments.length; a++) {
+                if (attachments[a] && (attachments[a].imageToken || attachments[a].s3Url || typeof attachments[a] === 'string')) {
+                    attachmentsArray.push(attachments[a].imageToken || attachments[a].s3Url || attachments[a]);
+                }
+            }
+        } else if (attachments && (attachments.imageToken || attachments.s3Url)) {
+            attachmentsArray.push(attachments.imageToken || attachments.s3Url);
+        }
+
         var params = {
             last_backend_uuid: _lastBackendUuid || _uuid(),
             read_write_token: sessionToken || '',
-            attachments: (attachments && attachments.imageToken) ? [attachments.imageToken] : [],
+            attachments: attachmentsArray,
             language: navigator.language || 'en-US',
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
             search_focus: 'internet',

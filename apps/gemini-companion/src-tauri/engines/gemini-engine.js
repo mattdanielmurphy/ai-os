@@ -532,7 +532,39 @@
         });
 
         var attachmentsArray = null;
-        if (attachments && attachments.token) {
+        if (Array.isArray(attachments) && attachments.length > 0) {
+            attachmentsArray = [];
+            for (var a = 0; a < attachments.length; a++) {
+                var att = attachments[a];
+                if (att && att.token) {
+                    var typeCode = 1;
+                    var mime = att.mime || '';
+                    if (mime.startsWith('image/')) typeCode = 1;
+                    else if (mime.startsWith('video/')) typeCode = 2;
+                    else if (mime.startsWith('audio/')) typeCode = 3;
+                    else if (mime.includes('pdf') || mime.startsWith('text/')) typeCode = 4;
+
+                    console.log('[AI-OS API] Sending message with attachment #' + (a + 1) + ' - Code:', typeCode, 'Mime:', mime);
+                    attachmentsArray.push([
+                        [
+                            att.token,
+                            typeCode,
+                            null,
+                            mime
+                        ],
+                        att.filename || ('file_' + (a + 1)),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        [0]
+                    ]);
+                }
+            }
+            if (attachmentsArray.length === 0) attachmentsArray = null;
+        } else if (attachments && attachments.token) {
             var typeCode = 1;
             var mime = attachments.mime || '';
             if (mime.startsWith('image/')) typeCode = 1;
