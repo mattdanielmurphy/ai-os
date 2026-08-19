@@ -2,9 +2,17 @@
 	"workbench.colorCustomizations": {
 		"activityBar.background": "#5544c5",
 		"titleBar.activeBackground": "#5544c5",
-		"titleBar.activeForeground": "#e0e0e0",
+		"titleBar.activeForeground": "#FFFFFF",
 		"titleBar.inactiveBackground": "#3d338c",
-		"titleBar.inactiveForeground": "#e0e0e0"
+		"titleBar.inactiveForeground": "#FFFFFF",
+		"statusBar.background": "#31267B",
+		"statusBar.debuggingBackground": "#31267B",
+		"statusBar.noFolderBackground": "#31267B",
+		"activityBar.foreground": "#FFFFFF",
+		"activityBar.inactiveForeground": "#FFFFFF",
+		"statusBar.foreground": "#FFFFFF",
+		"statusBar.debuggingForeground": "#FFFFFF",
+		"statusBar.noFolderForeground": "#FFFFFF"
 	},
 	"markdown.extension.completion.enabled": false,
 	"markdown.extension.tableFormatter.enabled": false,

@@ -1,5 +1,5 @@
 ---
-id: fix-cmd-opt-m-minimization
+id: "fix-cmd-opt-m-minimization"
 status: "review"
 priority: "high"
 assignee: null
@@ -9,9 +9,8 @@ created: "2026-07-24T23:42:00-06:00"
 modified: "2026-07-25T00:35:00-06:00"
 completedAt: null
 labels: ["bug", "tauri", "eventtap", "macos"]
-order: 1
+order: "a1"
 ---
-
 # Bug: Fix Cmd+Opt+M Window Minimization & CGEventTap Scope
 
 Fix issue where Cmd+Opt+M minimizes the app window due to CGEventTap silent failure and native miniaturization.
