@@ -1,4 +1,4 @@
-User Request: In Antigravity IDE, hovering over past conversations shows a disabled not-allowed crosshair cursor, and typing @conversation: shows nothing. Diagnose the exact root cause of why Antigravity IDE disabled conversation history loading, explain why raw state.vscdb injection caused this UI lock state, and build a safe, robust solution to import Antigravity.app threads into Antigravity IDE without breaking the UI extension host.
+User Request: Please check this UI mockup at file:///Users/matt/projects/ai-os/tmp/test_screenshot.png
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
