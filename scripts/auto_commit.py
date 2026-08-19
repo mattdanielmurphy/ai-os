@@ -23,7 +23,7 @@ def write_result(path, status, sha=None, message=None, error=None):
 
 def run_cmd(args, check=True):
     try:
-        res = subprocess.run(args, capture_output=True, text=True, check=check)
+        res = subprocess.run(args, capture_output=True, text=True, errors="replace", check=check)
         return res.stdout.strip(), res.returncode
     except subprocess.CalledProcessError as e:
         print(f"Command {' '.join(args)} failed: {e.stderr}", file=sys.stderr)
