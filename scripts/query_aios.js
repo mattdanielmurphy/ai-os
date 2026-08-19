@@ -3,7 +3,8 @@ import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import crypto from 'crypto';
-import { execSync, spawn } from 'child_process';
+import os from 'os';
+import { execSync } from 'child_process';
 
 const PPLX_MODEL_MAP = {
     'grok': 'grok46medium',
@@ -32,10 +33,17 @@ const PPLX_MODEL_MAP = {
     'auto': 'auto',
 };
 
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tiff', '.heic']);
 const MAX_PROMPT_CHARS = 35000; // Perplexity character limit is ~40k; 35k ensures safe ceiling including formatting
 
+function isImageFile(filePath) {
+    if (!filePath) return false;
+    const ext = path.extname(filePath).toLowerCase();
+    return IMAGE_EXTENSIONS.has(ext);
+}
+
 function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHARS) {
-    if (!text) return { inlinedText: '', attachedFilePath: null };
+    if (!text) return { inlinedText: '', attachedFilePath: null, attachedImagePath: null };
 
     const pathRegex = /(?:file:\/\/)?(\/(?:Users|Volumes|private|tmp|var)[^\s"'`<>]+)/g;
     const matches = new Set();
@@ -51,12 +59,22 @@ function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHAR
 
     let inlinedSections = [];
     let candidateAttachment = null;
+    let candidateImage = null;
     let currentInlinedChars = 0;
 
     for (const filePath of matches) {
         try {
             if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
                 const stat = fs.statSync(filePath);
+
+                if (isImageFile(filePath)) {
+                    if (!candidateImage) {
+                        candidateImage = filePath;
+                        console.error(`[query_aios] 🖼️ Detected referenced image/screenshot: ${filePath} (${stat.size} bytes). Selected as image attachment.`);
+                    }
+                    continue;
+                }
+
                 const content = fs.readFileSync(filePath, 'utf8');
                 const fileHeader = `\n--- Referenced File Context: ${filePath} ---\n`;
                 const fileFooter = `\n--- End of ${path.basename(filePath)} ---\n`;
@@ -78,7 +96,8 @@ function extractAndInlineReferencedFiles(text, availableBudget = MAX_PROMPT_CHAR
 
     return {
         inlinedText: inlinedSections.join('\n'),
-        attachedFilePath: candidateAttachment
+        attachedFilePath: candidateAttachment,
+        attachedImagePath: candidateImage
     };
 }
 
@@ -192,15 +211,109 @@ DO NOT provide full code implementations. Focus on structural details, signature
     const remainingBudget = Math.max(0, MAX_PROMPT_CHARS - fixedOverhead);
 
     // Auto-resolve referenced files in userRequest respecting remaining budget
-    const { inlinedText, attachedFilePath } = extractAndInlineReferencedFiles(userRequest, remainingBudget);
+    const { inlinedText, attachedFilePath, attachedImagePath } = extractAndInlineReferencedFiles(userRequest, remainingBudget);
 
     const fullPrompt = `User Request: ${userRequest}
 ${inlinedText}${imageContext}${agContextStr}${repoInfo}${logContext}${historyContext}${baseInstructions}`;
 
     return {
         prompt: fullPrompt,
-        attachedFilePath: attachedFilePath
+        attachedFilePath: attachedFilePath,
+        attachedImagePath: attachedImagePath
     };
+}
+
+// ---------------------------------------------------------------------------
+// Thread Map Registry (Auto-Resumption per Antigravity Thread)
+// ---------------------------------------------------------------------------
+const THREAD_MAP_FILE = path.join(os.homedir(), '.ai-os', 'thread_map.json');
+
+function loadThreadMap() {
+    try {
+        if (fs.existsSync(THREAD_MAP_FILE)) {
+            const content = fs.readFileSync(THREAD_MAP_FILE, 'utf8');
+            return JSON.parse(content);
+        }
+    } catch (e) {}
+    return { version: '1.0.0', mappings: {} };
+}
+
+function saveThreadMap(mapData) {
+    try {
+        const dir = path.dirname(THREAD_MAP_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(THREAD_MAP_FILE, JSON.stringify(mapData, null, 2), 'utf8');
+    } catch (e) {
+        console.error(`[query_aios] ⚠️ Could not persist thread mapping: ${e.message}`);
+    }
+}
+
+function resolveSessionId({ explicitSessionId, forceNewThread, noResume, agThreadOverride }) {
+    const agThreadId = agThreadOverride || process.env.ANTIGRAVITY_CONVERSATION_ID || null;
+    const threadMap = loadThreadMap();
+
+    // 1. Explicit session ID passed by user via --thread / --resume / -s / -r
+    if (explicitSessionId) {
+        if (agThreadId && !noResume) {
+            threadMap.mappings[agThreadId] = {
+                planner_session_id: explicitSessionId,
+                created_at: threadMap.mappings[agThreadId]?.created_at || new Date().toISOString(),
+                last_active_at: new Date().toISOString(),
+                turn_count: (threadMap.mappings[agThreadId]?.turn_count || 0) + 1
+            };
+            saveThreadMap(threadMap);
+        }
+        return { sessionId: explicitSessionId, isResume: true, mode: 'explicit' };
+    }
+
+    // 2. Force new thread requested via --new / -n / --new-thread
+    if (forceNewThread) {
+        const newSessionId = crypto.randomUUID();
+        if (agThreadId && !noResume) {
+            threadMap.mappings[agThreadId] = {
+                planner_session_id: newSessionId,
+                created_at: new Date().toISOString(),
+                last_active_at: new Date().toISOString(),
+                turn_count: 1
+            };
+            saveThreadMap(threadMap);
+            console.error(`[query_aios] 🆕 Initialized fresh planner thread ${newSessionId} for Antigravity conversation ${agThreadId}`);
+        }
+        return { sessionId: newSessionId, isResume: false, mode: 'forced_new' };
+    }
+
+    // 3. Standalone mode with noResume flag
+    if (noResume) {
+        const standaloneSessionId = crypto.randomUUID();
+        return { sessionId: standaloneSessionId, isResume: false, mode: 'no_resume' };
+    }
+
+    // 4. Contextual Antigravity Thread Resolution
+    if (agThreadId) {
+        const existing = threadMap.mappings[agThreadId];
+        if (existing && existing.planner_session_id) {
+            existing.turn_count = (existing.turn_count || 1) + 1;
+            existing.last_active_at = new Date().toISOString();
+            saveThreadMap(threadMap);
+            console.error(`[query_aios] 🔄 Auto-resuming ongoing planner thread ${existing.planner_session_id} for Antigravity conversation ${agThreadId} (turn ${existing.turn_count})`);
+            return { sessionId: existing.planner_session_id, isResume: true, mode: 'auto_resume' };
+        } else {
+            const newSessionId = crypto.randomUUID();
+            threadMap.mappings[agThreadId] = {
+                planner_session_id: newSessionId,
+                created_at: new Date().toISOString(),
+                last_active_at: new Date().toISOString(),
+                turn_count: 1
+            };
+            saveThreadMap(threadMap);
+            console.error(`[query_aios] 🆕 Initialized planner thread ${newSessionId} for new Antigravity conversation ${agThreadId} (turn 1)`);
+            return { sessionId: newSessionId, isResume: false, mode: 'auto_new' };
+        }
+    }
+
+    // 5. Standalone outside Antigravity
+    const fallbackSessionId = crypto.randomUUID();
+    return { sessionId: fallbackSessionId, isResume: false, mode: 'standalone_new' };
 }
 
 async function pingAios(baseUrl) {
@@ -258,7 +371,10 @@ async function main() {
     let outputPath = null;
     let timeoutSec = null;
     let uiOnly = false;
-    let sessionId = crypto.randomUUID();
+    let explicitSessionId = null;
+    let forceNewThread = false;
+    let noResume = false;
+    let agThreadOverride = null;
     let isPlanMode = false;
     let imageDesc = null;
     let recoverMode = false;
@@ -278,15 +394,19 @@ async function main() {
             }
         } else if (arg === '--image-desc') {
             imageDesc = args[++i];
-        } else if (arg === '--file' || arg === '-f') {
+        } else if (arg === '--screenshot' || arg === '--image' || arg === '--file' || arg === '--files' || arg === '-f') {
             filePath = args[++i];
-        } else if (arg === '--thread' || arg === '--session' || arg === '-s' || arg === '-c' || arg === '--continue') {
+        } else if (arg === '--thread' || arg === '--session' || arg === '-s' || arg === '-c' || arg === '--continue' || arg === '--resume' || arg === '-r') {
             const nextArg = args[i + 1];
             if (nextArg && !nextArg.startsWith('-')) {
-                sessionId = args[++i];
+                explicitSessionId = args[++i];
             }
-        } else if (arg === '--new' || arg === '-n') {
-            sessionId = crypto.randomUUID();
+        } else if (arg === '--new' || arg === '-n' || arg === '--new-thread') {
+            forceNewThread = true;
+        } else if (arg === '--no-resume') {
+            noResume = true;
+        } else if (arg === '--ag-thread' || arg === '--conversation-id') {
+            agThreadOverride = args[++i];
         } else if (arg === '--input' || arg === '-i') {
             inputFile = args[++i];
         } else if (arg === '--output' || arg === '-o') {
@@ -301,6 +421,13 @@ async function main() {
             message = arg;
         }
     }
+
+    const { sessionId } = resolveSessionId({
+        explicitSessionId,
+        forceNewThread,
+        noResume,
+        agThreadOverride
+    });
 
     const THINKING_MODELS = ['grok', 'grok-thinking', 'grok_thinking', 'grok-2', 'grok46medium', 'sonnet', 'claude50sonnetthinking', 'gemini', 'gemini-3.7', 'flash-thinking', 'gemini37flashthinking', 'kimi', 'k3', 'kimik3thinking', 'gpt', 'gpt5', 'terra', 'gpt56_terra_thinking', 'glm', 'glm-5', 'glm5', 'glm_5_2'];
     const isThinkingModel = THINKING_MODELS.includes(rawModel) || isPlanMode;
@@ -318,14 +445,19 @@ async function main() {
         if (!timeoutSec) timeoutSec = defaultTimeout;
         if (!outputPath) outputPath = './tmp/planner_output.txt';
         if (message) {
-            const { prompt: generatedPrompt, attachedFilePath } = buildPlannerPrompt(message, imageDesc);
+            const { prompt: generatedPrompt, attachedFilePath, attachedImagePath } = buildPlannerPrompt(message, imageDesc);
             fs.mkdirSync('./tmp', { recursive: true });
             fs.writeFileSync('./tmp/planner_prompt.txt', generatedPrompt, 'utf8');
             console.error(`[query_aios] Planner prompt generated at ./tmp/planner_prompt.txt (${generatedPrompt.length} chars)`);
             message = generatedPrompt;
-            if (!filePath && attachedFilePath) {
-                filePath = attachedFilePath;
-                console.error(`[query_aios] 📎 Attached file parameter set: ${filePath}`);
+            if (!filePath) {
+                if (attachedImagePath) {
+                    filePath = attachedImagePath;
+                    console.error(`[query_aios] 🖼️ Attached screenshot parameter set: ${filePath}`);
+                } else if (attachedFilePath) {
+                    filePath = attachedFilePath;
+                    console.error(`[query_aios] 📎 Attached file parameter set: ${filePath}`);
+                }
             }
         }
     } else {
@@ -337,18 +469,33 @@ async function main() {
     }
 
     if (message && !isPlanMode) {
-        const { inlinedText, attachedFilePath } = extractAndInlineReferencedFiles(message);
+        const { inlinedText, attachedFilePath, attachedImagePath } = extractAndInlineReferencedFiles(message);
         if (inlinedText) {
             message = `${message}\n${inlinedText}`;
         }
-        if (!filePath && attachedFilePath) {
-            filePath = attachedFilePath;
+        if (!filePath) {
+            if (attachedImagePath) {
+                filePath = attachedImagePath;
+            } else if (attachedFilePath) {
+                filePath = attachedFilePath;
+            }
         }
     }
 
     if (!message && !recoverMode) {
-        console.error('Usage: node query_aios.js "<prompt>" [--plan "<request>"] [--provider perplexity|gemini] [--model sonnet|sonar|gemini|gpt|grok|kimi|glm] [--thread <id>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--ui]');
+        console.error('Usage: node query_aios.js "<prompt>" [--plan "<request>"] [--provider perplexity|gemini] [--model sonnet|sonar|gemini|gpt|grok|kimi|glm] [--thread <id>] [--new-thread] [--no-resume] [--screenshot <path>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--ui]');
         process.exit(1);
+    }
+
+    if (filePath) {
+        const resolvedPath = path.resolve(filePath);
+        if (!fs.existsSync(resolvedPath)) {
+            console.error(`[query_aios] ❌ Attached file does not exist: ${resolvedPath}`);
+            process.exit(1);
+        }
+        filePath = resolvedPath;
+        const stat = fs.statSync(filePath);
+        console.error(`[query_aios] 📎 Confirmed attachment: ${filePath} (${stat.size} bytes)`);
     }
 
     let resolvedModel = null;
@@ -406,7 +553,7 @@ async function main() {
             prompt: message,
             model: resolvedModel,
             session_id: sessionId,
-            file_path: filePath ? path.resolve(filePath) : null,
+            file_path: filePath || null,
         }, timeoutSec);
         const answer = data.response || '';
 

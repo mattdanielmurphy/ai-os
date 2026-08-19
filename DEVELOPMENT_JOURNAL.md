@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-08-19
+- **Fixed `query_aios.js` Screenshot Attachments & Context-Aware Thread Auto-Resumption:** Added binary image detection and `--screenshot` / `--image` / `-f` attachment handling in `query_aios.js` so screenshots are passed as binary payload attachments rather than attempting UTF-8 prompt inlining. Implemented Antigravity thread-scoped auto-resumption (`~/.ai-os/thread_map.json`), automatically binding planner threads to `ANTIGRAVITY_CONVERSATION_ID` (defaulting to a new thread on turn 1, auto-resuming ongoing threads on turn 2+) with explicit override flags (`--new-thread`, `--resume <id>`, `--no-resume`). [[log]](agent-logs/2026-08-19_16-31_query-aios-screenshots-and-thread-autoresume.md)
+
 ## 2026-08-17
 - **Hardened `thread.md` Watcher Daemon & LaunchAgent Supervision:** Resolved reliability and lifecycle issues in `watch_transcripts.py` by prepending `SCRIPTS_DIR` to `sys.path`, adding per-conversation brain directory resolution across IDE and CLI profiles, improving `is_turn_completed` buffer parsing, and accumulating non-tool planner responses. Created managed LaunchAgent `com.matt.agent.watch-transcripts.plist` running under `tmux-agent-wrapper.sh` with persistent logs in `~/Library/Logs/launch-agents/watch-transcripts.log` and registered with `la`. Updated `scripts/preflight.py` to supervise the service via `launchctl`. [[log]](agent-logs/2026-08-17_22-35_fix-thread-md-watch-transcripts-launchagent.md)
 
