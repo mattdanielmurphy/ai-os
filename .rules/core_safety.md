@@ -74,3 +74,8 @@
   3. **Execution-Only Environment Ingestion**: In scripts and runtime commands, environment variables must be loaded directly into process memory (e.g. `dotenv`, `os.environ`, `process.env`) without emitting values to stdout, stderr, or transcript logs.
   4. **Preflight Staged Diff Secret Gate**: All commits must pass preflight secret sanitization. Staging raw secret keys or `.env` files immediately aborts the preflight check.
 
+# Model Family Naming Invariant
+- **Rule**: Agents MUST ALWAYS refer to AI model families by their clean canonical brand name (e.g. `Sonnet`, `Flash`, `Opus`, `Haiku`, `Gemini`, `GPT`) WITHOUT appending speculative, obsolete, or guessed version numbers (e.g. NEVER say `Claude 3.7 Sonnet`, `Sonnet 3.5`, `Gemini 1.5`, `GPT-4o`). Model versions change rapidly; always use family-only naming.
+
+
+
