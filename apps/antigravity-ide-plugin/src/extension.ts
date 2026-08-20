@@ -14,45 +14,149 @@ interface AntigravityTokensState {
   triageMode?: string;
   lastPreflightStatus?: string;
   lastUpdated?: number;
+  activeConversationId?: string;
+}
+
+const STATE_DIR = path.join(os.homedir(), '.gemini', 'antigravity-ide');
+const STATE_FILE = path.join(STATE_DIR, 'tokens.json');
+
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  return Math.max(1, Math.floor(text.length / 3.5));
+}
+
+function calculateConversationTokens(transcriptPath: string): { promptTokens: number; completionTokens: number } {
+  let promptTokens = 34500; // Base system prompt + rules + skills baseline
+  let completionTokens = 0;
+
+  if (!fs.existsSync(transcriptPath)) {
+    return { promptTokens: 0, completionTokens: 0 };
+  }
+
+  try {
+    const content = fs.readFileSync(transcriptPath, 'utf-8');
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const step = JSON.parse(trimmed);
+        const stype = step.type;
+        const body = step.content || '';
+        const thinking = step.thinking || '';
+        const toolCalls = step.tool_calls || [];
+
+        if (stype === 'USER_INPUT' || stype === 'CONVERSATION_HISTORY' || stype === 'SYSTEM_MESSAGE' || stype === 'CHECKPOINT' || stype === 'KNOWLEDGE_ARTIFACTS') {
+          promptTokens += estimateTokens(body);
+        } else if (stype === 'PLANNER_RESPONSE') {
+          let outText = thinking + (body || '');
+          for (const tc of toolCalls) {
+            outText += ' ' + (tc.name || '') + ' ' + JSON.stringify(tc.args || {});
+          }
+          completionTokens += estimateTokens(outText);
+        } else {
+          // Tool results and errors are fed back as model input
+          promptTokens += estimateTokens(body);
+        }
+      } catch {}
+    }
+  } catch (err) {
+    console.error('Error calculating conversation tokens:', err);
+  }
+
+  return { promptTokens, completionTokens };
+}
+
+function findLatestConversation(): { convId: string; transcriptPath: string } | null {
+  const brainDir = path.join(STATE_DIR, 'brain');
+  if (!fs.existsSync(brainDir)) return null;
+
+  try {
+    const entries = fs.readdirSync(brainDir, { withFileTypes: true });
+    let latestTime = 0;
+    let latestConv: { convId: string; transcriptPath: string } | null = null;
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      const transcript = path.join(brainDir, entry.name, '.system_generated', 'logs', 'transcript.jsonl');
+      if (fs.existsSync(transcript)) {
+        const stat = fs.statSync(transcript);
+        if (stat.mtimeMs > latestTime) {
+          latestTime = stat.mtimeMs;
+          latestConv = { convId: entry.name, transcriptPath: transcript };
+        }
+      }
+    }
+    return latestConv;
+  } catch {
+    return null;
+  }
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  // 1. Status Bar Item Creation (Left-aligned, high priority for guaranteed visibility)
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1000);
   statusBarItem.command = 'antigravity.showTelemetryMenu';
   statusBarItem.text = '$(sparkle) Antigravity: Initializing';
-  statusBarItem.tooltip = 'Antigravity IDE Live Telemetry (Click to view details)';
+  statusBarItem.tooltip = 'Antigravity IDE Live Telemetry';
   statusBarItem.show();
 
-  const stateFilePath = path.join(os.homedir(), '.hermes', 'antigravity_tokens.json');
+  let activeConvId: string | null = null;
+  let activeTranscriptPath: string | null = null;
 
   const updateUI = () => {
     try {
-      if (!fs.existsSync(stateFilePath)) {
-        statusBarItem.text = '$(sparkle) Antigravity: Ready';
-        statusBarItem.tooltip = 'State file ~/.hermes/antigravity_tokens.json not found';
-        return;
+      // 1. Check if active editor is in a brain conversation folder
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        const docPath = activeEditor.document.uri.fsPath;
+        const match = docPath.match(/\/brain\/([0-9a-fA-F-]{36})\//);
+        if (match) {
+          activeConvId = match[1];
+          activeTranscriptPath = path.join(STATE_DIR, 'brain', activeConvId, '.system_generated', 'logs', 'transcript.jsonl');
+        }
       }
-      const raw = fs.readFileSync(stateFilePath, 'utf-8');
-      const state: AntigravityTokensState = JSON.parse(raw);
 
-      const promptTokens = (state.promptTokens ?? 0).toLocaleString();
-      const completionTokens = (state.completionTokens ?? 0).toLocaleString();
+      // 2. Fallback to latest active conversation if no thread document is focused
+      if (!activeConvId || !activeTranscriptPath || !fs.existsSync(activeTranscriptPath)) {
+        const latest = findLatestConversation();
+        if (latest) {
+          activeConvId = latest.convId;
+          activeTranscriptPath = latest.transcriptPath;
+        }
+      }
+
+      // 3. Compute live token counts from transcript
+      let promptTokens = 0;
+      let completionTokens = 0;
+      if (activeTranscriptPath && fs.existsSync(activeTranscriptPath)) {
+        const counts = calculateConversationTokens(activeTranscriptPath);
+        promptTokens = counts.promptTokens;
+        completionTokens = counts.completionTokens;
+      }
+
+      // 4. Read state metadata (triage mode, endpoint)
+      let state: AntigravityTokensState = {};
+      if (fs.existsSync(STATE_FILE)) {
+        try {
+          state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
+        } catch {}
+      }
+
       const triageMode = state.triageMode || 'Orchestrator';
       const workspaceId = state.workspace_id || 'Global';
-      const lastPreflight = state.lastPreflightStatus || 'Ready';
-      const endpoint = state.cloud_code_endpoint || 'https://daily-cloudcode-pa.googleapis.com';
+      const promptFormatted = promptTokens.toLocaleString();
+      const compFormatted = completionTokens.toLocaleString();
+      const convShort = activeConvId ? activeConvId.substring(0, 8) : 'N/A';
 
-      statusBarItem.text = `$(sparkle) ${promptTokens} in / ${completionTokens} out [${triageMode}]`;
+      statusBarItem.text = `$(sparkle) ${promptFormatted} in / ${compFormatted} out [${triageMode}]`;
       statusBarItem.tooltip = new vscode.MarkdownString(
         `### Antigravity Telemetry\n\n` +
-        `- **Prompt Tokens In:** \`${promptTokens}\`\n` +
-        `- **Completion Tokens Out:** \`${completionTokens}\`\n` +
+        `- **Active Thread:** \`${convShort}\`\n` +
+        `- **Prompt Tokens In:** \`${promptFormatted}\`\n` +
+        `- **Completion Tokens Out:** \`${compFormatted}\`\n` +
         `- **Triage Mode:** \`${triageMode}\`\n` +
-        `- **Workspace:** \`${workspaceId}\`\n` +
-        `- **Preflight Status:** \`${lastPreflight}\`\n` +
-        `- **Endpoint:** \`${endpoint}\`\n\n` +
-        `*Click to open telemetry actions*`
+        `- **Workspace:** \`${workspaceId}\`\n\n` +
+        `*Click to switch triage mode or refresh*`
       );
     } catch (err) {
       console.error('Antigravity Telemetry UI update error:', err);
@@ -61,34 +165,42 @@ export function activate(context: vscode.ExtensionContext) {
 
   updateUI();
 
-  // Watch state file with 500ms interval polling
+  // Listen to active editor changes to track thread switches
+  const editorListener = vscode.window.onDidChangeActiveTextEditor(() => {
+    updateUI();
+  });
+
+  // Watch state file
   try {
-    fs.watchFile(stateFilePath, { interval: 500 }, () => {
+    fs.watchFile(STATE_FILE, { interval: 1000 }, () => {
       updateUI();
     });
   } catch (err) {
     console.error('Failed to attach fs.watchFile:', err);
   }
 
-  // Register Commands
+  // Poll for token updates every 2 seconds
+  const intervalTimer = setInterval(updateUI, 2000);
+
+  // Register commands
   const menuCommand = vscode.commands.registerCommand('antigravity.showTelemetryMenu', async () => {
     updateUI();
     let state: AntigravityTokensState = {};
-    if (fs.existsSync(stateFilePath)) {
+    if (fs.existsSync(STATE_FILE)) {
       try {
-        state = JSON.parse(fs.readFileSync(stateFilePath, 'utf-8'));
+        state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
       } catch {}
     }
     const selection = await vscode.window.showQuickPick(
       [
         {
           label: `$(sparkle) Current Mode: ${state.triageMode || 'Orchestrator'}`,
-          description: `Tokens: ${state.promptTokens ?? 0} in / ${state.completionTokens ?? 0} out`,
-          detail: `Workspace: ${state.workspace_id || 'Global'}`
+          description: `Thread: ${activeConvId ? activeConvId.substring(0, 8) : 'Global'}`,
+          detail: 'Active execution policy'
         },
         {
           label: '$(refresh) Refresh Telemetry',
-          description: 'Re-read ~/.hermes/antigravity_tokens.json'
+          description: 'Re-calculate active thread tokens'
         },
         {
           label: '$(gear) Select Triage Mode',
@@ -114,7 +226,10 @@ export function activate(context: vscode.ExtensionContext) {
       if (modeChoice) {
         state.triageMode = modeChoice.label;
         state.lastUpdated = Date.now() / 1000;
-        fs.writeFileSync(stateFilePath, JSON.stringify(state, null, 2), 'utf-8');
+        try {
+          fs.mkdirSync(STATE_DIR, { recursive: true });
+          fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
+        } catch {}
         updateUI();
         vscode.window.showInformationMessage(`Triage mode set to: ${modeChoice.label}`);
       }
@@ -127,19 +242,20 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     statusBarItem,
+    editorListener,
     menuCommand,
     refreshCommand,
     new vscode.Disposable(() => {
+      clearInterval(intervalTimer);
       try {
-        fs.unwatchFile(stateFilePath);
+        fs.unwatchFile(STATE_FILE);
       } catch {}
     })
   );
 }
 
 export function deactivate() {
-  const stateFilePath = path.join(os.homedir(), '.hermes', 'antigravity_tokens.json');
   try {
-    fs.unwatchFile(stateFilePath);
+    fs.unwatchFile(STATE_FILE);
   } catch {}
 }

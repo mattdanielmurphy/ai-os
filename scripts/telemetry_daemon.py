@@ -14,8 +14,8 @@ import signal
 from pathlib import Path
 
 DAEMON_LOG_DIR = Path.home() / ".gemini" / "antigravity-ide" / "daemon"
-STATE_DIR = Path.home() / ".hermes"
-STATE_FILE = STATE_DIR / "antigravity_tokens.json"
+STATE_DIR = Path.home() / ".gemini" / "antigravity-ide"
+STATE_FILE = STATE_DIR / "tokens.json"
 
 # Regex patterns for telemetry extraction
 RE_INPUT_TOKENS = re.compile(r'"(?:prompt_tokens|plan_tokens)"\s*:\s*(\d+)')
