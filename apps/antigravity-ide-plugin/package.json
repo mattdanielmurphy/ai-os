@@ -11,12 +11,24 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "antigravity.showTelemetryMenu",
+        "title": "Antigravity: Show Telemetry & Triage Status"
+      },
+      {
+        "command": "antigravity.refreshTelemetry",
+        "title": "Antigravity: Refresh Telemetry"
+      }
+    ]
+  },
   "scripts": {
-    "build": "bun build ./src/extension.ts --outfile ./dist/extension.js --target node --external vscode",
-    "watch": "bun build ./src/extension.ts --outfile ./dist/extension.js --target node --external vscode --watch",
+    "build": "bun build ./src/extension.ts --outfile ./dist/extension.js --target node --external vscode --format cjs",
+    "watch": "bun build ./src/extension.ts --outfile ./dist/extension.js --target node --external vscode --format cjs --watch",
     "prepublish": "bun run build"
   },
   "devDependencies": {
