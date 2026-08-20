@@ -2,7 +2,7 @@
 """
 sync_antigravity_ide.py
 Safely syncs Antigravity.app threads and brain directories into Antigravity IDE.
-Formats trajectory summaries into the exact Topic -> Row (Base64) Protobuf envelope
+Formats trajectory summaries into the exact native Topic -> DataEntry Protobuf envelope
 expected by Antigravity IDE's TrajectorySummariesLifecycle.
 """
 
@@ -19,6 +19,7 @@ SOURCE_GEMINI = Path.home() / ".gemini" / "antigravity"
 TARGET_GEMINI = Path.home() / ".gemini" / "antigravity-ide"
 TARGET_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "Antigravity IDE" / "User" / "globalStorage"
 STATE_DB = TARGET_APP_SUPPORT / "state.vscdb"
+CANARY_DB = TARGET_APP_SUPPORT / "state.vscdb.canary_bak"
 BACKUP_DIR = Path.home() / ".gemini" / "backups" / "antigravity_ide_sync"
 
 
@@ -43,71 +44,56 @@ def encode_varint(n: int) -> bytes:
     return bytes(res)
 
 
-def encode_length_delimited(tag: int, data: bytes) -> bytes:
-    tag_byte = (tag << 3) | 2
-    return encode_varint(tag_byte) + encode_varint(len(data)) + data
+def parse_entries(raw_bytes: bytes) -> dict:
+    """Parses repeated DataEntry payloads from a Topic protobuf message."""
+    entries = {}
+    i = 0
+    while i < len(raw_bytes):
+        if i >= len(raw_bytes):
+            break
+        tag = raw_bytes[i]
+        if tag != 0x0A:  # Field 1 wire 2 (Topic.entries)
+            break
+        i += 1
+        length = 0
+        shift = 0
+        while True:
+            b = raw_bytes[i]
+            i += 1
+            length |= (b & 0x7F) << shift
+            if not (b & 0x80):
+                break
+            shift += 7
+        entry_payload = raw_bytes[i : i + length]
+        i += length
+
+        sub_i = 0
+        if sub_i < len(entry_payload) and entry_payload[sub_i] == 0x0A:
+            sub_i += 1
+            k_len = 0
+            k_shift = 0
+            while True:
+                kb = entry_payload[sub_i]
+                sub_i += 1
+                k_len |= (kb & 0x7F) << k_shift
+                if not (kb & 0x80):
+                    break
+                k_shift += 7
+            key = entry_payload[sub_i : sub_i + k_len].decode("utf-8", errors="ignore")
+            entries[key] = entry_payload
+    return entries
 
 
-def encode_row(b64_val_str: str) -> bytes:
-    # Row: field 1 = string (value)
-    return encode_length_delimited(1, b64_val_str.encode("utf-8"))
-
-
-def encode_data_entry(key: str, row_bytes: bytes) -> bytes:
-    # DataEntry: field 1 = string (key), field 2 = Row (message)
-    key_bytes = key.encode("utf-8")
-    entry_payload = encode_length_delimited(1, key_bytes) + encode_length_delimited(2, row_bytes)
-    return entry_payload
-
-
-def encode_topic(data_map: dict) -> bytes:
-    # Topic: field 1 = repeated DataEntry
+def build_topic_envelope(entries: dict) -> bytes:
+    """Constructs the canonical Topic message from dictionary of DataEntry payloads."""
     out = bytearray()
-    for k, b64_str in data_map.items():
-        row_bytes = encode_row(b64_str)
-        entry_payload = encode_data_entry(k, row_bytes)
-        out.extend(encode_length_delimited(1, entry_payload))
+    for k, payload in entries.items():
+        migrated = payload.replace(b"/Users/matthewmurphy/", b"/Users/matt/")
+        out.extend(b"\x0a" + encode_varint(len(migrated)) + migrated)
     return bytes(out)
 
 
-def parse_chunks(data: bytes) -> dict:
-    i = 0
-    chunks = {}
-    while i < len(data):
-        tag = data[i]
-        if tag != 0x0A:
-            break
-        i += 1
-        l = 0
-        s = 0
-        while True:
-            b = data[i]
-            i += 1
-            l |= (b & 0x7F) << s
-            if not (b & 0x80):
-                break
-            s += 7
-        chunk = data[i : i + l]
-        i += l
-
-        sub_i = 0
-        if len(chunk) > 2 and chunk[sub_i] == 0x0A:
-            sub_i += 1
-            sl = 0
-            ss = 0
-            while True:
-                sb = chunk[sub_i]
-                sub_i += 1
-                sl |= (sb & 0x7F) << ss
-                if not (sb & 0x80):
-                    break
-                ss += 7
-            k = chunk[sub_i : sub_i + sl].decode("utf-8", errors="ignore")
-            chunks[k] = chunk
-    return chunks
-
-
-def sync_threads(force: bool = False, limit: int = 500):
+def sync_threads(force: bool = False, limit: int = 0):
     print("=== Antigravity IDE Thread Synchronizer ===")
     if is_ide_running() and not force:
         print("[WARNING] Antigravity IDE is currently running.")
@@ -147,40 +133,66 @@ def sync_threads(force: bool = False, limit: int = 500):
 
     print(f"Linked {linked_conv} conversation DBs and {linked_brain} brain directories.")
 
-    # 2. Extract and format summary topic
-    summaries_pb = SOURCE_GEMINI / "agyhub_summaries_proto.pb"
-    if not summaries_pb.exists():
-        print(f"[ERROR] Summaries file {summaries_pb} not found.")
-        return False
+    # 2. Collect trajectory summaries from canary backup and agyhub_summaries_proto.pb
+    all_entries = {}
 
-    with open(summaries_pb, "rb") as fp:
-        raw_pb = fp.read()
+    pb_path = SOURCE_GEMINI / "agyhub_summaries_proto.pb"
+    if pb_path.exists():
+        pb_entries = parse_entries(pb_path.read_bytes())
+        all_entries.update(pb_entries)
+        print(f"Extracted {len(pb_entries)} trajectory summaries from {pb_path.name}.")
 
-    chunks = parse_chunks(raw_pb)
-    print(f"Extracted {len(chunks)} trajectory summaries from source protobuf.")
+    if CANARY_DB.exists():
+        try:
+            con_can = sqlite3.connect(CANARY_DB)
+            row = con_can.cursor().execute(
+                "SELECT value FROM ItemTable WHERE key = 'antigravityUnifiedStateSync.trajectorySummaries'"
+            ).fetchone()
+            if row and row[0]:
+                can_entries = parse_entries(base64.b64decode(row[0]))
+                all_entries.update(can_entries)
+                print(f"Merged {len(can_entries)} trajectory summaries from canary_bak.")
+            con_can.close()
+        except Exception as e:
+            print(f"Warning reading canary_bak: {e}")
 
-    # Map to Base64 rows (most recent first or capped to limit)
-    data_map = {}
-    items = list(chunks.items())
-    if limit and len(items) > limit:
-        items = items[:limit]
+    if limit > 0 and len(all_entries) > limit:
+        all_entries = dict(list(all_entries.items())[:limit])
 
-    for k, chunk in items:
-        migrated = chunk.replace(b"/Users/matthewmurphy/", b"/Users/matt/")
-        data_map[k] = base64.b64encode(migrated).decode("utf-8")
-
-    topic_bytes = encode_topic(data_map)
+    topic_bytes = build_topic_envelope(all_entries)
     topic_b64 = base64.b64encode(topic_bytes).decode("utf-8")
-    print(f"Constructed Topic envelope with {len(data_map)} entries ({len(topic_bytes)} bytes).")
+    print(f"Constructed canonical Topic envelope with {len(all_entries)} entries ({len(topic_bytes)} bytes).")
 
-    # 3. Write to state.vscdb
+    # 3. Migrate sidebar workspaces
+    sidebar_b64 = None
+    if CANARY_DB.exists():
+        try:
+            con_can = sqlite3.connect(CANARY_DB)
+            w_row = con_can.cursor().execute(
+                "SELECT value FROM ItemTable WHERE key = 'antigravityUnifiedStateSync.sidebarWorkspaces'"
+            ).fetchone()
+            if w_row and w_row[0]:
+                w_bytes = base64.b64decode(w_row[0]).replace(b"/Users/matthewmurphy/", b"/Users/matt/")
+                sidebar_b64 = base64.b64encode(w_bytes).decode("utf-8")
+            con_can.close()
+        except Exception as e:
+            print(f"Warning reading sidebarWorkspaces: {e}")
+
+    # 4. Write to state.vscdb
     con = sqlite3.connect(STATE_DB)
     cur = con.cursor()
+    cur.execute("PRAGMA integrity_check")
     cur.execute(
         "INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)",
         ("antigravityUnifiedStateSync.trajectorySummaries", topic_b64),
     )
+    if sidebar_b64:
+        cur.execute(
+            "INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)",
+            ("antigravityUnifiedStateSync.sidebarWorkspaces", sidebar_b64),
+        )
     con.commit()
+    cur.execute("PRAGMA wal_checkpoint(FULL)")
     con.close()
     print("[SUCCESS] Successfully synchronized trajectory summaries into Antigravity IDE state.vscdb!")
     return True
