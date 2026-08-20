@@ -1,209 +1,286 @@
-This implementation plan establishes a comprehensive security architecture that eliminates direct `.env` reads through runtime interception and dedicated metadata-only tools, while securing the antigravity thread synchronization pipeline against credential leakage.
+Past conversations fail to load in the Antigravity IDE UI due to a desynchronization between `state.vscdb` extension storage keys, SQLite trajectory protobuf blob schemas in `~/.gemini/antigravity-ide/conversations/`, and strict parsing expectations in the `language_server` RPC handler for `trajectorySummaries`. The definitive fix establishes a resilient trajectory hydration pipeline that normalizes storage paths, repairs schema deserialization, and ensures binary invocation flags align with the vendor language server contract.
 
-## Architectural Strategy & Policy Analysis
+***
 
-The security architecture addresses secrets protection across two primary attack surfaces: agent tool execution environments and persistent conversation logs synced to Git repositories. To prevent accidental leakage, agents must never inspect raw `.env` files directly, and thread transcript synchronizers must scrub sensitive patterns prior to persistence.
+### Architectural Strategy
+
+The remediation architecture resolves conversation loading across three coupled layers: runtime binary invocation, data persistence, and RPC communication.
 
 ```
-+-----------------------------------------------------------------------------------+
-|                              AGENT EXECUTION BOUNDARY                             |
-|                                                                                   |
-|  [ Agent Command / Tool ]                                                         |
-|         |                                                                         |
-|         +--> (Read .env / cat .env) -------> [ EnvGuard Hook ] ---> BLOCKED       |
-|         |                                                                         |
-|         +--> (Query key existence) --------> [ aios-env Tool ] ---> Key Metadata  |
-|                                                                                   |
-+-----------------------------------------------------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|                            ANTIGRAVITY SYNC PIPELINE                              |
-|                                                                                   |
-|  [ Raw NDJSON / CLI Logs ]                                                        |
-|         |                                                                         |
-|         v                                                                         |
-|  [ SecretSanitizer Pipeline ]                                                     |
-|         |--> Regex Scanner (High-entropy keys, JWTs, Bearer tokens)               |
-|         |--> Known Environment Hash Table Redaction                               |
-|         v                                                                         |
-|  [ Redacted Markdown / SQLite ] ---> [ Git / Remote GitHub Sync ]                  |
-|                                                                                   |
-+-----------------------------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           Antigravity IDE UI                            │
+│                 (VS Code Extension Webview / Chat Panel)                 │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ JSON-RPC (stdio)
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│            Vendor Language Server (language_server_macos_arm)           │
+│                                                                         │
+│  ┌───────────────────────┐             ┌─────────────────────────────┐  │
+│  │ trajectorySummaries   │             │   loadTrajectory RPC        │  │
+│  │ RPC Handler           │             │   Handler                   │  │
+│  └───────────┬───────────┘             └──────────────┬──────────────┘  │
+│              │                                        │                 │
+│              ▼                                        ▼                 │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │ Resilient Protobuf Deserializer & Fallback Summary Parser         │  │
+│  └───────────────────────────────────┬───────────────────────────────┘  │
+└──────────────────────────────────────┼──────────────────────────────────┘
+                                       │
+        ┌──────────────────────────────┴──────────────────────────────┐
+        ▼                                                             ▼
+┌──────────────────────────────────────┐  ┌──────────────────────────────────────┐
+│        Workspace state.vscdb         │  │     ~/.gemini/antigravity-ide/       │
+│ (VS Code Global / Workspace Storage) │  │          conversations/*.db          │
+│   - Extension metadata & UI cache    │  │   - SQLite trajectory protobuf blobs │
+└──────────────────────────────────────┘  └──────────────────────────────────────┘
 ```
 
-### Thread Syncing Policy Analysis
+The approach enforces direct vendor binary execution without stdio-buffering shims, standardizes conversation database discovery across workspace roots, and wraps protobuf payload decoding in a fault-tolerant parser to prevent individual corrupted transcripts from blocking UI rendering.
 
-Syncing execution transcripts (`~/.gemini/antigravity-cli/brain/` and `gen_conversation_md.py`) to GitHub carries leakage risks even within private repositories. Private repositories can be made public unintentionally, shared with third-party extensions, or exposed via CI actions.
+| Layer | Failure Mechanism | Architectural Resolution |
+| :--- | :--- | :--- |
+| **Binary Invocation** | Missing `--storage-dir` or `--workspace-id` args | Standardize launcher flags and environment bindings |
+| **Persistence (SQLite)** | Database locks or schema mismatch in trajectory blobs | Schema validation and WAL-mode database connection |
+| **UI State (`state.vscdb`)** | Stale workspace GUID mappings and cache misses | Re-index state keys matching active workspace path hash |
+| **RPC & Deserialization** | Missing fields in `trajectorySummaries` protobuf | Backward-compatible schema decoding with fallbacks |
 
-| Sync Dimension | Raw Sync (Unsafe) | Pure Gitignore (Opaque) | Redacted Sync (Recommended) |
-|---|---|---|---|
-| Secret Exposure Risk | High (secrets live forever in git commit history) | Zero local-to-remote leakage | Low (deterministic sanitization before staging) |
-| Auditability & Search | High across remote devices | Minimal (local machine only) | High across both remote and local databases |
-| Knowledge Persistence | Preserves all context | Blocks remote transcript archiving | Retains full conversational reasoning safely |
-| Invalidation Overhead | Extreme (requires git history rewriting) | Zero (no remote commits) | Low (handled via local preflight validation) |
+***
 
-The enforced policy mandates **Redacted Thread Sync** backed by strict local pre-commit blocking:
-- Git tracking of conversation markdown files is permitted only after passing through the `SecretSanitizer` pipeline.
-- Raw NDJSON logs containing raw shell sessions remain strictly `.gitignore`'d in `~/.gemini/antigravity-cli/brain/` and `agent-logs/raw/`.
-- If an active key is ever detected in a staged diff, the preflight hook aborts execution and generates an automated revocation advisory.
+### Data Structures & State Management
 
-## Data Structures & State Management
+The conversation state resides in both SQLite trajectory stores and the VS Code `state.vscdb` database.
 
-The secret management subsystem requires structured schemas to manage environment access safely and define redaction models.
+#### 1. Trajectory Protobuf Schema
+```protobuf
+syntax = "proto3";
+package antigravity.trajectory;
 
+message TrajectoryMetadata {
+  string conversation_id = 1;
+  string title = 2;
+  int64 created_at_ms = 3;
+  int64 updated_at_ms = 4;
+  string workspace_path = 5;
+  int32 total_steps = 6;
+  string model_name = 7;
+}
+
+message TrajectoryStep {
+  string step_id = 1;
+  string role = 2; // "user", "assistant", "system", "tool"
+  string content = 3;
+  int64 timestamp_ms = 4;
+  repeated ToolCall tool_calls = 5;
+  string error_message = 6;
+}
+
+message ToolCall {
+  string tool_name = 1;
+  string call_id = 2;
+  string arguments_json = 3;
+  string result_json = 4;
+  int32 status_code = 5;
+}
+
+message Trajectory {
+  TrajectoryMetadata metadata = 1;
+  repeated TrajectoryStep steps = 2;
+}
+
+message TrajectorySummary {
+  string conversation_id = 1;
+  string title = 2;
+  int64 created_at_ms = 3;
+  int64 updated_at_ms = 4;
+  int32 step_count = 5;
+  string snippet = 6;
+  string workspace_id = 7;
+}
+
+message TrajectorySummariesResponse {
+  repeated TrajectorySummary summaries = 1;
+  int32 total_count = 2;
+}
+```
+
+#### 2. SQLite Database Schema (`~/.gemini/antigravity-ide/conversations/`)
+```sql
+CREATE TABLE IF NOT EXISTS conversation_trajectories (
+    conversation_id TEXT PRIMARY KEY,
+    workspace_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    title TEXT,
+    step_count INTEGER DEFAULT 0,
+    protobuf_blob BLOB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_trajectories_workspace 
+ON conversation_trajectories(workspace_hash, updated_at DESC);
+```
+
+#### 3. `state.vscdb` Storage Keys
+- Extension Cache Key: `antigravity.conversations.cachedSummaries.<workspace_hash>`
+- Active Conversation ID: `antigravity.activeConversationId`
+- Storage Directory Override: `antigravity.storageDirectory`
+
+***
+
+### API & Interface Contracts
+
+The interface contract standardizes communication between the extension client and the `language_server` binary.
+
+#### 1. Language Server Launch Contract
+```bash
+/Applications/Antigravity\ IDE.app/Contents/Resources/app/extensions/antigravity/bin/language_server_macos_arm \
+  --stdio \
+  --storage-dir="$HOME/.gemini/antigravity-ide" \
+  --workspace-id="<WORKSPACE_SHA256>" \
+  --log-level="info"
+```
+
+#### 2. LSP / JSON-RPC Endpoints
+```typescript
+interface TrajectoryRPCInterface {
+  /**
+   * Fetches metadata summaries for all past conversations in the current workspace.
+   */
+  getTrajectorySummaries(params: {
+    workspaceId: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    summaries: Array<{
+      conversationId: string;
+      title: string;
+      createdAt: number;
+      updatedAt: number;
+      stepCount: number;
+      snippet: string;
+    }>;
+    totalCount: number;
+  }>;
+
+  /**
+   * Loads the full step history for a specific conversation ID.
+   */
+  loadTrajectory(params: {
+    conversationId: string;
+  }): Promise<{
+    conversationId: string;
+    metadata: Record<string, unknown>;
+    steps: Array<{
+      stepId: string;
+      role: 'user' | 'assistant' | 'system' | 'tool';
+      content: string;
+      timestamp: number;
+      toolCalls?: Array<Record<string, unknown>>;
+    }>;
+  }>;
+
+  /**
+   * Deletes or archives a past trajectory from disk and state.
+   */
+  deleteTrajectory(params: {
+    conversationId: string;
+  }): Promise<{ success: boolean }>;
+}
+```
+
+***
+
+### Logic Flow & Algorithms
+
+The conversation recovery and loading workflow executes deterministic hydration with defensive fallbacks.
+
+#### 1. Language Server Initialization & DB Discovery
+```
+1. Extension client starts language_server_macos_arm via stdio with workspace-id.
+2. Binary resolves storage directory ~/.gemini/antigravity-ide/conversations/.
+3. Server executes PRAGMA journal_mode=WAL and PRAGMA busy_timeout=5000 on conversation databases.
+4. Server verifies trajectory schema and triggers lightweight migration if legacy columns exist.
+```
+
+#### 2. Resilient `trajectorySummaries` Extraction Algorithm
 ```python
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Dict, List, Optional, Set
-
-class SecretClassification(Enum):
-    API_KEY = "api_key"
-    BEARER_TOKEN = "bearer_token"
-    DATABASE_URI = "database_uri"
-    PRIVATE_KEY = "private_key"
-    GENERIC_SECRET = "generic_secret"
-
-@dataclass(frozen=True)
-class EnvMetadata:
-    key: str
-    is_set: bool
-    length: int
-    classification: SecretClassification
-    file_path: str
-
-@dataclass
-class RedactionPattern:
-    name: str
-    pattern: str
-    classification: SecretClassification
-    replacement_template: str = "[REDACTED_{classification}]"
-
-@dataclass
-class SanitizationResult:
-    cleaned_text: str
-    secrets_found_count: int
-    detected_types: Set[SecretClassification] = field(default_factory=set)
-    audit_trail: List[Dict[str, str]] = field(default_factory=list)
+def extract_trajectory_summaries(db_path: str, workspace_hash: str) -> list[dict]:
+    summaries = []
+    conn = sqlite3.connect(db_path, timeout=5.0)
+    cursor = conn.cursor()
+    
+    query = """
+        SELECT conversation_id, title, created_at, updated_at, step_count, protobuf_blob 
+        FROM conversation_trajectories 
+        WHERE workspace_hash = ? OR workspace_hash = 'global'
+        ORDER BY updated_at DESC
+    """
+    
+    for row in cursor.execute(query, (workspace_hash,)):
+        conv_id, title, created_at, updated_at, step_count, blob = row
+        try:
+            # Primary path: strict protobuf decode
+            trajectory = Trajectory()
+            trajectory.ParseFromString(blob)
+            
+            snippet = ""
+            if trajectory.steps:
+                snippet = trajectory.steps[0].content[:120]
+                
+            summaries.append({
+                "conversationId": conv_id,
+                "title": title or trajectory.metadata.title or "Untitled Conversation",
+                "createdAt": created_at or trajectory.metadata.created_at_ms,
+                "updatedAt": updated_at or trajectory.metadata.updated_at_ms,
+                "stepCount": step_count or len(trajectory.steps),
+                "snippet": snippet
+            })
+        except Exception:
+            # Fallback path: extract raw string heuristics if protobuf decoding fails
+            summaries.append({
+                "conversationId": conv_id,
+                "title": title or f"Recovered Session ({conv_id[:8]})",
+                "createdAt": created_at or 0,
+                "updatedAt": updated_at or 0,
+                "stepCount": step_count or 1,
+                "snippet": "Preview unavailable (recovered trajectory)"
+            })
+            
+    conn.close()
+    return summaries
 ```
 
-## API & Interface Contracts
-
-The following classes and function interfaces define contracts across the environment manager, sanitization engine, and validation hooks.
-
-```python
-class EnvGuard:
-    """Interception hook and helper utility for environment variable inspection."""
-
-    @staticmethod
-    def is_blocked_path(path: str) -> bool:
-        """Determines if the targeted path is a protected environment file."""
-        ...
-
-    @staticmethod
-    def inspect_keys(env_path: str = ".env") -> List[EnvMetadata]:
-        """Returns keys and metadata (length, presence) without exposing raw values."""
-        ...
-
-    @staticmethod
-    def validate_command(command: str) -> bool:
-        """Scans shell commands to block direct reads like cat .env or grep .env."""
-        ...
-
-
-class SecretSanitizer:
-    """High-performance stream and text sanitizer for scrubbing credentials."""
-
-    def __init__(self, custom_patterns: Optional[List[RedactionPattern]] = None) -> None:
-        ...
-
-    def register_env_secrets(self, env_files: List[str]) -> None:
-        """Loads actual local secret values in-memory to build an exact-match redaction dictionary."""
-        ...
-
-    def sanitize_content(self, text: str) -> SanitizationResult:
-        """Applies exact-match redaction and heuristic regex filtering across text."""
-        ...
-
-    def sanitize_file(self, input_path: str, output_path: Optional[str] = None) -> SanitizationResult:
-        """Reads a file, scrubs sensitive tokens, and writes the sanitized output."""
-        ...
-
-
-class SecretAuditHook:
-    """Pre-commit and preflight audit verification."""
-
-    @staticmethod
-    def audit_staged_diff() -> bool:
-        """Fails preflight if any unstaged or staged diff introduces raw secrets."""
-        ...
+#### 3. State Reconciliation & UI Sync Flow
+```
+1. Webview sends 'antigravity/getTrajectorySummaries' request via extension host.
+2. Extension host checks state.vscdb cache:
+   a. If cached summaries exist and TTL < 30s, return cached list.
+   b. If cache missed or stale, invoke language_server RPC.
+3. If language_server returns an empty list or RPC times out:
+   a. Fall back to local SQLite directory reader in scripts/sync_antigravity_ide.py.
+   b. Parse .db trajectory records directly using fallback parser.
+   c. Hydrate state.vscdb with the recovered summaries.
+4. UI renders conversation drawer with recovered conversation cards.
+5. On conversation selection, UI calls loadTrajectory(conversationId).
 ```
 
-## Logic Flow & Algorithms
-
-The security lifecycle operates across three automated execution paths: access interception, safe environment inspection, and transcript sanitization.
-
-### Path A: Runtime Environment File Interception
-
-```
-1. Receive command or tool call (e.g. read_file, exec_command).
-2. Normalize target path and resolve symlinks using realpath().
-3. If target matches pattern r'(^|/)(\.env|\.env\..*)$':
-     a. Intercept operation.
-     b. Log access violation to agent session audit log.
-     c. Raise PermissionError: "Direct access to .env is forbidden. Use aios-env tool instead."
-4. If tool is exec_command / bash:
-     a. Tokenize command string.
-     b. Check AST / token sequence for forbidden read operations:
-        ['cat', 'head', 'tail', 'less', 'more', 'view', 'grep', 'awk', 'sed'] targeting .env patterns.
-     c. If matched, block command execution and return descriptive permission error.
-```
-
-### Path B: Safe Environment Tool Workflow (`aios-env`)
-
-```
-1. Agent requires verification of environment setup.
-2. Agent invokes safe tool: `aios-env list` or `aios-env check --key GEMINI_API_KEY`.
-3. Tool parses `.env` without echoing values to standard output:
-     - Output key name, presence (True/False), character length, and masking preview (e.g. `AIzaSy...4xQ`).
-4. To run scripts requiring environment variables, agent executes standard subshell processes:
-     - Runtime loads variables into child process memory via `dotenv` without printing to terminal or logs.
-```
-
-### Path C: Transcript Sanitization and Sync Pipeline
-
-```
-1. Daemon triggers `sync_threads.py` on NDJSON transcript update.
-2. Read raw NDJSON session records.
-3. Ingest active `.env` files into `SecretSanitizer` exact-match dictionary (in-memory only).
-4. For each turn in transcript (User, Model, Tool Output):
-     a. Apply exact-match replacement against all loaded environment values.
-     b. Apply regex rules for structured tokens (e.g., `ghp_[A-Za-z0-9]{36}`, `sk-[A-Za-z0-9_-]{48}`).
-     c. Substitute detected matches with structured tokens: `[REDACTED_API_KEY:SHA256_PREFIX]`.
-5. Write sanitized conversational exchange to `thread.md` or Hermes SQLite `~/.hermes/state.db`.
-6. Run `SecretAuditHook.audit_staged_diff()` before committing to git remote.
-```
-
-## Edge Cases & Implementation Steps
-
-Robust credential protection must guard against alternative read vectors and complex log formats.
-
-### Edge Cases & Mitigation Strategies
-
-- **Obfuscated and Encoded Secrets:** Base64 or URL-encoded strings in URLs or tool payloads are detected by decoding common token lengths during `SecretSanitizer` scanning.
-- **Subshell and Tool Bypasses:** Direct subshells (e.g., `python -c "print(open('.env').read())"`) bypass static shell regexes. Mitigation requires combining CLI command checks with runtime file system permission locks (`chmod 600 .env`) and mandatory preflight diff scanning before git commits.
-- **Multi-File Environment Variations:** Files like `.env.local`, `.env.production`, `.env.test`, and `.env.backup` are matched against the regex `(?i)\.env(\.[a-z0-9_-]+)*$`.
-- **Git Index Exposure:** Inadvertently staging `.env` files is blocked at both `.gitignore` and `preflight.py` levels with non-zero exit code gates.
+***
 
 ### Implementation Steps
 
-- Modify `tools/` and `scripts/`:
-  - Create `scripts/env_guard.py` implementing `EnvGuard` and the `aios-env` CLI helper for safe key metadata inspection.
-  - Create `scripts/sanitize_thread.py` implementing `SecretSanitizer` with exact-match hashing and token regex filters.
-- Update `scripts/sync_threads.py`, `scripts/watch_transcripts.py`, and `scripts/gen_conversation_md.py`:
-  - Integrate `SecretSanitizer` into the transcript pipeline before writing markdown or persisting to `~/.hermes/state.db`.
-- Enhance Quality Gates in `scripts/preflight.py` and `scripts/postflight_lib.py`:
-  - Add a preflight secret audit step that scans staged git diffs and blocks any commit containing raw secrets or `.env` files.
-- Update Domain Knowledge & Invariants:
-  - Update `AG_CONTEXT.md` under **Key Architecture & Domain Rules** to include the zero-tolerance `.env` direct read policy and the redacted thread sync invariant.
-  - Record the architectural decision and rationale in `DEVELOPMENT_JOURNAL.md`.
+The execution steps are ordered sequentially to diagnose, repair, and verify conversation loading without risking active workspace data.
+
+- Step 1: **Sanitize Language Server Execution Environment**
+  Verify that `/Applications/Antigravity IDE.app/Contents/Resources/app/extensions/antigravity/bin/language_server_macos_arm` is the unmodified vendor binary. Ensure no active wrappers, stdin buffers, or defunct shims intercept the stdio stream.
+
+- Step 2: **Audit & Repair SQLite Trajectory DBs in `~/.gemini/antigravity-ide/conversations/`**
+  Run an integrity check across all `.db` files in the conversations folder. Remove any stale SQLite `-shm` and `-wal` lock files left by crashed processes. Ensure all records have a valid `workspace_hash` matching the SHA256 of the current workspace root.
+
+- Step 3: **Update Bridge Script `scripts/sync_antigravity_ide.py`**
+  Add robust protobuf decoding with a defensive fallback parser. Ensure it extracts `conversation_id`, `title`, `updated_at`, and `step_count` even when optional protobuf metadata tags are absent.
+
+- Step 4: **Rebuild `state.vscdb` Conversation Cache**
+  Add a repair routine in `scripts/extract_antigravity_titles.py` to populate `state.vscdb` global storage keys with valid trajectory summary JSON arrays for each discovered conversation.
+
+- Step 5: **Validate RPC Contract via End-to-End Test**
+  Execute `tests/test_antigravity_sync.py` to simulate `getTrajectorySummaries` and `loadTrajectory` JSON-RPC calls over stdio, verifying that all past conversations return HTTP 200 / JSON-RPC success responses and render correctly in the IDE interface.
