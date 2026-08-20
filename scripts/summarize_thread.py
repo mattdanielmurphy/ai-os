@@ -4,11 +4,24 @@ import json
 import urllib.request
 
 def summarize(conv_id):
-    transcript_path = os.path.expanduser(f"~/.gemini/antigravity/brain/{conv_id}/.system_generated/logs/transcript.jsonl")
-    registry_path = os.path.expanduser("~/.gemini/antigravity/brain/thread_summaries.json")
-    
-    if not os.path.exists(transcript_path):
+    brain_dirs = [
+        os.path.expanduser("~/.gemini/antigravity-ide/brain"),
+        os.path.expanduser("~/.gemini/antigravity/brain"),
+        os.path.expanduser("~/.gemini/antigravity-cli/brain"),
+    ]
+    transcript_path = None
+    target_brain = None
+    for b in brain_dirs:
+        p = f"{b}/{conv_id}/.system_generated/logs/transcript.jsonl"
+        if os.path.exists(p):
+            transcript_path = p
+            target_brain = b
+            break
+            
+    if not transcript_path or not target_brain:
         return
+        
+    registry_path = f"{target_brain}/thread_summaries.json"
 
     first_user = None
     final_model = None

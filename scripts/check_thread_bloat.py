@@ -140,24 +140,34 @@ def find_transcript_file(conv_id=None, explicit_transcript=None):
         return explicit_transcript
 
     home = Path.home()
+    brain_dirs = [
+        home / ".gemini/antigravity-ide/brain",
+        home / ".gemini/antigravity/brain",
+        home / ".gemini/antigravity-cli/brain",
+    ]
+
     if conv_id:
-        p = home / f".gemini/antigravity/brain/{conv_id}/.system_generated/logs/transcript.jsonl"
-        if p.exists():
-            return str(p)
+        for b in brain_dirs:
+            p = b / f"{conv_id}/.system_generated/logs/transcript.jsonl"
+            if p.exists():
+                return str(p)
             
     env_conv_id = os.environ.get("CONVERSATION_ID") or os.environ.get("ANTIGRAVITY_CONVERSATION_ID")
     if env_conv_id:
-        p = home / f".gemini/antigravity/brain/{env_conv_id}/.system_generated/logs/transcript.jsonl"
-        if p.exists():
-            return str(p)
+        for b in brain_dirs:
+            p = b / f"{env_conv_id}/.system_generated/logs/transcript.jsonl"
+            if p.exists():
+                return str(p)
 
     # Auto-detect latest transcript
-    brain_dir = home / ".gemini/antigravity/brain"
-    if brain_dir.exists():
-        matches = glob.glob(str(brain_dir / "**/.system_generated/logs/transcript.jsonl"), recursive=True)
-        if matches:
-            matches.sort(key=os.path.getmtime, reverse=True)
-            return matches[0]
+    all_matches = []
+    for b in brain_dirs:
+        if b.exists():
+            matches = glob.glob(str(b / "**/.system_generated/logs/transcript.jsonl"), recursive=True)
+            all_matches.extend(matches)
+    if all_matches:
+        all_matches.sort(key=os.path.getmtime, reverse=True)
+        return all_matches[0]
             
     return None
 

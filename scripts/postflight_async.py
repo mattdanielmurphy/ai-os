@@ -54,10 +54,16 @@ def append_staleness_warning():
         conv_id = meta.get("conversationId")
         
         if conv_id:
-            thread_md_path = f"/Users/matt/.gemini/antigravity/brain/{conv_id}/thread.md"
-            if os.path.exists(thread_md_path):
-                with open(thread_md_path, "a", encoding="utf-8") as f:
-                    f.write(warning)
+            for b in [
+                "/Users/matt/.gemini/antigravity-ide/brain",
+                "/Users/matt/.gemini/antigravity/brain",
+                "/Users/matt/.gemini/antigravity-cli/brain",
+            ]:
+                thread_md_path = f"{b}/{conv_id}/thread.md"
+                if os.path.exists(thread_md_path):
+                    with open(thread_md_path, "a", encoding="utf-8") as f:
+                        f.write(warning)
+                    break
     except Exception:
         pass
 
