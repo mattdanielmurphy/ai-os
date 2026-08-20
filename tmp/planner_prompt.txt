@@ -1,4 +1,4 @@
-User Request: Diagnose and fix Antigravity IDE past conversations failing to load: Identify the exact root cause of why conversations/threads fail to load or open in Antigravity IDE after binary and database modifications, investigate the communication protocol, database schemas, local storage, trajectory lifecycle, and language server interaction, and formulate a complete, reliable fix.
+User Request: Plan Root Cause Fix for Antigravity IDE Conversation Loading Failure. Context: Past conversations fail to load in Antigravity IDE UI. Inspect language_server RPC/LSP endpoints, binary arguments, state.vscdb vs sqlite trajectory databases in ~/.gemini/antigravity-ide/conversations/, protobuf schemas, and trajectorySummaries parsing to produce a definitive fix.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
