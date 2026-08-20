@@ -1,0 +1,27 @@
+{
+  "name": "antigravity-ide-plugin",
+  "displayName": "Antigravity IDE Live Telemetry",
+  "description": "Live status bar token usage and triage telemetry bridge for Antigravity IDE",
+  "version": "0.1.0",
+  "publisher": "ai-os",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "bun build ./src/extension.ts --outfile ./dist/extension.js --target node --external vscode",
+    "watch": "bun build ./src/extension.ts --outfile ./dist/extension.js --target node --external vscode --watch",
+    "prepublish": "bun run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.3.3"
+  }
+}
