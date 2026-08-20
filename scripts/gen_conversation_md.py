@@ -768,7 +768,7 @@ def generate(conv_id: str, title: str, app_data_dir: Path, output_path_override:
     banner = f'<span style="display: block; text-align: center; opacity: 0.45; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 0 0 2.5rem 0;">Thread Started — {datetime.now().strftime("%B %d, %Y")}</span>'
 
     # Outer container with custom styles
-    doc_content.append('<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100cqw; max-width: 100cqw; min-width: 100%; position: absolute; top: 0; left: calc(50% - 50cqw - 2px); bottom: 0; padding: 2.5rem calc(2rem) 2.5rem calc(2rem + 2 * 2px); scrollbar-width: thin;">')
+    doc_content.append('<span style="display: flex; flex-direction: column-reverse; height: 100cqh; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; width: 100%; min-width: 100%; position: absolute; top: 0; left: 0; bottom: 0; padding: 2.5rem 2rem; scrollbar-width: thin;">')
 
     reversed_exchanges = list(reversed(exchanges))
     for i, item in enumerate(reversed_exchanges):
