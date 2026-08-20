@@ -216,13 +216,20 @@ def get_transcript_path(conv_dir):
     return p1 if os.path.exists(p1) else p2
 
 def get_thread_context(target_cid=None):
-    brain_dir = os.path.expanduser("~/.gemini/antigravity/brain/")
+    brain_dirs = [
+        os.path.expanduser("~/.gemini/antigravity-ide/brain/"),
+        os.path.expanduser("~/.gemini/antigravity/brain/"),
+        os.path.expanduser("~/.gemini/antigravity-cli/brain/"),
+    ]
     convs = []
-    for d in glob.glob(os.path.join(brain_dir, "*")):
-        if os.path.isdir(d) and os.path.basename(d) != "scratch":
-            bname = os.path.basename(d)
-            if len(bname) >= 32:
-                convs.append(d)
+    for brain_dir in brain_dirs:
+        if not os.path.exists(brain_dir):
+            continue
+        for d in glob.glob(os.path.join(brain_dir, "*")):
+            if os.path.isdir(d) and os.path.basename(d) != "scratch":
+                bname = os.path.basename(d)
+                if len(bname) >= 32:
+                    convs.append(d)
     if not convs: return None, True, 0, []
     
     # Sort by mtime of transcript file, then directory mtime
@@ -309,12 +316,17 @@ def main():
     
     if is_first:
         print("\n=== RECENT THREAD CONTEXT (NEW THREAD START) ===")
-        summaries_path = os.path.expanduser("~/.gemini/antigravity/brain/thread_summaries.json")
         summaries = {}
-        if os.path.exists(summaries_path):
-            with open(summaries_path, "r") as f:
-                try: summaries = json.load(f)
-                except: pass
+        for sum_dir in ["~/.gemini/antigravity-ide/brain", "~/.gemini/antigravity/brain", "~/.gemini/antigravity-cli/brain"]:
+            sum_path = os.path.expanduser(f"{sum_dir}/thread_summaries.json")
+            if os.path.exists(sum_path):
+                with open(sum_path, "r") as f:
+                    try:
+                        loaded = json.load(f)
+                        for k, v in loaded.items():
+                            if k not in summaries:
+                                summaries[k] = v
+                    except: pass
         
         print("--- Detailed Summaries of Past 5 Threads ---")
         for i, path in enumerate(all_convs[1:6]):

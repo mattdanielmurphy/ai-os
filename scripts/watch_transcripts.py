@@ -69,13 +69,18 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800, force_rescan: bo
         _last_scanned_brain_dir = brain_dir
         active = {}
         subagent_to_parent = {}
-        if not brain_dir.exists():
-            return active, subagent_to_parent
+        default_brains = [
+            Path.home() / ".gemini" / "antigravity" / "brain",
+            Path.home() / ".gemini" / "antigravity-ide" / "brain",
+            Path.home() / ".gemini" / "antigravity-cli" / "brain",
+        ]
+        if brain_dir in default_brains:
+            scan_dirs = default_brains
+        else:
+            scan_dirs = [brain_dir]
 
-        scan_dirs = [brain_dir]
-        cli_brain = Path.home() / ".gemini" / "antigravity-cli" / "brain"
-        if cli_brain != brain_dir and cli_brain.exists():
-            scan_dirs.append(cli_brain)
+        if not any(p.exists() for p in scan_dirs):
+            return active, subagent_to_parent
 
         for brain_dir_path in scan_dirs:
             if not brain_dir_path.exists():
