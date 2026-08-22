@@ -71,7 +71,7 @@
   "mlops/inference/llama-cpp/references/server.md": 1783709248.79311,
   "creative/popular-web-designs/templates/sentry.md": 1783709248.777913,
   "creative/popular-web-designs/templates/stripe.md": 1783709248.7782657,
-  ".usage.json": 1786760009.4945834,
+  ".usage.json": 1787367166.9908564,
   "creative/popular-web-designs/templates/x.ai.md": 1783709248.779536,
   ".curator_backups/2026-07-31T21-28-46Z/manifest.json": 1785533327.6685274,
   "comfyui/workflows/flux_dev_txt2img.json": 1785094409.9402525,
@@ -294,7 +294,7 @@
   "mlops/evaluation/weights-and-biases/SKILL.md": 1786326341.4440172,
   "hammerspoon-webview/SKILL.md": 1785094410.4821215,
   "ocr-and-documents/scripts/extract_pymupdf.py": 1785094411.4695663,
-  ".curator_state": 1786760009.530017,
+  ".curator_state": 1787367168.8330054,
   "creative/popular-web-designs/templates/mintlify.md": 1783709248.776007,
   "baoyu-infographic/references/layouts/periodic-table.md": 1785094409.6954484,
   "baoyu-infographic/references/base-prompt.md": 1785094409.6863074,
@@ -933,5 +933,8 @@
   "_prune-subtractively/SKILL.md": 1787089727.1130245,
   "_critique-without-ghostwriting/SKILL.md": 1786919916.2927403,
   "_link-youtube-highlights/SKILL.md": 1786927326.6240025,
-  "_link-youtube-highlights/references/curation-case-study.md": 1786926890.1842747
+  "_link-youtube-highlights/references/curation-case-study.md": 1786926890.1842747,
+  ".curator_backups/2026-08-22T02-52-44Z/skills.tar.gz": 1787367165.7325163,
+  ".curator_backups/2026-08-22T02-52-44Z/cron-jobs.json": 1787367165.7368968,
+  ".curator_backups/2026-08-22T02-52-44Z/manifest.json": 1787367165.8017714
 }
