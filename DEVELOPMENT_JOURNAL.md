@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-08-23
+- **Workflow & Skill 1:1 Parity & Direct Resolution Rule:** Enforced 1:1 parity between global workflows (`~/.gemini/config/global_workflows/`) and skills (`skills/`). Created missing `skills/_plan-with-ai-os/SKILL.md` and `skills/rule/SKILL.md`. Added direct resolution rule in `.rules/core_safety.md` to prevent exploratory filesystem searches on named skills/workflows. [[log]](agent-logs/2026-08-23_00-54_workflow-skill-parity-and-direct-resolution.md)
 - **Created `_plan-with-subagent` Local Gemini Planning Skill & Workflow:** Built high-reasoning planning skill and global workflow dispatching native subagents with `Gemini 3.7 Flash (High)` for direct workspace investigation without requiring GitHub repository sync or Perplexity API routing. [[log]](agent-logs/2026-08-23_00-53_plan-with-subagent-skill.md)
 
 ## 2026-08-20
