@@ -6,12 +6,12 @@ Provides semantic recall, fact ingestion, pre-flight hydration, and sync between
 Hermes memories and Mem0 vector store.
 
 Usage:
-  python3 scripts/aios_memory.py add "User prefers bun over npm/pnpm" --category tooling
-  python3 scripts/aios_memory.py search "package manager preferences"
-  python3 scripts/aios_memory.py prefetch "implementing a build script"
-  python3 scripts/aios_memory.py list
-  python3 scripts/aios_memory.py sync
-  python3 scripts/aios_memory.py delete <memory_id>
+  aios-memory add "User prefers bun over npm/pnpm" --category tooling
+  aios-memory search "package manager preferences"
+  aios-memory prefetch "handling Apple reminders"
+  aios-memory list
+  aios-memory sync
+  aios-memory delete <memory_id>
 """
 
 import os
@@ -26,6 +26,15 @@ from typing import List, Dict, Any, Optional
 os.environ["MEM0_TELEMETRY"] = "False"
 os.environ["POSTHOG_DISABLED"] = "1"
 warnings.filterwarnings("ignore")
+
+# Redirect stderr during imports to suppress harmless spacy / token warnings
+_old_stderr = sys.stderr
+try:
+    sys.stderr = open(os.devnull, "w")
+    import mem0
+finally:
+    sys.stderr.close()
+    sys.stderr = _old_stderr
 
 HERMES_HOME = Path(os.environ.get("HERMES_HOME", Path.home() / ".hermes")).resolve()
 MEM0_DIR = HERMES_HOME / "mem0_qdrant"
@@ -104,7 +113,7 @@ def add_memory(text: str, user_id: str = DEFAULT_USER_ID, category: str = "gener
         return {"status": "error", "message": str(e)}
 
 
-def search_memories(query: str, user_id: str = DEFAULT_USER_ID, limit: int = 5) -> List[Dict[str, Any]]:
+def search_memories(query: str, user_id: str = DEFAULT_USER_ID, limit: int = 5, score_threshold: float = 0.3) -> List[Dict[str, Any]]:
     """Search memories semantically by query."""
     client, mode = get_mem0_client()
     if not client:
@@ -116,19 +125,27 @@ def search_memories(query: str, user_id: str = DEFAULT_USER_ID, limit: int = 5) 
         else:
             res = client.search(query, filters={"user_id": user_id}, limit=limit)
 
+        raw_results = []
         if isinstance(res, dict):
-            return res.get("results", [])
+            raw_results = res.get("results", [])
         elif isinstance(res, list):
-            return res
-        return []
+            raw_results = res
+
+        # Filter by threshold if score is present
+        filtered = []
+        for item in raw_results:
+            score = item.get("score")
+            if score is None or score >= score_threshold:
+                filtered.append(item)
+        return filtered[:limit]
     except Exception as e:
         print(f"[aios-memory] Search error: {e}", file=sys.stderr)
         return []
 
 
-def prefetch_context(query: str, user_id: str = DEFAULT_USER_ID, limit: int = 5) -> str:
+def prefetch_context(query: str, user_id: str = DEFAULT_USER_ID, limit: int = 5, score_threshold: float = 0.35) -> str:
     """Format relevant memories into a clean markdown context block for pre-flight hydration."""
-    memories = search_memories(query, user_id=user_id, limit=limit)
+    memories = search_memories(query, user_id=user_id, limit=limit, score_threshold=score_threshold)
     if not memories:
         return ""
 
@@ -219,12 +236,14 @@ def main():
     search_p.add_argument("query", help="Search query")
     search_p.add_argument("--user-id", default=DEFAULT_USER_ID, help="User identifier")
     search_p.add_argument("--limit", type=int, default=5, help="Max results")
+    search_p.add_argument("--threshold", type=float, default=0.3, help="Minimum relevance score")
 
     # prefetch
     prefetch_p = subparsers.add_parser("prefetch", help="Format memories into markdown for context prefetch")
     prefetch_p.add_argument("query", help="Task or turn query")
     prefetch_p.add_argument("--user-id", default=DEFAULT_USER_ID, help="User identifier")
     prefetch_p.add_argument("--limit", type=int, default=5, help="Max results")
+    prefetch_p.add_argument("--threshold", type=float, default=0.35, help="Minimum relevance score")
 
     # list
     list_p = subparsers.add_parser("list", help="List all stored memories")
@@ -245,11 +264,11 @@ def main():
         print(json.dumps(result, indent=2))
 
     elif args.command == "search":
-        results = search_memories(args.query, user_id=args.user_id, limit=args.limit)
+        results = search_memories(args.query, user_id=args.user_id, limit=args.limit, score_threshold=args.threshold)
         print(json.dumps(results, indent=2))
 
     elif args.command == "prefetch":
-        text = prefetch_context(args.query, user_id=args.user_id, limit=args.limit)
+        text = prefetch_context(args.query, user_id=args.user_id, limit=args.limit, score_threshold=args.threshold)
         if text:
             print(text)
         else:
