@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-08-23
+- **Created `_plan-with-subagent` Local Gemini Planning Skill & Workflow:** Built high-reasoning planning skill and global workflow dispatching native subagents with `Gemini 3.7 Flash (High)` for direct workspace investigation without requiring GitHub repository sync or Perplexity API routing. [[log]](agent-logs/2026-08-23_00-53_plan-with-subagent-skill.md)
+
 ## 2026-08-20
 - **Antigravity IDE Shim Rollback:** Restored the original arm64 `language_server_macos_arm` as the active executable and disabled the Python shim after confirming that it buffered then closed the language server's bidirectional stdin protocol. Future Antigravity telemetry is strictly observational; it must not intercept, delay, or route IDE requests. [[log]](agent-logs/2026-08-20_00-25_restore-antigravity-native-language-server.md)
 - **Antigravity IDE Binary Shim & Live Telemetry Pipeline:** Implemented transparent binary shim at `/Applications/Antigravity IDE.app/.../language_server_macos_arm` intercepting CLI flags, initial state, non-blocking preflight, and proxying to `.real`. Created `scripts/telemetry_daemon.py` watching daemon logs for prompt/completion tokens and triage mode, with atomic updates to `~/.hermes/antigravity_tokens.json`. Created `apps/antigravity-ide-plugin` status bar extension displaying live telemetry. [[log]](agent-logs/2026-08-20_00-10_antigravity_ide_shim_and_telemetry_plugin.md)

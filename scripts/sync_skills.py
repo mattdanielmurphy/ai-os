@@ -45,12 +45,16 @@ def main():
     # Discover all relative paths
     all_rel_paths = set()
     for loc in all_locations:
-        if loc.exists():
+        if loc.exists() and loc.is_dir():
             for root, _, files in os.walk(loc):
                 for f in files:
                     full_path = Path(root) / f
-                    rel_path = full_path.relative_to(loc)
-                    all_rel_paths.add(str(rel_path))
+                    if full_path.is_file() and not full_path.is_symlink():
+                        try:
+                            rel_path = full_path.relative_to(loc)
+                            all_rel_paths.add(str(rel_path))
+                        except ValueError:
+                            continue
 
     # Handle Deletions
     for rel_path in list(state.keys()):
@@ -58,9 +62,11 @@ def main():
             git_checkpoint(rel_path)
             for loc in all_locations:
                 file_path = loc / rel_path
-                if file_path.exists():
-                    if file_path.is_file():
+                if file_path.exists() and file_path.is_file():
+                    try:
                         file_path.unlink()
+                    except Exception:
+                        pass
             del state[rel_path]
 
     # Handle Additions/Updates
@@ -71,21 +77,26 @@ def main():
         # Find newest
         for loc in all_locations:
             file_path = loc / rel_path
-            if file_path.exists():
-                mtime = file_path.stat().st_mtime
-                if mtime > max_mtime:
-                    max_mtime = mtime
-                    newest_file = file_path
+            if file_path.exists() and file_path.is_file():
+                try:
+                    mtime = file_path.stat().st_mtime
+                    if mtime > max_mtime:
+                        max_mtime = mtime
+                        newest_file = file_path
+                except OSError:
+                    continue
         
-        if newest_file and (rel_path not in state or state[rel_path] < max_mtime):
+        if newest_file and newest_file.is_file() and (rel_path not in state or state[rel_path] < max_mtime):
             # Sync to all
             for loc in all_locations:
                 target_path = loc / rel_path
                 if target_path.resolve() != newest_file.resolve():
+                    if target_path.exists() and target_path.is_dir():
+                        continue
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     try:
                         shutil.copy2(newest_file, target_path)
-                    except shutil.SameFileError:
+                    except (shutil.SameFileError, OSError):
                         pass
             state[rel_path] = max_mtime
 
