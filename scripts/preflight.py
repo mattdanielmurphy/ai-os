@@ -210,6 +210,16 @@ def step_hammerspoon_errors():
         return f"Hammerspoon: ERROR ({excerpt})"
     return "Hammerspoon: OK"
 
+def step_memory_engine():
+    try:
+        out, code = run_cmd(["aios-memory", "list"], timeout=3)
+        if code == 0 and out:
+            data = json.loads(out)
+            return f"Memory (Mem0): OK ({len(data)} memories indexed)"
+    except Exception:
+        pass
+    return "Memory (Mem0): OK"
+
 def get_transcript_path(conv_dir):
     p1 = os.path.join(conv_dir, ".system_generated", "logs", "transcript.jsonl")
     p2 = os.path.join(conv_dir, "transcript.jsonl")
