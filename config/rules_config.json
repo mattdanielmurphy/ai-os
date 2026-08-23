@@ -69,6 +69,13 @@
       "file": "core_safety.md",
       "enabled": true,
       "description": "Enforce immediate planner dispatch on /_plan-with-ai-os"
+    },
+    "transparent_escalation": {
+      "name": "Transparent Model Escalation & Zero Silent Fallback Policy",
+      "tag": "TRANSPARENT_ESCALATION",
+      "file": "core_safety.md",
+      "enabled": true,
+      "description": "Prohibit deceptive self-execution when model escalation or delegation fails and mandate attribution headers"
     }
   },
   "settings": {
