@@ -379,6 +379,7 @@ def main():
             ("Quota", step_quota),
             ("Jules Quota", step_jules_quota),
             ("Perplexity", step_pplx_quota),
+            ("Memory (Mem0)", step_memory_engine),
             ("Rules", step_rules),
             ("Secret Audit", step_secret_audit),
             ("Git", step_git),
@@ -388,6 +389,7 @@ def main():
     else:
         steps = [
             ("Quota", step_quota),
+            ("Memory (Mem0)", step_memory_engine),
             ("Secret Audit", step_secret_audit),
         ]
     
