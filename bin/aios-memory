@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 # aios-memory launcher
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_EXEC="/Users/matt/.hermes/hermes-agent/venv/bin/python"
 
+# Resolve symlink to real directory
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )/.." >/dev/null 2>&1 && pwd )"
+
+PYTHON_EXEC="/Users/matt/.hermes/hermes-agent/venv/bin/python"
 if [ ! -f "$PYTHON_EXEC" ]; then
     PYTHON_EXEC="python3"
 fi
