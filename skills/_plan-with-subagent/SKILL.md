@@ -1,0 +1,51 @@
+---
+name: _plan-with-subagent
+description: "Initiate high-reasoning implementation planning by spawning a native subagent with Gemini 3.7 High without requiring GitHub repo sync."
+---
+
+# Plan With Subagent (Gemini High Reasoning)
+
+Initiate deep, high-reasoning implementation planning for complex, ambiguous, or multi-step tasks by spawning a native subagent running Gemini 3.7 High (`Gemini 3.7 Flash (High)`).
+
+Unlike `_plan-with-ai-os` (which dispatches out-of-band via Perplexity and requires a GitHub remote connector), this skill executes locally with direct workspace filesystem access, eliminating the need for GitHub sync, staging, or remote pushes.
+
+---
+
+## Key Benefits & Differences from `_plan-with-ai-os`
+
+| Feature | `_plan-with-ai-os` | `_plan-with-subagent` |
+|---|---|---|
+| **Execution Engine** | Perplexity (ai-os companion app) | Native Subagent (`Gemini 3.7 Flash (High)`) |
+| **Filesystem Access** | Inlined context / GitHub repo | Direct local workspace filesystem access |
+| **GitHub Remote Required** | Yes (`git remote origin`) | **No** (Local-only / offline capable) |
+| **Upload / Quota Limits** | 50 uploads/week | No upload caps; uses standard Gemini quota |
+| **Daemon / Port Dependency** | Requires companion daemon (`:3031`) | Self-contained within local agent session |
+
+---
+
+## Workflow Steps
+
+### 1. Sanity Check & Scope Formulation
+- Identify the target project root, active workspace files, and the user's core requirements.
+- Note any specific constraints, technical invariants, or design preferences.
+- Note: There is **NO** requirement to check for GitHub remotes, commit working trees, or push branches.
+
+### 2. Spawn Native Subagent for Planning
+- Spawn a dedicated subagent configured with `Gemini 3.7 Flash (High)` reasoning.
+- Pass a detailed prompt containing:
+  1. **User Request & Goal**: The exact task, problem statement, or requested feature.
+  2. **Context Directives**: Instruct the subagent to inspect `AG_CONTEXT.md`, `DEVELOPMENT_JOURNAL.md`, and relevant source files directly.
+  3. **Plan Structure Invariants**: The subagent must produce a complete implementation plan adhering to the standard specification:
+     - **Goal Description**: Concise explanation of the problem, background, and objective.
+     - **User Review Required**: Critical trade-offs, breaking changes, or architectural decisions (using GitHub alert callouts `> [!IMPORTANT]`, `> [!WARNING]`).
+     - **Open Questions**: Ambiguities or design alternatives requiring user feedback.
+     - **Proposed Changes**: Organized by component/directory, with clear markers:
+       - `#### [MODIFY] [file basename](file:///absolute/path/to/file)`
+       - `#### [NEW] [file basename](file:///absolute/path/to/file)`
+       - `#### [DELETE] [file basename](file:///absolute/path/to/file)`
+     - **Verification Plan**: Exact automated test commands and manual verification procedures.
+  4. **Artifact Target**: Instruct the subagent to write the final plan to `<appDataDir>/brain/<conversation-id>/implementation_plan.md` (or return the complete markdown to the orchestrator).
+
+### 3. Review & Present Plan to User
+- Ensure `implementation_plan.md` is populated with `user_facing: true` and `request_feedback: true` metadata.
+- Stop and request user approval before executing any code modifications.
