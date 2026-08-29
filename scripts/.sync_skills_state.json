@@ -71,7 +71,7 @@
   "mlops/inference/llama-cpp/references/server.md": 1783709248.79311,
   "creative/popular-web-designs/templates/sentry.md": 1783709248.777913,
   "creative/popular-web-designs/templates/stripe.md": 1783709248.7782657,
-  ".usage.json": 1787367166.9908564,
+  ".usage.json": 1787987159.995172,
   "creative/popular-web-designs/templates/x.ai.md": 1783709248.779536,
   ".curator_backups/2026-07-31T21-28-46Z/manifest.json": 1785533327.6685274,
   "comfyui/workflows/flux_dev_txt2img.json": 1785094409.9402525,
@@ -294,7 +294,7 @@
   "mlops/evaluation/weights-and-biases/SKILL.md": 1786326341.4440172,
   "hammerspoon-webview/SKILL.md": 1785094410.4821215,
   "ocr-and-documents/scripts/extract_pymupdf.py": 1785094411.4695663,
-  ".curator_state": 1787367168.8330054,
+  ".curator_state": 1787987160.0473752,
   "creative/popular-web-designs/templates/mintlify.md": 1783709248.776007,
   "baoyu-infographic/references/layouts/periodic-table.md": 1785094409.6954484,
   "baoyu-infographic/references/base-prompt.md": 1785094409.6863074,
@@ -941,5 +941,8 @@
   "_plan-with-gemini/SKILL.md": 1787468448.9326973,
   "_plan-with-ai-os/SKILL.md": 1787468005.0872653,
   "rule/SKILL.md": 1787468024.3963826,
-  "_manage-memory/SKILL.md": 1787470391.2991235
+  "_manage-memory/SKILL.md": 1787470391.2991235,
+  ".curator_backups/2026-08-29T07-05-59Z/skills.tar.gz": 1787987159.88036,
+  ".curator_backups/2026-08-29T07-05-59Z/cron-jobs.json": 1787987159.8818457,
+  ".curator_backups/2026-08-29T07-05-59Z/manifest.json": 1787987159.8886797
 }
