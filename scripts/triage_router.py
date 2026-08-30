@@ -437,6 +437,7 @@ def launch_antigravity_app(query, model=None):
     sys.exit(0)
 
 APP_ALIASES = {
+    "google": "Google Chrome",
     "chrome": "Google Chrome",
     "google chrome": "Google Chrome",
     "google chrome.app": "Google Chrome",
