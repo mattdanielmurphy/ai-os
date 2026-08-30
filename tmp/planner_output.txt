@@ -1,1 +1,168 @@
-Please try again later.
+To set up a hands-free voice interface on macOS, deploy a lightweight background wake word daemon that detects the phrase "Hal," invokes TypeWhisper's local dictation interface, and automatically routes the resulting transcript directly to `bin/triage`.
+
+***
+
+## Architectural Strategy & System Topology
+
+The system uses a decoupled, event-driven pipeline divided into three distinct lifecycle stages: continuous audio detection, speech transcription, and task triage.
+
+```
+[ Microphone Input ] 
+       │ (16kHz PCM Stream)
+       ▼
+[ Hal Wake Word Daemon ] (openWakeWord / ONNX)
+       │
+       ├─► Detected "Hal" ──► Audio Feedback (Chime)
+       │
+       ▼
+[ TypeWhisper Service ] (Local REST API :8978 / Local Engine)
+       │ (VAD Captures Utterance -> Local WhisperKit/Parakeet STT)
+       ▼
+[ TypeWhisper Webhook / Ingest Bridge ] (:8979)
+       │
+       ▼
+[ AI-OS Triage Harness ] (bin/triage "$TRANSCRIPT")
+```
+
+1. **Acoustic Detection Tier:** A resident Python service (`services/wake-hal/daemon.py`) continuously processes microphone input in non-blocking 80ms chunks at 16 kHz using `openwakeword` with a custom-trained or fine-tuned `hal.onnx` model. This tier operates with minimal CPU footprint and zero cloud connectivity.
+2. **Dictation & Transcription Tier:** Upon positive activation, the daemon sends an HTTP command to TypeWhisper’s local REST server (`http://127.0.0.1:8978/v1/dictation/start`). TypeWhisper handles real-time audio capture, native Voice Activity Detection (VAD), and on-device transcription via WhisperKit or Parakeet TDT.
+3. **Ingestion & Dispatch Tier:** When TypeWhisper completes transcription, its native webhook or automation workflow sends the text payload to a local bridge server (`services/wake-hal/bridge.py`), which executes `~/projects/ai-os/bin/triage` with the sanitized transcript.
+
+***
+
+## Data Structures & State Management
+
+The architecture requires explicit data classes for runtime configuration, event payloads, and daemon state.
+
+### State Transitions
+```
+IDLE ──(Wake Word "Hal")──► ACTIVATING ──(API Trigger)──► LISTENING ──(VAD Silence)──► TRANSCRIBING ──(Webhook)──► DISPATCHING ──► IDLE
+```
+
+### Type Definitions
+- `DaemonState` (Enum): `IDLE`, `ACTIVATING`, `LISTENING`, `TRANSCRIBING`, `DISPATCHING`, `COOLDOWN`.
+- `WakeConfig` (Data Class):
+  - `model_path`: `Path` to `hal.onnx` model weights.
+  - `sample_rate`: `int = 16000`.
+  - `chunk_size`: `int = 1280` (80ms frames).
+  - `confidence_threshold`: `float = 0.65`.
+  - `cooldown_seconds`: `float = 1.5`.
+  - `typewhisper_api_url`: `str = "http://127.0.0.1:8978"`.
+  - `bridge_port`: `int = 8979`.
+- `TypeWhisperWebhookPayload` (Data Class):
+  - `session_id`: `str`.
+  - `text`: `str`.
+  - `duration_ms`: `int`.
+  - `engine`: `str`.
+  - `timestamp`: `float`.
+- `TriageExecutionResult` (Data Class):
+  - `exit_code`: `int`.
+  - `stdout`: `str`.
+  - `stderr`: `str`.
+  - `routed_tier`: `str` (e.g., `agy`, `claude`, `hermes`).
+
+***
+
+## API Contracts & Interface Definitions
+
+### 1. TypeWhisper Local API Interaction Contract
+- **Endpoint:** `POST /v1/dictation/start`
+  - **Headers:** `{"Content-Type": "application/json"}`
+  - **Success Response:** `200 OK` `{"status": "recording"}`
+- **Endpoint:** `GET /v1/status`
+  - **Success Response:** `200 OK` `{"ready": true, "engine": "whisperkit"}`
+
+### 2. Ingestion Webhook Server Contract
+- **Endpoint:** `POST /v1/webhook/transcript`
+  - **Body Schema:**
+    ```json
+    {
+      "text": "Check all pending issues and summarize today's logs",
+      "timestamp": 1788093120.45
+    }
+    ```
+  - **Response:** `202 Accepted` `{"status": "dispatched"}`
+
+### 3. Core Class Signatures
+- `class WakeWordListener`:
+  - `def __init__(self, config: WakeConfig) -> None`
+  - `def start_audio_stream(self) -> None`
+  - `def stop_audio_stream(self) -> None`
+  - `def process_frame(self, pcm_data: bytes) -> bool`
+  - `def handle_activation(self) -> None`
+- `class TypeWhisperClient`:
+  - `def __init__(self, base_url: str) -> None`
+  - `def is_available(self) -> bool`
+  - `def trigger_dictation(self) -> bool`
+- `class TriageDispatcher`:
+  - `def __init__(self, binary_path: Path) -> None`
+  - `def sanitize_prompt(self, raw_text: str) -> str`
+  - `def dispatch(self, sanitized_text: str) -> TriageExecutionResult`
+
+***
+
+## Logic Flow & Wake-to-Triage Pipeline
+
+### Step 1: Acoustic Polling Loop
+```python
+# Daemon execution loop
+listener.start_audio_stream()
+while daemon_running:
+    frame = stream.read(config.chunk_size, exception_on_overflow=False)
+    score = openwakeword_model.predict(frame)["hal"]
+    
+    if score >= config.confidence_threshold and state == DaemonState.IDLE:
+        state = DaemonState.ACTIVATING
+        play_feedback_sound("activation.wav")
+        success = typewhisper_client.trigger_dictation()
+        if success:
+            state = DaemonState.LISTENING
+        else:
+            state = DaemonState.IDLE
+```
+
+### Step 2: Speech Capture & Webhook Bridge
+1. TypeWhisper opens the microphone, showing the floating recording indicator.
+2. The user speaks their request (e.g., "Hal, create a new issue for the authentication bug").
+3. TypeWhisper detects end-of-speech silence via VAD and runs local speech-to-text.
+4. TypeWhisper's Post-Processing Workflow sends an HTTP POST request containing `{"text": "<transcript>"}` to `http://127.0.0.1:8979/v1/webhook/transcript`.
+
+### Step 3: Dispatch to `aios triage`
+```python
+# Webhook receiver dispatch logic
+@app.post("/v1/webhook/transcript")
+async def handle_transcript(payload: TypeWhisperWebhookPayload):
+    cleaned = triage_dispatcher.sanitize_prompt(payload.text)
+    if not cleaned:
+        return {"status": "ignored", "reason": "empty"}
+    
+    # Asynchronous non-blocking subprocess spawn
+    asyncio.create_task(
+        triage_dispatcher.dispatch_async(
+            cmd=["/Users/matt/projects/ai-os/bin/triage", cleaned]
+        )
+    )
+    return {"status": "dispatched"}
+```
+
+***
+
+## Error Handling, Edge Cases & Implementation Plan
+
+### Error Handling & Edge Cases
+- **False Positive Triggers:** Require `confidence_threshold >= 0.65` combined with an automatic 1.5-second cooldown period to prevent rapid trigger loops.
+- **TypeWhisper Service Unavailable:** If TypeWhisper is closed or port `8978` fails to respond, play an alert sound and log an error to `~/.hermes/logs/wake-hal.log` instead of crashing the listener loop.
+- **Microphone Resource Contention:** If TypeWhisper cannot claim the microphone while the listener is active, configure the listener to briefly pause audio capture during `DaemonState.LISTENING`.
+- **Accidental Wake Word in Transcribed Prompt:** Strip leading occurrences of "Hal", "Hey Hal", or comma prefixes from the transcribed text before passing it to `bin/triage`.
+- **Empty or Inaudible Dictations:** TypeWhisper emits an empty string if ambient noise triggers VAD; the bridge rejects whitespace-only inputs without calling `bin/triage`.
+
+### Implementation Steps
+
+| Step | Action Item | Target File / Location | Description |
+|---|---|---|---|
+| 1 | Model & Dependencies | `services/wake-hal/models/hal.onnx` | Place pre-trained or fine-tuned `hal.onnx` wake word model; add `openwakeword`, `pyaudio`, `fastapi`, and `uvicorn` to service dependencies . |
+| 2 | Ingest Bridge Server | `services/wake-hal/bridge.py` | Implement the FastAPI webhook server on port `8979` that receives transcripts from TypeWhisper, strips wake words, and executes `bin/triage` asynchronously . |
+| 3 | Wake Word Daemon | `services/wake-hal/daemon.py` | Implement `WakeWordListener` to stream 16 kHz audio, score "Hal", emit feedback, and call `http://127.0.0.1:8978/v1/dictation/start` . |
+| 4 | TypeWhisper Workflow | TypeWhisper App Settings > Workflows | Configure TypeWhisper to send completed transcriptions to `http://127.0.0.1:8979/v1/webhook/transcript` via its Webhook Add-on . |
+| 5 | LaunchAgent Daemon | `~/Library/LaunchAgents/com.aios.wake-hal.plist` | Create and register a LaunchAgent plist to keep `daemon.py` and `bridge.py` running in the background across macOS reboots. |
+| 6 | Integration Testing | CLI Verification | Run end-to-end dry runs verifying "Hal" wake word activation, audio capture, transcription handoff, and `bin/triage` execution. |
