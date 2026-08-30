@@ -1,4 +1,4 @@
-User Request: Antigravity IDE past conversations still fail to load when clicked or opened. The user notes it was JUST working before edits were made to Antigravity IDE app files. Perform an exhaustive root-cause analysis and actionable repair plan: 1) What exact files in /Applications/Antigravity IDE.app, ~/.gemini/antigravity-ide, ~/.antigravity-ide, or ~/Library/Application Support/Antigravity IDE were altered? 2) Why did replacing the binary with /Applications/Antigravity.app's binary or modifying state.vscdb prevent past conversations from rendering? 3) What is the exact conversation retrieval pipeline in Antigravity IDE from UI click -> LSP/ConnectRPC -> SQLite DB / Protobuf / state.vscdb? 4) Formulate the precise step-by-step restoration commands to make past conversations open immediately.
+User Request: Set up a simple wake word listener for Mac so when saying 'Hal' it starts TypeWhisper and feeds it straight to aios triage
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -66,28 +66,28 @@ File: 2026-06-24_23-14_level-2-global-harness.md
 - The home-directory symlink guardrail only fires when `pwd` equals `$HOME`, preventing accidental symlink creation in subdirectories.
 - Using `"packageManager": "pnpm@11.2.2"` in `package.json` enforces pnpm via Corepack (`pnpm@11.2.2` matches the locally installed version).
 
-File: 2026-06-25_15-36_openrouter-cost-tracking.md
-- No external pip dependencies needed.
-- The `/credits` endpoint works with a standard API key (no management key required, unlike `/activity`).
+File: 2026-06-26_17-05_phase-1-tauri-pty.md
+- Dependencies configuration and file paths setup.
+- The Rust state and main event listeners are in place.
 
 ## What Didn't Work / Known Issues
-- OpenRouter's `/api/v1/activity` endpoint returns 403 for non-management keys — can't use it to surface per-generation token counts or provider info. Consider upgrading to a management key if token-level detail is needed later.
-- The delta approach cannot attribute cost to individual messages within the same agent turn.
+- `pnpm install` requires building local native packages (like `esbuild`). The user has manually executed `pnpm approve-builds` to unlock it.
 
 ## Architecture Notes
-- OpenRouter API: `/credits` returns `total_usage` and `total_credits`; `/activity` with `limit=N` returns per-generation metadata but requires a management key.
-- State file `.last_usage` lives alongside the script, in `.gitignore`-friendly territory.
+- The app uses standard Tauri v1 APIs (`@tauri-apps/api` and `@tauri-apps/cli`).
+- A persistent macOS shell (`/bin/zsh`) is spawned by the master PTY inside the Rust application state.
 
-File: 2026-06-25_15-55_replace-ambient-music-system.md
+
+File: 2026-06-26_17-11_phase-2-anchoring-toggle.md
+* `FEATURES.md`:
+  * Appended Phase 1 & 2 details to the features and operations ledger.
+
+## What Worked
+* Vite builds successfully. CSS styles are compiled properly.
+* Input routing correctly checks selection and formats string before calling PTY.
 
 ## What Didn't Work / Known Issues
-- Firefox's AudioContext autoplay policy may require user gesture — the existing toggle-button + M key pattern handles this via `toggle()`
-- The `shockwave` boolean threshold (`shockwaveEnergy > 3`) could be tuned — may fire too frequently at high mouse speeds
-
-## Architecture Notes
-- Web Audio API node lifetime: oscillator nodes created once at `initAudioContext()`, never stopped/restarted — frequencies changed via `frequency.linearRampToValueAtTime`
-- Feedback delay reverb is a well-known trick: 3 delays with staggered times and sub-unity feedback feeding into each other creates a rich diffuse tail
-- `exponentialRampToValueAtTime` must target a non-zero value (used 0.001 as the decay floor)
+* None observed. Ready for verification of the Tauri dev setup with the new configuration.
 
 
 --- Recent Thread History Summary ---

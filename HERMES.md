@@ -48,9 +48,6 @@
   - **Strict Span-Only Styling Invariant**: For `thread.md`, conversation artifacts, and custom markdown layouts, agents MUST use `<span>` tags exclusively (with `display: block;`, `white-space: pre-wrap;`, and inline CSS) for all layout and styling containers. NEVER use `<div>`, `<p>`, or other block HTML tags. Use `<br>` or `<br><br>` tags within `<span>` to preserve line breaks and paragraph spacing without breaking out of the inline span container.
   - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
 
-# UI/UX Default Theme & Light Mode Invariant
-- **Rule**: Agents MUST ALWAYS default generated HTML tools, UI prototypes, web apps, and design deliverables to clean, high-contrast Light Mode (or adaptive system color scheme sync via `prefers-color-scheme`). NEVER default to Dark Mode under any circumstances unless explicitly requested by Matt. Always provide an option/toggle for system sync and dark mode, but the default initial state MUST be Light Mode.
-
 ## Strict Planner / Workflow Immediate Dispatch
 - **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/_plan-with-ai-os` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
 - **Workflow**: Immediately run the single planner command via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`) with `WaitMsBeforeAsync: 500`. This is a **unified single-step command** that automatically: inspects Git context, reads agent logs, generates `./tmp/planner_prompt.txt`, dispatches to Perplexity (Gemini 3.7 Flash Thinking), and writes the completed plan to `./tmp/planner_output.txt`. There is NO separate `generate_prompt.py` step — do NOT run any such script.
