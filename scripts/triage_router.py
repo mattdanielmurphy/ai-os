@@ -355,7 +355,8 @@ DEFAULT_SEARCH_ENGINES = {
 def dispatch_headless_prompt(query: str, model: str = "Gemini 3.5 Flash (Low)") -> int:
     """Dispatches reasoning or conversational prompts directly to agy CLI non-interactively."""
     print(f"[triage] Headless CLI dispatch via agy ({model}): '{query}'")
-    cmd = ["agy", "-p", query, "--model", model]
+    agy_bin = shutil.which("agy") or os.path.expanduser("~/.local/bin/agy")
+    cmd = [agy_bin, "-p", query, "--model", model]
     with hide_agents_md():
         return subprocess.call(cmd)
 
