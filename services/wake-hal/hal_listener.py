@@ -44,7 +44,7 @@ TRIAGE_LAUNCHER = Path("/Users/matt/projects/ai-os/bin/triage-launcher.sh")
 import re
 
 WAKE_PATTERNS = [
-    r"^(?:hey|hi|hello)?[ ,:;?!-]*\b(?:hal|how|hell|howell)\b[ ,:;?!-]*",
+    r"^(?:hey|hi|hello)?[ ,:;?!-]*\b(?:hal|how|howl|howel|howell|hell|owl|al|pal|cal)\b[ ,:;?!-]*",
 ]
 
 def sanitize_command(raw_text: str) -> str:

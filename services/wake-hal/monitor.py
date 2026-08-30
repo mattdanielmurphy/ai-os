@@ -86,9 +86,16 @@ def main():
                     
                     if text:
                         print(f"👉 HEARD: \"{text}\"")
-                        if any(w in text.lower() for w in ["hal", "hey hal", "how", "hello hal", "hi hal"]):
-                            print(f"🎯 >>> MATCHED HAL WAKE WORD! <<<")
+                        from hal_listener import is_wake_word_present, sanitize_command, dispatch_to_triage
+                        if is_wake_word_present(text):
+                            cmd = sanitize_command(text)
+                            print(f"🎯 >>> MATCHED HAL WAKE WORD! Command: '{cmd}' <<<")
                             subprocess.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
+                            if cmd:
+                                print(f"🚀 Disagreeing / dispatching command '{cmd}' to triage...")
+                                dispatch_to_triage(cmd)
+                        else:
+                            print("ℹ️ (No wake word in utterance)")
                     
                     print("------------------------------------------------------------")
                     buffer = []
