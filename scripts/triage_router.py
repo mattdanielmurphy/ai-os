@@ -346,106 +346,27 @@ def open_perplexity_webview_thread(query, model=None):
 
     sys.exit(0)
 
-def get_antigravity_window_bounds():
-    """Gets (x, y, w, h) of window 1 of Antigravity process."""
-    try:
-        res = subprocess.run([
-            "osascript", "-e",
-            'tell application "System Events" to tell process "Antigravity" to return (position of window 1) & (size of window 1)'
-        ], capture_output=True, text=True, timeout=3)
-        parts = [int(p.strip()) for p in res.stdout.strip().replace("{", "").replace("}", "").split(",")]
-        if len(parts) == 4:
-            return parts[0], parts[1], parts[2], parts[3]
-    except Exception:
-        pass
-    return 0, 38, 1200, 800
+DEFAULT_SEARCH_ENGINES = {
+    "google": "https://www.google.com/search?q={query}",
+    "youtube": "https://www.youtube.com/results?search_query={query}",
+    "github": "https://github.com/search?q={query}",
+}
 
-def click_coords(x, y):
-    """Sends a hardware mouse click event at screen coordinates (x, y)."""
-    import ctypes
-    cg = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")
-    class CGPoint(ctypes.Structure):
-        _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
-    cg.CGEventCreateMouseEvent.restype = ctypes.c_void_p
-    cg.CGEventCreateMouseEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint32, CGPoint, ctypes.c_uint32]
-    cg.CGEventPost.restype = None
-    cg.CGEventPost.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
-
-    pt = CGPoint(x, y)
-    event_down = cg.CGEventCreateMouseEvent(None, 1, pt, 0)
-    event_up = cg.CGEventCreateMouseEvent(None, 2, pt, 0)
-    cg.CGEventPost(0, event_down)
-    cg.CGEventPost(0, event_up)
-
-def launch_antigravity_app(query, model=None):
-    """Launches / opens /Applications/Antigravity.app, copies prompt to clipboard,
-    opens new conversation with Shift+Cmd+O twice, resets element list with a top-right click,
-    tabs twice to the textarea, pastes, and sends."""
-    print(f"[triage] Opening /Applications/Antigravity.app with prompt ({len(query)} chars)...")
-    
-    # 1. Copy prompt to macOS system clipboard
-    try:
-        proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
-        proc.communicate(input=query.encode("utf-8"))
-    except Exception:
-        pass
-
-    # 2. Activate Antigravity, ensure frontmost focus, and press Shift+Cmd+O twice (key code 31)
-    applescript_step1 = '''
-    tell application "Antigravity" to activate
-    repeat 10 times
-        tell application "System Events"
-            if frontmost of process "Antigravity" is true then exit repeat
-        end tell
-        delay 0.1
-    end repeat
-    delay 0.3
-    tell application "System Events"
-        -- Key code 31 = 'O' (Shift + Cmd + O)
-        key code 31 using {command down, shift down}
-        delay 0.3
-        key code 31 using {command down, shift down}
-        delay 0.6
-    end tell
-    '''
-    subprocess.run(["osascript", "-e", applescript_step1])
-
-    # 3. Perform mouse click 100px from right, 100px from top of window to reset focus
-    x, y, w, h = get_antigravity_window_bounds()
-    click_x = x + w - 100
-    click_y = y + 100
-    print(f"[triage] Performing focus reset click at ({click_x}, {click_y})...")
-    click_coords(click_x, click_y)
-    time.sleep(0.3)
-
-    # 4. Tab twice to bring focus to textarea, paste prompt, and send (Return)
-    applescript_step2 = '''
-    tell application "System Events"
-        -- Press Tab twice to select textarea from reset state
-        key code 48
-        delay 0.2
-        key code 48
-        delay 0.3
-        -- Paste prompt from clipboard
-        keystroke "v" using {command down}
-        delay 0.3
-        -- Send prompt (Return key)
-        key code 36
-    end tell
-    '''
-    subprocess.run(["osascript", "-e", applescript_step2])
-    sys.exit(0)
+def dispatch_headless_prompt(query: str, model: str = "Gemini 3.5 Flash (Low)") -> int:
+    """Dispatches reasoning or conversational prompts directly to agy CLI non-interactively."""
+    print(f"[triage] Headless CLI dispatch via agy ({model}): '{query}'")
+    cmd = ["agy", "-p", query, "--model", model]
+    with hide_agents_md():
+        return subprocess.call(cmd)
 
 APP_ALIASES = {
     "google": "Google Chrome",
     "chrome": "Google Chrome",
     "google chrome": "Google Chrome",
     "google chrome.app": "Google Chrome",
-    "vscode": "Visual Studio Code",
-    "code": "Visual Studio Code",
-    "sublime": "Sublime Text",
-    "sublime text": "Sublime Text",
+    "safari": "Safari",
     "terminal": "Terminal",
+    "ghostty": "Ghostty",
     "iterm": "iTerm",
     "iterm2": "iTerm",
     "finder": "Finder",
@@ -459,13 +380,17 @@ APP_ALIASES = {
     "mail": "Mail",
     "music": "Music",
     "photos": "Photos",
-    "safari": "Safari",
     "slack": "Slack",
     "discord": "Discord",
     "spotify": "Spotify",
     "arc": "Arc",
     "brave": "Brave Browser",
-    "cursor": "Cursor"
+    "cursor": "Cursor",
+    "antigravity": "Antigravity",
+    "vscode": "Visual Studio Code",
+    "code": "Visual Studio Code",
+    "sublime": "Sublime Text",
+    "sublime text": "Sublime Text"
 }
 
 def try_direct_execution(query):
@@ -543,7 +468,18 @@ def try_direct_execution(query):
                         if res.returncode == 0:
                             return True
 
-    # 2. Kill / process termination pattern
+    # 2. Web search pattern
+    if q_lower.startswith("google ") or q_lower.startswith("search "):
+        search_query = q.split(" ", 1)[1].strip()
+        if search_query.lower().startswith("for "):
+            search_query = search_query[4:].strip()
+        encoded = urllib.parse.quote_plus(search_query)
+        url = DEFAULT_SEARCH_ENGINES["google"].format(query=encoded)
+        print(f"[triage] Fast-path direct execution: web search '{search_query}' -> {url}")
+        res = subprocess.run(["open", url])
+        return res.returncode == 0
+
+    # 3. Kill / process termination pattern
     kill_prefixes = ["killall ", "pkill "]
     for prefix in kill_prefixes:
         if q_lower.startswith(prefix):
@@ -648,11 +584,11 @@ def main():
 
     # Route based on prompt intent:
     if is_coding_intent:
-        # Coding / file / codebase task -> Launch / open /Applications/Antigravity.app
-        launch_antigravity_app(query, selected_model)
+        # Coding / file / codebase task -> Headless CLI execution via agy
+        exit_code = dispatch_headless_prompt(query, selected_model)
     else:
-        # Non-coding general query -> Open Gemini Webview in ai-os app
-        open_gemini_webview_thread(query, selected_model)
+        # Non-coding general query -> Open Gemini Webview in ai-os app or headless fallback
+        exit_code = dispatch_headless_prompt(query, selected_model)
 
     # 6. Tier 2 Executive Investigation on failure
     if exit_code != 0:
