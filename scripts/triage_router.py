@@ -477,6 +477,17 @@ def try_direct_execution(query):
         return False
     q_lower = q.lower()
     
+
+    # Strip common spoken conversational filler prefixes:
+    conversational_prefixes = [
+        "i'll ", "i will ", "please ", "can you ", "could you ", "would you ", "go ahead and ", "let's "
+    ]
+    for cp in conversational_prefixes:
+        if q_lower.startswith(cp):
+            q = q[len(cp):].strip().rstrip(".!?;:")
+            q_lower = q.lower()
+            break
+
     # 1. Open app / URL / file pattern
     open_prefixes = ["open ", "launch ", "start "]
     matched_prefix = None
