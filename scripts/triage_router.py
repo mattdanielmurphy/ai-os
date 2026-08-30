@@ -360,7 +360,8 @@ def dispatch_headless_prompt(query: str, model: str = "Gemini 3.5 Flash (Low)") 
         return subprocess.call(cmd)
 
 APP_ALIASES = {
-    "google": "Google Chrome",
+    "google": "https://www.google.com",
+    "google.com": "https://www.google.com",
     "chrome": "Google Chrome",
     "google chrome": "Google Chrome",
     "google chrome.app": "Google Chrome",
@@ -438,13 +439,18 @@ def try_direct_execution(query):
             res = subprocess.run(["open", str(expanded_path)])
             return res.returncode == 0
 
-        # Try App alias mapping
-        app_name = APP_ALIASES.get(target_lower)
-        if app_name:
-            print(f"[triage] Fast-path direct execution: launching application '{app_name}'")
-            res = subprocess.run(["open", "-a", app_name])
-            if res.returncode == 0:
-                return True
+        # Try App / URL alias mapping
+        alias_target = APP_ALIASES.get(target_lower)
+        if alias_target:
+            if alias_target.startswith(("http://", "https://")):
+                print(f"[triage] Fast-path direct execution: opening URL alias '{alias_target}'")
+                res = subprocess.run(["open", alias_target])
+                return res.returncode == 0
+            else:
+                print(f"[triage] Fast-path direct execution: launching application '{alias_target}'")
+                res = subprocess.run(["open", "-a", alias_target])
+                if res.returncode == 0:
+                    return True
 
         # Try raw target string with `open -a`
         print(f"[triage] Fast-path direct execution: attempting to open application '{target}'")
