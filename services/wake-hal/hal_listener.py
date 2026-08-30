@@ -66,10 +66,9 @@ def dispatch_to_triage(prompt: str):
     logger.info(f"🚀 DISPATCHING TO AI-OS TRIAGE: '{prompt}'")
     play_chime("Pop")
     try:
+        # Run triage and let output stream into the service log
         subprocess.Popen(
             [str(TRIAGE_LAUNCHER), prompt],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
             start_new_session=True
         )
     except Exception as e:

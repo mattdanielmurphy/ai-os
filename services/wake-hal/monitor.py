@@ -1,113 +1,73 @@
 #!/usr/bin/env python3
 """
 services/wake-hal/monitor.py
-Real-time audio listener & live speech transcription monitor.
+Real-time diagnostic monitor for the live background Hal wake-word service.
 
-Displays:
-1. Live microphone audio input level (VU meter).
-2. Live on-device speech-to-text (transcribes whatever you say into the mic).
-3. Detects if "Hal" or any wake word is spoken and shows the match.
+Taps directly into ~/.hermes/logs/wake-hal-err.log and ~/.hermes/logs/wake-hal.log,
+streaming live background service events (microphone capture, transcription,
+wake-word matches, triage dispatches, and errors).
 """
 
 import sys
+import os
 import time
-import math
-import numpy as np
-import pyaudio
-from faster_whisper import WhisperModel
 import subprocess
+from pathlib import Path
 
-SAMPLE_RATE = 16000
-CHUNK_SIZE = 1024
-SILENCE_THRESHOLD = 0.015  # RMS audio threshold to detect speech vs silence
-SILENCE_CHUNKS = 20        # ~1.2 seconds of silence to finalize utterance
+LOG_PATH = Path.home() / ".hermes" / "logs" / "wake-hal-err.log"
+PLIST_PATH = Path.home() / "Library" / "LaunchAgents" / "com.aios.wake-hal.plist"
 
-def get_rms(data: bytes) -> float:
-    samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
-    return float(np.sqrt(np.mean(samples**2)))
-
-def vu_bar(rms: float, width: int = 25) -> str:
-    level = min(width, int(rms * 150))
-    bar = "█" * level + "░" * (width - level)
-    return bar
+def check_service_status():
+    res = subprocess.run(["launchctl", "list"], capture_output=True, text=True)
+    running = "com.aios.wake-hal" in res.stdout
+    return running
 
 def main():
-    print("=" * 60)
-    print("🎙️  HAL AUDIO & SPEECH LIVE MONITOR")
-    print("=" * 60)
-    print("Loading fast on-device Whisper model (tiny.en)...")
-    model = WhisperModel("tiny.en", device="cpu", compute_type="int8")
-    print("✅ Model loaded! Opening default microphone...")
+    print("=" * 65)
+    print("🎙️  HAL BACKGROUND SERVICE LIVE MONITOR")
+    print("=" * 65)
+    
+    is_running = check_service_status()
+    if is_running:
+        print("🟢 Background Service Status: ACTIVE (Loaded in launchd)")
+    else:
+        print("🔴 Background Service Status: INACTIVE (Run 'launchctl load -w ~/Library/LaunchAgents/com.aios.wake-hal.plist')")
 
-    pa = pyaudio.PyAudio()
-    stream = pa.open(
-        format=pyaudio.paInt16,
-        channels=1,
-        rate=SAMPLE_RATE,
-        input=True,
-        frames_per_buffer=CHUNK_SIZE
-    )
+    print(f"📁 Streaming logs from: {LOG_PATH}")
+    print("=" * 65)
+    print("Speak into your mic: Say 'Hal' or 'Hal, open google'...")
+    print("-----------------------------------------------------------------\n")
 
-    print("\n🟢 LISTENING NOW! Speak into your microphone:")
-    print("------------------------------------------------------------")
+    if not LOG_PATH.exists():
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LOG_PATH.touch()
 
-    buffer = []
-    is_speaking = False
-    silent_count = 0
-
-    try:
-        while True:
-            data = stream.read(CHUNK_SIZE, exception_on_overflow=False)
-            rms = get_rms(data)
-            
-            # Print live VU meter on same line
-            bar = vu_bar(rms)
-            status = "🗣️ SPEECH" if rms > SILENCE_THRESHOLD else "💤 IDLE  "
-            sys.stdout.write(f"\r[{status}] VU: |{bar}| (RMS: {rms:.4f})")
-            sys.stdout.flush()
-
-            if rms > SILENCE_THRESHOLD:
-                is_speaking = True
-                silent_count = 0
-                buffer.append(data)
-            elif is_speaking:
-                buffer.append(data)
-                silent_count += 1
-                if silent_count > SILENCE_CHUNKS:
-                    # Finalize utterance
-                    sys.stdout.write("\nTranscribing utterance...\n")
-                    sys.stdout.flush()
-                    
-                    audio_bytes = b"".join(buffer)
-                    audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-                    
-                    segments, _ = model.transcribe(audio_np, beam_size=1, language="en")
-                    text = " ".join([s.text.strip() for s in segments]).strip()
-                    
-                    if text:
-                        print(f"👉 HEARD: \"{text}\"")
-                        from hal_listener import is_wake_word_present, sanitize_command, dispatch_to_triage
-                        if is_wake_word_present(text):
-                            cmd = sanitize_command(text)
-                            print(f"🎯 >>> MATCHED HAL WAKE WORD! Command: '{cmd}' <<<")
-                            subprocess.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
-                            if cmd:
-                                print(f"🚀 Disagreeing / dispatching command '{cmd}' to triage...")
-                                dispatch_to_triage(cmd)
-                        else:
-                            print("ℹ️ (No wake word in utterance)")
-                    
-                    print("------------------------------------------------------------")
-                    buffer = []
-                    is_speaking = False
-                    silent_count = 0
-
-    except KeyboardInterrupt:
-        print("\nExiting monitor.")
-    finally:
-        stream.stop_stream()
-        stream.close()
-        pa.terminate()
+    # Stream the log file live (like tail -f)
+    with open(LOG_PATH, "r", encoding="utf-8", errors="replace") as f:
+        # Move to the end of the file
+        f.seek(0, os.SEEK_END)
+        
+        try:
+            while True:
+                line = f.readline()
+                if line:
+                    line_str = line.strip()
+                    if "HEARD:" in line_str:
+                        print(f"\n🎤 {line_str.split('HEARD:', 1)[1].strip()}")
+                    elif "Wake word" in line_str or "WAKE" in line_str:
+                        print(f"🎯 {line_str}")
+                    elif "DISPATCHING" in line_str:
+                        print(f"🚀 {line_str}")
+                    elif "Fast-path" in line_str or "direct execution" in line_str:
+                        print(f"⚡ {line_str}")
+                    elif "ERROR" in line_str or "Error" in line_str or "Traceback" in line_str:
+                        print(f"❌ {line_str}")
+                    else:
+                        print(f"   {line_str}")
+                else:
+                    time.sleep(0.1)
+        except KeyboardInterrupt:
+            print("\nExiting monitor.")
 
 if __name__ == "__main__":
     main()
