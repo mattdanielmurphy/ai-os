@@ -48,6 +48,9 @@
   - **Strict Span-Only Styling Invariant**: For `thread.md`, conversation artifacts, and custom markdown layouts, agents MUST use `<span>` tags exclusively (with `display: block;`, `white-space: pre-wrap;`, and inline CSS) for all layout and styling containers. NEVER use `<div>`, `<p>`, or other block HTML tags. Use `<br>` or `<br><br>` tags within `<span>` to preserve line breaks and paragraph spacing without breaking out of the inline span container.
   - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
 
+# UI/UX Default Theme & Light Mode Invariant
+- **Rule**: Agents MUST ALWAYS default generated HTML tools, UI prototypes, web apps, and design deliverables to clean, high-contrast Light Mode (or adaptive system color scheme sync via `prefers-color-scheme`). NEVER default to Dark Mode under any circumstances unless explicitly requested by Matt. Always provide an option/toggle for system sync and dark mode, but the default initial state MUST be Light Mode.
+
 
 <!-- RULE:STRICT_PLANNER_DISPATCH -->
 ## Strict Planner / Workflow Immediate Dispatch
