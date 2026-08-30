@@ -476,7 +476,6 @@ def try_direct_execution(query):
     if not q:
         return False
     q_lower = q.lower()
-    
 
     # Strip common spoken conversational filler prefixes:
     conversational_prefixes = [

@@ -21,4 +21,4 @@ mkdir -p "$LOG_DIR"
 echo "[run_aios_server] Starting AI-OS Companion App at $(date)..."
 cd /Users/matt/projects/ai-os/apps/gemini-companion
 
-exec bun tauri dev
+exec caffeinate -s -i bun tauri dev

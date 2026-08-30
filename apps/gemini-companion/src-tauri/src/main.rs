@@ -71,7 +71,72 @@ async fn query_callback(
     }
 }
 
+#[cfg(target_os = "macos")]
+pub fn disable_app_nap() {
+    use cocoa::base::nil;
+    use cocoa::foundation::NSString;
+    use objc::runtime::{Class, Object};
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        if let Some(process_info_cls) = Class::get("NSProcessInfo") {
+            let process_info: *mut Object = msg_send![process_info_cls, processInfo];
+            if !process_info.is_null() {
+                let options: u64 = 0x00FFFFFF | (1 << 8) | (1 << 14) | (1 << 20);
+                let reason = NSString::alloc(nil).init_str("AI-OS Companion Server Webview Automation KeepAlive");
+                let _activity: *mut Object = msg_send![process_info, beginActivityWithOptions:options reason:reason];
+                eprintln!("[AI-OS] App Nap permanently disabled via NSProcessInfo beginActivityWithOptions");
+            }
+        }
+    }
+}
+
+pub fn create_gemini_window(app_handle: &tauri::AppHandle) -> Result<tauri::Window, tauri::Error> {
+    let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js").unwrap_or_default();
+    let gemini_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/gemini-engine.js").unwrap_or_default();
+    let full_gemini_init_script = format!("{}\n{}", userscript_code, gemini_engine_code);
+
+    let win = tauri::WindowBuilder::new(
+        app_handle,
+        "gemini_main",
+        tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap()),
+    )
+    .title("Gemini")
+    .initialization_script(&full_gemini_init_script)
+    .visible(true)
+    .decorations(true)
+    .transparent(false)
+    .inner_size(1200.0, 760.0)
+    .build()?;
+
+    let _ = win.center();
+    Ok(win)
+}
+
+pub fn create_perplexity_window(app_handle: &tauri::AppHandle) -> Result<tauri::Window, tauri::Error> {
+    let pplx_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
+
+    let win = tauri::WindowBuilder::new(
+        app_handle,
+        "perplexity_main",
+        tauri::WindowUrl::External("https://www.perplexity.ai".parse().unwrap()),
+    )
+    .title("Perplexity")
+    .initialization_script(&pplx_engine_code)
+    .visible(true)
+    .decorations(true)
+    .transparent(false)
+    .inner_size(1200.0, 760.0)
+    .build()?;
+
+    let _ = win.center();
+    Ok(win)
+}
+
 fn main() {
+    #[cfg(target_os = "macos")]
+    disable_app_nap();
+
     std::env::set_var("RUST_BACKTRACE", "1");
     std::panic::set_hook(Box::new(|panic_info| {
         let backtrace = std::backtrace::Backtrace::capture();
@@ -448,46 +513,14 @@ fn main() {
             // Do NOT edit it directly — edit the source modules in
             // ~/projects/userscript-bundler/userscripts/gemini-enhancements/ and
             // rebuild with `cd ~/projects/userscript-bundler && node bundler.cjs`.
-            let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js").unwrap_or_default();
-            let gemini_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/gemini-engine.js").unwrap_or_default();
-            let full_gemini_init_script = format!("{}\n{}", userscript_code, gemini_engine_code);
-            let pplx_engine_code = std::fs::read_to_string("/Users/matt/projects/ai-os/apps/gemini-companion/src-tauri/engines/perplexity-engine.js").unwrap_or_default();
-
             // 1. Expanded Normal Gemini Window (App Launch Target)
-            let gemini_main_window = tauri::WindowBuilder::new(
-                &app_handle,
-                "gemini_main",
-                tauri::WindowUrl::External("https://gemini.google.com/app".parse().unwrap()),
-            )
-            .title("Gemini")
-            .initialization_script(&full_gemini_init_script)
-            .visible(true)
-            .decorations(true)
-            .transparent(false)
-            .inner_size(1200.0, 760.0)
-            .build()
-            .unwrap();
-
-            let _ = gemini_main_window.center();
+            let gemini_main_window = create_gemini_window(&app_handle).unwrap();
 
             // 2. Dedicated Perplexity Window
-            let perplexity_main_window = tauri::WindowBuilder::new(
-                &app_handle,
-                "perplexity_main",
-                tauri::WindowUrl::External("https://www.perplexity.ai".parse().unwrap()),
-            )
-            .title("Perplexity")
-            .initialization_script(&pplx_engine_code)
-            .visible(true)
-            .decorations(true)
-            .transparent(false)
-            .inner_size(1200.0, 760.0)
-            .build()
-            .unwrap();
-
-            let _ = perplexity_main_window.center();
+            let perplexity_main_window = create_perplexity_window(&app_handle).unwrap();
 
             // 3. Dedicated Floating Mini-Window Mode (Triggered only by Cmd+Option+Space)
+            let userscript_code = std::fs::read_to_string("/Users/matt/projects/ai-os/userscripts/gemini-DO-NOT-EDIT.js").unwrap_or_default();
             let full_floating_init_script = format!("{}\n{}", userscript_code, floating_init_script);
 
             let floating_window = tauri::WindowBuilder::new(
@@ -688,6 +721,13 @@ fn main() {
                 }, true);
             "#,
             );
+        })
+        .on_window_event(|event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event.event() {
+                api.prevent_close();
+                let _ = event.window().hide();
+                eprintln!("[AI-OS] Window close intercepted: hid '{}' instead of destroying it", event.window().label());
+            }
         })
         .invoke_handler(tauri::generate_handler![
             session::refresh_tmux_session,
