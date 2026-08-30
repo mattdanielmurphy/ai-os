@@ -362,6 +362,110 @@ async function wakeAios(baseUrl, provider) {
     });
 }
 
+// ---------------------------------------------------------------------------
+// Auto-Continuation Helpers for Incomplete / Truncated Responses
+// ---------------------------------------------------------------------------
+function hasUnclosedCodeBlock(text) {
+    if (!text) return false;
+    const matches = text.match(/```/g);
+    return matches ? matches.length % 2 !== 0 : false;
+}
+
+function endsMidSentence(text) {
+    if (!text) return false;
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+
+    // Check for trailing connector words / punctuation that clearly indicate more text was coming
+    const endsWithConnector = /[,;\-—\(\[\{:]\s*$|(?:and|or|the|with|to|in|of|for|that|is|are|a|an|as|at|by|from|into|onto|if|then|else|when|where|which|while|because|since|although)\s*$/i;
+    if (endsWithConnector.test(trimmed)) return true;
+
+    // Standard markdown terminal punctuation or block endings: . ! ? " ' ) ] } ` * _ ~
+    const lastLine = trimmed.split('\n').pop().trim();
+    if (lastLine.length > 0) {
+        // If line is a markdown heading or list item with no body text following it
+        if (/^#{1,6}\s+[^.]+$/i.test(lastLine)) return true;
+        if (/^(?:\d+\.|\-|\*)\s+[a-zA-Z0-9_\s]{1,30}:?$/i.test(lastLine)) return true;
+
+        // If last line has multiple words but ends abruptly without punctuation
+        const words = lastLine.split(/\s+/);
+        if (words.length >= 4 && !/[.!?\)\"\'\]\}`*_~:\n]$/.test(lastLine)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function isIncompletePlan(text) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+
+    // Check if the plan started numbered sections but ended before section 6 (Implementation Steps)
+    const hasEarlySections = lower.includes('architectural strategy') || lower.includes('1. architectural') || lower.includes('data structures') || lower.includes('logic flow');
+    const hasFinalSection = lower.includes('implementation steps') || lower.includes('6. implementation') || lower.includes('step-by-step implementation') || lower.includes('implementation plan');
+
+    if (hasEarlySections && !hasFinalSection) return true;
+
+    // If it has implementation steps header, but ends abruptly within the section
+    if (hasFinalSection) {
+        const idx = Math.max(
+            lower.lastIndexOf('implementation steps'),
+            lower.lastIndexOf('6. implementation'),
+            lower.lastIndexOf('step-by-step implementation')
+        );
+        const after = text.slice(idx);
+        if (after.length < 150 || hasUnclosedCodeBlock(after)) return true;
+    }
+    return false;
+}
+
+function hasExplicitContinueHint(text) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    return (
+        lower.includes('[to be continued') ||
+        lower.includes('(continued in next') ||
+        lower.includes('(continues in next') ||
+        lower.includes('continue in my next') ||
+        lower.includes('continue in the next') ||
+        lower.includes('hit the token limit') ||
+        lower.includes('hit the character limit') ||
+        lower.includes('reply with "continue"') ||
+        lower.includes('say "continue" to proceed') ||
+        lower.includes('let me know if you would like me to continue')
+    );
+}
+
+function checkIncompleteReason(text, isPlanMode) {
+    if (!text || text.trim().length < 50) return null;
+    if (hasUnclosedCodeBlock(text)) return 'unclosed code block (```)';
+    if (hasExplicitContinueHint(text)) return 'explicit continuation prompt from model';
+    if (isPlanMode && isIncompletePlan(text)) return 'missing implementation steps in plan';
+    if (endsMidSentence(text)) return 'mid-sentence truncation';
+    return null;
+}
+
+function stitchContinuation(previousText, newChunk) {
+    if (!previousText) return newChunk;
+    if (!newChunk) return previousText;
+
+    let trimmedPrev = previousText.trimEnd();
+    let trimmedNew = newChunk.trimStart();
+
+    // If previous had an unclosed code fence and new chunk starts with a redundant code fence header
+    if (hasUnclosedCodeBlock(trimmedPrev)) {
+        trimmedNew = trimmedNew.replace(/^```[a-zA-Z0-9_-]*\n?/, '');
+        return `${trimmedPrev}\n${trimmedNew}`;
+    }
+
+    // If previous ended mid-word or mid-sentence
+    if (endsMidSentence(trimmedPrev)) {
+        return `${trimmedPrev} ${trimmedNew}`;
+    }
+
+    return `${trimmedPrev}\n\n${trimmedNew}`;
+}
+
 function sendAiosRequest(url, payload, timeoutSec) {
     return new Promise((resolve, reject) => {
         const u = new URL(url);
@@ -413,6 +517,8 @@ async function main() {
     let imageDesc = null;
     let recoverMode = false;
     let filePaths = [];
+    let autoContinue = true;
+    let maxContinues = 3;
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
@@ -433,10 +539,21 @@ async function main() {
             if (nextArg) {
                 filePaths.push(nextArg);
             }
-        } else if (arg === '--thread' || arg === '--session' || arg === '-s' || arg === '-c' || arg === '--continue' || arg === '--resume' || arg === '-r') {
+        } else if (arg === '--no-auto-continue' || arg === '--no-continue') {
+            autoContinue = false;
+        } else if (arg === '--max-continues') {
+            maxContinues = parseInt(args[++i], 10) || 3;
+        } else if (arg === '--thread' || arg === '--session' || arg === '-s' || arg === '-c' || arg === '--resume' || arg === '-r') {
             const nextArg = args[i + 1];
             if (nextArg && !nextArg.startsWith('-')) {
                 explicitSessionId = args[++i];
+            }
+        } else if (arg === '--continue') {
+            const nextArg = args[i + 1];
+            if (nextArg && !nextArg.startsWith('-')) {
+                explicitSessionId = args[++i];
+            } else if (!message) {
+                message = "Please continue directly from where you left off. Do not repeat previous text, just continue seamlessly.";
             }
         } else if (arg === '--new' || arg === '-n' || arg === '--new-thread') {
             forceNewThread = true;
@@ -599,10 +716,37 @@ async function main() {
             file_path: verifiedFilePaths.length > 0 ? verifiedFilePaths[0] : null,
             file_paths: verifiedFilePaths.length > 0 ? verifiedFilePaths : null,
         }, timeoutSec);
-        const answer = data.response || '';
+        let answer = data.response || '';
 
         if (!answer) {
             throw new Error(`Received empty response from AI-OS for ${provider}`);
+        }
+
+        let continueCount = 0;
+        while (autoContinue && continueCount < maxContinues) {
+            const reason = checkIncompleteReason(answer, isPlanMode);
+            if (!reason) break;
+
+            continueCount++;
+            console.error(`[query_aios] 🔄 Detected incomplete response (${reason}). Automatically sending "continue" (turn ${continueCount}/${maxContinues})...`);
+
+            const continuePrompt = "Please continue directly from where you left off. Do not repeat previous sections or headers, continue seamlessly until the entire response/plan is complete.";
+            const continueData = await sendAiosRequest(endpoint, {
+                prompt: continuePrompt,
+                model: resolvedModel,
+                session_id: sessionId,
+                file_path: null,
+                file_paths: null,
+            }, timeoutSec);
+
+            const nextChunk = continueData.response || '';
+            if (!nextChunk || nextChunk.trim() === '') {
+                console.error(`[query_aios] ⚠️ Received empty continuation response. Stopping auto-continue.`);
+                break;
+            }
+
+            answer = stitchContinuation(answer, nextChunk);
+            console.error(`[query_aios] 📎 Stitched continuation part ${continueCount} (+${nextChunk.length} chars, total: ${answer.length} chars)`);
         }
 
         const endTime = Date.now();
