@@ -77,6 +77,18 @@ def get_rms(data: bytes) -> float:
     samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
     return float(np.sqrt(np.mean(samples**2)))
 
+def show_gui_overlay(message: str = "🎙️ Hal is listening...", duration: float = 2.0):
+    """Displays a fast floating HUD overlay on macOS via Hammerspoon or osascript."""
+    try:
+        # 1. Fast Hammerspoon HUD alert
+        subprocess.Popen(
+            ["hs", "-c", f'hs.alert.closeAll(); hs.alert.show("{message}", {duration})'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+    except Exception:
+        pass
+
 def play_chime(sound_name: str):
     """Plays a macOS built-in system sound."""
     sound_path = Path(f"/System/Library/Sounds/{sound_name}.aiff")
@@ -154,17 +166,19 @@ def main():
                             if command_part:
                                 # Single utterance with command: "Hal, open google"
                                 logger.info(f"🎯 Wake word + command detected: '{command_part}'")
+                                show_gui_overlay(f"⚡ Hal: {command_part}", 1.5)
                                 is_active_listening = False
                                 dispatch_to_triage(command_part)
                             else:
                                 # Just said "Hal" -> Enter active listening mode for 10s
                                 logger.info("🎯 Wake word matched! Arming active listening for 10 seconds...")
-                                play_chime("Tink")
+                                show_gui_overlay("🎙️ Hal is listening...", 3.0)
                                 is_active_listening = True
                                 active_until = time.time() + FOLLOWUP_TIMEOUT
                         elif is_active_listening:
                             # We are in active listening mode and received a follow-up command!
                             logger.info(f"⚡ Follow-up command received in active window: '{raw_transcript}'")
+                            show_gui_overlay(f"⚡ Hal: {raw_transcript}", 1.5)
                             is_active_listening = False
                             dispatch_to_triage(raw_transcript)
                     
