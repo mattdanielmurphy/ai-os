@@ -6,8 +6,8 @@ Hal Wake Word Listener Daemon.
 Listens on the default microphone using Sherpa-ONNX Zipformer KWS (Keyword Spotting)
 for the wake word "Hal" / "Hey Hal".
 When detected:
-1. Plays an activation feedback sound (e.g. Ping or Pop).
-2. Triggers TypeWhisper dictation (via double-tap Right Option simulated keycode or deep link).
+1. Plays an activation feedback sound (e.g. Tink / Pop).
+2. Triggers TypeWhisper dictation hotkey (double-tap Option).
 3. Tells the bridge to expect a wake session.
 """
 
@@ -22,7 +22,6 @@ import pyaudio
 import sherpa_onnx
 from pathlib import Path
 
-# Add parent directory for imports if needed
 SERVICE_DIR = Path(__file__).resolve().parent
 MODEL_DIR = SERVICE_DIR / "models" / "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01"
 
@@ -36,7 +35,7 @@ logger = logging.getLogger("wake-hal-daemon")
 
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 1024  # 64ms at 16kHz
-COOLDOWN_SECONDS = 3.0
+COOLDOWN_SECONDS = 2.5
 
 def play_chime(sound_name: str = "Tink"):
     """Plays a built-in macOS alert sound for immediate audio feedback."""
@@ -51,24 +50,25 @@ def play_chime(sound_name: str = "Tink"):
 
 def trigger_typewhisper():
     """Triggers TypeWhisper dictation.
-    TypeWhisper's default shortcut is double-tap Right Option (keycode 61) or Fn (keycode 63 / 59).
-    We simulate the double-tap hotkey via osascript System Events.
+    TypeWhisper is configured for double-tap Option or Fn key.
+    We simulate Option double-tap via osascript System Events.
     """
     logger.info("Triggering TypeWhisper dictation hotkey...")
-    
-    # AppleScript to send double Right Option / Option tap (Key code 58/61)
     applescript = '''
     tell application "System Events"
-        -- Key code 58 is Option key, 61 is Right Option
         key code 58
         delay 0.08
         key code 58
     end tell
     '''
     try:
-        subprocess.run(["osascript", "-e", applescript], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(
+            ["osascript", "-e", applescript],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
     except Exception as e:
-        logger.error(f"Failed to send TypeWhisper hotkey: {e}")
+        logger.error(f"Failed to trigger TypeWhisper hotkey: {e}")
 
 class HalWakeWordListener:
     def __init__(self):
@@ -80,8 +80,8 @@ class HalWakeWordListener:
             joiner=str(MODEL_DIR / "joiner-epoch-12-avg-2-chunk-16-left-64.int8.onnx"),
             keywords_file=str(MODEL_DIR / "hal_keywords.txt"),
             num_threads=2,
-            keywords_score=1.2,
-            keywords_threshold=0.25,
+            keywords_score=1.0,
+            keywords_threshold=0.20,
             provider="cpu"
         )
         self.stream = self.kws.create_stream()
@@ -111,14 +111,14 @@ class HalWakeWordListener:
         try:
             while self.running:
                 data = audio_stream.read(CHUNK_SIZE, exception_on_overflow=False)
-                # Convert PCM16 bytes to float32 numpy array normalized to [-1.0, 1.0]
                 samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
                 
                 self.stream.accept_waveform(SAMPLE_RATE, samples)
                 while self.kws.is_ready(self.stream):
-                    self.kws.decode(self.stream)
-                    keyword = self.kws.get_result(self.stream).keyword
-                    if keyword:
+                    self.kws.decode_stream(self.stream)
+                    result = self.kws.get_result(self.stream)
+                    keyword = getattr(result, "keyword", None) or (str(result) if result else None)
+                    if keyword and keyword.strip():
                         now = time.time()
                         if now - self.last_detection_time > COOLDOWN_SECONDS:
                             self.last_detection_time = now
@@ -126,8 +126,6 @@ class HalWakeWordListener:
                             play_chime("Tink")
                             self.db_watcher.expect_wake_session()
                             trigger_typewhisper()
-                        else:
-                            logger.debug(f"Wake word detected but in cooldown: '{keyword}'")
                         
                         # Reset stream after keyword match
                         self.stream = self.kws.create_stream()
