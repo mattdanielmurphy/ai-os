@@ -472,7 +472,7 @@ def try_direct_execution(query):
     """Attempts fast direct execution for simple OS commands (open app, open URL, kill process, etc.)
     without starting LLM reasoning models or launching agy.
     Returns True if handled, False otherwise."""
-    q = query.strip()
+    q = query.strip().rstrip(".!?;:")
     if not q:
         return False
     q_lower = q.lower()
@@ -486,7 +486,7 @@ def try_direct_execution(query):
             break
             
     if matched_prefix:
-        target = q[len(matched_prefix):].strip().strip("'\"")
+        target = q[len(matched_prefix):].strip().strip("'\"").rstrip(".!?;:")
         target_lower = target.lower()
 
         # Is it a URL?
