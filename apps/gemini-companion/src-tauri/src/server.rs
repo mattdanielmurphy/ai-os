@@ -585,69 +585,85 @@ async fn handle_beacon_callback(
         .unwrap()
 }
 
+pub fn ensure_perplexity_window(app_handle: &tauri::AppHandle) -> Result<tauri::Window, (axum::http::StatusCode, String)> {
+    if let Some(win) = app_handle.get_window("perplexity_main") {
+        Ok(win)
+    } else {
+        eprintln!("[AI-OS] Perplexity window missing — recreating dynamically...");
+        crate::create_perplexity_window(app_handle).map_err(|e| {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to spawn Perplexity window: {}", e))
+        })
+    }
+}
+
+pub fn ensure_gemini_window(app_handle: &tauri::AppHandle) -> Result<tauri::Window, (axum::http::StatusCode, String)> {
+    if let Some(win) = app_handle.get_window("gemini_main") {
+        Ok(win)
+    } else {
+        eprintln!("[AI-OS] Gemini window missing — recreating dynamically...");
+        crate::create_gemini_window(app_handle).map_err(|e| {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to spawn Gemini window: {}", e))
+        })
+    }
+}
+
 async fn handle_prompt_dispatch(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(payload): Json<PromptDispatchPayload>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
-    if let Some(win) = app_handle.get_window("gemini_main") {
-        let _ = win.show();
-        let _ = win.unminimize();
-        let _ = win.set_focus();
+    let win = ensure_gemini_window(&app_handle)?;
+    let _ = win.show();
+    let _ = win.unminimize();
+    let _ = win.set_focus();
 
-        let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
-        let eval_script = format!(
-            r#"
-            (function() {{
-                if (window.injectAndSendPrompt) {{
-                    window.injectAndSendPrompt({});
-                }} else {{
-                    window.__pendingPrompt = {};
-                }}
-            }})();
-            "#,
-            js_prompt, js_prompt
-        );
+    let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
+    let eval_script = format!(
+        r#"
+        (function() {{
+            if (window.injectAndSendPrompt) {{
+                window.injectAndSendPrompt({});
+            }} else {{
+                window.__pendingPrompt = {};
+            }}
+        }})();
+        "#,
+        js_prompt, js_prompt
+    );
 
-        let _ = win.eval(&eval_script);
-        Ok("Prompt dispatched to Gemini window".to_string())
-    } else {
-        Err((axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))
-    }
+    let _ = win.eval(&eval_script);
+    Ok("Prompt dispatched to Gemini window".to_string())
 }
 
 async fn handle_perplexity_prompt(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(payload): Json<PromptDispatchPayload>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
-    if let Some(win) = app_handle.get_window("perplexity_main") {
-        let _ = win.show();
-        let _ = win.unminimize();
-        let _ = win.set_focus();
+    let win = ensure_perplexity_window(&app_handle)?;
+    let _ = win.show();
+    let _ = win.unminimize();
+    let _ = win.set_focus();
 
-        let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
-        let eval_script = format!(
-            r#"
-            (function() {{
-                if (window.injectAndSendPrompt) {{
-                    window.injectAndSendPrompt({});
-                }} else {{
-                    const ta = document.querySelector('textarea');
-                    if (ta) {{
-                        ta.focus();
-                        ta.value = {};
-                        ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    }}
+    let js_prompt = serde_json::to_string(&payload.prompt).unwrap_or_default();
+    let eval_script = format!(
+        r#"
+        (function() {{
+            if (window.injectAndSendPrompt) {{
+                window.injectAndSendPrompt({});
+            }} else {{
+                const ta = document.querySelector('textarea');
+                if (ta) {{
+                    ta.focus();
+                    ta.value = {};
+                    ta.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 }}
-            }})();
-            "#,
-            js_prompt, js_prompt
-        );
+            }}
+        }})();
+        "#,
+        js_prompt, js_prompt
+    );
 
-        let _ = win.eval(&eval_script);
-        Ok("Prompt dispatched to Perplexity window".to_string())
-    } else {
-        Err((axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))
-    }
+    let _ = win.eval(&eval_script);
+    Ok("Prompt dispatched to Perplexity window".to_string())
 }
 
 async fn handle_perplexity_callback(
@@ -672,8 +688,15 @@ async fn handle_perplexity_query(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(payload): Json<PromptDispatchPayload>,
 ) -> Result<Json<QueryResponse>, (axum::http::StatusCode, String)> {
-    let win = app_handle.get_window("perplexity_main")
-        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))?;
+    let win = ensure_perplexity_window(&app_handle)?;
+
+    // Wake and verify URL
+    let current_url = win.url().to_string();
+    if !current_url.starts_with("https://www.perplexity.ai") && !current_url.starts_with("https://perplexity.ai") {
+        eprintln!("[AI-OS] Perplexity window was on unexpected URL: {}. Navigating to https://www.perplexity.ai...", current_url);
+        let _ = win.eval("window.location.href = 'https://www.perplexity.ai';");
+        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+    }
 
     let query_id = format!("pplx_q_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -811,8 +834,15 @@ async fn handle_gemini_query(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(payload): Json<PromptDispatchPayload>,
 ) -> Result<Json<QueryResponse>, (axum::http::StatusCode, String)> {
-    let win = app_handle.get_window("gemini_main")
-        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))?;
+    let win = ensure_gemini_window(&app_handle)?;
+
+    // Wake and verify URL
+    let current_url = win.url().to_string();
+    if !current_url.starts_with("https://gemini.google.com") {
+        eprintln!("[AI-OS] Gemini window was on unexpected URL: {}. Navigating to https://gemini.google.com/app...", current_url);
+        let _ = win.eval("window.location.href = 'https://gemini.google.com/app';");
+        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+    }
 
     let query_id = format!("gemini_q_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -1187,8 +1217,7 @@ async fn handle_openai_chat(
 async fn handle_debug_ping(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
-    let win = app_handle.get_window("perplexity_main")
-        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Perplexity main window not found".to_string()))?;
+    let win = ensure_perplexity_window(&app_handle)?;
 
     let ping_id = format!("ping_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -1266,8 +1295,7 @@ async fn handle_debug_ping(
 async fn handle_debug_ping_gemini(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
 ) -> Result<String, (axum::http::StatusCode, String)> {
-    let win = app_handle.get_window("gemini_main")
-        .ok_or_else(|| (axum::http::StatusCode::NOT_FOUND, "Gemini main window not found".to_string()))?;
+    let win = ensure_gemini_window(&app_handle)?;
 
     let ping_id = format!("ping_gemini_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -1342,12 +1370,115 @@ async fn handle_debug_ping_gemini(
     wait_for_query_result(&win, &ping_id, "Gemini", rx, 5).await
 }
 
+#[derive(serde::Deserialize, Debug)]
+pub struct WakeRequest {
+    pub provider: Option<String>,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct WakeResponse {
+    pub status: String,
+    pub perplexity_window: bool,
+    pub gemini_window: bool,
+    pub perplexity_url: Option<String>,
+    pub gemini_url: Option<String>,
+}
+
+async fn handle_wake(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    payload: Option<Json<WakeRequest>>,
+) -> Result<Json<WakeResponse>, (axum::http::StatusCode, String)> {
+    let req_provider = payload
+        .and_then(|p| p.0.provider)
+        .unwrap_or_else(|| "all".to_string())
+        .to_lowercase();
+
+    let mut pplx_ok = false;
+    let mut gemini_ok = false;
+    let mut pplx_url = None;
+    let mut gemini_url = None;
+
+    if req_provider == "all" || req_provider.contains("perplexity") || req_provider.contains("pplx") {
+        match ensure_perplexity_window(&app_handle) {
+            Ok(win) => {
+                let current_url = win.url().to_string();
+                pplx_url = Some(current_url.clone());
+                if !current_url.starts_with("https://www.perplexity.ai") && !current_url.starts_with("https://perplexity.ai") {
+                    let _ = win.eval("window.location.href = 'https://www.perplexity.ai';");
+                } else {
+                    let _ = win.eval("/* aios_wake */ window.__aiosAwokenAt = Date.now();");
+                }
+                pplx_ok = true;
+            }
+            Err(e) => {
+                eprintln!("[AI-OS WAKE WARN] Could not ensure perplexity window: {:?}", e);
+            }
+        }
+    }
+
+    if req_provider == "all" || req_provider.contains("gemini") {
+        match ensure_gemini_window(&app_handle) {
+            Ok(win) => {
+                let current_url = win.url().to_string();
+                gemini_url = Some(current_url.clone());
+                if !current_url.starts_with("https://gemini.google.com") {
+                    let _ = win.eval("window.location.href = 'https://gemini.google.com/app';");
+                } else {
+                    let _ = win.eval("/* aios_wake */ window.__aiosAwokenAt = Date.now();");
+                }
+                gemini_ok = true;
+            }
+            Err(e) => {
+                eprintln!("[AI-OS WAKE WARN] Could not ensure gemini window: {:?}", e);
+            }
+        }
+    }
+
+    Ok(Json(WakeResponse {
+        status: "ok".to_string(),
+        perplexity_window: pplx_ok,
+        gemini_window: gemini_ok,
+        perplexity_url: pplx_url,
+        gemini_url: gemini_url,
+    }))
+}
+
+async fn handle_health(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+) -> Json<WakeResponse> {
+    let pplx_win = app_handle.get_window("perplexity_main");
+    let gemini_win = app_handle.get_window("gemini_main");
+
+    Json(WakeResponse {
+        status: "online".to_string(),
+        perplexity_window: pplx_win.is_some(),
+        gemini_window: gemini_win.is_some(),
+        perplexity_url: pplx_win.map(|w| w.url().to_string()),
+        gemini_url: gemini_win.map(|w| w.url().to_string()),
+    })
+}
+
 // ---------------------------------------------------------------------------
 // Server spawn
 // ---------------------------------------------------------------------------
 
 pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
     tauri::async_runtime::spawn(async move {
+        // Periodic keep-alive heartbeat to prevent WebKit background process sleep
+        let app_handle_keepalive = app_handle.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(15));
+            loop {
+                interval.tick().await;
+                if let Some(win) = app_handle_keepalive.get_window("perplexity_main") {
+                    let _ = win.eval("/* aios_keepalive */ window.__aiosKeepalive = Date.now();");
+                }
+                if let Some(win) = app_handle_keepalive.get_window("gemini_main") {
+                    let _ = win.eval("/* aios_keepalive */ window.__aiosKeepalive = Date.now();");
+                }
+            }
+        });
+
         let cors = CorsLayer::new()
             .allow_origin(Any)
             .allow_methods(Any)
@@ -1368,6 +1499,8 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/beacon", axum::routing::get(handle_beacon_callback))
             .route("/api/debug/ping", axum::routing::get(handle_debug_ping))
             .route("/api/debug/ping_gemini", axum::routing::get(handle_debug_ping_gemini))
+            .route("/api/wake", post(handle_wake).get(handle_wake))
+            .route("/api/health", axum::routing::get(handle_health))
             .route("/v1/chat/completions", post(handle_openai_chat))
             .route("/v1/models", axum::routing::get(handle_openai_models))
             .layer(cors)

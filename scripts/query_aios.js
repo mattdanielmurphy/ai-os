@@ -328,6 +328,40 @@ async function pingAios(baseUrl) {
     });
 }
 
+async function wakeAios(baseUrl, provider) {
+    return new Promise((resolve) => {
+        const u = new URL(`${baseUrl}/api/wake`);
+        const payload = JSON.stringify({ provider: provider || 'all' });
+        const options = {
+            hostname: u.hostname,
+            port: u.port,
+            path: u.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+            },
+            timeout: 3000,
+        };
+        const req = http.request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => body += chunk);
+            res.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    resolve(data);
+                } catch (e) {
+                    resolve(res.statusCode === 200 ? { status: 'ok' } : null);
+                }
+            });
+        });
+        req.on('error', () => resolve(null));
+        req.on('timeout', () => { req.destroy(); resolve(null); });
+        req.write(payload);
+        req.end();
+    });
+}
+
 function sendAiosRequest(url, payload, timeoutSec) {
     return new Promise((resolve, reject) => {
         const u = new URL(url);
@@ -517,24 +551,29 @@ async function main() {
 
     const baseUrl = 'http://127.0.0.1:3031';
 
-    let serverReady = await pingAios(baseUrl);
-    if (!serverReady) {
+    let wakeResult = await wakeAios(baseUrl, baseProvider);
+    if (!wakeResult) {
         console.error(`[query_aios] 🔄 AI-OS server at http://127.0.0.1:3031 is not responding. Starting via launch agent...`);
         try {
-            execSync('la start aios-server 2>/dev/null', { stdio: 'ignore' });
+            execSync('la restart aios-server 2>/dev/null || la start aios-server 2>/dev/null', { stdio: 'ignore' });
         } catch (e) {}
 
-        for (let i = 0; i < 60; i++) {
-            await new Promise(r => setTimeout(r, 1000));
-            serverReady = await pingAios(baseUrl);
-            if (serverReady) {
-                console.error(`[query_aios] ✅ AI-OS server is online.`);
+        for (let i = 0; i < 40; i++) {
+            await new Promise(r => setTimeout(r, 750));
+            wakeResult = await wakeAios(baseUrl, baseProvider);
+            if (wakeResult) {
+                console.error(`[query_aios] ✅ AI-OS server is online and awoken.`);
                 break;
             }
         }
+    } else {
+        const winKey = baseProvider === 'gemini' ? 'gemini_window' : 'perplexity_window';
+        if (wakeResult[winKey]) {
+            console.error(`[query_aios] ⚡ AI-OS companion webview (${baseProvider}) is awake and ready.`);
+        }
     }
 
-    if (!serverReady) {
+    if (!wakeResult) {
         console.error(`\n[query_aios] ERROR: AI-OS server is unreachable (http://127.0.0.1:3031).`);
         console.error(`Check status with: la status aios-server or tail logs at ~/.ai-os/logs/companion_server.error.log\n`);
         process.exit(1);
