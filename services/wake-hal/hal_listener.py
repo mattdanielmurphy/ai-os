@@ -41,36 +41,25 @@ FOLLOWUP_TIMEOUT = 10.0    # Wait up to 10 seconds for follow-up command
 
 TRIAGE_LAUNCHER = Path("/Users/matt/projects/ai-os/bin/triage-launcher.sh")
 
-WAKE_WORDS = [
-    "hal", "hey hal", "hi hal", "hello hal",
-    "how", "hey how", "hi how", "howell", "hell"
+import re
+
+WAKE_PATTERNS = [
+    r"^(?:hey|hi|hello)?[ ,:;?!-]*\b(?:hal|how|hell|howell)\b[ ,:;?!-]*",
 ]
 
-def play_chime(sound_name: str):
-    """Plays a macOS built-in system sound."""
-    sound_path = Path(f"/System/Library/Sounds/{sound_name}.aiff")
-    if sound_path.exists():
-        subprocess.Popen(
-            ["afplay", str(sound_path)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
 def sanitize_command(raw_text: str) -> str:
-    """Strips leading wake words and formatting punctuation."""
+    """Strips leading wake words and formatting punctuation cleanly."""
     text = raw_text.strip()
     if not text:
         return ""
     
-    text_lower = text.lower()
-    for w in WAKE_WORDS:
-        if text_lower.startswith(w):
-            stripped = text[len(w):].lstrip(" ,:;?!-\n\t")
-            if stripped:
-                return stripped
-            else:
-                return ""
-    return text
+    cleaned = text
+    for pat in WAKE_PATTERNS:
+        cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE).strip()
+    
+    # Strip any leftover leading punctuation
+    cleaned = cleaned.lstrip(" ,:;?!-\n\t").strip()
+    return cleaned
 
 def dispatch_to_triage(prompt: str):
     """Dispatches prompt directly to aios triage launcher."""
@@ -89,6 +78,23 @@ def dispatch_to_triage(prompt: str):
 def get_rms(data: bytes) -> float:
     samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
     return float(np.sqrt(np.mean(samples**2)))
+
+def play_chime(sound_name: str):
+    """Plays a macOS built-in system sound."""
+    sound_path = Path(f"/System/Library/Sounds/{sound_name}.aiff")
+    if sound_path.exists():
+        subprocess.Popen(
+            ["afplay", str(sound_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+def is_wake_word_present(raw_text: str) -> bool:
+    """Checks if utterance starts with or contains any wake pattern."""
+    for pat in WAKE_PATTERNS:
+        if re.search(pat, raw_text, flags=re.IGNORECASE):
+            return True
+    return False
 
 def main():
     logger.info("Initializing Whisper model (tiny.en)...")
@@ -142,10 +148,8 @@ def main():
                     
                     if raw_transcript:
                         logger.info(f"🎤 HEARD: \"{raw_transcript}\"")
-                        lower_text = raw_transcript.lower()
                         
-                        # Check if wake word is present
-                        contains_wake = any(w in lower_text for w in WAKE_WORDS)
+                        contains_wake = is_wake_word_present(raw_transcript)
                         command_part = sanitize_command(raw_transcript)
 
                         if contains_wake:
