@@ -152,7 +152,7 @@ def handle_conversational_query(query: str) -> bool:
                     "--dangerously-skip-permissions",
                     "-p",
                     f"{system_instruction}\n\nUser Question: {query}",
-                    "--model", "Gemini 3.5 Flash (Low)"
+                    "--model", "Gemini 3.7 Flash (Low)"
                 ]
                 with hide_agents_md():
                     res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
@@ -518,7 +518,7 @@ DEFAULT_SEARCH_ENGINES = {
     "github": "https://github.com/search?q={query}",
 }
 
-def dispatch_headless_prompt(query: str, model: str = "Gemini 3.5 Flash (Low)") -> int:
+def dispatch_headless_prompt(query: str, model: str = "Gemini 3.7 Flash (Low)") -> int:
     """Dispatches reasoning or conversational prompts directly to agy CLI non-interactively."""
     print(f"[triage] Headless CLI dispatch via agy ({model}): '{query}'")
     agy_bin = shutil.which("agy") or os.path.expanduser("~/.local/bin/agy")
@@ -696,7 +696,7 @@ def main():
             
     # Default behavior for interactive shell
     if not query:
-        model = model_override or "Gemini 3.5 Flash (Low)"
+        model = model_override or "Gemini 3.7 Flash (Low)"
         print(f"[triage] Interactive mode or empty prompt: launching agy with {model}")
         cmd = ["agy"] + args
         if not has_model:
@@ -726,21 +726,21 @@ def main():
     print(f"[triage] Classified category: {category}")
 
     # 4. Route selection
-    selected_model = "Gemini 3.5 Flash (Low)"
+    selected_model = "Gemini 3.7 Flash (Low)"
     
     is_coding_intent = category in ["coding_standard", "coding_complex"] or any(
         kw in query.lower() for kw in ["file", "find", "search", "code", "repo", "script", "fix", "debug", "refactor", "build", "run", "git"]
     )
 
     if category == "simple_non_coding" and not is_coding_intent:
-        selected_model = "Gemini 3.5 Flash (Low)"
+        selected_model = "Gemini 3.7 Flash (Low)"
     elif category == "coding_standard" or is_coding_intent:
         quota_5h, quota_week, is_real = get_quota()
         if is_real and quota_5h < 0.20:
             print(f"[triage] Quota < 20% ({int(quota_5h * 100)}%). Throttling to Gemini 3.1 Pro (Low) to conserve resources.")
             selected_model = "Gemini 3.1 Pro (Low)"
         else:
-            selected_model = "Gemini 3.5 Flash (Low)"
+            selected_model = "Gemini 3.7 Flash (Low)"
     elif category == "coding_complex":
         selected_model = "Gemini 3.1 Pro (High)"
     elif category == "valve_boilerplate":
@@ -795,13 +795,8 @@ def main():
 
         # Retry/escalate with Gemini 3.1 Pro (High)
         print(f"[triage] Automatically retrying with escalated reasoning model: {escalated_model}...")
-        cmd_escalated = ["agy", "--model", escalated_model]
-        for arg in args:
-            if arg == "--model":
-                continue
-            cmd_escalated.append(arg)
-        with hide_agents_md():
-            sys.exit(subprocess.call(cmd_escalated))
+        exit_code = dispatch_headless_prompt(query, escalated_model)
+        sys.exit(exit_code)
 
     sys.exit(0)
 
