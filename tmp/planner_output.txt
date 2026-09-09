@@ -1,1 +1,181 @@
-Please try again later.
+The macOS alert sound occurs because queries that cannot be resolved via direct operating system actions fail silently or throw unhandled exceptions during execution dispatch. Resolving this requires routing natural language queries through an LLM reasoning engine, returning the generated response to a visual presentation layer, and streaming the text to a dedicated HAL-9000 voice synthesis pipeline.
+
+Cloning HAL-9000 is straightforward and technically viable. The character's flat pitch, measured cadence, and lack of emotional inflection make it one of the easiest voices to synthesize with modern neural text-to-speech engines.
+
+| Tier | Engine | Latency | Voice Fidelity | Resource Cost & Offline Support |
+| :--- | :--- | :--- | :--- | :--- |
+| **Local Neural (Recommended)** | Kokoro-v1.0 / Piper TTS + Douglas Rain reference checkpoint | 80–180 ms | High (Accurate cadence, monotone delivery) | Zero API cost; fully offline; runs on Apple Silicon MPS/CPU |
+| **Local Zero-Shot** | XTTS-v2 / F5-TTS with 10s audio sample from *2001* | 400–900 ms | Very High (Identical timbre and acoustics) | High CPU/GPU load; requires ~4GB VRAM |
+| **Cloud Neural** | ElevenLabs / Cartesia Sonic (HAL-9000 cloned voice ID) | 150–300 ms | Production/Cinematic Grade | Requires API key and internet connectivity |
+
+***
+
+## Architectural Strategy
+
+```
+                          ┌────────────────────────┐
+                          │   hal_listener.py      │ (Whisper / Sherpa-ONNX)
+                          └───────────┬────────────┘
+                                      │ Transcribed text
+                                      ▼
+                          ┌────────────────────────┐
+                          │    triage_router.py    │
+                          └─────┬────────────┬─────┘
+           Direct OS Command    │            │ Conversational / General Query
+        ┌───────────────────────┘            └──────────────────────┐
+        ▼                                                           ▼
+┌────────────────┐                                       ┌─────────────────────┐
+│  Direct Exec   │                                       │ Query Dispatcher    │
+│  (open, kill)  │                                       │ (`agy -p` / Ollama) │
+└────────────────┘                                       └──────────┬──────────┘
+                                                                    │ Generated Text
+                                                ┌───────────────────┴───────────────────┐
+                                                ▼                                       ▼
+                                     ┌─────────────────────┐                 ┌─────────────────────┐
+                                     │ Visual Presentation │                 │  HAL Voice Pipeline │
+                                     │ (Companion HUD/TUI) │                 │  (TTS + DSP Audio)  │
+                                     └─────────────────────┘                 └──────────┬──────────┘
+                                                                                        │ PCM Audio
+                                                                                        ▼
+                                                                             ┌─────────────────────┐
+                                                                             │   Audio Output      │
+                                                                             │  (CoreAudio/afplay) │
+                                                                             └─────────────────────┘
+```
+
+The voice assistant pipeline decouples request triage, response generation, visual display, and speech synthesis into discrete stages:
+1. **Routing & Dispatch:** `services/wake-hal/hal_listener.py` captures voice input and passes transcripts to `scripts/triage_router.py`. When `try_direct_execution()` returns false for conversational or calculation queries like *"what is the square root of 64"*, the router forwards the query to a lightweight LLM runner (`agy -p` or a local fast model) instead of triggering a system alert.
+2. **Visual Presentation:** The resulting answer is dispatched to the AI-OS companion HUD or terminal UI via local IPC/socket.
+3. **Voice Synthesis & Acoustic Modeling:** The response text is sanitized (stripping code blocks, markdown symbols, and formatting) and sent to a dedicated local TTS daemon (`services/tts-hal/`). An acoustic filter applies HAL-9000's signature profile: 200 Hz high-pass, 4.5 kHz low-pass, subtle dynamic compression, and flat pitch modulation before playback.
+
+***
+
+## Data Structures & State Management
+
+### Audio Engine Configuration
+
+```python
+class TTSProvider(str, Enum):
+    LOCAL_KOKORO = "kokoro"
+    LOCAL_XTTS = "xtts_v2"
+    ELEVENLABS = "elevenlabs"
+    MACOS_NATIVE = "macos_say"
+
+class HalVoiceConfig:
+    provider: TTSProvider
+    model_id: str
+    voice_id_or_sample: str        # Path to reference wav or ElevenLabs voice_id
+    sample_rate: int = 24000
+    speaking_rate: float = 0.92    # Slightly slower cadence for HAL-9000
+    pitch_shift: float = 0.0       # Monotone anchor
+    apply_dsp_filter: bool = True  # Bandpass + room reflection filter
+```
+
+### Query & Response State
+
+```python
+class QueryType(str, Enum):
+    DIRECT_COMMAND = "direct_command"
+    CALCULATION = "calculation"
+    KNOWLEDGE_QUERY = "knowledge_query"
+    AGENT_TASK = "agent_task"
+
+class TriageResult:
+    query_text: str
+    query_type: QueryType
+    success: bool
+    response_text: Optional[str]
+    error_message: Optional[str]
+    execution_duration_ms: float
+
+class SpeechQueueItem:
+    item_id: str
+    text_content: str
+    priority: int
+    interrupt_current: bool = False
+    timestamp: float
+```
+
+***
+
+## Interface Contracts & Execution Logic
+
+### Component Interfaces
+
+```python
+class BaseTTSBackend(ABC):
+    @abstractmethod
+    def synthesize(self, text: str, output_path: Path) -> Path:
+        """Synthesizes text into a WAV file using the configured HAL voice model."""
+        pass
+
+class AudioFilterPipeline:
+    @staticmethod
+    def process_hal_acoustics(input_wav: Path, output_wav: Path) -> Path:
+        """Applies bandpass filtering, mild compression, and room reflection."""
+        pass
+
+class HalVoiceService:
+    def __init__(self, config: HalVoiceConfig): ...
+    def speak(self, text: str, non_blocking: bool = True) -> None: ...
+    def stop(self) -> None: ...
+
+class TriageEngine:
+    def route_and_execute(self, prompt: str) -> TriageResult: ...
+    def dispatch_llm_query(self, prompt: str) -> str: ...
+```
+
+### Execution Algorithm
+
+```
+function HandleVoiceQuery(raw_audio_input):
+    transcript = SpeechToText(raw_audio_input)
+    cleaned_prompt = StripWakeWordPrefix(transcript, wake_words=["hal", "hey hal"])
+    
+    // 1. Check for fast-path direct OS commands
+    if try_direct_execution(cleaned_prompt):
+        HalVoiceService.speak("Done.")
+        VisualHUD.show_status("Executed: " + cleaned_prompt)
+        return
+    
+    // 2. Dispatch conversational / reasoning queries
+    VisualHUD.show_thinking("Hal is computing...")
+    try:
+        response_text = TriageEngine.dispatch_llm_query(cleaned_prompt)
+        
+        // 3. Dual output: Visual display + Hal speech
+        VisualHUD.render_response(cleaned_prompt, response_text)
+        
+        // Strip markdown and math wrappers for clean vocalization
+        spoken_text = PrepareTextForSpeech(response_text)
+        HalVoiceService.speak(spoken_text, non_blocking=True)
+        
+    except QueryDispatchError as err:
+        VisualHUD.show_error(err.message)
+        HalVoiceService.speak("I am sorry, Dave. I am unable to process that request.")
+```
+
+***
+
+## Error Handling & Edge Cases
+
+- **Speech-to-Text Misrecognitions:** Math queries often contain phonetic variations (such as *"square root of sixty-four"* vs *"root 64"*). The router pre-normalizes numeric phrases before passing them to the direct calculator or model runner.
+- **Overlapping Speech & Interruptions:** If a new wake word is detected while HAL is speaking, `HalVoiceService.stop()` terminates the running `afplay` or audio stream process to avoid overlapping audio channels.
+- **TTS Synthesis Latency:** For responses longer than 25 words, the pipeline splits text by sentence boundary, synthesizes the first sentence immediately to start audio output in under 200 ms, and streams subsequent sentences concurrently.
+- **Markdown & Code Fence Filtration:** Raw code blocks, bullet characters, URLs, and LaTeX math tags (`\( ... \)`) are stripped or verbalized into natural expressions (e.g., `\sqrt{64}` converted to *"8"* or *"the square root of 64"*) prior to TTS submission.
+- **Engine Fallback:** If local neural TTS fails or is unavailable, the service falls back gracefully to macOS `say -v "Daniel"` with a lowered pitch, preventing unhandled exceptions from triggering the macOS error sound.
+
+***
+
+## Implementation Steps
+
+1. **`services/tts-hal/engine.py` (New File)**  
+   Create the HAL voice synthesis service supporting local Kokoro/Piper models with a fallback to `say`. Include the acoustic DSP filter using `scipy.signal` or `sox` to emulate the 1968 studio microphone sound profile.
+2. **`services/tts-hal/daemon.py` (New File)**  
+   Create a lightweight local loopback daemon or unix domain socket server listening for `/speak`, `/stop`, and `/status` commands to avoid cold-boot latency on every invocation.
+3. **`scripts/triage_router.py`**  
+   Refactor `handle_query()` to route unhandled direct commands through `dispatch_headless_prompt()` (using `agy -p` or the companion endpoint), capture stdout safely, and invoke `services/tts-hal/speak.py`.
+4. **`services/wake-hal/hal_listener.py`**  
+   Update the transcription callback to pass results directly to `scripts/triage_router.py` and hook into companion HUD notifications for immediate visual feedback.
+5. **`launchd/com.aios.tts-hal.plist` (New File)**  
+   Define and install the LaunchAgent supervisor to keep the HAL voice synthesis daemon warm in the background.

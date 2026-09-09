@@ -221,7 +221,7 @@
   "requesting-code-review/SKILL.md": 1783709248.8215878,
   "hermes-agent/references/troubleshooting.md": 1785094410.5688653,
   "p5js/scripts/export-frames.js": 1783709248.7728314,
-  ".bundled_manifest": 1787432509.396356,
+  ".bundled_manifest": 1788815545.386178,
   "creative/popular-web-designs/templates/figma.md": 1783709248.774981,
   "creative/popular-web-designs/templates/claude.md": 1783709248.7739809,
   "creative/comfyui/scripts/health_check.py": 1786326341.4388263,
@@ -294,7 +294,7 @@
   "mlops/evaluation/weights-and-biases/SKILL.md": 1786326341.4440172,
   "hammerspoon-webview/SKILL.md": 1785094410.4821215,
   "ocr-and-documents/scripts/extract_pymupdf.py": 1785094411.4695663,
-  ".curator_state": 1787987160.0473752,
+  ".curator_state": 1788594684.7513556,
   "creative/popular-web-designs/templates/mintlify.md": 1783709248.776007,
   "baoyu-infographic/references/layouts/periodic-table.md": 1785094409.6954484,
   "baoyu-infographic/references/base-prompt.md": 1785094409.6863074,
@@ -944,5 +944,10 @@
   "_manage-memory/SKILL.md": 1787470391.2991235,
   ".curator_backups/2026-08-29T07-05-59Z/skills.tar.gz": 1787987159.88036,
   ".curator_backups/2026-08-29T07-05-59Z/cron-jobs.json": 1787987159.8818457,
-  ".curator_backups/2026-08-29T07-05-59Z/manifest.json": 1787987159.8886797
+  ".curator_backups/2026-08-29T07-05-59Z/manifest.json": 1787987159.8886797,
+  "google-workspace/scripts/__pycache__/_hermes_home.cpython-314.pyc": 1788373597.3996065,
+  ".curator_backups/2026-09-05T07-51-24Z/manifest.json": 1788594684.6693077,
+  ".curator_backups/2026-09-05T07-51-24Z/skills.tar.gz": 1788594684.661141,
+  ".curator_backups/2026-09-05T07-51-24Z/cron-jobs.json": 1788594684.6617906,
+  "_inspect-screen-visually/SKILL.md": 1788916361.9357245
 }
