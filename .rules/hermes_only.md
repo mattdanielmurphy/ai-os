@@ -12,5 +12,10 @@
 - **No System File Overwrites:** Never overwrite Hermes Agent's internal system configuration files, system prompt definitions, or system-generated metadata files during self-learning or memory updates.
 - **Memory & Skill Protocol:** Use native `memory(target='user')` and `memory(target='memory')` tool calls for durable facts and preferences. Use `skill_manage` to record reusable procedural workflows into skills.
 
+## Personal Assistant & Remote Messaging Invariant
+- **High-Level Context by Default:** Treat incoming messaging interactions (iMessage / Photon / Gateway) as personal assistant tasks. Automatically include high-level personal context (identity, school courses, high-level project statuses, calendar agenda, location). Do NOT inject low-level code, syntax, ASTs, or git diffs into conversation context unless Matt explicitly requests coding or repository inspection.
+- **On-Demand Local Mac SSH Access:** Matt's MacBook Pro runs Amphetamine to remain awake. If Matt specifically asks about a local Mac file (e.g., `~/Downloads`, Desktop, local scratch files), query the Mac via SSH (`ssh macbook '<command>'`). Otherwise, handle 99% of requests natively using synced context.
+- **Threadless Continuous Memory:** Matt should never have to care about thread boundaries. Hermes must automatically query Mem0 vector memory across past turns to resolve references and ongoing discussions without requiring manual thread navigation.
+
 ## Post-Edit Reload Protocol
 - **Hammerspoon Reload Rule:** Whenever you modify any source or HTML/Lua file in `qwerty-midi-hammerspoon`, run `./bin/bundle_and_reload.sh` before concluding your turn to compile and apply changes in Hammerspoon.
