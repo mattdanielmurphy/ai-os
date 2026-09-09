@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import sys
 import os
+import re
+import math
 import json
 import urllib.request
 import urllib.parse
@@ -13,6 +15,165 @@ from pathlib import Path
 # Config and settings paths
 SETTING_PATH = Path.home() / ".gemini" / "antigravity-cli" / "settings.json"
 OAUTH_CREDS_PATH = Path.home() / ".gemini" / "oauth_creds.json"
+TELEMETRY_DB_PATH = Path.home() / ".ai-os-telemetry.json"
+ERROR_LOG_PATH = Path("/tmp/aios_last_cmd.log")
+HAL_SPEAK_SCRIPT = Path("/Users/matt/projects/ai-os/services/tts-hal/speak.py")
+
+def show_gui_overlay(message: str, duration: float = 3.5):
+    """Displays a fast floating HUD overlay on macOS via Hammerspoon or osascript."""
+    # 1. Try Hammerspoon HUD alert (instant centered on-screen badge)
+    try:
+        clean_msg = message.replace('"', '\\"').replace("'", "\\'")
+        lua = f'hs.alert.closeAll(); hs.alert.show([[{clean_msg}]], {duration})'
+        applescript = f'tell application "Hammerspoon" to execute lua code "{lua}"'
+        res = subprocess.run(
+            ["osascript", "-e", applescript],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=0.6
+        )
+        if res.returncode == 0:
+            return
+    except Exception:
+        pass
+
+    # 2. Fallback to native macOS Notification Center banner
+    try:
+        clean_msg = message.replace('"', '\\"')
+        subprocess.Popen(
+            ["osascript", "-e", f'display notification "{clean_msg}" with title "HAL-9000"'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+    except Exception:
+        pass
+
+def speak_hal(text: str, non_blocking: bool = True):
+    """Speaks text using HAL-9000 acoustic voice engine."""
+    if HAL_SPEAK_SCRIPT.exists():
+        cmd = [sys.executable, str(HAL_SPEAK_SCRIPT), text]
+        if not non_blocking:
+            cmd.append("--sync")
+        subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+
+def evaluate_math_phrase(q: str) -> str | None:
+    """Safely evaluates common spoken math and calculation queries."""
+    q_clean = q.lower().strip().rstrip("?.! ")
+    # Strip leading filler words
+    for prefix in ["what is the ", "what's the ", "what is ", "what's ", "calculate ", "compute ", "tell me the ", "tell me "]:
+        if q_clean.startswith(prefix):
+            q_clean = q_clean[len(prefix):].strip()
+            break
+
+    # 1. Square root
+    m = re.search(r"^(?:the\s+)?square root of ([0-9]+(?:\.[0-9]+)?)$", q_clean)
+    if m:
+        val = float(m.group(1))
+        if val < 0:
+            return "The square root of a negative number is not a real number."
+        res = math.isqrt(int(val)) if val.is_integer() and math.isqrt(int(val))**2 == int(val) else round(math.sqrt(val), 4)
+        return f"The square root of {m.group(1)} is {res}."
+
+    # 2. Percentage: "15% of 80" or "15 percent of 80"
+    m = re.search(r"^([0-9]+(?:\.[0-9]+)?)\s*(?:%|percent)\s+of\s+([0-9]+(?:\.[0-9]+)?)$", q_clean)
+    if m:
+        pct = float(m.group(1))
+        base = float(m.group(2))
+        res = (pct / 100.0) * base
+        res_str = int(res) if res.is_integer() else round(res, 4)
+        return f"{m.group(1)} percent of {m.group(2)} is {res_str}."
+
+    # 3. Power / Exponent: "2 to the power of 8"
+    m = re.search(r"^([0-9]+(?:\.[0-9]+)?)\s+(?:to the power of|\^)\s+([0-9]+(?:\.[0-9]+)?)$", q_clean)
+    if m:
+        base = float(m.group(1))
+        exp = float(m.group(2))
+        res = base ** exp
+        res_str = int(res) if res.is_integer() else round(res, 4)
+        return f"{m.group(1)} to the power of {m.group(2)} is {res_str}."
+
+    # 4. Basic Arithmetic: A (plus|minus|times|divided by) B
+    m = re.search(r"^([0-9]+(?:\.[0-9]+)?)\s*(plus|\+|\-|minus|times|\*|multiplied by|divided by|\/)\s*([0-9]+(?:\.[0-9]+)?)$", q_clean)
+    if m:
+        a = float(m.group(1))
+        op = m.group(2).strip()
+        b = float(m.group(3))
+        if op in ["plus", "+"]:
+            res = a + b
+            op_word = "plus"
+        elif op in ["minus", "-"]:
+            res = a - b
+            op_word = "minus"
+        elif op in ["times", "*", "multiplied by"]:
+            res = a * b
+            op_word = "times"
+        elif op in ["divided by", "/"]:
+            if b == 0:
+                return "Division by zero is undefined."
+            res = a / b
+            op_word = "divided by"
+        res_str = int(res) if res.is_integer() else round(res, 4)
+        return f"{m.group(1)} {op_word} {m.group(3)} is {res_str}."
+
+    return None
+
+def try_math_calculation(query: str) -> bool:
+    """Evaluates mathematical, arithmetic, and calculation queries instantly with dual HUD + HAL Voice."""
+    result_text = evaluate_math_phrase(query)
+    if result_text:
+        print(f"[triage] Fast-path math calculation: {result_text}")
+        show_gui_overlay(f"HAL: {result_text}", duration=4.0)
+        speak_hal(result_text, non_blocking=True)
+        return True
+    return False
+
+def handle_conversational_query(query: str) -> bool:
+    """Attempts fast direct response via Gemini Flash Lite or agy with dual Visual HUD + HAL-9000 Voice."""
+    system_instruction = (
+        "You are HAL-9000 from 2001: A Space Odyssey. Provide a factual, direct, calm, and concise answer "
+        "in 1 to 2 sentences maximum. Do NOT use markdown, code blocks, bullet points, or emojis."
+    )
+    show_gui_overlay("🎙️ Hal is computing...", duration=2.0)
+    response = query_gemini_flash_lite(query, system_instruction)
+    
+    # Fallback to headless agy if direct API call returns None
+    if not response or not response.strip():
+        agy_bin = shutil.which("agy") or os.path.expanduser("~/.local/bin/agy")
+        if os.path.exists(agy_bin):
+            try:
+                cmd = [
+                    agy_bin,
+                    "--dangerously-skip-permissions",
+                    "-p",
+                    f"{system_instruction}\n\nUser Question: {query}",
+                    "--model", "Gemini 3.5 Flash (Low)"
+                ]
+                with hide_agents_md():
+                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+                if res.returncode == 0 and res.stdout:
+                    # Strip thread references and markdown dividers
+                    clean = re.sub(r"\*Reference:\*[\s\S]*", "", res.stdout)
+                    clean = re.sub(r"```[\s\S]*?```", "", clean)
+                    clean = re.sub(r"[*_~]{1,3}", "", clean)
+                    clean = clean.strip()
+                    if clean:
+                        response = clean
+            except Exception as e:
+                print(f"[triage] agy fallback error: {e}")
+
+    if response and response.strip():
+        clean_resp = response.strip()
+        print(f"[triage] HAL response: {clean_resp}")
+        show_gui_overlay(f"HAL: {clean_resp}", duration=4.5)
+        speak_hal(clean_resp, non_blocking=True)
+        return True
+    return False
 TELEMETRY_DB_PATH = Path.home() / ".ai-os-telemetry.json"
 ERROR_LOG_PATH = Path("/tmp/aios_last_cmd.log")
 
@@ -155,7 +316,12 @@ def tier1_triage(query):
     response_text = query_gemini_flash_lite(prompt, system_instruction)
     
     if not response_text:
-        return "coding_standard"  # Safe default
+        # Heuristic fallback if direct API is unavailable
+        q_lower = query.lower()
+        coding_keywords = ["file", "find", "search", "code", "repo", "script", "fix", "debug", "refactor", "build", "run", "git", "class", "function", "def", "import", "npm", "bun", "test", "commit"]
+        if any(kw in q_lower for kw in coding_keywords):
+            return "coding_standard"
+        return "simple_non_coding"
 
     # Clean JSON output if wrapped in markdown formatting
     clean_text = response_text.strip()
@@ -356,7 +522,7 @@ def dispatch_headless_prompt(query: str, model: str = "Gemini 3.5 Flash (Low)") 
     """Dispatches reasoning or conversational prompts directly to agy CLI non-interactively."""
     print(f"[triage] Headless CLI dispatch via agy ({model}): '{query}'")
     agy_bin = shutil.which("agy") or os.path.expanduser("~/.local/bin/agy")
-    cmd = [agy_bin, "-p", query, "--model", model]
+    cmd = [agy_bin, "--dangerously-skip-permissions", "-p", query, "--model", model]
     with hide_agents_md():
         return subprocess.call(cmd)
 
@@ -550,6 +716,10 @@ def main():
     if try_direct_execution(query):
         sys.exit(0)
 
+    # Fast-path math & calculation check (e.g. "what is the square root of 64")
+    if try_math_calculation(query):
+        sys.exit(0)
+
     # 3. Tier 1 Classification
     print(f"[triage] Intercepting prompt: '{query[:50]}...'")
     category = tier1_triage(query)
@@ -594,7 +764,9 @@ def main():
         # Coding / file / codebase task -> Headless CLI execution via agy
         exit_code = dispatch_headless_prompt(query, selected_model)
     else:
-        # Non-coding general query -> Open Gemini Webview in ai-os app or headless fallback
+        # Non-coding conversational query -> Dual Visual HUD + Spoken HAL Voice response
+        if handle_conversational_query(query):
+            sys.exit(0)
         exit_code = dispatch_headless_prompt(query, selected_model)
 
     # 6. Tier 2 Executive Investigation on failure
