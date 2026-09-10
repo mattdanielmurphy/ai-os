@@ -1507,7 +1507,7 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .with_state(app_handle);
 
         let mut listener = None;
-        let addr: std::net::SocketAddr = "127.0.0.1:3031".parse().unwrap();
+        let addr: std::net::SocketAddr = "0.0.0.0:3031".parse().unwrap();
 
         for attempt in 1..=10 {
             let socket_res = (|| -> std::io::Result<tokio::net::TcpListener> {
