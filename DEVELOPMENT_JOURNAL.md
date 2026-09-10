@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-10
+- **Deactivate Hal Wake Word Listener (`services/wake-hal/hal_listener.py`):** Unloaded and disabled LaunchAgent `com.aios.wake-hal` via `la unload wake-hal`, terminated PID 4107, and updated `com.aios.wake-hal.plist` with `Disabled: true`, `RunAtLoad: false`, `KeepAlive: false` to prevent microphone capture false-positives. Registered `wake-hal` in `~/.local/bin/la`. [[log]](agent-logs/2026-09-10_12-07_deactivate-hal-wake-listener.md)
 - **Fix Hermes Gateway Photon iMessage & Agy Proxy Stream Bug (`services/agy-proxy/proxy.py`):** Fixed `UnboundLocalError: cannot access local variable 'content'` in `proxy.py` result event handler by scoping content emission within `if not streamed_response:`. Pruned stale session state and reconnected `hermes-gateway` to Photon sidecar and `api_server`, verifying 7.19s clean end-to-end completions via Antigravity `gemini-3.6-flash-low`. [[log]](agent-logs/2026-09-10_07-30_fix-hermes-gateway-photon-and-agy-proxy.md)
 
 ## 2026-08-30
