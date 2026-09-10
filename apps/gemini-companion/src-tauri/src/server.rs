@@ -1055,7 +1055,32 @@ async fn handle_openai_chat(
 ) -> Result<axum::response::Response, (axum::http::StatusCode, String)> {
     let raw_model = req.model.unwrap_or_else(|| "gemini".to_string());
     let requested_model = raw_model.to_lowercase();
-    let is_pplx = requested_model.starts_with("perplexity") || requested_model == "sonar" || requested_model == "sonnet" || requested_model.contains("claude");
+    let (is_pplx, resolved_model) = if requested_model.starts_with("perplexity")
+        || requested_model.starts_with("pplx")
+        || requested_model == "sonar"
+        || requested_model == "turbo"
+        || requested_model == "sonnet"
+        || requested_model.contains("claude") {
+
+        let sub = requested_model
+            .trim_start_matches("perplexity")
+            .trim_start_matches("pplx")
+            .trim_start_matches(':')
+            .trim_start_matches('-')
+            .trim_start_matches('/');
+        let model = match sub {
+            "gemini" | "flash" => "gemini",
+            "sonnet" | "claude" => "sonnet",
+            "gpt" | "terra" | "luna" => "gpt",
+            "grok" => "grok",
+            "kimi" => "kimi",
+            "sonar" | "turbo" => "turbo",
+            _ => if sub.is_empty() { "gemini" } else { sub },
+        };
+        (true, model.to_string())
+    } else {
+        (false, raw_model.clone())
+    };
 
     let prompt_text = req.messages.iter()
         .map(|m| {
@@ -1111,7 +1136,7 @@ async fn handle_openai_chat(
 
     let dispatch_payload = PromptDispatchPayload {
         prompt: prompt_text,
-        model: Some(raw_model.clone()),
+        model: Some(resolved_model.clone()),
         session_id: Some(session_id_str),
         attachment: attachment_data,
         attachments: None,
