@@ -438,7 +438,7 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                     if conv_id:
                         _save_session(session_key, conv_id)
                 
-                # Always process the final result to emit content
+                # Emit final result content only if not already streamed
                 if not streamed_response:
                     raw = event.get("result")
                     content = ""
@@ -446,13 +446,13 @@ async def run_agy_stream(messages: List[Message], model_name: str, user_tag: Opt
                         content = raw.get("response", "")
                     elif isinstance(raw, str):
                         content = raw
-                if content:
-                    payload = {
-                        "id": request_id, "object": "chat.completion.chunk",
-                        "created": created_time, "model": model_name,
-                        "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}]
-                    }
-                    yield f"data: {json.dumps(payload)}\n\n"
+                    if content:
+                        payload = {
+                            "id": request_id, "object": "chat.completion.chunk",
+                            "created": created_time, "model": model_name,
+                            "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}]
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
 
                 _log_usage(event.get("usage") or {}, session_key)
 
