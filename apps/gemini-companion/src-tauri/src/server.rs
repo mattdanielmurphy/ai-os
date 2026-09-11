@@ -1145,10 +1145,21 @@ async fn handle_openai_chat(
     };
 
     if req.stream.unwrap_or(false) {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<Result<String, String>>();
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<String>();
         let is_pplx_clone = is_pplx;
         let model_name = raw_model.clone();
         let app_handle_clone = app_handle.clone();
+
+        let tx_keepalive = tx.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                // Standard SSE comment keepalive line to prevent client/proxy idle timeout
+                if tx_keepalive.send(": keepalive\n\n".to_string()).is_err() {
+                    break;
+                }
+            }
+        });
 
         tokio::spawn(async move {
             let res = if is_pplx_clone {
@@ -1174,18 +1185,32 @@ async fn handle_openai_chat(
                             "finish_reason": "stop"
                         }]
                     });
-                    let _ = tx.send(Ok(format!("data: {}\n\ndata: [DONE]\n\n", serde_json::to_string(&chunk_obj).unwrap())));
+                    let _ = tx.send(format!("data: {}\n\ndata: [DONE]\n\n", serde_json::to_string(&chunk_obj).unwrap()));
                 }
                 Err((_, err)) => {
-                    let _ = tx.send(Err(err));
+                    let chunk_id = format!("chatcmpl-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+                    let err_obj = serde_json::json!({
+                        "id": chunk_id,
+                        "object": "chat.completion.chunk",
+                        "created": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                        "model": model_name,
+                        "choices": [{
+                            "index": 0,
+                            "delta": {
+                                "role": "assistant",
+                                "content": format!("⚠️ [AI-OS Error]: {}", err)
+                            },
+                            "finish_reason": "stop"
+                        }]
+                    });
+                    let _ = tx.send(format!("data: {}\n\ndata: [DONE]\n\n", serde_json::to_string(&err_obj).unwrap()));
                 }
             }
         });
 
         let stream = futures_util::stream::unfold(rx, |mut rx| async move {
             match rx.recv().await {
-                Some(Ok(data)) => Some((Ok(axum::body::Bytes::from(data)), rx)),
-                Some(Err(e)) => Some((Err(std::io::Error::new(std::io::ErrorKind::Other, e)), rx)),
+                Some(data) => Some((Ok::<axum::body::Bytes, std::io::Error>(axum::body::Bytes::from(data)), rx)),
                 None => None,
             }
         });
