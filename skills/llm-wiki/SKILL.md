@@ -35,12 +35,11 @@ Use this skill when the user:
 
 ## Wiki Location
 
-**Location:** Set via `WIKI_PATH` environment variable (e.g. in `${HERMES_HOME:-~/.hermes}/.env`).
-
-If unset, defaults to `~/wiki`.
+**Location:** Set via `WIKI_PATH` environment variable.
+Defaults to Matt's personal knowledge base: `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal`.
 
 ```bash
-WIKI="${WIKI_PATH:-$HOME/wiki}"
+WIKI="${WIKI_PATH:-/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal}"
 ```
 
 The wiki is just a directory of markdown files — open it in Obsidian, VS Code, or
