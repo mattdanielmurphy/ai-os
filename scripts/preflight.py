@@ -220,6 +220,52 @@ def step_memory_engine():
         pass
     return "Memory (Mem0): OK"
 
+def get_memory_hydration(project_name="ai-os", in_progress=None):
+    """Prefetch top 3-4 relevant memories from Mem0 combining task context and core operational facts."""
+    try:
+        query_parts = []
+        if project_name and project_name not in ["projects", "matt"]:
+            query_parts.append(project_name)
+        if in_progress:
+            task_clean = re.sub(r'\[.*?\]', '', in_progress[0]).strip()
+            query_parts.append(task_clean)
+        
+        query = " ".join(query_parts).strip()
+        if not query:
+            query = "user preferences and work style"
+            
+        items = []
+        seen = set()
+        
+        # 1. Project & active task query
+        out, code = run_cmd(["aios-memory", "prefetch", query, "--limit", "3"], timeout=4)
+        if code == 0 and out and "Relevant Recalled Context" in out:
+            for l in out.strip().splitlines():
+                if l.startswith("- ") or l.startswith("• "):
+                    norm = re.sub(r'\s*\*\(relevance:.*?\)\*', '', l).strip("- •")
+                    if norm not in seen:
+                        seen.add(norm)
+                        items.append(l)
+        
+        # 2. If fewer than 4 items, supplement with core operational preferences
+        if len(items) < 4:
+            core_query = f"{project_name} notes wiki package manager work style".strip()
+            out2, code2 = run_cmd(["aios-memory", "prefetch", core_query, "--limit", "4"], timeout=4)
+            if code2 == 0 and out2 and "Relevant Recalled Context" in out2:
+                for l in out2.strip().splitlines():
+                    if l.startswith("- ") or l.startswith("• "):
+                        norm = re.sub(r'\s*\*\(relevance:.*?\)\*', '', l).strip("- •")
+                        if norm not in seen:
+                            seen.add(norm)
+                            items.append(l)
+                            if len(items) >= 4:
+                                break
+                                
+        return items[:4]
+    except Exception:
+        pass
+    return []
+
 def get_transcript_path(conv_dir):
     p1 = os.path.join(conv_dir, ".system_generated", "logs", "transcript.jsonl")
     p2 = os.path.join(conv_dir, "transcript.jsonl")
@@ -325,6 +371,11 @@ def main():
     print("=== PRE-FLIGHT CHECK ===")
     
     if is_first:
+        proj_name = os.path.basename(os.getcwd())
+        in_progress, backlog = get_project_board_summary()
+        mem_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        mem_future = mem_executor.submit(get_memory_hydration, proj_name, in_progress)
+
         print("\n=== RECENT THREAD CONTEXT (NEW THREAD START) ===")
         summaries = {}
         for sum_dir in ["~/.gemini/antigravity-ide/brain", "~/.gemini/antigravity/brain", "~/.gemini/antigravity-cli/brain"]:
@@ -357,7 +408,6 @@ def main():
             title = get_thread_title(path)
             print(f"- [{cid[:8]}] {title} | Folders: {', '.join(folders) if folders else 'None'}")
         
-        in_progress, backlog = get_project_board_summary()
         if in_progress or backlog:
             print("\n=== ACTIVE PROJECT BOARD (PROJECT_BOARD.md) ===")
             print("Path: file:///Users/matt/projects/ai-os/PROJECT_BOARD.md")
@@ -371,6 +421,19 @@ def main():
                 for item in backlog[:4]:
                     print(f"  - {item}")
             print("================================================\n")
+
+        # Hydrate top relevant memories for Turn 1
+        try:
+            hydrated_memories = mem_future.result(timeout=4)
+        except Exception:
+            hydrated_memories = []
+        mem_executor.shutdown(wait=False)
+
+        if hydrated_memories:
+            print("=== RELEVANT CONTEXT & MEMORIES (MEM0 HYDRATION) ===")
+            for mem in hydrated_memories:
+                print(f"• {mem.lstrip('- ').strip()}")
+            print("====================================================\n")
     else:
         print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
     
