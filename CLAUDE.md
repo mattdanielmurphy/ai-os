@@ -98,6 +98,14 @@
 - **Pre-Flight Context Hydration**: Before executing non-trivial architectural, debugging, or workflow tasks, agents must proactively recall relevant context and past lessons rather than operating cold or re-deriving known solutions.
 - **Battle-Tested Memory Architecture**: AI-OS memory and self-learning MUST use established, third-party / production memory backends (e.g. Mem0, Hermes FTS5/SQLite engine) rather than ad-hoc homebrew memory scripts.
 
+# Personal Knowledge Base & LLM Wiki Invariant
+- **Location**: Matt's personal notes vault and LLM Wiki is located at `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`.
+- **Architecture**: Organized per the Karpathy LLM Wiki pattern:
+  - `SCHEMA.md`: Domain definition, frontmatter rules, and tag taxonomy.
+  - `index.md`: Master catalog of all interlinked notes.
+  - `log.md`: Append-only chronological action log.
+- **Rule**: Agents MUST NEVER guess or search for alternative wiki directories (e.g. `~/wiki`). All note routing, personal knowledge updates, and wiki operations MUST route directly to this path.
+
 # Git Protocol Rules
 
 ## Auto-Commit Protocol
