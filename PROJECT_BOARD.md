@@ -14,7 +14,6 @@ Central task registry across all projects and active coding threads. Automatical
 
 ## 🚀 In Progress
 
-- [ ] Replace Quartz with Docsify for ai-os-wiki knowledge base engine [project:: ai-os] [assignee:: agent] [due:: 2026-08-15]
 - [ ] Fix gemini-thread-sync userscript connection & verify sync daemon [project:: gemini-thread-sync] [assignee:: agent]
 
 ---
@@ -33,11 +32,13 @@ Central task registry across all projects and active coding threads. Automatical
 
 - `[DEPRECATED]` GLIC Safari sidecar Tauri app & Rust window tracker (Made irrelevant by Chrome migration)
 - `[DEPRECATED]` Wails Go backend for thread-browser (Replaced by ai-os companion app)
+- `[DEPRECATED]` Quartz/Docsify ai-os-wiki web server (Decommissioned in favor of direct Obsidian vault)
 
 ---
 
 ## ✅ Completed
 
+- [x] Decommission redundant ai-os-wiki web server and prune deprecated sub-apps [project:: ai-os] [assignee:: agent]
 - [x] Establish Master PROJECT_BOARD.md and active preflight state hydration [project:: ai-os] [assignee:: agent]
 - [x] Unload rogue Quartz ai-os-wiki LaunchAgent to stop CPU/memory runaway [project:: ai-os] [assignee:: agent]
 - [x] Clean up ai-os docs (active/archive subfolders) [project:: ai-os] [assignee:: agent]
