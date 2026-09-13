@@ -38,6 +38,7 @@ Central task registry across all projects and active coding threads. Automatical
 
 ## ✅ Completed
 
+- [x] Implement Proactive Executive Assistant Service with FSRS, Habit Bridge, and Context Gate [project:: proactive-assistant] [assignee:: agent] [due:: 2026-09-13]
 - [x] Decommission redundant ai-os-wiki web server and prune deprecated sub-apps [project:: ai-os] [assignee:: agent]
 - [x] Establish Master PROJECT_BOARD.md and active preflight state hydration [project:: ai-os] [assignee:: agent]
 - [x] Unload rogue Quartz ai-os-wiki LaunchAgent to stop CPU/memory runaway [project:: ai-os] [assignee:: agent]

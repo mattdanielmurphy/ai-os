@@ -1,4 +1,21 @@
-User Request: Design and implement the proactive personal assistant service in ai-os (services/assistant/). Architecture must account for a host Mac that sleeps and goes offline intermittently (using launchd / persistent queue with sleep-wake recovery so missed triggers are evaluated upon reconnection). Include: 1) Context Gate (Apple Calendar, Focus mode, routine buffers), 2) Telegram Bot interface with inline buttons and silence-as-signal logic, 3) FSRS spaced repetition and Obsidian habit tracking (Habits Design.md), 4) Step-by-step implementation plan.
+User Request: Perform an exhaustive, critical architectural audit and second-opinion review of the proposed proactive personal assistant plan in implementation_plan.md and tmp/planner_output.txt.
+
+Address the following key questions:
+1. Potential Mistakes & Blind Spots:
+   - What are the subtle failure modes, edge cases, or design mistakes in the proposed architecture (specifically around macOS sleep-wake gap detection, launchd scheduling, Calendar/Focus mode probing via AppleScript/defaults, and silence watchdog)?
+   - Where is this architecture most likely to break in practice when running on a non-24/7 laptop?
+
+2. Telegram vs. iMessage (Photon / BlueBubbles / imsg CLI):
+   - Matt currently uses iMessage as his primary messaging app (and was impressed by Photon), but is considering Telegram if it is significantly more robust, reliable, and full-featured.
+   - Compare Telegram vs iMessage specifically for an executive function & spaced repetition assistant:
+     * Interactive UI: Inline keyboards / 1-tap callback buttons vs free-form text response.
+     * Message Lifecycle: Dynamic message editing (e.g. updating an expired prompt to '(Check-in expired)', removing active buttons upon completion).
+     * Delivery reliability, push notifications, and API stability.
+     * Verdict: Is Telegram worth using a secondary app, or can iMessage realistically match this UX?
+
+3. Alternative Architectural Paths:
+   - What would be another way to go about this system? Are there radically simpler or more reliable paradigms to achieve the same goals without over-engineering?
+   - How can we minimize friction and maximize long-term maintainability?
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge

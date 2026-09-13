@@ -1,181 +1,37 @@
-The macOS alert sound occurs because queries that cannot be resolved via direct operating system actions fail silently or throw unhandled exceptions during execution dispatch. Resolving this requires routing natural language queries through an LLM reasoning engine, returning the generated response to a visual presentation layer, and streaming the text to a dedicated HAL-9000 voice synthesis pipeline.
+## Audit Summary
 
-Cloning HAL-9000 is straightforward and technically viable. The character's flat pitch, measured cadence, and lack of emotional inflection make it one of the easiest voices to synthesize with modern neural text-to-speech engines.
+The proposed architecture is directionally sound (persistent-queue + sleep-gap-detection + context-gate + silence-as-signal are all correct primitives), but it has several structural weaknesses that will surface specifically on a laptop that sleeps unpredictably, and the Telegram-vs-iMessage decision has a clear technical winner that the plan doesn't fully justify against Matt's stated preference for iMessage/Photon. Below is the critical pass.
 
-| Tier | Engine | Latency | Voice Fidelity | Resource Cost & Offline Support |
-| :--- | :--- | :--- | :--- | :--- |
-| **Local Neural (Recommended)** | Kokoro-v1.0 / Piper TTS + Douglas Rain reference checkpoint | 80–180 ms | High (Accurate cadence, monotone delivery) | Zero API cost; fully offline; runs on Apple Silicon MPS/CPU |
-| **Local Zero-Shot** | XTTS-v2 / F5-TTS with 10s audio sample from *2001* | 400–900 ms | Very High (Identical timbre and acoustics) | High CPU/GPU load; requires ~4GB VRAM |
-| **Cloud Neural** | ElevenLabs / Cartesia Sonic (HAL-9000 cloned voice ID) | 150–300 ms | Production/Cinematic Grade | Requires API key and internet connectivity |
+## 1. macOS Sleep/Wake & launchd Blind Spots
 
-***
+**The "60-second tick" assumption is the single biggest flaw.** A `launchd` agent with `StartInterval=60` does not run every 60 seconds while the Mac sleeps — it simply does not fire at all during sleep, and on wake `launchd` coalesces all missed intervals into a single run, not one run per missed minute. This actually helps the "avalanche" problem the plan worries about, but it also means the "every execution tick" wall-clock-delta check in the plan can't rely on a live in-process loop that persists across sleep; the process itself is likely not even running. `KeepAlive` will restart a crashed daemon, but it will not keep a process resident and ticking through sleep — the OS suspends it. The plan needs to be explicit that **the daemon is not a continuously-running asyncio loop across sleep**; it is a process that gets killed/suspended at sleep and re-invoked at wake via `StartInterval` + `RunAtLoad`, and *every* invocation must independently rediscover state from SQLite, not from in-memory scheduler state. The current pseudo-code implies persistent memory of `SLEEP_RECOVERY_MODE` across ticks, which won't survive process suspension reliably.
 
-## Architectural Strategy
+**`StartCalendarInterval` vs `StartInterval` behave differently on wake**, and the plan doesn't specify which it uses. Per Apple's own history and the launchd sources reviewed, `StartCalendarInterval` catches up missed fires on wake (with coalescing of duplicate missed events), while `StartInterval` is more prone to being silently dropped depending on kqueue-based sleep-time accounting. The implementation step should mandate `StartCalendarInterval` with a tight recurring cadence (e.g., every 15 min) rather than `StartInterval`, since `StartInterval`'s sleep-skipping behavior is the more commonly reported failure mode.
 
-```
-                          ┌────────────────────────┐
-                          │   hal_listener.py      │ (Whisper / Sherpa-ONNX)
-                          └───────────┬────────────┘
-                                      │ Transcribed text
-                                      ▼
-                          ┌────────────────────────┐
-                          │    triage_router.py    │
-                          └─────┬────────────┬─────┘
-           Direct OS Command    │            │ Conversational / General Query
-        ┌───────────────────────┘            └──────────────────────┐
-        ▼                                                           ▼
-┌────────────────┐                                       ┌─────────────────────┐
-│  Direct Exec   │                                       │ Query Dispatcher    │
-│  (open, kill)  │                                       │ (`agy -p` / Ollama) │
-└────────────────┘                                       └──────────┬──────────┘
-                                                                    │ Generated Text
-                                                ┌───────────────────┴───────────────────┐
-                                                ▼                                       ▼
-                                     ┌─────────────────────┐                 ┌─────────────────────┐
-                                     │ Visual Presentation │                 │  HAL Voice Pipeline │
-                                     │ (Companion HUD/TUI) │                 │  (TTS + DSP Audio)  │
-                                     └─────────────────────┘                 └──────────┬──────────┘
-                                                                                        │ PCM Audio
-                                                                                        ▼
-                                                                             ┌─────────────────────┐
-                                                                             │   Audio Output      │
-                                                                             │  (CoreAudio/afplay) │
-                                                                             └─────────────────────┘
-```
+**A restart cancels pending wake catch-up.** Multiple sources confirm that if the Mac is *rebooted* (not just slept) while a `launchd` job was pending, the pending fire is forgotten rather than replayed on the next boot. Because the trigger queue lives in SQLite (not in `launchd`'s internal state), this is actually fine for the assistant's own triggers — but it means the daemon cannot depend on `launchd`'s catch-up semantics at all for correctness. The SQLite `trigger_queue` with its own `scheduled_at`/`expires_at` TTL is the correct source of truth; `launchd` should be treated as nothing more than "wake me up periodically, or immediately on boot," never as a reliable delivery mechanism for a specific trigger.
 
-The voice assistant pipeline decouples request triage, response generation, visual display, and speech synthesis into discrete stages:
-1. **Routing & Dispatch:** `services/wake-hal/hal_listener.py` captures voice input and passes transcripts to `scripts/triage_router.py`. When `try_direct_execution()` returns false for conversational or calculation queries like *"what is the square root of 64"*, the router forwards the query to a lightweight LLM runner (`agy -p` or a local fast model) instead of triggering a system alert.
-2. **Visual Presentation:** The resulting answer is dispatched to the AI-OS companion HUD or terminal UI via local IPC/socket.
-3. **Voice Synthesis & Acoustic Modeling:** The response text is sanitized (stripping code blocks, markdown symbols, and formatting) and sent to a dedicated local TTS daemon (`services/tts-hal/`). An acoustic filter applies HAL-9000's signature profile: 200 Hz high-pass, 4.5 kHz low-pass, subtle dynamic compression, and flat pitch modulation before playback.
+**`defaults read com.apple.ncprefs` for Focus mode is fragile and likely already broken.** Since macOS Ventura, Focus/DND state moved into a binary plist format under `~/Library/DoNotDisturb/DB/` with per-mode configuration files, and Apple has repeatedly changed the schema across OS versions without a public API. A plan that hard-codes a `defaults read` call is a single-OS-update away from silently returning stale or empty data with no error — this needs a documented fallback (e.g., detect stale/missing key and fail *open* to "assume available" or *closed* to "assume busy," and explicitly pick one policy) and version-pinned parsing with a self-test that runs in CI or on daemon startup.
 
-***
+**AppleScript/EventKit calendar queries require the process to have Automation/Calendar permission, and a background `launchd` LaunchAgent invoking `osascript` will frequently trigger the macOS TCC (Transparency, Consent, Control) permission prompt the first time — and if it's denied or the daemon runs headless without an active login session, EventKit access silently returns nothing rather than raising a catchable error.** The plan's "fallback to default routine buffers" mitigation is right in spirit, but it must also **log and surface** permission failures distinctly from "no events found," or you'll never notice the Context Gate has been blind for weeks.
 
-## Data Structures & State Management
+**Silence Watchdog needs a persistent poll of its own**, and the plan currently nests it inside the same tick loop as trigger dispatch. If the Mac sleeps for 6 hours with 3 outbound signals awaiting response, on wake all 3 will time out simultaneously, spike the `low_energy_counter`, and potentially trigger the cooldown suppression rule right as the user becomes available — the opposite of what's wanted. The watchdog needs to treat "no watchdog run occurred while asleep" as a null result, not a decayed-response result, or friction-scoring will be systematically biased by how long the Mac happened to sleep, which is exactly the "silence" signal but for the wrong reason (machine unavailability, not user unavailability).
 
-### Audio Engine Configuration
+## 2. Telegram vs. iMessage (Photon / BlueBubbles)
 
-```python
-class TTSProvider(str, Enum):
-    LOCAL_KOKORO = "kokoro"
-    LOCAL_XTTS = "xtts_v2"
-    ELEVENLABS = "elevenlabs"
-    MACOS_NATIVE = "macos_say"
+| Dimension | Telegram | iMessage (BlueBubbles) |
+|---|---|---|
+| Inline buttons / 1-tap callbacks | Native `InlineKeyboardMarkup`, first-class, no extra infra | Not supported by Apple; must be simulated via tap-backs (👍/👎 reactions) which BlueBubbles exposes only with **Private API enabled, which requires disabling SIP** on the host Mac |
+| Dynamic message editing | Native `editMessageText`/`editMessageReplyMarkup` | Not supported by iMessage/BlueBubbles at all — messages can't be edited or have their keyboard removed after sending |
+| Delivery/push reliability | Long-polling or webhook via stable public Bot API, works from anywhere | Depends on a always-on macOS BlueBubbles Server process on the *same host that's already sleeping intermittently* — a chicken-and-egg problem, since the messaging layer would go down exactly when the host sleeps |
+| API stability | Official, versioned, heavily used by thousands of bots | Community reverse-engineered project; frequently breaks across macOS point releases since it reads iMessage's private SQLite `chat.db` and injects into the app process |
+| Setup cost | `pip install python-telegram-bot`, a bot token, done | Requires installing BlueBubbles Server, granting Full Disk Access, and disabling SIP for reactions/tapbacks — a meaningfully higher-risk security posture change on Matt's daily-driver Mac |
 
-class HalVoiceConfig:
-    provider: TTSProvider
-    model_id: str
-    voice_id_or_sample: str        # Path to reference wav or ElevenLabs voice_id
-    sample_rate: int = 24000
-    speaking_rate: float = 0.92    # Slightly slower cadence for HAL-9000
-    pitch_shift: float = 0.0       # Monotone anchor
-    apply_dsp_filter: bool = True  # Bandpass + room reflection filter
-```
+**Verdict:** Telegram is the clear technical choice for this specific use case, not because iMessage/Photon is a worse *chat experience* generally, but because the two hard requirements — (a) message editing to remove a stale keyboard and show "(Check-in expired)", and (b) tappable inline buttons without a free-text reply — are things Apple's iMessage protocol simply does not expose, even through BlueBubbles's reverse-engineered bridge. BlueBubbles can approximate button-like interaction only via tapback reactions, which requires disabling SIP (System Integrity Protection) on the same host running the assistant, which is a security downgrade disproportionate to the UX gain, and it still can't edit sent messages. Given memory shows Matt already prefers Telegram over Discord for automated notifications, and given the plan's core UX (inline rating buttons, editable "expired" states) is Telegram's bread and butter, keeping Telegram as the interface and treating iMessage/Photon purely as Matt's personal messaging app (unconnected to this system) is the right call. If Photon impressed him as a *client*, that's orthogonal — Telegram also has excellent native macOS/iOS apps, so there's no UX regression from using it as a second, purpose-built channel.
 
-### Query & Response State
+## 3. Simpler Alternative Paths
 
-```python
-class QueryType(str, Enum):
-    DIRECT_COMMAND = "direct_command"
-    CALCULATION = "calculation"
-    KNOWLEDGE_QUERY = "knowledge_query"
-    AGENT_TASK = "agent_task"
+**Alternative A — Shortcuts + Focus Filters instead of a custom Context Gate.** Rather than parsing `defaults read` or brittle Focus plist files, macOS/iOS Shortcuts can query "Get Current Focus" and calendar availability as first-class Shortcuts actions, invocable via `shortcuts run <name>` from the daemon. This trades a custom AppleScript/EventKit reverse-engineering effort for Apple's own supported automation surface, and is far less likely to break across OS updates, at the cost of a slightly higher per-call latency (~200-500ms shell-out).
 
-class TriageResult:
-    query_text: str
-    query_type: QueryType
-    success: bool
-    response_text: Optional[str]
-    error_message: Optional[str]
-    execution_duration_ms: float
+**Alternative B — Cron-on-a-cheap-always-on-VPS as source of truth, Mac as pure compute.** Given `ai-os` already runs a VPS with Caddy/Tailscale, the entire trigger-scheduling and silence-watchdog logic (which doesn't need Mac-specific data) could live on the always-on VPS, with only the Context Gate's Calendar/Focus probes needing to run locally on the Mac (via a tiny Tailscale-reachable HTTP endpoint the VPS polls before firing). This eliminates 90% of the sleep/wake-recovery complexity entirely, since the scheduler process never sleeps — only the "is Matt actually free" check needs to reach the Mac, and if the Mac is unreachable, the natural and correct fallback is simply "suppress and retry," which is already the desired behavior for an offline Mac. This is very likely the **more maintainable** path long-term and should be seriously considered as a rewrite of the "run on `launchd`" assumption baked into the current plan.
 
-class SpeechQueueItem:
-    item_id: str
-    text_content: str
-    priority: int
-    interrupt_current: bool = False
-    timestamp: float
-```
-
-***
-
-## Interface Contracts & Execution Logic
-
-### Component Interfaces
-
-```python
-class BaseTTSBackend(ABC):
-    @abstractmethod
-    def synthesize(self, text: str, output_path: Path) -> Path:
-        """Synthesizes text into a WAV file using the configured HAL voice model."""
-        pass
-
-class AudioFilterPipeline:
-    @staticmethod
-    def process_hal_acoustics(input_wav: Path, output_wav: Path) -> Path:
-        """Applies bandpass filtering, mild compression, and room reflection."""
-        pass
-
-class HalVoiceService:
-    def __init__(self, config: HalVoiceConfig): ...
-    def speak(self, text: str, non_blocking: bool = True) -> None: ...
-    def stop(self) -> None: ...
-
-class TriageEngine:
-    def route_and_execute(self, prompt: str) -> TriageResult: ...
-    def dispatch_llm_query(self, prompt: str) -> str: ...
-```
-
-### Execution Algorithm
-
-```
-function HandleVoiceQuery(raw_audio_input):
-    transcript = SpeechToText(raw_audio_input)
-    cleaned_prompt = StripWakeWordPrefix(transcript, wake_words=["hal", "hey hal"])
-    
-    // 1. Check for fast-path direct OS commands
-    if try_direct_execution(cleaned_prompt):
-        HalVoiceService.speak("Done.")
-        VisualHUD.show_status("Executed: " + cleaned_prompt)
-        return
-    
-    // 2. Dispatch conversational / reasoning queries
-    VisualHUD.show_thinking("Hal is computing...")
-    try:
-        response_text = TriageEngine.dispatch_llm_query(cleaned_prompt)
-        
-        // 3. Dual output: Visual display + Hal speech
-        VisualHUD.render_response(cleaned_prompt, response_text)
-        
-        // Strip markdown and math wrappers for clean vocalization
-        spoken_text = PrepareTextForSpeech(response_text)
-        HalVoiceService.speak(spoken_text, non_blocking=True)
-        
-    except QueryDispatchError as err:
-        VisualHUD.show_error(err.message)
-        HalVoiceService.speak("I am sorry, Dave. I am unable to process that request.")
-```
-
-***
-
-## Error Handling & Edge Cases
-
-- **Speech-to-Text Misrecognitions:** Math queries often contain phonetic variations (such as *"square root of sixty-four"* vs *"root 64"*). The router pre-normalizes numeric phrases before passing them to the direct calculator or model runner.
-- **Overlapping Speech & Interruptions:** If a new wake word is detected while HAL is speaking, `HalVoiceService.stop()` terminates the running `afplay` or audio stream process to avoid overlapping audio channels.
-- **TTS Synthesis Latency:** For responses longer than 25 words, the pipeline splits text by sentence boundary, synthesizes the first sentence immediately to start audio output in under 200 ms, and streams subsequent sentences concurrently.
-- **Markdown & Code Fence Filtration:** Raw code blocks, bullet characters, URLs, and LaTeX math tags (`\( ... \)`) are stripped or verbalized into natural expressions (e.g., `\sqrt{64}` converted to *"8"* or *"the square root of 64"*) prior to TTS submission.
-- **Engine Fallback:** If local neural TTS fails or is unavailable, the service falls back gracefully to macOS `say -v "Daniel"` with a lowered pitch, preventing unhandled exceptions from triggering the macOS error sound.
-
-***
-
-## Implementation Steps
-
-1. **`services/tts-hal/engine.py` (New File)**  
-   Create the HAL voice synthesis service supporting local Kokoro/Piper models with a fallback to `say`. Include the acoustic DSP filter using `scipy.signal` or `sox` to emulate the 1968 studio microphone sound profile.
-2. **`services/tts-hal/daemon.py` (New File)**  
-   Create a lightweight local loopback daemon or unix domain socket server listening for `/speak`, `/stop`, and `/status` commands to avoid cold-boot latency on every invocation.
-3. **`scripts/triage_router.py`**  
-   Refactor `handle_query()` to route unhandled direct commands through `dispatch_headless_prompt()` (using `agy -p` or the companion endpoint), capture stdout safely, and invoke `services/tts-hal/speak.py`.
-4. **`services/wake-hal/hal_listener.py`**  
-   Update the transcription callback to pass results directly to `scripts/triage_router.py` and hook into companion HUD notifications for immediate visual feedback.
-5. **`launchd/com.aios.tts-hal.plist` (New File)**  
-   Define and install the LaunchAgent supervisor to keep the HAL voice synthesis daemon warm in the background.
+**Alternative C — Reduce state machine surface by using Telegram itself as the queue.** Rather than maintaining `outbound_signals` timeout logic manually, Telegram's Bot API supports message TTL semantics loosely via scheduled `editMessageText` calls triggered by the same scheduler; no architectural change needed here, but it's worth noting the "friction score" and cooldown logic in `user_dynamics` is the one piece of genuinely novel logic in the whole system — everything else (FSRS math, Telegram delivery, calendar reads) is a wrapper around existing libraries, which validates the original "glue, don't build" instinct from the referenced conversation history. The audit's main recommendation is to keep that philosophy and push the Context Gate's sleep/wake fragility off the laptop entirely (Alternative B) rather than trying to harden `launchd`/AppleScript further, since those are the least controllable, least testable parts of the stack.
