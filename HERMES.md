@@ -36,9 +36,13 @@
 - **Rule**: Agents MUST NEVER emit generic user placeholders (e.g. `[Your Name]`, `[Your Student ID]`, `[Your CCID]`, `[Your Email]`, `[Insert Date]`) in templates, email drafts, forms, or scripts when the information exists in the project context or personal vault.
 - **Auto-Lookup**: Agents must search and auto-populate all known identifiers and personal metadata directly:
   - Full Name: `Matthew Daniel Murphy` (Matt)
+  - Phone: `(825) 977-5250` (or `+18259775250`)
+  - Email: `matt@mattmurphy.ca` / `mdmurphy@ualberta.ca`
   - U of A Student ID: `1981495`
   - CCID: `mdmurphy` (`mdmurphy@ualberta.ca`)
   - Alberta Student Number (ASN): `3069-4370-5`
+  - BC PEN: `197392699`
+  - Date of Birth: `December 11, 1997`
   - Program: `B.Sc. Major in Computing Science / Artificial Intelligence Concentration`
 
 # Architectural Preservation & Non-Destructive Debugging Policy
