@@ -624,7 +624,21 @@ def test_telegram_html_formatter():
     res_ic = markdown_to_telegram_html(italic_code)
     assert res_ic == "<i>Location: <code>Inbox/Quick Capture.md</code></i>"
 
-    # 6. Message chunking
+    # 6. Markdown Table conversion to Unicode ASCII box
+    table_md = (
+        "| Role | Officeholder | Function |\n"
+        "| :--- | :--- | :--- |\n"
+        "| Head of State | King Charles III | Sovereign and constitutional monarch |\n"
+        "| Head of Government | Andrew Holness | Prime Minister |"
+    )
+    res_table = markdown_to_telegram_html(table_md)
+    assert "<pre><code>┌" in res_table
+    assert "│ Role" in res_table
+    assert "│ King Charles III" in res_table
+    assert "└" in res_table
+    assert "</code></pre>" in res_table
+
+    # 7. Message chunking
     long_text = ("This is a paragraph.\n\n" * 250)
     chunks = split_message_chunks(long_text, max_chars=4000)
     assert len(chunks) > 1

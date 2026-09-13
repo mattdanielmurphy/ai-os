@@ -543,7 +543,23 @@ class ActionDispatcher:
             return await self.cmd_capture(note, chat_id)
 
         # 5. Conversational Assistant via AI-OS (with multi-turn history & thread continuity)
-        await self.gateway.send_chat_action(chat_id, "typing")
+        # Immediately display a thinking status message so user has instant visual confirmation
+        status_msg_id = await self.gateway.send_message(
+            chat_id, "🧠 <i>Thinking with Gemini Flash Thinking...</i>"
+        )
+
+        # Start continuous typing heartbeat so Telegram's header indicator stays active
+        stop_typing = asyncio.Event()
+
+        async def _typing_heartbeat():
+            while not stop_typing.is_set():
+                await self.gateway.send_chat_action(chat_id, "typing")
+                try:
+                    await asyncio.wait_for(stop_typing.wait(), timeout=4.0)
+                except asyncio.TimeoutError:
+                    pass
+
+        typing_task = asyncio.create_task(_typing_heartbeat())
 
         # Hydrate recent history before recording current message
         recent_history = await self.db.get_recent_chat_history(chat_id, limit=8)
@@ -552,19 +568,33 @@ class ActionDispatcher:
         # Record incoming user message in DB
         await self.db.add_chat_message(chat_id, "user", clean_text)
 
-        aios_reply = await self._query_aios(augmented_prompt, chat_id=chat_id)
+        try:
+            aios_reply = await self._query_aios(augmented_prompt, chat_id=chat_id)
+        finally:
+            stop_typing.set()
+            try:
+                await typing_task
+            except Exception:
+                pass
+
         if aios_reply:
             # Record outgoing assistant response in DB
             await self.db.add_chat_message(chat_id, "assistant", aios_reply)
-            await self.gateway.send_message(chat_id, aios_reply)
+            if status_msg_id:
+                await self.gateway.edit_message(chat_id, status_msg_id, aios_reply)
+            else:
+                await self.gateway.send_message(chat_id, aios_reply)
             return True
 
         # Inform user of query failure rather than dumping into Obsidian Inbox
-        await self.gateway.send_message(
-            chat_id,
+        fail_msg = (
             "⚠️ <i>Unable to get a response from AI-OS companion server right now.</i>\n\n"
-            "Please verify the AI-OS server is active (<code>la status aios-server</code>) and try again.",
+            "Please verify the AI-OS server is active (<code>la status aios-server</code>) and try again."
         )
+        if status_msg_id:
+            await self.gateway.edit_message(chat_id, status_msg_id, fail_msg)
+        else:
+            await self.gateway.send_message(chat_id, fail_msg)
         return False
 
 
