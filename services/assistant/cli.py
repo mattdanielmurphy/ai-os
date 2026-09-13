@@ -34,6 +34,8 @@ async def cmd_add_card(args, config: AssistantConfig):
         lapses=card["lapses"],
         state=card["state"],
         due_at=card["due_at"],
+        options=args.options,
+        correct_index=args.correct_index,
     )
     print(f"Card created successfully: ID {card['card_id']} (Deck: {card['deck_type']})")
 
@@ -98,6 +100,8 @@ def main():
     p_card.add_argument("--prompt", required=True, help="Question / prompt")
     p_card.add_argument("--answer", required=True, help="Answer")
     p_card.add_argument("--elaboration", default="", help="1-sentence progressive elaboration")
+    p_card.add_argument("--options", default=None, help="Pipe-separated options, e.g. 'Option A|Option B|Option C|Option D'")
+    p_card.add_argument("--correct-index", type=int, default=0, help="0-based index of correct option")
     p_card.add_argument("--deck", default="cold_storage", choices=["cold_storage", "baby_facts"])
     p_card.add_argument("--schedule-now", action="store_true", help="Queue immediate review trigger")
 

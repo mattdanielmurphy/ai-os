@@ -1,6 +1,7 @@
 """Comprehensive unit and integration test suite for the Proactive Executive Assistant Service."""
 
 import asyncio
+import json
 import os
 import shutil
 import tempfile
@@ -370,6 +371,57 @@ async def test_end_to_end_action_dispatcher():
 
         today_log = log_dir / f"{datetime.now().strftime('%Y-%m-%d')}.md"
         assert today_log.exists()
+
+        # 3. Test 2-Step MCQ Flow (Answer selection -> Struggle rating)
+        mcq_options = ["Alpha", "Beta", "Gamma", "Delta"]
+        await db.add_or_update_card(
+            card_id="mcq1",
+            deck_type="cold_storage",
+            prompt="Which letter comes first in the Greek alphabet?",
+            answer="Alpha",
+            elaboration="Alpha is the first letter of the Greek alphabet.",
+            stability=1.0,
+            difficulty=2.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now,
+            options=json.dumps(mcq_options),
+            correct_index=0,
+        )
+        card_mcq = await db.get_card("mcq1")
+        prompt_text, mcq_keyboard = format_review_prompt(card_mcq)
+        assert "*A)* Alpha" in prompt_text
+        assert mcq_keyboard[0][0]["callback_data"] == "fsrs_pick:mcq1:0"
+
+        # Send prompt via gateway so message exists in gateway state
+        msg_id = await gateway.send_prompt(999, prompt_text, mcq_keyboard)
+        assert msg_id is not None
+
+        await db.record_outbound_signal(
+            message_id=msg_id,
+            chat_id=999,
+            trigger_id="trig_mcq",
+            sent_at=now,
+            timeout_at=now + timedelta(minutes=45),
+        )
+
+        # Step 1: User picks option A (correct)
+        pick_ok = await dispatcher.handle_callback_str("fsrs_pick:mcq1:0", chat_id=999, message_id=msg_id)
+        assert pick_ok is True
+        # Verify message was updated with struggle buttons
+        dry_msg = gateway._dry_run_messages[msg_id]
+        assert "🎯 *Correct!*" in dry_msg["text"]
+        assert dry_msg["keyboard"][0][0]["callback_data"] == "fsrs_rate:mcq1:4"
+
+        # Step 2: User rates struggle (e.g. Confident / Good = 3)
+        rate_ok = await dispatcher.handle_callback_str("fsrs_rate:mcq1:3", chat_id=999, message_id=msg_id)
+        assert rate_ok is True
+        updated_mcq = await db.get_card("mcq1")
+        assert updated_mcq["reps"] == 1
+        assert "✅ *Recall Logged*" in gateway._dry_run_messages[msg_id]["text"]
+        assert gateway._dry_run_messages[msg_id]["keyboard"] == []
+
         await db.close()
 
 

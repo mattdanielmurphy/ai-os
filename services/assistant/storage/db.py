@@ -53,6 +53,8 @@ class AssistantDB:
                 prompt TEXT NOT NULL,
                 answer TEXT NOT NULL,
                 elaboration TEXT NOT NULL,           -- 1-sentence novel context / application
+                options TEXT,                        -- JSON string array of multiple choice options
+                correct_index INTEGER DEFAULT 0,     -- Index of the correct choice
                 stability REAL NOT NULL,
                 difficulty REAL NOT NULL,
                 reps INTEGER NOT NULL,
@@ -94,6 +96,16 @@ class AssistantDB:
         ]
         for q in queries:
             await self._conn.execute(q)
+        
+        # Migrations for existing databases
+        try:
+            await self._conn.execute("ALTER TABLE fsrs_cards ADD COLUMN options TEXT")
+        except Exception:
+            pass
+        try:
+            await self._conn.execute("ALTER TABLE fsrs_cards ADD COLUMN correct_index INTEGER DEFAULT 0")
+        except Exception:
+            pass
         await self._conn.commit()
 
     # -------------------------------------------------------------------------
@@ -215,19 +227,23 @@ class AssistantDB:
         state: int,
         due_at: datetime,
         last_review: Optional[datetime] = None,
+        options: Optional[str] = None,
+        correct_index: int = 0,
     ) -> None:
         assert self._conn is not None
         await self._conn.execute(
             """
             INSERT INTO fsrs_cards (
-                card_id, deck_type, prompt, answer, elaboration,
+                card_id, deck_type, prompt, answer, elaboration, options, correct_index,
                 stability, difficulty, reps, lapses, state, last_review, due_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(card_id) DO UPDATE SET
                 deck_type=excluded.deck_type,
                 prompt=excluded.prompt,
                 answer=excluded.answer,
                 elaboration=excluded.elaboration,
+                options=excluded.options,
+                correct_index=excluded.correct_index,
                 stability=excluded.stability,
                 difficulty=excluded.difficulty,
                 reps=excluded.reps,
@@ -242,6 +258,8 @@ class AssistantDB:
                 prompt,
                 answer,
                 elaboration,
+                options,
+                correct_index,
                 stability,
                 difficulty,
                 reps,
