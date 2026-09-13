@@ -252,3 +252,61 @@ class TelegramGateway:
             except Exception as e2:
                 logger.error(f"Failed to edit Telegram message {message_id}: {e2}")
                 return False
+
+    async def edit_message(
+        self,
+        chat_id: int,
+        message_id: int,
+        text: str,
+        parse_mode: str = ParseMode.HTML,
+    ) -> bool:
+        """
+        Edits a previously sent message in place with new text, handling chunking and plain-text fallback.
+        If content exceeds 4000 characters, edits message_id with chunk 0 and sends remaining chunks.
+        """
+        if not self.config.is_telegram_ready() or not self.app:
+            if message_id in self._dry_run_messages:
+                self._dry_run_messages[message_id]["text"] = text
+                logger.info(f"[DRY-RUN] Edited Message (id={message_id}):\n{text}")
+                return True
+            return False
+
+        chunks = split_message_chunks(text, max_chars=4000)
+        first_chunk = chunks[0] if chunks else ""
+        formatted_first = (
+            markdown_to_telegram_html(first_chunk) if parse_mode == ParseMode.HTML else first_chunk
+        )
+
+        success = False
+        try:
+            await self.app.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=formatted_first,
+                parse_mode=parse_mode,
+            )
+            logger.info(f"Edited Telegram message (msg_id={message_id})")
+            success = True
+        except Exception as e:
+            logger.warning(
+                f"Failed to edit Telegram message {message_id} with HTML ({e}). Retrying plain text..."
+            )
+            try:
+                await self.app.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=first_chunk,
+                )
+                logger.info(f"Edited Telegram message with plain text fallback (msg_id={message_id})")
+                success = True
+            except Exception as e2:
+                logger.error(f"Failed to edit Telegram message {message_id}: {e2}")
+                # If editing failed, send message afresh
+                await self.send_message(chat_id, first_chunk, parse_mode=parse_mode)
+
+        if len(chunks) > 1:
+            for extra_chunk in chunks[1:]:
+                await self.send_message(chat_id, extra_chunk, parse_mode=parse_mode)
+
+        return success
+
