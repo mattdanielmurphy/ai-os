@@ -575,8 +575,19 @@ async function main() {
             recoverMode = true;
         } else if (arg === '--ui' || arg === '--prompt-only') {
             uiOnly = true;
-        } else if (!message && !arg.startsWith('-')) {
-            message = arg;
+        } else if (arg === '--prompt' || arg === '--message') {
+            message = args[++i];
+        } else if (arg === '--') {
+            const remaining = args.slice(i + 1);
+            if (remaining.length > 0 && !message) {
+                message = remaining.join(' ');
+            }
+            break;
+        } else if (!message) {
+            // Positional message (accept even if leading with '-' as long as it has spaces/newlines or isn't a flag)
+            if (!arg.startsWith('-') || arg.includes(' ') || arg.includes('\n')) {
+                message = arg;
+            }
         }
     }
 

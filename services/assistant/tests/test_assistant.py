@@ -619,7 +619,12 @@ def test_telegram_html_formatter():
     assert res_snake == "variable_name_with_multiple_underscores"
     assert "<i>" not in res_snake
 
-    # 5. Message chunking
+    # 5. Italic wrapping inline code
+    italic_code = "_Location: `Inbox/Quick Capture.md`_"
+    res_ic = markdown_to_telegram_html(italic_code)
+    assert res_ic == "<i>Location: <code>Inbox/Quick Capture.md</code></i>"
+
+    # 6. Message chunking
     long_text = ("This is a paragraph.\n\n" * 250)
     chunks = split_message_chunks(long_text, max_chars=4000)
     assert len(chunks) > 1

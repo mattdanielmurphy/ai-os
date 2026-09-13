@@ -53,7 +53,7 @@ def markdown_to_telegram_html(text: str) -> str:
 
     def save_placeholder(val: str) -> str:
         idx = len(placeholders)
-        key = f"\x00TGH_{idx}\x00"
+        key = f"\x00TGHX{idx}X\x00"
         placeholders.append(val)
         return key
 
@@ -142,7 +142,7 @@ def markdown_to_telegram_html(text: str) -> str:
 
     # 14. Restore placeholders in reverse order
     for idx in range(len(placeholders) - 1, -1, -1):
-        key = f"\x00TGH_{idx}\x00"
+        key = f"\x00TGHX{idx}X\x00"
         text = text.replace(key, placeholders[idx])
 
     return text
