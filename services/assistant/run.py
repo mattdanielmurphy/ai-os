@@ -10,18 +10,23 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-from .config import AssistantConfig
-from .context_gate.calendar import CalendarProbe
-from .context_gate.evaluator import ContextGateEvaluator
-from .context_gate.focus_mode import FocusModeProbe
-from .habit_bridge.logger import HabitLogger, format_habit_prompt
-from .habit_bridge.parser import HabitParser
-from .spaced_repetition.cards import format_review_prompt
-from .spaced_repetition.engine import FSRSEngine
-from .storage.db import AssistantDB
-from .telegram_gateway.bot import TelegramGateway
-from .telegram_gateway.handlers import ActionDispatcher, register_handlers
-from .telegram_gateway.silence import AwakeSilenceWatchdog
+# Ensure project root is in sys.path for direct execution
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from services.assistant.config import AssistantConfig
+from services.assistant.context_gate.calendar import CalendarProbe
+from services.assistant.context_gate.evaluator import ContextGateEvaluator
+from services.assistant.context_gate.focus_mode import FocusModeProbe
+from services.assistant.habit_bridge.logger import HabitLogger, format_habit_prompt
+from services.assistant.habit_bridge.parser import HabitParser
+from services.assistant.spaced_repetition.cards import format_review_prompt
+from services.assistant.spaced_repetition.engine import FSRSEngine
+from services.assistant.storage.db import AssistantDB
+from services.assistant.telegram_gateway.bot import TelegramGateway
+from services.assistant.telegram_gateway.handlers import ActionDispatcher, register_handlers
+from services.assistant.telegram_gateway.silence import AwakeSilenceWatchdog
 
 logging.basicConfig(
     level=logging.INFO,
