@@ -22,10 +22,14 @@ const PPLX_MODEL_MAP = {
     'gpt5': 'gpt56_terra_thinking',
     'terra': 'gpt56_terra_thinking',
     'gpt56_terra_thinking': 'gpt56_terra_thinking',
-    'gemini': 'gemini37flashthinking',
+    'gemini': 'gemini38flashthinking',
+    'gemini-3.8': 'gemini38flashthinking',
     'gemini-3.7': 'gemini37flashthinking',
-    'flash-thinking': 'gemini37flashthinking',
+    'gemini-3.6': 'gemini36flashthinking',
+    'flash-thinking': 'gemini38flashthinking',
+    'gemini38flashthinking': 'gemini38flashthinking',
     'gemini37flashthinking': 'gemini37flashthinking',
+    'gemini36flashthinking': 'gemini36flashthinking',
     'glm': 'glm_5_2',
     'glm-5': 'glm_5_2',
     'glm5': 'glm_5_2',
@@ -583,7 +587,14 @@ async function main() {
         agThreadOverride
     });
 
-    const THINKING_MODELS = ['grok', 'grok-thinking', 'grok_thinking', 'grok-2', 'grok46medium', 'sonnet', 'claude50sonnetthinking', 'gemini', 'gemini-3.7', 'flash-thinking', 'gemini37flashthinking', 'kimi', 'k3', 'kimik3thinking', 'gpt', 'gpt5', 'terra', 'gpt56_terra_thinking', 'glm', 'glm-5', 'glm5', 'glm_5_2'];
+    const THINKING_MODELS = [
+        'grok', 'grok-thinking', 'grok_thinking', 'grok-2', 'grok46medium',
+        'sonnet', 'claude50sonnetthinking',
+        'gemini', 'gemini-3.8', 'gemini38flashthinking', 'gemini-3.7', 'gemini37flashthinking', 'gemini-3.6', 'gemini36flashthinking', 'flash-thinking',
+        'kimi', 'k3', 'kimik3thinking',
+        'gpt', 'gpt5', 'terra', 'gpt56_terra_thinking',
+        'glm', 'glm-5', 'glm5', 'glm_5_2'
+    ];
     const isThinkingModel = THINKING_MODELS.includes(rawModel) || isPlanMode;
     const minAllowedTimeout = isThinkingModel ? 300 : 120;
     const defaultTimeout = isThinkingModel ? 600 : 300;

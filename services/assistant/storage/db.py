@@ -92,6 +92,18 @@ class AssistantDB:
                 value TEXT NOT NULL,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id INTEGER NOT NULL,
+                role TEXT NOT NULL,          -- 'user', 'assistant'
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_chat_history_chat_id ON chat_history(chat_id, id);
             """
         ]
         for q in queries:
@@ -405,3 +417,48 @@ class AssistantDB:
             (key, value),
         )
         await self._conn.commit()
+
+    # -------------------------------------------------------------------------
+    # Chat History (Multi-Turn Conversational Memory)
+    # -------------------------------------------------------------------------
+    async def add_chat_message(self, chat_id: int, role: str, content: str) -> int:
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            INSERT INTO chat_history (chat_id, role, content)
+            VALUES (?, ?, ?)
+            """,
+            (chat_id, role, content),
+        )
+        await self._conn.commit()
+        return cursor.lastrowid or 0
+
+    async def get_recent_chat_history(
+        self, chat_id: int, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT id, chat_id, role, content, created_at
+            FROM chat_history
+            WHERE chat_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (chat_id, limit),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in reversed(rows)]
+
+    async def clear_chat_history(self, chat_id: int) -> int:
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            DELETE FROM chat_history
+            WHERE chat_id = ?
+            """,
+            (chat_id,),
+        )
+        await self._conn.commit()
+        return cursor.rowcount
+
