@@ -6,5 +6,7 @@ target/
 .agy-mcp/
 tmp/
 .venv/
+.env
+.env.*
 **/__pycache__/
 *.pyc

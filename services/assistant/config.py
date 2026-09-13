@@ -1,9 +1,17 @@
-"""Configuration for the Proactive Executive Assistant Service."""
-
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+try:
+    from dotenv import load_dotenv
+    # Load from centralized ~/.hermes/.env and project root .env
+    load_dotenv(Path.home() / ".hermes" / ".env")
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+    load_dotenv(Path.cwd() / ".env")
+except ImportError:
+    pass
 
 
 @dataclass
