@@ -51,9 +51,9 @@ def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> s
 
     history_block = "\n\n".join(history_lines)
     return (
-        f"--- Prior Conversation Context ---\n"
+        f"[Prior Conversation Context]\n"
         f"{history_block}\n"
-        f"--- End Prior Context ---\n\n"
+        f"[End Prior Context]\n\n"
         f"User's Latest Message: {prompt}\n\n"
         f"Please respond directly to the user's latest message above, maintaining continuous context from the prior conversation history."
     )
@@ -426,10 +426,10 @@ class ActionDispatcher:
             cmd = [
                 "node",
                 os.path.expanduser("~/projects/ai-os/scripts/query_aios.js"),
-                prompt,
+                "--prompt", prompt,
                 "--provider", "perplexity",
                 "--model", "gemini",
-                "--timeout", "120",
+                "--timeout", "300",
             ]
             if chat_id:
                 cmd.extend(["--thread", f"telegram_chat_{chat_id}"])
@@ -440,7 +440,7 @@ class ActionDispatcher:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=125.0)
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=310.0)
                 output = stdout.decode("utf-8", errors="replace")
 
                 if "--------------------------------------------------------------------------------" in output:
@@ -451,7 +451,7 @@ class ActionDispatcher:
                 return output.strip() if output.strip() else None
             except asyncio.TimeoutError:
                 proc.kill()
-                logger.warning("AI-OS query timed out after 125s")
+                logger.warning("AI-OS query timed out after 310s")
                 return None
         except Exception as e:
             logger.error(f"Error querying AI-OS from assistant: {e}")
@@ -559,8 +559,13 @@ class ActionDispatcher:
             await self.gateway.send_message(chat_id, aios_reply)
             return True
 
-        # Fallback: Save to Obsidian Inbox
-        return await self.cmd_capture(clean_text, chat_id)
+        # Inform user of query failure rather than dumping into Obsidian Inbox
+        await self.gateway.send_message(
+            chat_id,
+            "⚠️ <i>Unable to get a response from AI-OS companion server right now.</i>\n\n"
+            "Please verify the AI-OS server is active (<code>la status aios-server</code>) and try again.",
+        )
+        return False
 
 
 def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) -> None:
