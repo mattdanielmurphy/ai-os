@@ -10,6 +10,10 @@ from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, 
 
 from ..config import AssistantConfig
 
+# Silence httpx URL requests so Telegram bot token in endpoint URL is never logged
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 logger = logging.getLogger("assistant.telegram_gateway.bot")
 
 
