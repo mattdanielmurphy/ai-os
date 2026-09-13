@@ -338,7 +338,7 @@
         var sessionToken = _getSessionToken();
         var frontendUuid = _uuid();
 
-        var modelPref = 'grok46medium';
+        var modelPref = 'gemini38flashthinking';
         if (engine === 'sonar' || engine === 'turbo') {
             modelPref = 'turbo';
         } else if (engine === 'grok' || engine === 'grok-2' || engine === 'grok46medium' || engine === 'grok-thinking' || engine === 'grok_thinking') {
@@ -349,8 +349,12 @@
             modelPref = 'kimik3thinking';
         } else if (engine === 'gpt' || engine === 'gpt5' || engine === 'terra' || engine === 'gpt56_terra_thinking') {
             modelPref = 'gpt56_terra_thinking';
-        } else if (engine === 'gemini' || engine === 'gemini-3.7' || engine === 'flash-thinking' || engine === 'gemini37flashthinking') {
+        } else if (engine === 'gemini' || engine === 'gemini-3.8' || engine === 'flash-thinking' || engine === 'gemini38flashthinking') {
+            modelPref = 'gemini38flashthinking';
+        } else if (engine === 'gemini-3.7' || engine === 'gemini37flashthinking') {
             modelPref = 'gemini37flashthinking';
+        } else if (engine === 'gemini-3.6' || engine === 'gemini36flashthinking') {
+            modelPref = 'gemini36flashthinking';
         } else if (engine === 'glm' || engine === 'glm-5' || engine === 'glm5' || engine === 'glm_5_2') {
             modelPref = 'glm_5_2';
         } else if (engine && engine !== 'auto') {

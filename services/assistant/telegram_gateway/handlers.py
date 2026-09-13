@@ -32,6 +32,33 @@ from .bot import TelegramGateway
 logger = logging.getLogger("assistant.telegram_gateway.handlers")
 
 
+def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> str:
+    """
+    Constructs a contextual prompt including prior conversation turns,
+    ensuring that references like 'Send that markdown again' or 'What about X?'
+    have full context even across session restarts or long pauses.
+    """
+    if not history:
+        return prompt
+
+    history_lines = []
+    for msg in history:
+        role = "User" if msg.get("role") == "user" else "Assistant"
+        content = msg.get("content", "").strip()
+        if len(content) > 2000:
+            content = content[:2000] + "... [truncated for length]"
+        history_lines.append(f"{role}: {content}")
+
+    history_block = "\n\n".join(history_lines)
+    return (
+        f"--- Prior Conversation Context ---\n"
+        f"{history_block}\n"
+        f"--- End Prior Context ---\n\n"
+        f"User's Latest Message: {prompt}\n\n"
+        f"Please respond directly to the user's latest message above, maintaining continuous context from the prior conversation history."
+    )
+
+
 class ActionDispatcher:
     def __init__(
         self,
@@ -183,6 +210,7 @@ class ActionDispatcher:
             "• `/quiz` or `/review` — Start an immediate spaced repetition quiz\n"
             "• `/status` — View active triggers, due cards, and gate status\n"
             "• `/habits` — View today's habit check-ins\n"
+            "• `/reset` or `/clear` — Reset conversation context and memory\n"
             "• `/note <text>` — Quick capture note directly to Obsidian Inbox\n"
             "• `/remind <text>` — Add timed reminder to Apple Reminders\n\n"
             "_Tip: You can reply directly to quizzes with A, B, C, D in text, or ask me any question!_"
@@ -367,21 +395,52 @@ class ActionDispatcher:
         # Fallback to Obsidian inbox if apple-reminders fails
         return await self.cmd_capture(f"Reminder: {title}", chat_id)
 
-    async def _query_aios(self, prompt: str) -> Optional[str]:
+    async def cmd_reset(self, chat_id: int) -> bool:
+        await self.db.clear_chat_history(chat_id)
+        try:
+            cmd = [
+                "node",
+                os.path.expanduser("~/projects/ai-os/scripts/query_aios.js"),
+                "New conversation started. Reset context.",
+                "--thread", f"telegram_chat_{chat_id}",
+                "--new-thread",
+                "--timeout", "30",
+            ]
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.wait(), timeout=10.0)
+        except Exception:
+            pass
+
+        await self.gateway.send_message(
+            chat_id,
+            "🧹 *Conversation Context Cleared*\n\nStarted a fresh conversation session with Gemini Flash Thinking.",
+        )
+        return True
+
+    async def _query_aios(self, prompt: str, chat_id: Optional[int] = None) -> Optional[str]:
         try:
             cmd = [
                 "node",
                 os.path.expanduser("~/projects/ai-os/scripts/query_aios.js"),
                 prompt,
-                "--timeout", "25",
+                "--provider", "perplexity",
+                "--model", "gemini",
+                "--timeout", "120",
             ]
+            if chat_id:
+                cmd.extend(["--thread", f"telegram_chat_{chat_id}"])
+
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=125.0)
                 output = stdout.decode("utf-8", errors="replace")
 
                 if "--------------------------------------------------------------------------------" in output:
@@ -392,7 +451,7 @@ class ActionDispatcher:
                 return output.strip() if output.strip() else None
             except asyncio.TimeoutError:
                 proc.kill()
-                logger.warning("AI-OS query timed out after 30s")
+                logger.warning("AI-OS query timed out after 125s")
                 return None
         except Exception as e:
             logger.error(f"Error querying AI-OS from assistant: {e}")
@@ -470,6 +529,8 @@ class ActionDispatcher:
             return await self.cmd_habits(chat_id)
         elif lower_text in ("help", "start"):
             return await self.cmd_help(chat_id)
+        elif lower_text in ("reset", "clear", "new chat", "forget"):
+            return await self.cmd_reset(chat_id)
 
         # 3. Check for reminders (Apple Reminders protocol)
         if re.match(r"^(remind me to |remind me |todo:\s*|remember to )", lower_text):
@@ -481,10 +542,20 @@ class ActionDispatcher:
             note = re.sub(r"^(note:\s*|capture:\s*|idea:\s*)", "", clean_text, flags=re.IGNORECASE).strip()
             return await self.cmd_capture(note, chat_id)
 
-        # 5. Conversational Assistant via AI-OS
+        # 5. Conversational Assistant via AI-OS (with multi-turn history & thread continuity)
         await self.gateway.send_chat_action(chat_id, "typing")
-        aios_reply = await self._query_aios(clean_text)
+
+        # Hydrate recent history before recording current message
+        recent_history = await self.db.get_recent_chat_history(chat_id, limit=8)
+        augmented_prompt = build_conversational_prompt(clean_text, recent_history)
+
+        # Record incoming user message in DB
+        await self.db.add_chat_message(chat_id, "user", clean_text)
+
+        aios_reply = await self._query_aios(augmented_prompt, chat_id=chat_id)
         if aios_reply:
+            # Record outgoing assistant response in DB
+            await self.db.add_chat_message(chat_id, "assistant", aios_reply)
             await self.gateway.send_message(chat_id, aios_reply)
             return True
 
@@ -525,6 +596,10 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
         chat_id = update.effective_chat.id if update.effective_chat else 0
         await dispatcher.cmd_habits(chat_id)
 
+    async def telegram_reset_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await dispatcher.cmd_reset(chat_id)
+
     async def telegram_capture_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id if update.effective_chat else 0
         text = " ".join(context.args) if context.args else ""
@@ -554,6 +629,8 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
     gateway.add_handler(CommandHandler(["status", "info"], telegram_status_handler))
     gateway.add_handler(CommandHandler(["quiz", "review"], telegram_quiz_handler))
     gateway.add_handler(CommandHandler(["habits", "habit"], telegram_habits_handler))
+    gateway.add_handler(CommandHandler(["reset", "clear", "new"], telegram_reset_handler))
     gateway.add_handler(CommandHandler(["capture", "note"], telegram_capture_handler))
     gateway.add_handler(CommandHandler(["remind", "todo"], telegram_remind_handler))
     gateway.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, telegram_text_handler))
+
