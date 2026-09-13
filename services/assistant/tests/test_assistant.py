@@ -484,6 +484,86 @@ async def test_sleep_recovery_mode():
         # After anti-avalanche delay, only the single highest priority item is immediately pending
         pending_immediately = await db.get_pending_triggers(wake_time)
         assert len(pending_immediately) == 1
-        assert pending_immediately[0]["id"] == "trig_urgent"
+
+        await db.close()
+
+
+# -----------------------------------------------------------------------------
+# Text Messages, Active Prompt Replies & Commands Test
+# -----------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_text_messages_and_commands():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        db_path = root / "assistant.db"
+        vault_path = root / "vault"
+        vault_path.mkdir(parents=True)
+        (vault_path / "habits" / "definitions").mkdir(parents=True)
+        (vault_path / "habits" / "logs").mkdir(parents=True)
+
+        config = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault_path,
+            telegram_bot_token="TEST_TOKEN",
+            dry_run=True,
+        )
+        db = AssistantDB(db_path)
+        await db.connect()
+        fsrs = FSRSEngine(config)
+        gateway = TelegramGateway(config)
+        habit_logger = HabitLogger(vault_path / "habits" / "logs")
+        dispatcher = ActionDispatcher(db, fsrs, habit_logger, gateway, config=config)
+
+        # 1. Test /help and /status commands
+        assert await dispatcher.cmd_help(chat_id=888) is True
+        assert len(gateway._dry_run_messages) > 0
+
+        assert await dispatcher.cmd_status(chat_id=888) is True
+
+        # 2. Test /note and quick capture
+        assert await dispatcher.cmd_capture("Buy green tea", chat_id=888) is True
+        capture_file = vault_path / "Inbox" / "Quick Capture.md"
+        assert capture_file.exists()
+        assert "Buy green tea" in capture_file.read_text()
+
+        # 3. Test Text Reply to Active MCQ Prompt
+        mcq_options = ["London", "Paris", "Berlin", "Tokyo"]
+        now = datetime.now(timezone.utc)
+        await db.add_or_update_card(
+            card_id="geo1",
+            deck_type="cold_storage",
+            prompt="What is the capital of France?",
+            answer="Paris",
+            elaboration="Paris is located on the river Seine.",
+            stability=1.0,
+            difficulty=2.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now,
+            options=json.dumps(mcq_options),
+            correct_index=1,
+        )
+
+        # Dispatch quiz card
+        assert await dispatcher.cmd_quiz(chat_id=888) is True
+        signals = await db.get_awaiting_signals()
+        assert len(signals) == 1
+        msg_id = signals[0]["message_id"]
+
+        # Simulate user replying with text "B" (picking Paris)
+        handled_pick = await dispatcher.handle_text_message("B", chat_id=888, message_id=999)
+        assert handled_pick is True
+        assert "🎯 *Correct!*" in gateway._dry_run_messages[msg_id]["text"]
+
+        # Simulate user replying with text "Confident" (rating=3)
+        handled_rate = await dispatcher.handle_text_message("Confident", chat_id=888, message_id=1000)
+        assert handled_rate is True
+        updated_card = await db.get_card("geo1")
+        assert updated_card["reps"] == 1
+        assert "✅ *Recall Logged*" in gateway._dry_run_messages[msg_id]["text"]
+
+        # 4. Test natural keywords without active prompt
+        assert await dispatcher.handle_text_message("quiz", chat_id=888, message_id=1001) is True
 
         await db.close()

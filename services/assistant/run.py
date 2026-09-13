@@ -54,7 +54,12 @@ class AssistantDaemon:
         self.habit_logger = HabitLogger(self.config.habits_logs_dir)
         self.gateway = TelegramGateway(self.config)
         self.dispatcher = ActionDispatcher(
-            self.db, self.fsrs_engine, self.habit_logger, self.gateway
+            self.db,
+            self.fsrs_engine,
+            self.habit_logger,
+            self.gateway,
+            config=self.config,
+            habit_parser=self.habit_parser,
         )
         self.silence_watchdog = AwakeSilenceWatchdog(self.config, self.db, self.gateway)
         self._running = False

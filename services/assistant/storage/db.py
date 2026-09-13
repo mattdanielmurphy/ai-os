@@ -294,6 +294,12 @@ class AssistantDB:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
+    async def get_any_card(self) -> Optional[Dict[str, Any]]:
+        assert self._conn is not None
+        cursor = await self._conn.execute("SELECT * FROM fsrs_cards ORDER BY due_at ASC LIMIT 1")
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
     async def log_fsrs_review(
         self,
         log_id: str,
