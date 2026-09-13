@@ -8,7 +8,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from ..habit_bridge.logger import HabitLogger, format_habit_completed
-from ..spaced_repetition.cards import format_review_completed
+from ..spaced_repetition.cards import format_feedback_prompt, format_review_completed
 from ..spaced_repetition.engine import FSRSEngine
 from ..storage.db import AssistantDB
 from .bot import TelegramGateway
@@ -38,10 +38,15 @@ class ActionDispatcher:
         parts = callback_data.split(":")
         action_type = parts[0]
 
-        if action_type == "fsrs" and len(parts) >= 3:
+        if action_type in ("fsrs", "fsrs_rate") and len(parts) >= 3:
             card_id = parts[1]
             rating_val = int(parts[2])
             return await self._handle_fsrs(card_id, rating_val, chat_id, message_id)
+
+        elif action_type == "fsrs_pick" and len(parts) >= 3:
+            card_id = parts[1]
+            chosen_idx = int(parts[2])
+            return await self._handle_fsrs_pick(card_id, chosen_idx, chat_id, message_id)
 
         elif action_type == "habit" and len(parts) >= 3:
             habit_name = parts[1]
@@ -50,6 +55,24 @@ class ActionDispatcher:
 
         logger.warning(f"Unknown callback query format: {callback_data}")
         return False
+
+    async def _handle_fsrs_pick(
+        self, card_id: str, chosen_idx: int, chat_id: int, message_id: int
+    ) -> bool:
+        card = await self.db.get_card(card_id)
+        if not card:
+            logger.warning(f"FSRS pick received for unknown card {card_id}")
+            return False
+
+        feedback_text, struggle_keyboard = format_feedback_prompt(card, chosen_idx)
+        await self.gateway.edit_prompt(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=feedback_text,
+            remove_keyboard=False,
+            keyboard_rows=struggle_keyboard,
+        )
+        return True
 
     async def _handle_fsrs(
         self, card_id: str, rating_val: int, chat_id: int, message_id: int

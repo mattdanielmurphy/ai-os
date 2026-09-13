@@ -109,23 +109,36 @@ class TelegramGateway:
         message_id: int,
         text: str,
         remove_keyboard: bool = True,
+        keyboard_rows: Optional[List[List[Dict[str, str]]]] = None,
         parse_mode: str = ParseMode.MARKDOWN,
     ) -> bool:
         """
-        Edits a previously sent message in place (e.g. progressive elaboration or mute on timeout).
+        Edits a previously sent message in place (e.g. progressive elaboration, transition to struggle rating, or mute).
         """
         if not self.config.is_telegram_ready() or not self.app:
             # Dry-run mode simulation
             if message_id in self._dry_run_messages:
                 self._dry_run_messages[message_id]["text"] = text
-                if remove_keyboard:
+                if keyboard_rows is not None:
+                    self._dry_run_messages[message_id]["keyboard"] = keyboard_rows
+                elif remove_keyboard:
                     self._dry_run_messages[message_id]["keyboard"] = []
                 logger.info(f"[DRY-RUN] Edited Prompt (id={message_id}):\n{text}")
                 return True
             return False
 
         try:
-            reply_markup = None if remove_keyboard else None
+            reply_markup = None
+            if keyboard_rows is not None:
+                keyboard = []
+                for row in keyboard_rows:
+                    btn_row = [
+                        InlineKeyboardButton(text=btn["text"], callback_data=btn["callback_data"])
+                        for btn in row
+                    ]
+                    keyboard.append(btn_row)
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
             await self.app.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
