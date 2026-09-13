@@ -567,3 +567,61 @@ async def test_text_messages_and_commands():
         assert await dispatcher.handle_text_message("quiz", chat_id=888, message_id=1001) is True
 
         await db.close()
+
+
+# -----------------------------------------------------------------------------
+# Telegram HTML Formatter Tests
+# -----------------------------------------------------------------------------
+def test_telegram_html_formatter():
+    from services.assistant.telegram_gateway.formatter import (
+        markdown_to_telegram_html,
+        split_message_chunks,
+    )
+
+    # 1. Bold, Italic, Headers, Bullets, Blockquotes
+    md = (
+        "# Title Header\n\n"
+        "**Double Bold** and *Single Bold*.\n"
+        "_Italic note_ with `inline_code_variable`.\n\n"
+        "> An insightful quote\n\n"
+        "- Point A\n"
+        "- Point B\n\n"
+        "Check [Link](https://example.com) and ~~strike~~ and ||spoiler||."
+    )
+    res = markdown_to_telegram_html(md)
+    assert "<b>Title Header</b>" in res
+    assert "<b>Double Bold</b>" in res
+    assert "<b>Single Bold</b>" in res
+    assert "<i>Italic note</i>" in res
+    assert "<code>inline_code_variable</code>" in res
+    assert "<blockquote>An insightful quote</blockquote>" in res
+    assert "• Point A" in res
+    assert '<a href="https://example.com">Link</a>' in res
+    assert "<s>strike</s>" in res
+    assert "<tg-spoiler>spoiler</tg-spoiler>" in res
+
+    # 2. Safety: special characters (<, >, &) outside formatting
+    raw_math = "If x < 5 and y > 10 & z != 0: `test <code & tag>`"
+    res_math = markdown_to_telegram_html(raw_math)
+    assert "&lt;" in res_math
+    assert "&gt;" in res_math
+    assert "&amp;" in res_math
+    assert "<code>test &lt;code &amp; tag&gt;</code>" in res_math
+
+    # 3. Code block with language highlighting
+    fenced = "```python\ndef test():\n    return 42\n```"
+    res_fenced = markdown_to_telegram_html(fenced)
+    assert '<pre><code class="language-python">def test():\n    return 42\n</code></pre>' in res_fenced
+
+    # 4. snake_case should NOT be converted to italics
+    snake = "variable_name_with_multiple_underscores"
+    res_snake = markdown_to_telegram_html(snake)
+    assert res_snake == "variable_name_with_multiple_underscores"
+    assert "<i>" not in res_snake
+
+    # 5. Message chunking
+    long_text = ("This is a paragraph.\n\n" * 250)
+    chunks = split_message_chunks(long_text, max_chars=4000)
+    assert len(chunks) > 1
+    assert all(len(c) <= 4000 for c in chunks)
+

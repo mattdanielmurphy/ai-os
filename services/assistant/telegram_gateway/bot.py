@@ -14,6 +14,8 @@ from ..config import AssistantConfig
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
+from .formatter import markdown_to_telegram_html, split_message_chunks
+
 logger = logging.getLogger("assistant.telegram_gateway.bot")
 
 
@@ -72,10 +74,11 @@ class TelegramGateway:
         chat_id: int,
         text: str,
         keyboard_rows: Optional[List[List[Dict[str, str]]]] = None,
-        parse_mode: str = ParseMode.MARKDOWN,
+        parse_mode: str = ParseMode.HTML,
     ) -> Optional[int]:
         """
-        Sends a standard or interactive message to a chat.
+        Sends a standard or interactive message to a chat, formatted as HTML by default.
+        Automatically converts Markdown to Telegram HTML and handles long messages.
         """
         if keyboard_rows:
             return await self.send_prompt(chat_id, text, keyboard_rows, parse_mode=parse_mode)
@@ -92,37 +95,47 @@ class TelegramGateway:
             logger.info(f"[DRY-RUN] Sent Message (id={msg_id}) to chat {chat_id}:\n{text}")
             return msg_id
 
-        try:
-            message = await self.app.bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                parse_mode=parse_mode,
+        chunks = split_message_chunks(text, max_chars=4000)
+        last_msg_id: Optional[int] = None
+
+        for chunk in chunks:
+            formatted_text = (
+                markdown_to_telegram_html(chunk) if parse_mode == ParseMode.HTML else chunk
             )
-            logger.info(f"Sent message to Telegram (msg_id={message.message_id})")
-            return message.message_id
-        except Exception as e:
-            # Fallback to plain text if Markdown format error
             try:
                 message = await self.app.bot.send_message(
                     chat_id=chat_id,
-                    text=text,
+                    text=formatted_text,
+                    parse_mode=parse_mode,
                 )
-                return message.message_id
-            except Exception as e2:
-                logger.error(f"Failed to send Telegram message: {e2}")
-                return None
+                last_msg_id = message.message_id
+                logger.info(f"Sent message to Telegram (msg_id={message.message_id})")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to send formatted Telegram message ({e}). Retrying as plain text..."
+                )
+                try:
+                    message = await self.app.bot.send_message(
+                        chat_id=chat_id,
+                        text=chunk,
+                    )
+                    last_msg_id = message.message_id
+                    logger.info(f"Sent plain text fallback to Telegram (msg_id={message.message_id})")
+                except Exception as e2:
+                    logger.error(f"Failed to send Telegram message: {e2}")
+                    return None
+
+        return last_msg_id
 
     async def send_prompt(
         self,
         chat_id: int,
         text: str,
         keyboard_rows: List[List[Dict[str, str]]],
-        parse_mode: str = ParseMode.MARKDOWN,
+        parse_mode: str = ParseMode.HTML,
     ) -> Optional[int]:
         """
         Sends an interactive prompt with inline buttons.
-        Returns:
-            message_id (int) or None on failure.
         """
         if not self.config.is_telegram_ready() or not self.app:
             # Dry-run mode simulation
@@ -137,27 +150,42 @@ class TelegramGateway:
             logger.info(f"[DRY-RUN] Sent Prompt (id={msg_id}) to chat {chat_id}:\n{text}")
             return msg_id
 
-        try:
-            keyboard = []
-            for row in keyboard_rows:
-                btn_row = [
-                    InlineKeyboardButton(text=btn["text"], callback_data=btn["callback_data"])
-                    for btn in row
-                ]
-                keyboard.append(btn_row)
+        formatted_text = (
+            markdown_to_telegram_html(text) if parse_mode == ParseMode.HTML else text
+        )
 
-            reply_markup = InlineKeyboardMarkup(keyboard)
+        keyboard = []
+        for row in keyboard_rows:
+            btn_row = [
+                InlineKeyboardButton(text=btn["text"], callback_data=btn["callback_data"])
+                for btn in row
+            ]
+            keyboard.append(btn_row)
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
             message = await self.app.bot.send_message(
                 chat_id=chat_id,
-                text=text,
+                text=formatted_text,
                 parse_mode=parse_mode,
                 reply_markup=reply_markup,
             )
             logger.info(f"Sent prompt to Telegram (msg_id={message.message_id})")
             return message.message_id
         except Exception as e:
-            logger.error(f"Failed to send Telegram message: {e}")
-            return None
+            logger.warning(f"Failed to send HTML prompt ({e}). Retrying with plain text...")
+            try:
+                message = await self.app.bot.send_message(
+                    chat_id=chat_id,
+                    text=text,
+                    reply_markup=reply_markup,
+                )
+                logger.info(f"Sent plain prompt fallback to Telegram (msg_id={message.message_id})")
+                return message.message_id
+            except Exception as e2:
+                logger.error(f"Failed to send prompt to Telegram: {e2}")
+                return None
 
     async def edit_prompt(
         self,
@@ -166,7 +194,7 @@ class TelegramGateway:
         text: str,
         remove_keyboard: bool = True,
         keyboard_rows: Optional[List[List[Dict[str, str]]]] = None,
-        parse_mode: str = ParseMode.MARKDOWN,
+        parse_mode: str = ParseMode.HTML,
     ) -> bool:
         """
         Edits a previously sent message in place (e.g. progressive elaboration, transition to struggle rating, or mute).
@@ -183,27 +211,44 @@ class TelegramGateway:
                 return True
             return False
 
-        try:
-            reply_markup = None
-            if keyboard_rows is not None:
-                keyboard = []
-                for row in keyboard_rows:
-                    btn_row = [
-                        InlineKeyboardButton(text=btn["text"], callback_data=btn["callback_data"])
-                        for btn in row
-                    ]
-                    keyboard.append(btn_row)
-                reply_markup = InlineKeyboardMarkup(keyboard)
+        formatted_text = (
+            markdown_to_telegram_html(text) if parse_mode == ParseMode.HTML else text
+        )
 
+        reply_markup = None
+        if keyboard_rows is not None:
+            keyboard = []
+            for row in keyboard_rows:
+                btn_row = [
+                    InlineKeyboardButton(text=btn["text"], callback_data=btn["callback_data"])
+                    for btn in row
+                ]
+                keyboard.append(btn_row)
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
             await self.app.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text=text,
+                text=formatted_text,
                 parse_mode=parse_mode,
                 reply_markup=reply_markup,
             )
             logger.info(f"Edited Telegram message (msg_id={message_id})")
             return True
         except Exception as e:
-            logger.error(f"Failed to edit Telegram message {message_id}: {e}")
-            return False
+            logger.warning(
+                f"Failed to edit Telegram message {message_id} with HTML ({e}). Retrying plain text..."
+            )
+            try:
+                await self.app.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=text,
+                    reply_markup=reply_markup,
+                )
+                logger.info(f"Edited Telegram message with plain text fallback (msg_id={message_id})")
+                return True
+            except Exception as e2:
+                logger.error(f"Failed to edit Telegram message {message_id}: {e2}")
+                return False

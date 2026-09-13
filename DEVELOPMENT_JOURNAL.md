@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-13
+- **Telegram HTML Formatting & Markdown Converter (`services/assistant/telegram_gateway/`):** Migrated Telegram bot messages and interactive prompts to `ParseMode.HTML` with a dedicated `markdown_to_telegram_html` converter and `split_message_chunks` utility. Automatically transforms markdown headers, code blocks with syntax highlighting, bullet points, blockquotes, bold/italic (preserving snake_case variables), spoilers, and links into valid Telegram HTML entities, eliminating plain text fallback drops. [[log]](agent-logs/2026-09-13_11-48_telegram-html-formatting.md)
 - **Implement Proactive Executive Assistant Service (`services/assistant/`):** Built local-first executive assistant service managing FSRS spaced repetition (partitioned `cold_storage` vs `baby_facts`), Obsidian habit tracking (`Habits Design.md`), and Telegram micro-interventions. Hardened with sleep-wake recovery (monotonic awake-time tracking only, eliminating false timeout traps when laptop sleeps) and a Context Gate (macOS EventKit calendar probe with +45m routine buffer, Shortcuts Focus Mode check, and empathetic silence backoff cooldowns). Built CLI management utility and achieved 100% pass rate across 7 unit and integration test suites. [[log]](agent-logs/2026-09-13_11-05_proactive-assistant-service.md)
 
 ## 2026-09-10
