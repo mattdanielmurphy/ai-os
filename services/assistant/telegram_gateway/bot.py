@@ -52,9 +52,65 @@ class TelegramGateway:
             self._is_running = False
             logger.info("Telegram Bot polling stopped.")
 
+    def add_handler(self, handler) -> None:
+        if self.app:
+            self.app.add_handler(handler)
+
     def add_callback_handler(self, handler_fn: Callable) -> None:
         if self.app:
             self.app.add_handler(CallbackQueryHandler(handler_fn))
+
+    async def send_chat_action(self, chat_id: int, action: str = "typing") -> None:
+        if self.config.is_telegram_ready() and self.app:
+            try:
+                await self.app.bot.send_chat_action(chat_id=chat_id, action=action)
+            except Exception as e:
+                logger.debug(f"Failed to send chat action: {e}")
+
+    async def send_message(
+        self,
+        chat_id: int,
+        text: str,
+        keyboard_rows: Optional[List[List[Dict[str, str]]]] = None,
+        parse_mode: str = ParseMode.MARKDOWN,
+    ) -> Optional[int]:
+        """
+        Sends a standard or interactive message to a chat.
+        """
+        if keyboard_rows:
+            return await self.send_prompt(chat_id, text, keyboard_rows, parse_mode=parse_mode)
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "text": text,
+                "keyboard": [],
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent Message (id={msg_id}) to chat {chat_id}:\n{text}")
+            return msg_id
+
+        try:
+            message = await self.app.bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                parse_mode=parse_mode,
+            )
+            logger.info(f"Sent message to Telegram (msg_id={message.message_id})")
+            return message.message_id
+        except Exception as e:
+            # Fallback to plain text if Markdown format error
+            try:
+                message = await self.app.bot.send_message(
+                    chat_id=chat_id,
+                    text=text,
+                )
+                return message.message_id
+            except Exception as e2:
+                logger.error(f"Failed to send Telegram message: {e2}")
+                return None
 
     async def send_prompt(
         self,
