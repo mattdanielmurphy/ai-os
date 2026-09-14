@@ -56,19 +56,37 @@ class SecretSanitizer:
             Path("/Users/matt/projects/ai-os"),
             Path("/Users/matt/.gemini"),
             Path("/Users/matt/.hermes"),
-            Path.cwd(),
         ]
+        cwd = Path.cwd()
+        if cwd.resolve() != Path.home().resolve() and cwd not in search_dirs:
+            search_dirs.append(cwd)
+
         if extra_dirs:
-            search_dirs.extend(extra_dirs)
+            for d in extra_dirs:
+                if d.resolve() != Path.home().resolve() and d not in search_dirs:
+                    search_dirs.append(d)
 
         seen_files = set()
+        ignored_dir_names = {"node_modules", ".git", "Library", "CloudStorage", "dist", "build", ".venv", "venv", ".cache"}
+
         for s_dir in search_dirs:
             if not s_dir.exists():
                 continue
-            for env_candidate in s_dir.glob("**/.env*"):
-                if env_candidate.is_file() and env_candidate not in seen_files:
-                    seen_files.add(env_candidate)
-                    self.register_env_file(env_candidate)
+            if s_dir.resolve() == Path.home().resolve():
+                for env_candidate in s_dir.glob(".env*"):
+                    if env_candidate.is_file() and env_candidate not in seen_files:
+                        seen_files.add(env_candidate)
+                        self.register_env_file(env_candidate)
+                continue
+
+            for root, dirs, files in os.walk(s_dir):
+                dirs[:] = [d for d in dirs if d not in ignored_dir_names]
+                for f in files:
+                    if f.startswith(".env"):
+                        env_candidate = Path(root) / f
+                        if env_candidate.is_file() and env_candidate not in seen_files:
+                            seen_files.add(env_candidate)
+                            self.register_env_file(env_candidate)
 
     def register_env_file(self, env_file_path: Path):
         """Loads secret values from an env file in-memory for exact string replacement."""
