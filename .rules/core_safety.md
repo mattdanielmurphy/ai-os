@@ -92,7 +92,7 @@
 
 # Zero-Tolerance Secret Isolation & Invariant
 - **Strict .env & Secret File Invariant**:
-  1. **Never Read Raw Secrets**: Agents MUST NEVER read, inspect, print, or output the raw contents of `.env`, `.env.*`, `*credentials*`, or private key files directly (e.g. NEVER run `cat .env`, `view_file` on `.env`, `grep` across `.env`, or dump raw keys to terminal/chat).
+  1. **Never Read Raw Secrets**: Agents MUST NEVER read, inspect, print, or output the raw contents of `.env`, `.env.*`, `*credentials*`, or private key files directly (e.g. NEVER execute terminal or file-viewing tools directly on secret files or dump raw keys to terminal/chat).
   2. **Safe Environment Tooling (`aios-env`)**: When checking whether an environment variable is set or verifying configuration, agents MUST ONLY use safe environment inspection tooling (`aios-env check --key <KEY>` or `aios-env list`), which reports key presence, type, and character length without revealing values.
   3. **Execution-Only Environment Ingestion**: In scripts and runtime commands, environment variables must be loaded directly into process memory (e.g. `dotenv`, `os.environ`, `process.env`) without emitting values to stdout, stderr, or transcript logs.
   4. **Preflight Staged Diff Secret Gate**: All commits must pass preflight secret sanitization. Staging raw secret keys or `.env` files immediately aborts the preflight check.

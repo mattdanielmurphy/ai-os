@@ -95,13 +95,14 @@ compaction:
 See the full design note:
 `~/projects/ai-os/agent-logs/2026-08-09_cache-aware-thread-handoff-design.md`
 
-## Cross-platform transcript sync (idea stage)
+## Cross-platform transcript sync & Gemini Archive
 
-Goal: recognize when Matt raises an issue he's discussed before, across all projects and platforms
-(Antigravity.app, Hermes, project forks), and pull the prior transcript. Proposed aggregation of
-Antigravity `brain/` transcripts + Hermes local session DB + per-project forks, matching incoming
-prompts against global history. Agent keeps a lightweight summary in context and digs into the full
-prior transcript only when a problem recurs.
+In addition to Antigravity turn logs, Matt's environment maintains full conversation sync across Gemini web and Hermes:
+
+- **Gemini Web Archive**: Markdown files stored under `~/Documents/gemini-archive/threads/gemini/` (and subfolders like `perplexity/`). Each file features YAML frontmatter (`source: "gemini.google.com"`, `source_url`, `conversation_id`, `archived_at`, `message_count`) with turns segmented by `<!-- gemini-message role=... -->`.
+- **Hermes DB Ingestion**: `scripts/ingest_gemini_archives.py` (and watcher daemon `gemini-ingest-watch.sh`) parses these threads into `~/.hermes/state.db` under `source = 'gemini-archive'`.
+- **Hammerspoon Search**: Triggered via `⌃⌘G` (`Ctrl + Cmd + G`) or `@gemini` / `@notes`, backed by `~/.hammerspoon/modules/gemini_thread_search.lua` querying `~/.hermes/state.db` (`source = 'gemini-archive'`) and Obsidian notes simultaneously.
+- **Antigravity Brain Summaries**: Antigravity session titles are cached in protobuf at `~/.gemini/antigravity/agyhub_summaries_proto.pb` (parsed via `load_pb_titles()` in `scripts/export_recent_threads.py`). Each brain directory in `~/.gemini/antigravity/brain/<conv-id>/` contains a rendered `thread.md`.
 
 ## Pitfalls
 

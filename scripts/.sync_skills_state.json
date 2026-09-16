@@ -71,7 +71,7 @@
   "mlops/inference/llama-cpp/references/server.md": 1783709248.79311,
   "creative/popular-web-designs/templates/sentry.md": 1783709248.777913,
   "creative/popular-web-designs/templates/stripe.md": 1783709248.7782657,
-  ".usage.json": 1789233337.1792815,
+  ".usage.json": 1789543804.659397,
   "creative/popular-web-designs/templates/x.ai.md": 1783709248.779536,
   ".curator_backups/2026-07-31T21-28-46Z/manifest.json": 1785533327.6685274,
   "comfyui/workflows/flux_dev_txt2img.json": 1785094409.9402525,
@@ -226,7 +226,7 @@
   "creative/popular-web-designs/templates/claude.md": 1783709248.7739809,
   "creative/comfyui/scripts/health_check.py": 1786326341.4388263,
   "creative/popular-web-designs/templates/ibm.md": 1783709248.7753742,
-  "ai-os/ai-os-conversation-logs/SKILL.md": 1786344231.2048588,
+  "ai-os/ai-os-conversation-logs/SKILL.md": 1789543202.470088,
   "custom-skills/docx/scripts/office/schemas/microsoft/wml-symex-2015.xsd": 1785094410.0418994,
   "custom-skills/docx/scripts/office/schemas/ISO-IEC29500-4_2016/vml-main.xsd": 1785094410.0561934,
   "p5js/scripts/setup.sh": 1786592662.5990915,
@@ -968,5 +968,7 @@
   "devops/sdlc-review/SKILL.md": 1786429133.5261102,
   ".curator_backups/2026-09-12T17-15-36Z/skills.tar.gz": 1789233337.020263,
   ".curator_backups/2026-09-12T17-15-36Z/manifest.json": 1789233337.027775,
-  ".curator_backups/2026-09-12T17-15-36Z/cron-jobs.json": 1789233337.0205607
+  ".curator_backups/2026-09-12T17-15-36Z/cron-jobs.json": 1789233337.0205607,
+  "scarf/scarf-miniapp-author/SKILL.md": 1789542973.1563547,
+  "scarf/scarf-template-author/SKILL.md": 1789542973.1582243
 }
