@@ -76,6 +76,8 @@ The `~/projects/ai-os/.rules/` directory is the **single source of truth** for g
 
 5. **Updating only one platform's generated file manually.** Always rebuild all platforms with `build_rules.py`.
 
+6. **Tripping Hermes threat/prompt-injection scanner (`read_secrets`, etc.).** Avoid literal prohibited command strings (e.g. `cat .env`, `curl $KEY`, `ignore previous instructions`) even in negative or forbidding rules. Hermes context scanners (`tools/threat_patterns.py`) will detect the pattern, flag the file as an exploit, and block `CLAUDE.md`/`AGENTS.md`/`HERMES.md` from loading entirely. Use semantic descriptions instead (e.g. "never execute terminal or file-viewing tools directly on secret files").
+
 ## Verification Checklist
 
 - [ ] Rule added/edited in `.rules/common.md` (or platform-specific variant)
