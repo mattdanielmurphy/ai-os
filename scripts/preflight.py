@@ -7,6 +7,7 @@ import json
 import time
 import glob
 import re
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -79,26 +80,18 @@ def step_quota():
             return "ag-quota: OK"
     return "ag-quota: Skipped/Cached"
 
-def step_jules_quota():
+def step_aios_planner():
+    """Verify AI-OS companion app and Perplexity bridge are alive on port 3031."""
     try:
-        from jules_quota import get_jules_status
-        status = get_jules_status()
-        if status["status"] == "OK":
-            return f"Jules Quota: OK ({status['total_remaining']}/{status['total_limit']} sessions)"
-        return f"Jules Quota: {status['status']}"
+        req = urllib.request.Request("http://127.0.0.1:3031/api/debug/ping")
+        with urllib.request.urlopen(req, timeout=0.8) as resp:
+            data = resp.read().decode("utf-8")
+            if "PPLX=true" in data:
+                return "AI-OS Planner (:3031): OK (Perplexity Connected)"
+            return "AI-OS Planner (:3031): OK"
     except Exception:
-        return "Jules Quota: Skipped"
-
-
-def step_pplx_quota():
-    try:
-        from pplx_quota import get_pplx_quota
-        q = get_pplx_quota()
-        if q.get("status") == "OK":
-            return f"Perplexity Quota: OK ({q.get('remaining_pro')} Pro, {q.get('remaining_research')} Research, {q.get('remaining_uploads')} Uploads)"
-        return f"Perplexity Quota: {q.get('status')}"
-    except Exception as e:
-        return f"Perplexity Quota: ERROR ({e})"
+        pass
+    return "AI-OS Planner (:3031): OFFLINE (launch agent: aios-server)"
 
 def get_project_board_summary():
     board_path = os.path.expanduser("~/projects/ai-os/PROJECT_BOARD.md")
@@ -159,8 +152,8 @@ def step_git():
     if is_git_code == 0 and is_git_out == "true":
         _, diff_code = run_cmd(["git", "diff", "--quiet"], timeout=1)
         _, cached_code = run_cmd(["git", "diff", "--cached", "--quiet"], timeout=1)
-        _, untracked_out = run_cmd(["git", "ls-files", "--others", "--exclude-standard"], timeout=1)
-        has_local_changes = (diff_code != 0 or cached_code != 0 or len(untracked_out) > 0)
+        untracked_out, _ = run_cmd(["git", "ls-files", "--others", "--exclude-standard"], timeout=1)
+        has_local_changes = (diff_code != 0 or cached_code != 0 or bool(untracked_out.strip()))
         
         if has_local_changes:
             status_out, _ = run_cmd(["git", "status", "--porcelain"], timeout=1)
@@ -210,18 +203,8 @@ def step_hammerspoon_errors():
         return f"Hammerspoon: ERROR ({excerpt})"
     return "Hammerspoon: OK"
 
-def step_memory_engine():
-    try:
-        out, code = run_cmd(["aios-memory", "list"], timeout=3)
-        if code == 0 and out:
-            data = json.loads(out)
-            return f"Memory (Mem0): OK ({len(data)} memories indexed)"
-    except Exception:
-        pass
-    return "Memory (Mem0): OK"
-
-def get_memory_hydration(project_name="ai-os", in_progress=None):
-    """Prefetch top 3-4 relevant memories from Mem0 combining task context and core operational facts."""
+def get_memory_data(project_name="ai-os", in_progress=None):
+    """Fetch total count and top hydrated memories in a single fast call."""
     try:
         query_parts = []
         if project_name and project_name not in ["projects", "matt"]:
@@ -230,41 +213,14 @@ def get_memory_hydration(project_name="ai-os", in_progress=None):
             task_clean = re.sub(r'\[.*?\]', '', in_progress[0]).strip()
             query_parts.append(task_clean)
         
-        query = " ".join(query_parts).strip()
-        if not query:
-            query = "user preferences and work style"
-            
-        items = []
-        seen = set()
-        
-        # 1. Project & active task query
-        out, code = run_cmd(["aios-memory", "prefetch", query, "--limit", "3"], timeout=4)
-        if code == 0 and out and "Relevant Recalled Context" in out:
-            for l in out.strip().splitlines():
-                if l.startswith("- ") or l.startswith("• "):
-                    norm = re.sub(r'\s*\*\(relevance:.*?\)\*', '', l).strip("- •")
-                    if norm not in seen:
-                        seen.add(norm)
-                        items.append(l)
-        
-        # 2. If fewer than 4 items, supplement with core operational preferences
-        if len(items) < 4:
-            core_query = f"{project_name} notes wiki package manager work style".strip()
-            out2, code2 = run_cmd(["aios-memory", "prefetch", core_query, "--limit", "4"], timeout=4)
-            if code2 == 0 and out2 and "Relevant Recalled Context" in out2:
-                for l in out2.strip().splitlines():
-                    if l.startswith("- ") or l.startswith("• "):
-                        norm = re.sub(r'\s*\*\(relevance:.*?\)\*', '', l).strip("- •")
-                        if norm not in seen:
-                            seen.add(norm)
-                            items.append(l)
-                            if len(items) >= 4:
-                                break
-                                
-        return items[:4]
+        query = " ".join(query_parts).strip() or "user preferences and work style"
+        out, code = run_cmd(["aios-memory", "preflight", "--query", query, "--limit", "4"], timeout=6)
+        if code == 0 and out:
+            data = json.loads(out)
+            return data.get("count", 0), data.get("memories", [])
     except Exception:
         pass
-    return []
+    return 0, []
 
 def get_transcript_path(conv_dir):
     p1 = os.path.join(conv_dir, ".system_generated", "logs", "transcript.jsonl")
@@ -374,39 +330,24 @@ def main():
         proj_name = os.path.basename(os.getcwd())
         in_progress, backlog = get_project_board_summary()
         mem_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        mem_future = mem_executor.submit(get_memory_hydration, proj_name, in_progress)
+        mem_future = mem_executor.submit(get_memory_data, proj_name, in_progress)
 
         print("\n=== RECENT THREAD CONTEXT (NEW THREAD START) ===")
-        summaries = {}
-        for sum_dir in ["~/.gemini/antigravity-ide/brain", "~/.gemini/antigravity/brain", "~/.gemini/antigravity-cli/brain"]:
-            sum_path = os.path.expanduser(f"{sum_dir}/thread_summaries.json")
-            if os.path.exists(sum_path):
-                with open(sum_path, "r") as f:
-                    try:
-                        loaded = json.load(f)
-                        for k, v in loaded.items():
-                            if k not in summaries:
-                                summaries[k] = v
-                    except: pass
-        
-        print("--- Detailed Summaries of Past 5 Threads ---")
-        for i, path in enumerate(all_convs[1:6]):
+        seen_titles = set()
+        count_shown = 0
+        for path in all_convs[1:30]:
             cid = os.path.basename(path)
-            folders = extract_folders(path)
             title = get_thread_title(path)
-            summ = summaries.get(cid, "No summary available")
-            if summ == "No summary available":
-                summ = get_thread_title(path)
-            print(f"[{i+1}] [{cid[:8]}] {title}")
-            print(f"    Folders: {', '.join(folders) if folders else 'None'}")
-            print(f"    Summary: {summ}")
-        
-        print("\n--- Titles & Folders of Past 10 Threads ---")
-        for path in all_convs[1:11]:
-            cid = os.path.basename(path)
+            norm_title = title.strip().lower()
+            if norm_title in seen_titles:
+                continue
+            seen_titles.add(norm_title)
             folders = extract_folders(path)
-            title = get_thread_title(path)
-            print(f"- [{cid[:8]}] {title} | Folders: {', '.join(folders) if folders else 'None'}")
+            folder_str = f" | Folders: {', '.join(folders)}" if folders else ""
+            print(f"- [{cid[:8]}] {title}{folder_str}")
+            count_shown += 1
+            if count_shown >= 8:
+                break
         
         if in_progress or backlog:
             print("\n=== ACTIVE PROJECT BOARD (PROJECT_BOARD.md) ===")
@@ -424,25 +365,24 @@ def main():
 
         # Hydrate top relevant memories for Turn 1
         try:
-            hydrated_memories = mem_future.result(timeout=4)
+            mem_count, hydrated_memories = mem_future.result(timeout=6)
         except Exception:
-            hydrated_memories = []
+            mem_count, hydrated_memories = 0, []
         mem_executor.shutdown(wait=False)
 
         if hydrated_memories:
             print("=== RELEVANT CONTEXT & MEMORIES (MEM0 HYDRATION) ===")
             for mem in hydrated_memories:
-                print(f"• {mem.lstrip('- ').strip()}")
+                print(f"• {mem.lstrip('- •').strip()}")
             print("====================================================\n")
     else:
         print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
-    
+        mem_count = 0
+
     if is_first:
         steps = [
             ("Quota", step_quota),
-            ("Jules Quota", step_jules_quota),
-            ("Perplexity", step_pplx_quota),
-            ("Memory (Mem0)", step_memory_engine),
+            ("Planner", step_aios_planner),
             ("Rules", step_rules),
             ("Secret Audit", step_secret_audit),
             ("Git", step_git),
@@ -452,7 +392,6 @@ def main():
     else:
         steps = [
             ("Quota", step_quota),
-            ("Memory (Mem0)", step_memory_engine),
             ("Secret Audit", step_secret_audit),
         ]
     
@@ -463,6 +402,8 @@ def main():
             name, result = future.result()
             results[name] = result
             
+    if is_first:
+        print(f"- Memory (Mem0): OK ({mem_count} memories indexed)")
     for name, _ in steps:
         print(f"- {results[name]}")
 
