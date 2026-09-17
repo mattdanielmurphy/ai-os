@@ -130,6 +130,19 @@ def get_project_board_summary():
 
 
 def step_rules():
+    rules_dir = os.path.expanduser("~/projects/ai-os/.rules")
+    target = os.path.expanduser("~/.gemini/GEMINI.md")
+    if os.path.exists(rules_dir) and os.path.exists(target):
+        try:
+            target_mtime = os.path.getmtime(target)
+            needs_build = any(
+                os.path.getmtime(os.path.join(rules_dir, f)) > target_mtime
+                for f in os.listdir(rules_dir) if f.endswith(".md")
+            )
+            if not needs_build:
+                return "Rules: OK"
+        except Exception:
+            pass
     out, code = run_cmd(["python3", os.path.expanduser("~/projects/ai-os/scripts/build_rules.py")], timeout=2)
     return "Rules: OK" if code == 0 else "Rules: WARNING"
 
@@ -204,7 +217,24 @@ def step_hammerspoon_errors():
     return "Hammerspoon: OK"
 
 def get_memory_data(project_name="ai-os", in_progress=None):
-    """Fetch total count and top hydrated memories in a single fast call."""
+    """Fetch total count and top hydrated memories in a single fast call with mtime caching."""
+    cache_dir = os.path.expanduser("~/.hermes/cache")
+    clean_proj = re.sub(r'[^a-zA-Z0-9_\-]', '_', project_name or "default")
+    cache_file = os.path.join(cache_dir, f"preflight_mem_{clean_proj}.json")
+    memory_md = os.path.expanduser("~/.hermes/memories/MEMORY.md")
+    
+    # Check cache validity (valid for 15 mins, or invalidated if MEMORY.md was touched)
+    if os.path.exists(cache_file):
+        try:
+            cache_mtime = os.path.getmtime(cache_file)
+            mem_mtime = os.path.getmtime(memory_md) if os.path.exists(memory_md) else 0
+            if (time.time() - cache_mtime < 900) and (cache_mtime > mem_mtime):
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("count", 0), data.get("memories", [])
+        except Exception:
+            pass
+
     try:
         query_parts = []
         if project_name and project_name not in ["projects", "matt"]:
@@ -217,7 +247,15 @@ def get_memory_data(project_name="ai-os", in_progress=None):
         out, code = run_cmd(["aios-memory", "preflight", "--query", query, "--limit", "4"], timeout=6)
         if code == 0 and out:
             data = json.loads(out)
-            return data.get("count", 0), data.get("memories", [])
+            count = data.get("count", 0)
+            memories = data.get("memories", [])
+            try:
+                os.makedirs(cache_dir, exist_ok=True)
+                with open(cache_file, "w", encoding="utf-8") as f:
+                    json.dump({"count": count, "memories": memories}, f)
+            except Exception:
+                pass
+            return count, memories
     except Exception:
         pass
     return 0, []
@@ -327,59 +365,6 @@ def main():
     print("=== PRE-FLIGHT CHECK ===")
     
     if is_first:
-        proj_name = os.path.basename(os.getcwd())
-        in_progress, backlog = get_project_board_summary()
-        mem_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        mem_future = mem_executor.submit(get_memory_data, proj_name, in_progress)
-
-        print("\n=== RECENT THREAD CONTEXT (NEW THREAD START) ===")
-        seen_titles = set()
-        count_shown = 0
-        for path in all_convs[1:30]:
-            cid = os.path.basename(path)
-            title = get_thread_title(path)
-            norm_title = title.strip().lower()
-            if norm_title in seen_titles:
-                continue
-            seen_titles.add(norm_title)
-            folders = extract_folders(path)
-            folder_str = f" | Folders: {', '.join(folders)}" if folders else ""
-            print(f"- [{cid[:8]}] {title}{folder_str}")
-            count_shown += 1
-            if count_shown >= 8:
-                break
-        
-        if in_progress or backlog:
-            print("\n=== ACTIVE PROJECT BOARD (PROJECT_BOARD.md) ===")
-            print("Path: file:///Users/matt/projects/ai-os/PROJECT_BOARD.md")
-            print("Launch: http://127.0.0.1:8643/open_zed?path=/Users/matt/projects/ai-os/PROJECT_BOARD.md\n")
-            if in_progress:
-                print("🚀 In Progress:")
-                for item in in_progress[:4]:
-                    print(f"  - {item}")
-            if backlog:
-                print("\n📋 Top Backlog:")
-                for item in backlog[:4]:
-                    print(f"  - {item}")
-            print("================================================\n")
-
-        # Hydrate top relevant memories for Turn 1
-        try:
-            mem_count, hydrated_memories = mem_future.result(timeout=6)
-        except Exception:
-            mem_count, hydrated_memories = 0, []
-        mem_executor.shutdown(wait=False)
-
-        if hydrated_memories:
-            print("=== RELEVANT CONTEXT & MEMORIES (MEM0 HYDRATION) ===")
-            for mem in hydrated_memories:
-                print(f"• {mem.lstrip('- •').strip()}")
-            print("====================================================\n")
-    else:
-        print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
-        mem_count = 0
-
-    if is_first:
         steps = [
             ("Quota", step_quota),
             ("Planner", step_aios_planner),
@@ -389,19 +374,76 @@ def main():
             ("Watcher", step_watcher),
             ("Hammerspoon", step_hammerspoon_errors),
         ]
+        proj_name = os.path.basename(os.getcwd())
+        in_progress, backlog = get_project_board_summary()
     else:
         steps = [
             ("Quota", step_quota),
             ("Secret Audit", step_secret_audit),
         ]
-    
-    results = {}
+        in_progress, backlog = [], []
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        # Launch memory fetch in parallel with step execution
+        if is_first:
+            mem_future = executor.submit(get_memory_data, proj_name, in_progress)
+        
         future_to_step = {executor.submit(run_step, name, func): name for name, func in steps}
+
+        # Main thread concurrently displays Recent Thread Context and Project Board
+        if is_first:
+            print("\n=== RECENT THREAD CONTEXT (NEW THREAD START) ===")
+            seen_titles = set()
+            count_shown = 0
+            for path in all_convs[1:30]:
+                cid = os.path.basename(path)
+                title = get_thread_title(path)
+                norm_title = title.strip().lower()
+                if norm_title in seen_titles:
+                    continue
+                seen_titles.add(norm_title)
+                folders = extract_folders(path)
+                folder_str = f" | Folders: {', '.join(folders)}" if folders else ""
+                print(f"- [{cid[:8]}] {title}{folder_str}")
+                count_shown += 1
+                if count_shown >= 8:
+                    break
+            
+            if in_progress or backlog:
+                print("\n=== ACTIVE PROJECT BOARD (PROJECT_BOARD.md) ===")
+                print("Path: file:///Users/matt/projects/ai-os/PROJECT_BOARD.md")
+                print("Launch: http://127.0.0.1:8643/open_zed?path=/Users/matt/projects/ai-os/PROJECT_BOARD.md\n")
+                if in_progress:
+                    print("🚀 In Progress:")
+                    for item in in_progress[:4]:
+                        print(f"  - {item}")
+                if backlog:
+                    print("\n📋 Top Backlog:")
+                    for item in backlog[:4]:
+                        print(f"  - {item}")
+                print("================================================\n")
+
+            # Hydrate top relevant memories for Turn 1
+            try:
+                mem_count, hydrated_memories = mem_future.result(timeout=6)
+            except Exception:
+                mem_count, hydrated_memories = 0, []
+
+            if hydrated_memories:
+                print("=== RELEVANT CONTEXT & MEMORIES (MEM0 HYDRATION) ===")
+                for mem in hydrated_memories:
+                    print(f"• {mem.lstrip('- •').strip()}")
+                print("====================================================\n")
+        else:
+            print(f"[Thread Context: Active conversation {active_cid[:8]} (turn {turn_count})]\n")
+            mem_count = 0
+
+        # Collect step results
+        results = {}
         for future in concurrent.futures.as_completed(future_to_step):
             name, result = future.result()
             results[name] = result
-            
+
     if is_first:
         print(f"- Memory (Mem0): OK ({mem_count} memories indexed)")
     for name, _ in steps:
