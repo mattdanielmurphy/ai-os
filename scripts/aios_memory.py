@@ -195,6 +195,68 @@ def delete_memory(memory_id: str) -> Dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 
+def preflight_data(query: str = "", user_id: str = DEFAULT_USER_ID, limit: int = 4, score_threshold: float = 0.35) -> Dict[str, Any]:
+    """Fetch memory count and hydrated memories in a single client session for fast preflight."""
+    client, mode = get_mem0_client()
+    if not client:
+        return {"status": "error", "count": 0, "memories": []}
+
+    try:
+        if mode == "platform":
+            all_mems = client.get_all(filters={"user_id": user_id})
+        else:
+            all_mems = client.get_all(filters={"user_id": user_id})
+        if isinstance(all_mems, dict):
+            raw_all = all_mems.get("results", [])
+        elif isinstance(all_mems, list):
+            raw_all = all_mems
+        else:
+            raw_all = []
+        total_count = len(raw_all)
+    except Exception:
+        total_count = 0
+
+    if not query:
+        query = "user preferences work style"
+
+    try:
+        if mode == "platform":
+            res = client.search(query, filters={"user_id": user_id}, top_k=limit)
+        else:
+            res = client.search(query, filters={"user_id": user_id}, limit=limit)
+
+        raw_results = res.get("results", []) if isinstance(res, dict) else (res if isinstance(res, list) else [])
+        formatted = []
+        seen_texts = set()
+        for item in raw_results:
+            score = item.get("score")
+            if score is None or score >= score_threshold:
+                text = item.get("memory", "").strip()
+                if text and text not in seen_texts:
+                    seen_texts.add(text)
+                    score_str = f" *(relevance: {score:.2f})*" if score is not None else ""
+                    formatted.append(f"{text}{score_str}")
+
+        # If fewer than limit, supplement with core operational preferences
+        if len(formatted) < limit:
+            core_res = client.search("user preferences package manager tooling wiki notes", filters={"user_id": user_id}, limit=limit)
+            core_raw = core_res.get("results", []) if isinstance(core_res, dict) else (core_res if isinstance(core_res, list) else [])
+            for item in core_raw:
+                score = item.get("score")
+                if score is None or score >= score_threshold:
+                    text = item.get("memory", "").strip()
+                    if text and text not in seen_texts:
+                        seen_texts.add(text)
+                        score_str = f" *(relevance: {score:.2f})*" if score is not None else ""
+                        formatted.append(f"{text}{score_str}")
+                        if len(formatted) >= limit:
+                            break
+
+        return {"status": "ok", "count": total_count, "memories": formatted[:limit]}
+    except Exception as e:
+        return {"status": "error", "count": total_count, "memories": [], "message": str(e)}
+
+
 def sync_from_hermes_memory_md(user_id: str = DEFAULT_USER_ID) -> int:
     """Sync existing durable facts from ~/.hermes/memories/MEMORY.md into Mem0."""
     if not MEMORY_MD_PATH.exists():
@@ -255,11 +317,20 @@ def main():
 
     # sync
     sync_p = subparsers.add_parser("sync", help="Ingest all entries from ~/.hermes/memories/MEMORY.md into Mem0")
-    sync_p.add_argument("--user-id", default=DEFAULT_USER_ID, help="User identifier")
+    # preflight
+    preflight_p = subparsers.add_parser("preflight", help="Return memory count and hydrated memories for preflight in a single call")
+    preflight_p.add_argument("--query", default="", help="Task or turn query")
+    preflight_p.add_argument("--user-id", default=DEFAULT_USER_ID, help="User identifier")
+    preflight_p.add_argument("--limit", type=int, default=4, help="Max results")
+    preflight_p.add_argument("--threshold", type=float, default=0.35, help="Minimum relevance score")
 
     args = parser.parse_args()
 
-    if args.command == "add":
+    if args.command == "preflight":
+        result = preflight_data(query=args.query, user_id=args.user_id, limit=args.limit, score_threshold=args.threshold)
+        print(json.dumps(result))
+
+    elif args.command == "add":
         result = add_memory(args.text, user_id=args.user_id, category=args.category, source=args.source)
         print(json.dumps(result, indent=2))
 
