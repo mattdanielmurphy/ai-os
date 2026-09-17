@@ -167,25 +167,26 @@ class SecretAuditHook:
         import subprocess
         root = repo_root or Path.cwd()
         
-        errors = []
-        sanitizer = SecretSanitizer()
-
-        # Check for staged .env files
+        # Fast path: if no staged files, exit immediately
         staged_files_proc = subprocess.run(
             ["git", "diff", "--cached", "--name-only"],
             capture_output=True, text=True, cwd=str(root)
         )
-        if staged_files_proc.returncode == 0:
-            for fname in staged_files_proc.stdout.splitlines():
-                if re.search(r'(?:^|/)(\.env(?:\.[a-zA-Z0-9_\-]+)*)$', fname, re.IGNORECASE):
-                    errors.append(f"STAGED_ENV_FILE: Attempted to stage environment file '{fname}'. Remove with 'git reset HEAD {fname}'.")
+        if staged_files_proc.returncode == 0 and not staged_files_proc.stdout.strip():
+            return (True, [])
+
+        errors = []
+        for fname in staged_files_proc.stdout.splitlines():
+            if re.search(r'(?:^|/)(\.env(?:\.[a-zA-Z0-9_\-]+)*)$', fname, re.IGNORECASE):
+                errors.append(f"STAGED_ENV_FILE: Attempted to stage environment file '{fname}'. Remove with 'git reset HEAD {fname}'.")
 
         # Check staged diff content
         staged_diff_proc = subprocess.run(
             ["git", "diff", "--cached"],
             capture_output=True, text=True, cwd=str(root)
         )
-        if staged_diff_proc.returncode == 0 and staged_diff_proc.stdout:
+        if staged_diff_proc.returncode == 0 and staged_diff_proc.stdout.strip():
+            sanitizer = SecretSanitizer()
             added_lines = [line[1:] for line in staged_diff_proc.stdout.splitlines() if line.startswith("+") and not line.startswith("+++")]
             diff_text = "\n".join(added_lines)
             res = sanitizer.sanitize_content(diff_text)
