@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-18
+- **macOS Lecture Focus Mode & Live Audio-Synced Rolling Transcript (`~/.hammerspoon/`, `services/lecture_mode/`):** Built Hammerspoon focus enforcer restricting macOS to Obsidian, Notability, Google Chrome (U of A Profile 3), Finder, and QSpace Pro, replacing `Cmd+Tab` with direct allowed-app cycling and implementing a 10-second `hs.canvas` countdown exit barrier with `Escape` cancel hook. Paired with local CoreAudio recorder, Swift `PDFKit` slide vocabulary extractor for domain-specific terminology priming, local INT8 `faster-whisper` transcription engine, and a live web HUD (`http://127.0.0.1:4141`) with 60-second scrollback, 1-click `[mm:ss]` markdown quote copying, and non-destructive Obsidian lecture note synchronization. [[log]](agent-logs/2026-09-18_15-40_lecture-mode-and-audio-synced-transcript.md)
 - **Proactive Morning Grounding, Briefing & Vault Gratitude Logging (`services/assistant/`):** Implemented `MorningBriefingBuilder` and `record_gratitude` to deliver daily somatic grounding prompts (tension release), gratitude capture into Obsidian vault habit logs (`habits/logs/YYYY-MM-DD.md`), FSRS due review tallies, and lecture schedule hydration via Telegram with inline actions (`[🙏 Record Gratitude]`, `[🧘 Done Centering]`, `[⚡ Review N Cards]`). Added Priority 1 daily scheduler and CLI `morning-briefing` command, with 100% test pass rate across 11 test suites. [[log]](agent-logs/2026-09-18_13-40_proactive-morning-briefing-and-gratitude.md)
 
 ## 2026-09-15
