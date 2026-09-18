@@ -254,7 +254,7 @@ class AssistantDaemon:
         Ensures a morning_briefing trigger exists for today or tomorrow.
         Schedules at config.morning_briefing_hour:config.morning_briefing_minute local time.
         """
-        now_local = datetime.now()
+        now_local = now_utc.astimezone() if now_utc.tzinfo else now_utc
         today_str = now_local.strftime("%Y-%m-%d")
         trigger_id = f"trig_morning_{today_str}"
 

@@ -644,3 +644,98 @@ def test_telegram_html_formatter():
     assert len(chunks) > 1
     assert all(len(c) <= 4000 for c in chunks)
 
+
+@pytest.mark.asyncio
+async def test_morning_briefing_builder_and_gratitude():
+    from services.assistant.briefing.engine import MorningBriefingBuilder
+    from services.assistant.briefing.gratitude import record_gratitude
+    from services.assistant.context_gate.calendar import CalendarEvent
+
+    # 1. Builder formatting test
+    test_date = datetime(2026, 9, 18, 8, 30)
+    builder = MorningBriefingBuilder(date=test_date)
+    ev = CalendarEvent(
+        title="MUSIC 102 Lecture",
+        start=datetime(2026, 9, 18, 14, 0),
+        end=datetime(2026, 9, 18, 15, 20),
+        is_all_day=False,
+    )
+    text, keyboard = builder.build_prompt(due_cards_count=4, calendar_events=[ev])
+
+    assert "Morning Grounding & Briefing" in text
+    assert "Friday, September 18" in text
+    assert "60-Second Mindful Centering" in text
+    assert "Daily Gratitude" in text
+    assert "4 cards" in text
+    assert "MUSIC 102 Lecture" in text
+    assert "2:00 PM – 3:20 PM" in text
+
+    # Check keyboard rows
+    assert len(keyboard) == 2
+    assert keyboard[0][0]["callback_data"] == "briefing:gratitude"
+    assert keyboard[0][1]["callback_data"] == "briefing:meditate_done"
+    assert keyboard[1][0]["callback_data"] == "briefing:review"
+    assert "4 Cards" in keyboard[1][0]["text"]
+
+    # 2. Gratitude Logging to Vault test
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir)
+        log_path = record_gratitude(vault, "The morning sunlight through the window", timestamp=test_date)
+        assert log_path.exists()
+        content = log_path.read_text(encoding="utf-8")
+        assert "## Gratitude" in content
+        assert "[08:30] The morning sunlight through the window" in content
+
+        # Append second gratitude note
+        record_gratitude(vault, "A hot cup of pour-over coffee", timestamp=datetime(2026, 9, 18, 8, 45))
+        content2 = log_path.read_text(encoding="utf-8")
+        assert "[08:30] The morning sunlight through the window" in content2
+        assert "[08:45] A hot cup of pour-over coffee" in content2
+
+
+@pytest.mark.asyncio
+async def test_morning_briefing_dispatch_and_callbacks():
+    from services.assistant.briefing.engine import MorningBriefingBuilder
+    from services.assistant.run import AssistantDaemon
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        db_path = Path(tmpdir) / "test.db"
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+        )
+        daemon = AssistantDaemon(config=cfg)
+        await daemon.db.connect()
+
+        # 1. Test automatic daily briefing queueing
+        now_utc = datetime(2026, 9, 18, 7, 0, tzinfo=timezone.utc)
+        await daemon._ensure_daily_morning_briefing(now_utc)
+        today_trig = await daemon.db.get_trigger("trig_morning_2026-09-18")
+        assert today_trig is not None
+        assert today_trig["trigger_type"] == "morning_briefing"
+        assert today_trig["priority"] == 1
+
+        # 2. Test manual command /morning
+        await daemon.dispatcher.cmd_morning(chat_id=12345)
+        signals = await daemon.db.get_awaiting_signals()
+        assert len(signals) == 1
+        assert signals[0]["trigger_id"] == "trig_morning_manual"
+
+        # 3. Test callback briefing:meditate_done
+        success = await daemon.dispatcher.handle_callback_str("briefing:meditate_done", 12345, signals[0]["message_id"])
+        assert success is True
+        resolved = await daemon.db.get_awaiting_signals()
+        assert len(resolved) == 0
+
+        # 4. Test gratitude text reply
+        await daemon.dispatcher.handle_text_message("I am grateful for high-bandwidth thinking", 12345, 999)
+        today_log = vault / "habits" / "logs" / f"{datetime.now().strftime('%Y-%m-%d')}.md"
+        assert today_log.exists()
+        assert "high-bandwidth thinking" in today_log.read_text(encoding="utf-8")
+
+        await daemon.db.close()
+
