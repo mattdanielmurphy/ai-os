@@ -100,6 +100,10 @@
 # Model Family Naming Invariant
 - **Rule**: Agents MUST ALWAYS refer to AI model families by their clean canonical brand name (e.g. `Sonnet`, `Flash`, `Opus`, `Haiku`, `Gemini`, `GPT`) WITHOUT appending speculative, obsolete, or guessed version numbers (e.g. NEVER say `Claude 3.7 Sonnet`, `Sonnet 3.5`, `Gemini 1.5`, `GPT-4o`). Model versions change rapidly; always use family-only naming.
 
+# Model & API Verification Invariant (Zero Hallucinated Models)
+- **Rule**: Agents MUST NEVER trust internal memory or guess model names, model identifiers, version tags, or API engine strings (e.g. TTS voice models, LLM checkpoint names, provider engine strings).
+- **Mandatory Pre-Verification**: Before writing, configuring, or hardcoding any model identifier, engine string, or voice name into code, presets, or configurations, agents MUST actively verify the exact string against authoritative documentation, official API endpoints, or official provider playgrounds. Never extrapolate or fabricate model versions or name schemes (e.g. guessing model names without verifying).
+
 # Search-to-Memory & Autonomous Learning Invariant
 - **Search Friction as Memory Signal**: Whenever an agent is required to perform exploratory search (e.g. `grep_search`, directory sweeps, config discovery, or web lookups) to resolve an unknown path, hidden setting, architectural dependency, or debugging quirk:
   - The agent MUST NOT discard the discovery upon completing the task.
