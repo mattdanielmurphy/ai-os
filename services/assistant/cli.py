@@ -91,6 +91,39 @@ async def cmd_status(args, config: AssistantConfig):
     await db.close()
 
 
+async def cmd_morning_briefing(args, config: AssistantConfig):
+    db = AssistantDB(config.db_path)
+    await db.connect()
+    now = datetime.now(timezone.utc)
+    if args.now:
+        scheduled_at = now
+    elif args.time:
+        parts = [int(p) for p in args.time.split(":")]
+        now_local = datetime.now().replace(hour=parts[0], minute=parts[1], second=0, microsecond=0)
+        scheduled_at = now_local.astimezone(timezone.utc)
+    else:
+        now_local = datetime.now().replace(
+            hour=config.morning_briefing_hour,
+            minute=config.morning_briefing_minute,
+            second=0,
+            microsecond=0,
+        )
+        scheduled_at = now_local.astimezone(timezone.utc)
+
+    trig_id = f"trig_morning_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
+    expires_at = scheduled_at + timedelta(hours=6)
+    await db.add_trigger(
+        trigger_id=trig_id,
+        trigger_type="morning_briefing",
+        target_id="daily_briefing",
+        scheduled_at=scheduled_at,
+        expires_at=expires_at,
+        priority=1,
+    )
+    print(f"Scheduled morning briefing trigger: {trig_id} for {scheduled_at.isoformat()}")
+    await db.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Proactive Assistant CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -109,6 +142,11 @@ def main():
     p_habit = subparsers.add_parser("add-habit-check", help="Queue a habit check trigger")
     p_habit.add_argument("--habit", required=True, help="Exact name of habit definition")
 
+    # Morning Briefing
+    p_morning = subparsers.add_parser("morning-briefing", help="Queue a morning briefing trigger")
+    p_morning.add_argument("--now", action="store_true", help="Queue immediate morning briefing")
+    p_morning.add_argument("--time", default=None, help="Scheduled time in HH:MM")
+
     # Status
     subparsers.add_parser("status", help="Show pending triggers and due cards")
 
@@ -119,6 +157,8 @@ def main():
         asyncio.run(cmd_add_card(args, config))
     elif args.command == "add-habit-check":
         asyncio.run(cmd_add_habit_check(args, config))
+    elif args.command == "morning-briefing":
+        asyncio.run(cmd_morning_briefing(args, config))
     elif args.command == "status":
         asyncio.run(cmd_status(args, config))
 
