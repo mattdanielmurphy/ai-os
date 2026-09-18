@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-09-18
+- **Proactive Morning Grounding, Briefing & Vault Gratitude Logging (`services/assistant/`):** Implemented `MorningBriefingBuilder` and `record_gratitude` to deliver daily somatic grounding prompts (tension release), gratitude capture into Obsidian vault habit logs (`habits/logs/YYYY-MM-DD.md`), FSRS due review tallies, and lecture schedule hydration via Telegram with inline actions (`[🙏 Record Gratitude]`, `[🧘 Done Centering]`, `[⚡ Review N Cards]`). Added Priority 1 daily scheduler and CLI `morning-briefing` command, with 100% test pass rate across 11 test suites. [[log]](agent-logs/2026-09-18_13-40_proactive-morning-briefing-and-gratitude.md)
+
 ## 2026-09-15
 - **Hermes Gemini Flash Orchestration & Mac-to-VPS Caddy Failover:** Transitioned Hermes Agent on both Mac and Oracle VPS (`oracle-vps`) to the native Google Gemini API (`gemini-3.8-flash`) with dynamic low/medium/high reasoning effort and cost-reduction delegation in `SOUL.md` (delegating heavy coding to `agymcp:agy` and deep planning to `query_aios.js`). Configured Caddy reverse proxy on the VPS (`:8787`) with upstream health checks providing a single, seamless iPhone PWA entrypoint that transparently serves from the Mac when awake and automatically fails over to the VPS when the Mac sleeps. [[log]](agent-logs/2026-09-15_19-37_hermes_gemini_api_vps_failover.md)
 
