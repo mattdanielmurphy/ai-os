@@ -15,6 +15,7 @@ project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from services.assistant.briefing.engine import MorningBriefingBuilder
 from services.assistant.config import AssistantConfig
 from services.assistant.context_gate.calendar import CalendarProbe
 from services.assistant.context_gate.evaluator import ContextGateEvaluator
@@ -60,6 +61,7 @@ class AssistantDaemon:
             self.gateway,
             config=self.config,
             habit_parser=self.habit_parser,
+            calendar_probe=self.calendar_probe,
         )
         self.silence_watchdog = AwakeSilenceWatchdog(self.config, self.db, self.gateway)
         self._running = False
@@ -130,7 +132,10 @@ class AssistantDaemon:
                 now_utc = datetime.now(timezone.utc)
                 await self.db.expire_stale_triggers(now_utc)
 
-                # 3. Evaluate and process next pending trigger
+                # 3. Ensure daily morning briefing is queued
+                await self._ensure_daily_morning_briefing(now_utc)
+
+                # 4. Evaluate and process next pending trigger
                 await self._process_pending_triggers(now_utc)
 
             except asyncio.CancelledError:
@@ -210,6 +215,21 @@ class AssistantDaemon:
                 await self.db.update_trigger_status(trigger_id, "EXPIRED")
                 return
 
+        elif trigger_type == "morning_briefing":
+            due_cards = await self.db.get_due_cards(now_utc)
+            events = []
+            if self.calendar_probe:
+                try:
+                    events = self.calendar_probe.fetch_events()
+                except Exception as e:
+                    logger.warning(f"Error fetching calendar events for morning briefing: {e}")
+            builder = MorningBriefingBuilder()
+            text, keyboard = builder.build_prompt(
+                due_cards_count=len(due_cards),
+                calendar_events=events,
+            )
+            message_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+
         elif trigger_type == "micro_step":
             # Generic micro-step prompt
             text = f"🎯 *Micro-Step Action*\n\n{target_id}\n\n_Take 2 minutes to complete this step._"
@@ -228,6 +248,48 @@ class AssistantDaemon:
             )
             await self.db.update_trigger_status(trigger_id, "FIRED")
             logger.info(f"Trigger '{trigger_id}' FIRED successfully as Telegram message {message_id}.")
+
+    async def _ensure_daily_morning_briefing(self, now_utc: datetime) -> None:
+        """
+        Ensures a morning_briefing trigger exists for today or tomorrow.
+        Schedules at config.morning_briefing_hour:config.morning_briefing_minute local time.
+        """
+        now_local = datetime.now()
+        today_str = now_local.strftime("%Y-%m-%d")
+        trigger_id = f"trig_morning_{today_str}"
+
+        existing = await self.db.get_trigger(trigger_id)
+        if existing:
+            return
+
+        scheduled_local = now_local.replace(
+            hour=self.config.morning_briefing_hour,
+            minute=self.config.morning_briefing_minute,
+            second=0,
+            microsecond=0,
+        )
+
+        if now_local > scheduled_local:
+            tomorrow_local = scheduled_local + timedelta(days=1)
+            trigger_id_tomorrow = f"trig_morning_{tomorrow_local.strftime('%Y-%m-%d')}"
+            existing_tomorrow = await self.db.get_trigger(trigger_id_tomorrow)
+            if existing_tomorrow:
+                return
+            scheduled_at = tomorrow_local.astimezone(timezone.utc)
+            trigger_id = trigger_id_tomorrow
+        else:
+            scheduled_at = scheduled_local.astimezone(timezone.utc)
+
+        expires_at = scheduled_at + timedelta(hours=6)
+        await self.db.add_trigger(
+            trigger_id=trigger_id,
+            trigger_type="morning_briefing",
+            target_id="daily_briefing",
+            scheduled_at=scheduled_at,
+            expires_at=expires_at,
+            priority=1,
+        )
+        logger.info(f"Queued daily morning briefing trigger '{trigger_id}' for {scheduled_at.isoformat()}.")
 
 
 async def main():

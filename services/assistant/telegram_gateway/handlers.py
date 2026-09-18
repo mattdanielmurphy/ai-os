@@ -18,6 +18,9 @@ from telegram.ext import (
 )
 
 from ..config import AssistantConfig
+from ..briefing.engine import MorningBriefingBuilder
+from ..briefing.gratitude import record_gratitude
+from ..context_gate.calendar import CalendarProbe
 from ..habit_bridge.logger import HabitLogger, format_habit_completed
 from ..habit_bridge.parser import HabitParser
 from ..spaced_repetition.cards import (
@@ -68,6 +71,7 @@ class ActionDispatcher:
         gateway: TelegramGateway,
         config: Optional[AssistantConfig] = None,
         habit_parser: Optional[HabitParser] = None,
+        calendar_probe: Optional[CalendarProbe] = None,
     ):
         self.db = db
         self.fsrs_engine = fsrs_engine
@@ -75,6 +79,7 @@ class ActionDispatcher:
         self.gateway = gateway
         self.config = config or AssistantConfig()
         self.habit_parser = habit_parser
+        self.calendar_probe = calendar_probe
 
     async def handle_callback_str(
         self, callback_data: str, chat_id: int, message_id: int
@@ -100,6 +105,30 @@ class ActionDispatcher:
             variant = parts[2]
             return await self._handle_habit(habit_name, variant, chat_id, message_id)
 
+        elif action_type == "briefing" and len(parts) >= 2:
+            sub = parts[1]
+            if sub == "gratitude":
+                await self.gateway.send_message(
+                    chat_id,
+                    "🙏 *Daily Gratitude Reflection*\n\n"
+                    "What is one small, specific thing you appreciate having in your day?\n\n"
+                    "Reply directly to this message, or type `/gratitude <thought>` to record it in your journal.",
+                )
+                return True
+            elif sub == "meditate_done":
+                await self.gateway.edit_prompt(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text="🧘 *Morning Centering Complete*\n\n"
+                    "Breath is grounded, posture is aligned, and awareness is reset. Wishing you a calm, focused day, Matt.",
+                    remove_keyboard=True,
+                )
+                await self.db.resolve_signal(message_id, "RESPONDED")
+                return True
+            elif sub == "review":
+                await self.cmd_quiz(chat_id)
+                return True
+
         elif action_type == "cmd" and len(parts) >= 2:
             cmd_name = parts[1]
             if cmd_name == "quiz":
@@ -108,6 +137,8 @@ class ActionDispatcher:
                 return await self.cmd_habits(chat_id)
             elif cmd_name == "status":
                 return await self.cmd_status(chat_id)
+            elif cmd_name == "morning":
+                return await self.cmd_morning(chat_id)
 
         logger.warning(f"Unknown callback query format: {callback_data}")
         return False
@@ -205,8 +236,10 @@ class ActionDispatcher:
     async def cmd_help(self, chat_id: int) -> bool:
         help_text = (
             "👋 *AI-OS Executive Assistant*\n\n"
-            "I manage your spaced repetition reviews, habit tracking, and proactive check-ins.\n\n"
+            "I manage your morning briefings, spaced repetition reviews, habit tracking, and proactive check-ins.\n\n"
             "*Available Commands:*\n"
+            "• `/morning` — Trigger your daily morning grounding and briefing\n"
+            "• `/gratitude <thought>` — Log a gratitude entry directly into your vault\n"
             "• `/quiz` or `/review` — Start an immediate spaced repetition quiz\n"
             "• `/status` — View active triggers, due cards, and gate status\n"
             "• `/habits` — View today's habit check-ins\n"
@@ -217,11 +250,58 @@ class ActionDispatcher:
         )
         keyboard = [
             [
+                {"text": "🌅 Morning Briefing", "callback_data": "cmd:morning"},
                 {"text": "📚 Quiz Me", "callback_data": "cmd:quiz"},
+            ],
+            [
                 {"text": "📊 Status", "callback_data": "cmd:status"},
             ]
         ]
         await self.gateway.send_message(chat_id, help_text, keyboard_rows=keyboard)
+        return True
+
+    async def cmd_morning(self, chat_id: int) -> bool:
+        now_utc = datetime.now(timezone.utc)
+        due_cards = await self.db.get_due_cards(now_utc)
+        events = []
+        if self.calendar_probe:
+            try:
+                events = self.calendar_probe.fetch_events()
+            except Exception as e:
+                logger.warning(f"Error fetching calendar events for morning briefing: {e}")
+        builder = MorningBriefingBuilder()
+        text, keyboard = builder.build_prompt(
+            due_cards_count=len(due_cards),
+            calendar_events=events,
+        )
+        msg_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+        if msg_id:
+            timeout_at = now_utc + timedelta(seconds=self.config.silence_timeout_seconds)
+            await self.db.record_outbound_signal(
+                message_id=msg_id,
+                chat_id=chat_id,
+                trigger_id="trig_morning_manual",
+                sent_at=now_utc,
+                timeout_at=timeout_at,
+                status="AWAITING_INPUT",
+            )
+        return True
+
+    async def cmd_gratitude(self, text: str, chat_id: int) -> bool:
+        clean_text = text.strip()
+        if not clean_text:
+            await self.gateway.send_message(
+                chat_id, "Usage: `/gratitude <what you are thankful for>`"
+            )
+            return False
+
+        log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
+        reply = (
+            f"🙏 *Gratitude Logged!*\n\n"
+            f"_{clean_text}_\n\n"
+            f"Recorded to `{log_path.name}` in your Obsidian vault."
+        )
+        await self.gateway.send_message(chat_id, reply)
         return True
 
     async def cmd_status(self, chat_id: int) -> bool:
@@ -520,6 +600,12 @@ class ActionDispatcher:
                     await self._handle_habit(habit_name, "full", chat_id, prompt_msg_id)
                     return True
 
+            # Morning briefing active prompt (user replied to morning prompt)
+            elif trigger_id.startswith("trig_morning_") or trigger_id == "trig_morning_manual":
+                await self.cmd_gratitude(clean_text, chat_id)
+                await self.db.resolve_signal(prompt_msg_id, "RESPONDED")
+                return True
+
         # 2. Check for natural command keywords
         if lower_text in ("status", "info"):
             return await self.cmd_status(chat_id)
@@ -527,6 +613,11 @@ class ActionDispatcher:
             return await self.cmd_quiz(chat_id)
         elif lower_text in ("habits", "habit"):
             return await self.cmd_habits(chat_id)
+        elif lower_text in ("morning", "briefing", "good morning"):
+            return await self.cmd_morning(chat_id)
+        elif re.match(r"^(gratitude:\s*|grateful for\s*|i am grateful for\s*|i'm grateful for\s*)", lower_text):
+            thought = re.sub(r"^(gratitude:\s*|grateful for\s*|i am grateful for\s*|i'm grateful for\s*)", "", clean_text, flags=re.IGNORECASE).strip()
+            return await self.cmd_gratitude(thought, chat_id)
         elif lower_text in ("help", "start"):
             return await self.cmd_help(chat_id)
         elif lower_text in ("reset", "clear", "new chat", "forget"):
@@ -651,6 +742,18 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
         else:
             await gateway.send_message(chat_id, "Usage: `/remind <reminder title>`")
 
+    async def telegram_morning_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await dispatcher.cmd_morning(chat_id)
+
+    async def telegram_gratitude_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        text = " ".join(context.args) if context.args else ""
+        if text:
+            await dispatcher.cmd_gratitude(text, chat_id)
+        else:
+            await gateway.send_message(chat_id, "Usage: `/gratitude <what you are thankful for>`")
+
     async def telegram_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.effective_message
         if not msg or not msg.text:
@@ -661,6 +764,8 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
 
     gateway.add_callback_handler(telegram_callback_handler)
     gateway.add_handler(CommandHandler(["start", "help"], telegram_start_handler))
+    gateway.add_handler(CommandHandler(["morning", "briefing"], telegram_morning_handler))
+    gateway.add_handler(CommandHandler(["gratitude", "thankful"], telegram_gratitude_handler))
     gateway.add_handler(CommandHandler(["status", "info"], telegram_status_handler))
     gateway.add_handler(CommandHandler(["quiz", "review"], telegram_quiz_handler))
     gateway.add_handler(CommandHandler(["habits", "habit"], telegram_habits_handler))

@@ -57,6 +57,10 @@ class AssistantConfig:
     retention_cold_storage: float = 0.90
     retention_baby_facts: float = 0.85
 
+    # Morning Grounding & Briefing Schedule
+    morning_briefing_hour: int = 8
+    morning_briefing_minute: int = 0
+
     @property
     def habits_definitions_dir(self) -> Path:
         return self.obsidian_vault_path / "habits" / "definitions"

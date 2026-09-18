@@ -222,6 +222,15 @@ class AssistantDB:
         await self._conn.commit()
         return cursor.rowcount
 
+    async def get_trigger(self, trigger_id: str) -> Optional[Dict[str, Any]]:
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "SELECT * FROM trigger_queue WHERE id = ?",
+            (trigger_id,),
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
     # -------------------------------------------------------------------------
     # FSRS Cards
     # -------------------------------------------------------------------------
