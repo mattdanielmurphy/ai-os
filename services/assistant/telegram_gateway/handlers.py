@@ -1,12 +1,15 @@
 """Telegram handlers for callbacks, text messages, executive commands, and quick capture."""
 
 import asyncio
+import html
 import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 from telegram import Update
@@ -31,8 +34,34 @@ from ..spaced_repetition.cards import (
 from ..spaced_repetition.engine import FSRSEngine
 from ..storage.db import AssistantDB
 from .bot import TelegramGateway
+from .stt import transcribe_audio_file, extract_audio_from_video
 
 logger = logging.getLogger("assistant.telegram_gateway.handlers")
+
+
+def clean_hermes_output(raw_output: str) -> Optional[str]:
+    """Cleans terminal warnings, reasoning blocks, thread metrics, and session IDs from hermes chat output."""
+    if not raw_output:
+        return None
+    lines = raw_output.splitlines()
+    cleaned = []
+    in_box = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("Warning:") or stripped.startswith("session_id:"):
+            continue
+        if stripped.startswith("┌─ Reasoning") or stripped.startswith("┌─"):
+            in_box = True
+            continue
+        if in_box:
+            if stripped.endswith("┘") or stripped.startswith("└─"):
+                in_box = False
+            continue
+        if stripped.startswith("**Thread Metrics:**"):
+            continue
+        cleaned.append(line)
+    result = "\n".join(cleaned).strip()
+    return result if result else None
 
 
 def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> str:
@@ -40,9 +69,16 @@ def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> s
     Constructs a contextual prompt including prior conversation turns,
     ensuring that references like 'Send that markdown again' or 'What about X?'
     have full context even across session restarts or long pauses.
+    Enforces Telegram presentation rules (vertical cards, no tables).
     """
+    presentation_rule = (
+        "[Formatting Rule: You are chatting with Matt on mobile Telegram. "
+        "Default all structured data to clean vertical cards/blocks with bold labels (e.g. • <b>Label:</b> Value) and bullet points. "
+        "NEVER generate ASCII or Markdown tables.]\n\n"
+    )
+
     if not history:
-        return prompt
+        return f"{presentation_rule}{prompt}"
 
     history_lines = []
     for msg in history:
@@ -54,6 +90,7 @@ def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> s
 
     history_block = "\n\n".join(history_lines)
     return (
+        f"{presentation_rule}"
         f"[Prior Conversation Context]\n"
         f"{history_block}\n"
         f"[End Prior Context]\n\n"
@@ -477,42 +514,32 @@ class ActionDispatcher:
 
     async def cmd_reset(self, chat_id: int) -> bool:
         await self.db.clear_chat_history(chat_id)
-        try:
-            cmd = [
-                "node",
-                os.path.expanduser("~/projects/ai-os/scripts/query_aios.js"),
-                "New conversation started. Reset context.",
-                "--thread", f"telegram_chat_{chat_id}",
-                "--new-thread",
-                "--timeout", "30",
-            ]
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await asyncio.wait_for(proc.wait(), timeout=10.0)
-        except Exception:
-            pass
-
         await self.gateway.send_message(
             chat_id,
-            "🧹 *Conversation Context Cleared*\n\nStarted a fresh conversation session with Gemini Flash Thinking.",
+            "🧹 *Conversation Context Cleared*\n\nStarted a fresh conversation session with OpenAI Codex.",
         )
         return True
 
-    async def _query_aios(self, prompt: str, chat_id: Optional[int] = None) -> Optional[str]:
+    async def _query_codex(
+        self,
+        prompt: str,
+        image_path: Optional[Path] = None,
+        chat_id: Optional[int] = None,
+    ) -> Optional[str]:
+        """Queries OpenAI Codex via hermes chat CLI using user's Codex subscription."""
         try:
             cmd = [
-                "node",
-                os.path.expanduser("~/projects/ai-os/scripts/query_aios.js"),
-                "--prompt", prompt,
-                "--provider", "perplexity",
-                "--model", "gemini",
-                "--timeout", "300",
+                "hermes",
+                "chat",
+                "-q", prompt,
+                "-Q",
+                "--provider", "openai-codex",
+                "--source", "tool",
+                "--ignore-rules",
+                "--reasoning", "none",
             ]
-            if chat_id:
-                cmd.extend(["--thread", f"telegram_chat_{chat_id}"])
+            if image_path and image_path.exists():
+                cmd.extend(["--image", str(image_path)])
 
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -520,25 +547,51 @@ class ActionDispatcher:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=310.0)
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180.0)
                 output = stdout.decode("utf-8", errors="replace")
-
-                if "--------------------------------------------------------------------------------" in output:
-                    parts = output.split("--------------------------------------------------------------------------------")
-                    if len(parts) >= 2:
-                        ans = parts[1].split("================================================================================")[0]
-                        return ans.strip()
-                return output.strip() if output.strip() else None
+                res = clean_hermes_output(output)
+                if not res:
+                    logger.warning(f"Codex returned empty or filtered response. Raw: {output[:300]}")
+                return res
             except asyncio.TimeoutError:
                 proc.kill()
-                logger.warning("AI-OS query timed out after 310s")
+                logger.warning("Codex query timed out after 180s")
                 return None
         except Exception as e:
-            logger.error(f"Error querying AI-OS from assistant: {e}")
+            logger.error(f"Error querying Codex from assistant: {e}")
             return None
 
+    async def _query_agy(self, prompt: str, chat_id: int) -> bool:
+        """Dispatches an advanced coding task to agy."""
+        status_msg_id = await self.gateway.send_message(
+            chat_id, "⚡️ <i>Launching agy coding task...</i>"
+        )
+        try:
+            cmd = [
+                "python3",
+                os.path.expanduser("~/projects/ai-os/scripts/subagent.py"),
+                "-p", prompt,
+                "--use-agy",
+                "--no-tmux",
+            ]
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await proc.communicate()
+            output = stdout.decode("utf-8", errors="replace").strip()
+            if not output:
+                output = "✅ Agy completed the task."
+            await self.gateway.edit_message(chat_id, status_msg_id, output)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to run agy: {e}")
+            await self.gateway.edit_message(chat_id, status_msg_id, f"❌ Failed to run agy: {e}")
+            return False
+
     # -------------------------------------------------------------------------
-    # Plain Text Handler (Prompt replies, natural keywords, capture, AI conversation)
+    # Plain Text Handler (Prompt replies, natural keywords, capture, Codex conversation)
     # -------------------------------------------------------------------------
     async def handle_text_message(
         self, text: str, chat_id: int, message_id: int
@@ -633,13 +686,16 @@ class ActionDispatcher:
             note = re.sub(r"^(note:\s*|capture:\s*|idea:\s*)", "", clean_text, flags=re.IGNORECASE).strip()
             return await self.cmd_capture(note, chat_id)
 
-        # 5. Conversational Assistant via AI-OS (with multi-turn history & thread continuity)
-        # Immediately display a thinking status message so user has instant visual confirmation
+        # 4.5. Check for explicit agy coding task
+        if re.match(r"^(agy:\s*|code:\s*)", lower_text):
+            coding_task = re.sub(r"^(agy:\s*|code:\s*)", "", clean_text, flags=re.IGNORECASE).strip()
+            return await self._query_agy(coding_task, chat_id)
+
+        # 5. Conversational Assistant via OpenAI Codex (with multi-turn history & thread continuity)
         status_msg_id = await self.gateway.send_message(
-            chat_id, "🧠 <i>Thinking with Gemini Flash Thinking...</i>"
+            chat_id, "💬 <i>Thinking with Codex...</i>"
         )
 
-        # Start continuous typing heartbeat so Telegram's header indicator stays active
         stop_typing = asyncio.Event()
 
         async def _typing_heartbeat():
@@ -652,15 +708,12 @@ class ActionDispatcher:
 
         typing_task = asyncio.create_task(_typing_heartbeat())
 
-        # Hydrate recent history before recording current message
         recent_history = await self.db.get_recent_chat_history(chat_id, limit=8)
         augmented_prompt = build_conversational_prompt(clean_text, recent_history)
-
-        # Record incoming user message in DB
         await self.db.add_chat_message(chat_id, "user", clean_text)
 
         try:
-            aios_reply = await self._query_aios(augmented_prompt, chat_id=chat_id)
+            codex_reply = await self._query_codex(augmented_prompt, chat_id=chat_id)
         finally:
             stop_typing.set()
             try:
@@ -668,19 +721,17 @@ class ActionDispatcher:
             except Exception:
                 pass
 
-        if aios_reply:
-            # Record outgoing assistant response in DB
-            await self.db.add_chat_message(chat_id, "assistant", aios_reply)
+        if codex_reply:
+            await self.db.add_chat_message(chat_id, "assistant", codex_reply)
             if status_msg_id:
-                await self.gateway.edit_message(chat_id, status_msg_id, aios_reply)
+                await self.gateway.edit_message(chat_id, status_msg_id, codex_reply)
             else:
-                await self.gateway.send_message(chat_id, aios_reply)
+                await self.gateway.send_message(chat_id, codex_reply)
             return True
 
-        # Inform user of query failure rather than dumping into Obsidian Inbox
         fail_msg = (
-            "⚠️ <i>Unable to get a response from AI-OS companion server right now.</i>\n\n"
-            "Please verify the AI-OS server is active (<code>la status aios-server</code>) and try again."
+            "⚠️ <i>Unable to get a response from Codex right now.</i>\n\n"
+            "Please check network/credentials and try again."
         )
         if status_msg_id:
             await self.gateway.edit_message(chat_id, status_msg_id, fail_msg)
@@ -688,9 +739,163 @@ class ActionDispatcher:
             await self.gateway.send_message(chat_id, fail_msg)
         return False
 
+    # -------------------------------------------------------------------------
+    # Multimodal Media Handlers (Photos, Voice/Audio STT, Videos, Documents)
+    # -------------------------------------------------------------------------
+    async def handle_photo_message(
+        self, photo_path: Path, caption: Optional[str], chat_id: int, message_id: int
+    ) -> bool:
+        """Inspects and explains user-provided photos/screenshots using Codex Vision."""
+        user_prompt = caption.strip() if caption and caption.strip() else "Please inspect and explain what is shown in this image in detail:"
+        status_msg_id = await self.gateway.send_message(
+            chat_id, "🖼️ <i>Analyzing image with Codex Vision...</i>"
+        )
+
+        stop_typing = asyncio.Event()
+
+        async def _typing_heartbeat():
+            while not stop_typing.is_set():
+                await self.gateway.send_chat_action(chat_id, "typing")
+                try:
+                    await asyncio.wait_for(stop_typing.wait(), timeout=4.0)
+                except asyncio.TimeoutError:
+                    pass
+
+        typing_task = asyncio.create_task(_typing_heartbeat())
+
+        recent_history = await self.db.get_recent_chat_history(chat_id, limit=6)
+        augmented_prompt = build_conversational_prompt(user_prompt, recent_history)
+        await self.db.add_chat_message(chat_id, "user", f"[Photo attached: {photo_path.name}] {user_prompt}")
+
+        try:
+            reply = await self._query_codex(augmented_prompt, image_path=photo_path, chat_id=chat_id)
+        finally:
+            stop_typing.set()
+            try:
+                await typing_task
+            except Exception:
+                pass
+
+        if reply:
+            await self.db.add_chat_message(chat_id, "assistant", reply)
+            if status_msg_id:
+                await self.gateway.edit_message(chat_id, status_msg_id, reply)
+            else:
+                await self.gateway.send_message(chat_id, reply)
+            return True
+
+        fail_msg = "⚠️ <i>Unable to analyze image with Codex right now.</i>"
+        if status_msg_id:
+            await self.gateway.edit_message(chat_id, status_msg_id, fail_msg)
+        else:
+            await self.gateway.send_message(chat_id, fail_msg)
+        return False
+
+    async def handle_audio_message(
+        self, audio_path: Path, chat_id: int, message_id: int, caption: Optional[str] = None
+    ) -> bool:
+        """Transcribes voice notes or audio files using Groq Whisper and processes as query."""
+        status_msg_id = await self.gateway.send_message(
+            chat_id, "🎙️ <i>Transcribing voice note with Groq Whisper...</i>"
+        )
+        try:
+            transcript = await transcribe_audio_file(
+                audio_path, api_key=self.config.groq_api_key
+            )
+        except Exception as e:
+            logger.error(f"Failed to transcribe audio: {e}")
+            transcript = None
+
+        if not transcript:
+            await self.gateway.edit_message(
+                chat_id,
+                status_msg_id,
+                "⚠️ <i>Unable to transcribe audio message via Groq.</i>",
+            )
+            return False
+
+        full_query = f"{caption.strip()} {transcript.strip()}" if caption and caption.strip() else transcript.strip()
+        await self.gateway.edit_message(
+            chat_id,
+            status_msg_id,
+            f"🎙️ <i>\"{full_query}\"</i>",
+        )
+        return await self.handle_text_message(full_query, chat_id, message_id)
+
+    async def handle_video_message(
+        self, video_path: Path, chat_id: int, message_id: int, caption: Optional[str] = None
+    ) -> bool:
+        """Extracts audio from video and transcribes with Groq Whisper."""
+        status_msg_id = await self.gateway.send_message(
+            chat_id, "🎬 <i>Processing video audio...</i>"
+        )
+        audio_path = extract_audio_from_video(video_path)
+        transcript = None
+        if audio_path and audio_path.exists():
+            try:
+                transcript = await transcribe_audio_file(
+                    audio_path, api_key=self.config.groq_api_key
+                )
+            except Exception as e:
+                logger.error(f"Error transcribing video audio: {e}")
+            finally:
+                if audio_path.exists():
+                    try:
+                        audio_path.unlink()
+                    except Exception:
+                        pass
+
+        if transcript:
+            full_query = f"{caption.strip()} {transcript.strip()}" if caption and caption.strip() else transcript.strip()
+            await self.gateway.edit_message(
+                chat_id,
+                status_msg_id,
+                f"🎬 <i>\"{full_query}\"</i>",
+            )
+            return await self.handle_text_message(full_query, chat_id, message_id)
+        elif caption and caption.strip():
+            await self.gateway.edit_message(chat_id, status_msg_id, f"🎬 <i>Received video: \"{caption.strip()}\"</i>")
+            return await self.handle_text_message(caption.strip(), chat_id, message_id)
+        else:
+            await self.gateway.edit_message(chat_id, status_msg_id, "⚠️ <i>No speech or caption detected in video.</i>")
+            return False
+
+    async def handle_document_message(
+        self,
+        doc_path: Path,
+        file_name: str,
+        mime_type: Optional[str],
+        caption: Optional[str],
+        chat_id: int,
+        message_id: int,
+    ) -> bool:
+        """Routes documents by file type (images to Vision, audio/video to STT, code/text to Codex)."""
+        ext = doc_path.suffix.lower()
+        if ext in (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"):
+            return await self.handle_photo_message(doc_path, caption, chat_id, message_id)
+        elif ext in (".ogg", ".oga", ".mp3", ".wav", ".m4a", ".webm", ".flac", ".aac"):
+            return await self.handle_audio_message(doc_path, chat_id, message_id, caption=caption)
+        elif ext in (".mp4", ".mov", ".mkv", ".avi"):
+            return await self.handle_video_message(doc_path, chat_id, message_id, caption=caption)
+
+        # Text and code files
+        try:
+            content = doc_path.read_text(encoding="utf-8", errors="replace")
+            if len(content) > 50000:
+                content = content[:50000] + "\n... [content truncated]"
+            user_prompt = caption.strip() if caption and caption.strip() else f"Analyze and explain the contents of file `{file_name}`:"
+            formatted_query = f"[Attached File: {file_name}]\n```\n{content}\n```\n\n{user_prompt}"
+            return await self.handle_text_message(formatted_query, chat_id, message_id)
+        except Exception as e:
+            logger.error(f"Failed to read document {doc_path}: {e}")
+            await self.gateway.send_message(
+                chat_id, f"📁 Received file <code>{html.escape(file_name)}</code> ({ext})."
+            )
+            return True
+
 
 def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) -> None:
-    """Registers callback queries, command handlers, and text message handlers with python-telegram-bot."""
+    """Registers callback queries, command handlers, and media/text message handlers with python-telegram-bot."""
     async def telegram_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
         if not query or not query.data:
@@ -754,6 +959,95 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
         else:
             await gateway.send_message(chat_id, "Usage: `/gratitude <what you are thankful for>`")
 
+    async def telegram_agy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        text = " ".join(context.args) if context.args else ""
+        if text:
+            await dispatcher._query_agy(text, chat_id)
+        else:
+            await gateway.send_message(chat_id, "Usage: `/agy <coding instruction>`")
+
+    async def telegram_photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.effective_message
+        if not msg or not msg.photo:
+            return
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        message_id = msg.message_id
+        photo = msg.photo[-1]
+        try:
+            file = await photo.get_file()
+            target_dir = dispatcher.config.media_tmp_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_path = target_dir / f"{file.file_unique_id}.jpg"
+            await file.download_to_drive(custom_path=str(target_path))
+            await dispatcher.handle_photo_message(target_path, msg.caption, chat_id, message_id)
+        except Exception as e:
+            logger.error(f"Error handling photo message: {e}")
+            await gateway.send_message(chat_id, f"❌ Failed to process photo: {e}")
+
+    async def telegram_audio_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.effective_message
+        if not msg:
+            return
+        audio_obj = msg.voice or msg.audio
+        if not audio_obj:
+            return
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        message_id = msg.message_id
+        try:
+            file = await audio_obj.get_file()
+            target_dir = dispatcher.config.media_tmp_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            ext = ".ogg" if msg.voice else (Path(getattr(audio_obj, "file_name", "audio.mp3")).suffix or ".mp3")
+            target_path = target_dir / f"{file.file_unique_id}{ext}"
+            await file.download_to_drive(custom_path=str(target_path))
+            await dispatcher.handle_audio_message(target_path, chat_id, message_id, caption=msg.caption)
+        except Exception as e:
+            logger.error(f"Error handling audio message: {e}")
+            await gateway.send_message(chat_id, f"❌ Failed to process audio: {e}")
+
+    async def telegram_video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.effective_message
+        if not msg:
+            return
+        vid_obj = msg.video or msg.video_note
+        if not vid_obj:
+            return
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        message_id = msg.message_id
+        try:
+            file = await vid_obj.get_file()
+            target_dir = dispatcher.config.media_tmp_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            ext = Path(getattr(vid_obj, "file_name", "video.mp4")).suffix or ".mp4"
+            target_path = target_dir / f"{file.file_unique_id}{ext}"
+            await file.download_to_drive(custom_path=str(target_path))
+            await dispatcher.handle_video_message(target_path, chat_id, message_id, caption=msg.caption)
+        except Exception as e:
+            logger.error(f"Error handling video message: {e}")
+            await gateway.send_message(chat_id, f"❌ Failed to process video: {e}")
+
+    async def telegram_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.effective_message
+        if not msg or not msg.document:
+            return
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        message_id = msg.message_id
+        doc = msg.document
+        try:
+            file = await doc.get_file()
+            target_dir = dispatcher.config.media_tmp_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            file_name = doc.file_name or f"{file.file_unique_id}.bin"
+            target_path = target_dir / f"{file.file_unique_id}_{file_name}"
+            await file.download_to_drive(custom_path=str(target_path))
+            await dispatcher.handle_document_message(
+                target_path, file_name, doc.mime_type, msg.caption, chat_id, message_id
+            )
+        except Exception as e:
+            logger.error(f"Error handling document message: {e}")
+            await gateway.send_message(chat_id, f"❌ Failed to process document: {e}")
+
     async def telegram_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.effective_message
         if not msg or not msg.text:
@@ -772,5 +1066,10 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
     gateway.add_handler(CommandHandler(["reset", "clear", "new"], telegram_reset_handler))
     gateway.add_handler(CommandHandler(["capture", "note"], telegram_capture_handler))
     gateway.add_handler(CommandHandler(["remind", "todo"], telegram_remind_handler))
+    gateway.add_handler(CommandHandler(["agy", "code"], telegram_agy_handler))
+    gateway.add_handler(MessageHandler(filters.PHOTO, telegram_photo_handler))
+    gateway.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, telegram_audio_handler))
+    gateway.add_handler(MessageHandler(filters.VIDEO | filters.VIDEO_NOTE, telegram_video_handler))
+    gateway.add_handler(MessageHandler(filters.Document.ALL, telegram_document_handler))
     gateway.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, telegram_text_handler))
 
