@@ -46,6 +46,19 @@ class AssistantConfig:
         default_factory=lambda: os.getenv("ASSISTANT_DRY_RUN", "0") in ("1", "true", "True")
     )
 
+    # Cloud STT & Media
+    groq_api_key: Optional[str] = field(
+        default_factory=lambda: os.getenv("GROQ_API_KEY")
+    )
+    media_tmp_dir: Path = field(
+        default_factory=lambda: Path(
+            os.getenv(
+                "ASSISTANT_MEDIA_DIR",
+                os.path.expanduser("~/projects/ai-os/services/assistant/tmp/telegram_media"),
+            )
+        )
+    )
+
     # Context Gate & Silence Dynamics
     event_routine_buffer_minutes: int = 45  # Delay after class/event ends before contacting
     silence_timeout_seconds: int = 45 * 60  # 45 minutes of awake time before mutes
