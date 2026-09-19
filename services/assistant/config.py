@@ -59,6 +59,14 @@ class AssistantConfig:
         )
     )
 
+    # AI Engine Routing (default: agy gemini-3.8-flash-low for free quota, fallback to codex)
+    default_engine: str = field(
+        default_factory=lambda: os.getenv("ASSISTANT_DEFAULT_ENGINE", "agy")
+    )
+    agy_model: str = field(
+        default_factory=lambda: os.getenv("ASSISTANT_AGY_MODEL", "gemini-3.8-flash-low")
+    )
+
     # Context Gate & Silence Dynamics
     event_routine_buffer_minutes: int = 45  # Delay after class/event ends before contacting
     silence_timeout_seconds: int = 45 * 60  # 45 minutes of awake time before mutes
