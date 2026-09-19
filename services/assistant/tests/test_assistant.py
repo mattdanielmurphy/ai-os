@@ -817,6 +817,7 @@ async def test_multimodal_media_handlers_dispatch():
             groq_api_key="gsk_test",
         )
         db = AssistantDB(db_path)
+        assert cfg.default_engine == "codex"
         await db.connect()
         gateway = TelegramGateway(cfg)
         dispatcher = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(vault), gateway, config=cfg)

@@ -59,9 +59,9 @@ class AssistantConfig:
         )
     )
 
-    # AI Engine Routing (default: agy gemini-3.8-flash-low for free quota, fallback to codex)
+    # AI Engine Routing (default: codex subscription, fallback to agy)
     default_engine: str = field(
-        default_factory=lambda: os.getenv("ASSISTANT_DEFAULT_ENGINE", "agy")
+        default_factory=lambda: os.getenv("ASSISTANT_DEFAULT_ENGINE", "codex")
     )
     agy_model: str = field(
         default_factory=lambda: os.getenv("ASSISTANT_AGY_MODEL", "gemini-3.8-flash-low")
