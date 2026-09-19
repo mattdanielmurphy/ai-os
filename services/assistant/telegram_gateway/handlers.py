@@ -8,9 +8,10 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 from telegram import Update
 from telegram.ext import (
@@ -37,6 +38,175 @@ from .bot import TelegramGateway
 from .stt import transcribe_audio_file, extract_audio_from_video
 
 logger = logging.getLogger("assistant.telegram_gateway.handlers")
+
+# ---------------------------------------------------------------------------
+# Telegram Native Media Delivery Constants & Extraction Utilities
+# ---------------------------------------------------------------------------
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".alac", ".aiff", ".ogg", ".opus", ".oga"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff", ".svg"}
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi"}
+DOCUMENT_EXTENSIONS = {
+    ".pdf", ".zip", ".tar", ".gz", ".csv", ".tsv", ".txt", ".md",
+    ".json", ".yaml", ".yml", ".py", ".sh", ".html", ".docx", ".xlsx", ".pptx", ".epub",
+}
+ALL_MEDIA_EXTENSIONS = AUDIO_EXTENSIONS | IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | DOCUMENT_EXTENSIONS
+
+MEDIA_TAG_RE = re.compile(
+    r"[`\"'*_]{0,3}MEDIA:\s*([^\s`\"'*]+)[`\"'*_]{0,3}",
+    re.IGNORECASE,
+)
+
+
+def extract_media_from_text(raw_text: str) -> Tuple[str, List[Dict[str, Any]]]:
+    """
+    Extracts MEDIA:<path> tags and platform directives ([[audio_as_voice]], [[as_document]])
+    from the raw model response. Returns cleaned user-facing text and a list of media dicts.
+    """
+    if not raw_text:
+        return "", []
+
+    has_voice_directive = "[[audio_as_voice]]" in raw_text
+    as_document_directive = "[[as_document]]" in raw_text
+
+    media_items: List[Dict[str, Any]] = []
+    seen_paths = set()
+
+    for match in MEDIA_TAG_RE.finditer(raw_text):
+        raw_path_str = match.group(1).strip()
+        try:
+            expanded = Path(os.path.expanduser(raw_path_str)).resolve()
+            if expanded.exists() and expanded.is_file():
+                if expanded not in seen_paths:
+                    seen_paths.add(expanded)
+                    ext = expanded.suffix.lower()
+                    is_voice = has_voice_directive and (ext in AUDIO_EXTENSIONS)
+                    media_items.append({
+                        "path": expanded,
+                        "is_voice": is_voice,
+                        "as_document": as_document_directive,
+                    })
+            else:
+                logger.warning(f"MEDIA tag referenced nonexistent path: {raw_path_str}")
+        except Exception as e:
+            logger.debug(f"Failed to resolve MEDIA path '{raw_path_str}': {e}")
+
+    # Clean directives and MEDIA: tags from the text
+    cleaned = raw_text.replace("[[audio_as_voice]]", "").replace("[[as_document]]", "")
+    cleaned = MEDIA_TAG_RE.sub("", cleaned)
+    # Strip multiple consecutive blank lines
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+    return cleaned, media_items
+
+
+def find_session_generated_media(session_id: str) -> List[Dict[str, Any]]:
+    """
+    Inspects ~/.hermes/state.db for tool results in the specified session that
+    produced media or audio files (e.g. text_to_speech, image_generate, or code runs).
+    """
+    if not session_id:
+        return []
+
+    state_db_path = Path.home() / ".hermes" / "state.db"
+    if not state_db_path.exists():
+        return []
+
+    import json
+    import sqlite3
+
+    media_items: List[Dict[str, Any]] = []
+    seen_paths = set()
+
+    try:
+        conn = sqlite3.connect(f"file:{state_db_path}?mode=ro", uri=True)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT content FROM messages WHERE session_id = ? AND role = 'tool'",
+            (session_id,),
+        )
+        rows = cursor.fetchall()
+        conn.close()
+
+        for (content,) in rows:
+            if not content:
+                continue
+            try:
+                data = json.loads(content)
+                if not isinstance(data, dict):
+                    continue
+
+                # 1. Check media_tag string (e.g. "[[audio_as_voice]]\nMEDIA:/path/...")
+                media_tag = data.get("media_tag")
+                if media_tag and isinstance(media_tag, str):
+                    _, tag_items = extract_media_from_text(media_tag)
+                    for item in tag_items:
+                        p = item["path"]
+                        if p not in seen_paths:
+                            seen_paths.add(p)
+                            media_items.append(item)
+
+                # 2. Check file_path
+                file_path = data.get("file_path")
+                if file_path and isinstance(file_path, str):
+                    p = Path(os.path.expanduser(file_path)).resolve()
+                    if p.exists() and p.is_file() and p not in seen_paths:
+                        seen_paths.add(p)
+                        is_voice = bool(data.get("voice_compatible", False))
+                        media_items.append({
+                            "path": p,
+                            "is_voice": is_voice,
+                            "as_document": False,
+                        })
+
+                # 3. Check file_paths list
+                file_paths = data.get("file_paths")
+                if isinstance(file_paths, list):
+                    for fp in file_paths:
+                        if isinstance(fp, str):
+                            p = Path(os.path.expanduser(fp)).resolve()
+                            if p.exists() and p.is_file() and p not in seen_paths:
+                                seen_paths.add(p)
+                                media_items.append({
+                                    "path": p,
+                                    "is_voice": False,
+                                    "as_document": False,
+                                })
+            except Exception:
+                pass
+    except Exception as e:
+        logger.debug(f"find_session_generated_media failed: {e}")
+
+    return media_items
+
+
+def find_deliverable_paths_in_text(text: str) -> List[Path]:
+    """
+    Fallback scanner: finds absolute local paths or markdown file links in text
+    referencing deliverable media files that actually exist on disk and were recently touched.
+    """
+    if not text:
+        return []
+
+    found: List[Path] = []
+    seen = set()
+    path_pattern = re.compile(
+        r"(?:file://)?((?:/[a-zA-Z0-9_\.\-]+)+|(?:~/[a-zA-Z0-9_\.\-]+)+)"
+    )
+
+    now = time.time()
+    for match in path_pattern.finditer(text):
+        raw_p = match.group(1).strip()
+        try:
+            p = Path(os.path.expanduser(raw_p)).resolve()
+            if p.suffix.lower() in ALL_MEDIA_EXTENSIONS and p.exists() and p.is_file():
+                mtime = p.stat().st_mtime
+                if (now - mtime) < 1800 and p not in seen:
+                    seen.add(p)
+                    found.append(p)
+        except Exception:
+            pass
+
+    return found
 
 
 def clean_hermes_output(raw_output: str) -> Optional[str]:
@@ -88,12 +258,12 @@ def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> s
     Constructs a contextual prompt including prior conversation turns,
     ensuring that references like 'Send that markdown again' or 'What about X?'
     have full context even across session restarts or long pauses.
-    Enforces Telegram presentation rules (vertical cards, no tables).
+    Enforces Telegram presentation rules (vertical cards, no tables) and native attachment delivery.
     """
     presentation_rule = (
-        "[Formatting Rule: You are chatting with Matt on mobile Telegram. "
-        "Default all structured data to clean vertical cards/blocks with bold labels (e.g. • <b>Label:</b> Value) and bullet points. "
-        "NEVER generate ASCII or Markdown tables.]\n\n"
+        "[Formatting & Delivery Rules: You are chatting with Matt on mobile Telegram.\n"
+        "1. Structure & Layout: Default all structured data to clean vertical cards/blocks with bold labels (e.g. • <b>Label:</b> Value) and bullet points. NEVER generate ASCII or Markdown tables.\n"
+        "2. Native Attachments: You have full native Telegram file delivery capabilities! Whenever you generate, convert, locate, or refer to an audio recording, voice note, photo, image, video, PDF, document, or code export for Matt, attach it by outputting MEDIA:/absolute/path/to/file on its own line (e.g. MEDIA:/path/to/audio.mp3). Use [[audio_as_voice]] on the preceding line for voice bubble playback. The Telegram gateway will automatically extract the file, upload it as a native attachment, and deliver it directly to Matt in this chat.]\n\n"
     )
 
     if not history:
@@ -673,6 +843,11 @@ class ActionDispatcher:
             try:
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180.0)
                 output = stdout.decode("utf-8", errors="replace")
+                session_id_match = re.search(r"session_id:\s*([a-zA-Z0-9_-]+)", output)
+                if session_id_match:
+                    self._last_codex_session_id = session_id_match.group(1).strip()
+                else:
+                    self._last_codex_session_id = None
                 res = clean_hermes_output(output)
                 if not res:
                     logger.warning(f"Codex returned empty or filtered response. Raw: {output[:300]}")
@@ -734,6 +909,65 @@ class ActionDispatcher:
             logger.error(f"Failed to run agy coding task: {e}")
             await self.gateway.edit_message(chat_id, status_msg_id, f"❌ Failed to run agy: {e}")
             return False
+
+    async def _deliver_model_response(
+        self,
+        chat_id: int,
+        model_reply: str,
+        status_msg_id: Optional[int] = None,
+        session_id: Optional[str] = None,
+    ) -> bool:
+        """
+        Cleans the model's text response, saves it to history, updates status/sends message,
+        and extracts and delivers any attached media natively to Telegram.
+        """
+        # 1. Extract MEDIA: tags and directives from the response text
+        clean_text, media_items = extract_media_from_text(model_reply)
+
+        # 2. Check if the session generated any media via tools (TTS, image generation, etc.)
+        effective_session_id = session_id or getattr(self, "_last_codex_session_id", None)
+        if effective_session_id:
+            tool_media = find_session_generated_media(effective_session_id)
+            for tm in tool_media:
+                if not any(item["path"] == tm["path"] for item in media_items):
+                    media_items.append(tm)
+
+        # 3. Fallback: check for recently created local paths mentioned in text
+        if not media_items:
+            mentioned = find_deliverable_paths_in_text(clean_text)
+            for p in mentioned:
+                media_items.append({"path": p, "is_voice": False, "as_document": False})
+
+        # 4. Save clean text to database
+        if clean_text:
+            await self.db.add_chat_message(chat_id, "assistant", clean_text)
+
+        # 5. Deliver or edit text message
+        if clean_text:
+            if status_msg_id:
+                await self.gateway.edit_message(chat_id, status_msg_id, clean_text)
+            else:
+                await self.gateway.send_message(chat_id, clean_text)
+        elif status_msg_id and not media_items:
+            await self.gateway.edit_message(chat_id, status_msg_id, "✅")
+
+        # 6. Deliver all media attachments natively
+        for item in media_items:
+            path = item["path"]
+            is_voice = item.get("is_voice", False)
+            as_doc = item.get("as_document", False)
+            logger.info(
+                f"Delivering attachment to chat {chat_id}: {path.name} "
+                f"(voice={is_voice}, as_doc={as_doc})"
+            )
+            await self.gateway.send_media(
+                chat_id=chat_id,
+                file_path=path,
+                is_voice=is_voice,
+                as_document=as_doc,
+            )
+
+        return True
 
     # -------------------------------------------------------------------------
     # Plain Text Handler (Prompt replies, natural keywords, capture, AI conversation)
@@ -871,12 +1105,12 @@ class ActionDispatcher:
                 pass
 
         if model_reply:
-            await self.db.add_chat_message(chat_id, "assistant", model_reply)
-            if status_msg_id:
-                await self.gateway.edit_message(chat_id, status_msg_id, model_reply)
-            else:
-                await self.gateway.send_message(chat_id, model_reply)
-            return True
+            return await self._deliver_model_response(
+                chat_id=chat_id,
+                model_reply=model_reply,
+                status_msg_id=status_msg_id,
+                session_id=getattr(self, "_last_codex_session_id", None),
+            )
 
         fail_msg = (
             "⚠️ <i>Unable to get a response from the AI assistant right now.</i>\n\n"
@@ -928,12 +1162,12 @@ class ActionDispatcher:
                 pass
 
         if reply:
-            await self.db.add_chat_message(chat_id, "assistant", reply)
-            if status_msg_id:
-                await self.gateway.edit_message(chat_id, status_msg_id, reply)
-            else:
-                await self.gateway.send_message(chat_id, reply)
-            return True
+            return await self._deliver_model_response(
+                chat_id=chat_id,
+                model_reply=reply,
+                status_msg_id=status_msg_id,
+                session_id=getattr(self, "_last_codex_session_id", None),
+            )
 
         fail_msg = "⚠️ <i>Unable to analyze image right now.</i>"
         if status_msg_id:

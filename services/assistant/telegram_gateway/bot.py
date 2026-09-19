@@ -2,7 +2,8 @@
 
 import asyncio
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
@@ -309,4 +310,285 @@ class TelegramGateway:
                 await self.send_message(chat_id, extra_chunk, parse_mode=parse_mode)
 
         return success
+
+    async def send_audio(
+        self,
+        chat_id: int,
+        audio_path: Union[str, Path],
+        caption: Optional[str] = None,
+        title: Optional[str] = None,
+        performer: Optional[str] = None,
+    ) -> Optional[int]:
+        """Sends an audio file (.mp3, .wav, .m4a, etc.) to Telegram."""
+        path = Path(audio_path).expanduser().resolve()
+        if not path.exists():
+            logger.warning(f"send_audio failed: file does not exist: {path}")
+            return None
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "type": "audio",
+                "path": str(path),
+                "caption": caption,
+                "title": title,
+                "performer": performer,
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent Audio (id={msg_id}) to chat {chat_id}: {path.name}")
+            return msg_id
+
+        caption_clean = markdown_to_telegram_html(caption) if caption else None
+        try:
+            with open(path, "rb") as f:
+                msg = await self.app.bot.send_audio(
+                    chat_id=chat_id,
+                    audio=f,
+                    caption=caption_clean,
+                    title=title or path.stem,
+                    performer=performer or "Assistor",
+                    parse_mode=ParseMode.HTML if caption_clean else None,
+                )
+                logger.info(f"Sent audio to Telegram (msg_id={msg.message_id}, file={path.name})")
+                return msg.message_id
+        except Exception as e:
+            logger.warning(f"Failed to send audio as HTML caption ({e}). Retrying plain caption...")
+            try:
+                with open(path, "rb") as f:
+                    msg = await self.app.bot.send_audio(
+                        chat_id=chat_id,
+                        audio=f,
+                        caption=caption,
+                        title=title or path.stem,
+                        performer=performer or "Assistor",
+                    )
+                    logger.info(f"Sent audio with plain caption fallback (msg_id={msg.message_id})")
+                    return msg.message_id
+            except Exception as e2:
+                logger.warning(f"Failed to send as audio ({e2}). Retrying as document fallback...")
+                return await self.send_document(chat_id, path, caption=caption)
+
+    async def send_voice(
+        self,
+        chat_id: int,
+        voice_path: Union[str, Path],
+        caption: Optional[str] = None,
+    ) -> Optional[int]:
+        """Sends a voice message (.ogg or Opus) to Telegram with voice bubble UI."""
+        path = Path(voice_path).expanduser().resolve()
+        if not path.exists():
+            logger.warning(f"send_voice failed: file does not exist: {path}")
+            return None
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "type": "voice",
+                "path": str(path),
+                "caption": caption,
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent Voice (id={msg_id}) to chat {chat_id}: {path.name}")
+            return msg_id
+
+        caption_clean = markdown_to_telegram_html(caption) if caption else None
+        try:
+            with open(path, "rb") as f:
+                msg = await self.app.bot.send_voice(
+                    chat_id=chat_id,
+                    voice=f,
+                    caption=caption_clean,
+                    parse_mode=ParseMode.HTML if caption_clean else None,
+                )
+                logger.info(f"Sent voice to Telegram (msg_id={msg.message_id}, file={path.name})")
+                return msg.message_id
+        except Exception as e:
+            logger.warning(f"Failed to send voice bubble ({e}). Retrying via send_audio fallback...")
+            return await self.send_audio(chat_id, path, caption=caption)
+
+    async def send_photo(
+        self,
+        chat_id: int,
+        photo_path: Union[str, Path],
+        caption: Optional[str] = None,
+    ) -> Optional[int]:
+        """Sends an image/photo (.jpg, .png, .webp, etc.) to Telegram."""
+        path = Path(photo_path).expanduser().resolve()
+        if not path.exists():
+            logger.warning(f"send_photo failed: file does not exist: {path}")
+            return None
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "type": "photo",
+                "path": str(path),
+                "caption": caption,
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent Photo (id={msg_id}) to chat {chat_id}: {path.name}")
+            return msg_id
+
+        caption_clean = markdown_to_telegram_html(caption) if caption else None
+        try:
+            with open(path, "rb") as f:
+                msg = await self.app.bot.send_photo(
+                    chat_id=chat_id,
+                    photo=f,
+                    caption=caption_clean,
+                    parse_mode=ParseMode.HTML if caption_clean else None,
+                )
+                logger.info(f"Sent photo to Telegram (msg_id={msg.message_id}, file={path.name})")
+                return msg.message_id
+        except Exception as e:
+            logger.warning(f"Failed to send photo as HTML caption ({e}). Retrying plain caption...")
+            try:
+                with open(path, "rb") as f:
+                    msg = await self.app.bot.send_photo(
+                        chat_id=chat_id,
+                        photo=f,
+                        caption=caption,
+                    )
+                    logger.info(f"Sent photo with plain caption fallback (msg_id={msg.message_id})")
+                    return msg.message_id
+            except Exception as e2:
+                logger.warning(f"Failed to send photo ({e2}). Retrying as document fallback...")
+                return await self.send_document(chat_id, path, caption=caption)
+
+    async def send_video(
+        self,
+        chat_id: int,
+        video_path: Union[str, Path],
+        caption: Optional[str] = None,
+    ) -> Optional[int]:
+        """Sends a video (.mp4, .mov, etc.) to Telegram."""
+        path = Path(video_path).expanduser().resolve()
+        if not path.exists():
+            logger.warning(f"send_video failed: file does not exist: {path}")
+            return None
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "type": "video",
+                "path": str(path),
+                "caption": caption,
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent Video (id={msg_id}) to chat {chat_id}: {path.name}")
+            return msg_id
+
+        caption_clean = markdown_to_telegram_html(caption) if caption else None
+        try:
+            with open(path, "rb") as f:
+                msg = await self.app.bot.send_video(
+                    chat_id=chat_id,
+                    video=f,
+                    caption=caption_clean,
+                    parse_mode=ParseMode.HTML if caption_clean else None,
+                )
+                logger.info(f"Sent video to Telegram (msg_id={msg.message_id}, file={path.name})")
+                return msg.message_id
+        except Exception as e:
+            logger.warning(f"Failed to send video ({e}). Retrying as document fallback...")
+            return await self.send_document(chat_id, path, caption=caption)
+
+    async def send_document(
+        self,
+        chat_id: int,
+        document_path: Union[str, Path],
+        caption: Optional[str] = None,
+        filename: Optional[str] = None,
+    ) -> Optional[int]:
+        """Sends an arbitrary document/file to Telegram."""
+        path = Path(document_path).expanduser().resolve()
+        if not path.exists():
+            logger.warning(f"send_document failed: file does not exist: {path}")
+            return None
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "type": "document",
+                "path": str(path),
+                "caption": caption,
+                "filename": filename or path.name,
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent Document (id={msg_id}) to chat {chat_id}: {path.name}")
+            return msg_id
+
+        caption_clean = markdown_to_telegram_html(caption) if caption else None
+        try:
+            with open(path, "rb") as f:
+                msg = await self.app.bot.send_document(
+                    chat_id=chat_id,
+                    document=f,
+                    filename=filename or path.name,
+                    caption=caption_clean,
+                    parse_mode=ParseMode.HTML if caption_clean else None,
+                )
+                logger.info(f"Sent document to Telegram (msg_id={msg.message_id}, file={path.name})")
+                return msg.message_id
+        except Exception as e:
+            logger.warning(f"Failed to send document as HTML caption ({e}). Retrying plain caption...")
+            try:
+                with open(path, "rb") as f:
+                    msg = await self.app.bot.send_document(
+                        chat_id=chat_id,
+                        document=f,
+                        filename=filename or path.name,
+                        caption=caption,
+                    )
+                    logger.info(f"Sent document with plain caption fallback (msg_id={msg.message_id})")
+                    return msg.message_id
+            except Exception as e2:
+                logger.error(f"Failed to send document to Telegram: {e2}")
+                return None
+
+    async def send_media(
+        self,
+        chat_id: int,
+        file_path: Union[str, Path],
+        caption: Optional[str] = None,
+        is_voice: bool = False,
+        as_document: bool = False,
+    ) -> Optional[int]:
+        """
+        Unified media sender: automatically classifies the file type and delivers it
+        using the native Telegram method (photo, audio, voice, video, or document).
+        """
+        path = Path(file_path).expanduser().resolve()
+        if not path.exists():
+            logger.warning(f"send_media failed: file not found: {path}")
+            return None
+
+        if as_document:
+            return await self.send_document(chat_id, path, caption=caption)
+
+        ext = path.suffix.lower()
+        if is_voice:
+            return await self.send_voice(chat_id, path, caption=caption)
+
+        if ext in (".mp3", ".wav", ".m4a", ".aac", ".flac", ".alac", ".aiff"):
+            return await self.send_audio(chat_id, path, caption=caption)
+        elif ext in (".ogg", ".opus"):
+            return await self.send_voice(chat_id, path, caption=caption)
+        elif ext in (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif"):
+            return await self.send_photo(chat_id, path, caption=caption)
+        elif ext in (".mp4", ".mov", ".mkv", ".webm", ".m4v"):
+            return await self.send_video(chat_id, path, caption=caption)
+        else:
+            return await self.send_document(chat_id, path, caption=caption)
+
 
