@@ -69,49 +69,66 @@ def parse_markdown_table_row(line: str) -> List[str]:
     return [clean_cell_text(c) for c in stripped.split("|")]
 
 
-def format_ascii_box_table(rows: List[List[str]], max_col_width: int = 32) -> str:
+def format_vertical_card_table(rows: List[List[str]]) -> str:
     """
-    Renders a 2D array of rows into a beautiful Unicode box-drawing table
-    wrapped in <pre><code>...</code></pre> with cell word-wrapping.
+    Renders a 2D array of table rows into clean, mobile-native Telegram vertical cards/blocks
+    with bold labels, preventing wrapped/scrambled ASCII tables on narrow screens.
     """
     if not rows:
         return ""
-    num_cols = max(len(r) for r in rows)
-    norm_rows = []
-    for r in rows:
-        padded = list(r)
-        while len(padded) < num_cols:
-            padded.append("")
-        norm_rows.append(padded)
 
-    col_widths = []
-    for c in range(num_cols):
-        max_len = max(len(norm_rows[r][c]) for r in range(len(norm_rows)))
-        col_widths.append(max(3, min(max_len, max_col_width)))
+    headers = rows[0]
+    data_rows = rows[1:]
+    if not data_rows:
+        return "\n".join(f"• <b>{html.escape(c, quote=False)}</b>" for c in headers if c)
 
-    top = "┌" + "┬".join("─" * (w + 2) for w in col_widths) + "┐"
-    sep = "├" + "┼".join("─" * (w + 2) for w in col_widths) + "┤"
-    bot = "└" + "┴".join("─" * (w + 2) for w in col_widths) + "┘"
+    cards = []
+    num_cols = len(headers)
 
-    lines = [top]
-    for row_idx, r in enumerate(norm_rows):
-        wrapped_cells = [
-            textwrap.wrap(r[i], width=col_widths[i]) or [""] for i in range(num_cols)
-        ]
-        max_h = max(len(c) for c in wrapped_cells)
-        for h in range(max_h):
-            row_parts = []
-            for i in range(num_cols):
-                cell_text = wrapped_cells[i][h] if h < len(wrapped_cells[i]) else ""
-                row_parts.append(" " + cell_text.ljust(col_widths[i]) + " ")
-            lines.append("│" + "│".join(row_parts) + "│")
-        if row_idx == 0 and len(norm_rows) > 1:
-            lines.append(sep)
-        elif row_idx < len(norm_rows) - 1:
-            lines.append(sep)
-    lines.append(bot)
-    escaped_box = html.escape("\n".join(lines), quote=False)
-    return f"<pre><code>{escaped_box}</code></pre>"
+    if num_cols == 2:
+        # 2-column key-value pairs: • <b>Key:</b> Value
+        lines = []
+        for r in data_rows:
+            k = r[0] if len(r) > 0 else ""
+            v = r[1] if len(r) > 1 else ""
+            if k or v:
+                k_esc = html.escape(k, quote=False)
+                v_esc = html.escape(v, quote=False)
+                if k and v:
+                    lines.append(f"• <b>{k_esc}:</b> {v_esc}")
+                elif k:
+                    lines.append(f"• <b>{k_esc}</b>")
+                else:
+                    lines.append(f"• {v_esc}")
+        return "\n".join(lines)
+
+    # 3 or more columns: Vertical Entity Cards
+    for r in data_rows:
+        card_title = r[0] if len(r) > 0 else ""
+        card_lines = []
+        if card_title:
+            card_lines.append(f"<b>{html.escape(card_title, quote=False)}</b>")
+
+        for c_idx in range(1, num_cols):
+            h_name = headers[c_idx] if c_idx < len(headers) else f"Field {c_idx}"
+            val = r[c_idx] if c_idx < len(r) else ""
+            if val:
+                card_lines.append(
+                    f"• <b>{html.escape(h_name, quote=False)}:</b> {html.escape(val, quote=False)}"
+                )
+
+        if card_lines:
+            cards.append("\n".join(card_lines))
+
+    return "\n\n".join(cards)
+
+
+def format_ascii_box_table(rows: List[List[str]], max_col_width: int = 32) -> str:
+    """
+    Alias redirecting to format_vertical_card_table to enforce the Telegram
+    presentation rule: format data as vertical cards/blocks, never ASCII tables.
+    """
+    return format_vertical_card_table(rows)
 
 
 def markdown_to_telegram_html(text: str) -> str:

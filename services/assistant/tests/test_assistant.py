@@ -624,7 +624,7 @@ def test_telegram_html_formatter():
     res_ic = markdown_to_telegram_html(italic_code)
     assert res_ic == "<i>Location: <code>Inbox/Quick Capture.md</code></i>"
 
-    # 6. Markdown Table conversion to Unicode ASCII box
+    # 6. Markdown Table conversion to Telegram Vertical Cards
     table_md = (
         "| Role | Officeholder | Function |\n"
         "| :--- | :--- | :--- |\n"
@@ -632,11 +632,12 @@ def test_telegram_html_formatter():
         "| Head of Government | Andrew Holness | Prime Minister |"
     )
     res_table = markdown_to_telegram_html(table_md)
-    assert "<pre><code>┌" in res_table
-    assert "│ Role" in res_table
-    assert "│ King Charles III" in res_table
-    assert "└" in res_table
-    assert "</code></pre>" in res_table
+    assert "<b>Head of State</b>" in res_table
+    assert "• <b>Officeholder:</b> King Charles III" in res_table
+    assert "• <b>Function:</b> Sovereign and constitutional monarch" in res_table
+    assert "<b>Head of Government</b>" in res_table
+    assert "• <b>Officeholder:</b> Andrew Holness" in res_table
+    assert "• <b>Function:</b> Prime Minister" in res_table
 
     # 7. Message chunking
     long_text = ("This is a paragraph.\n\n" * 250)
@@ -738,4 +739,133 @@ async def test_morning_briefing_dispatch_and_callbacks():
         assert "high-bandwidth thinking" in today_log.read_text(encoding="utf-8")
 
         await daemon.db.close()
+
+
+# -----------------------------------------------------------------------------
+# Telegram Vertical Card & Formatter Tests
+# -----------------------------------------------------------------------------
+def test_vertical_card_formatting():
+    from services.assistant.telegram_gateway.formatter import format_vertical_card_table
+
+    # 2-column key-value
+    kv_rows = [
+        ["Property", "Value"],
+        ["CPU", "M4 Pro"],
+        ["Memory", "48GB"],
+    ]
+    kv_res = format_vertical_card_table(kv_rows)
+    assert "• <b>CPU:</b> M4 Pro" in kv_res
+    assert "• <b>Memory:</b> 48GB" in kv_res
+
+    # 3-column entity cards
+    entity_rows = [
+        ["Service", "Port", "Status"],
+        ["aios-assistant", "None", "Active"],
+        ["aios-server", "3031", "Active"],
+    ]
+    entity_res = format_vertical_card_table(entity_rows)
+    assert "<b>aios-assistant</b>" in entity_res
+    assert "• <b>Port:</b> None" in entity_res
+    assert "• <b>Status:</b> Active" in entity_res
+    assert "<b>aios-server</b>" in entity_res
+    assert "• <b>Port:</b> 3031" in entity_res
+
+
+def test_clean_hermes_output_utility():
+    from services.assistant.telegram_gateway.handlers import clean_hermes_output
+
+    sample_output = (
+        "Warning: Unknown toolsets: moa\n"
+        "Here is the answer to your question, Matt.\n\n"
+        "**Thread Metrics:** ~180k tokens\n"
+        "session_id: 20260919_130000_123456\n"
+    )
+    cleaned = clean_hermes_output(sample_output)
+    assert cleaned == "Here is the answer to your question, Matt."
+
+    # Test with reasoning block
+    reasoning_output = (
+        "Warning: Unknown toolsets: moa\n"
+        "┌─ Reasoning ──────────────────────────────────────────────────────────────────┐\n"
+        "Internal thought process...\n"
+        "└──────────────────────────────────────────────────────────────────────────────┘\n"
+        "Direct final answer.\n"
+        "session_id: 20260919_130000_123456\n"
+    )
+    cleaned_reasoning = clean_hermes_output(reasoning_output)
+    assert cleaned_reasoning == "Direct final answer."
+
+
+@pytest.mark.asyncio
+async def test_multimodal_media_handlers_dispatch():
+    from unittest.mock import AsyncMock, patch
+    from services.assistant.telegram_gateway.handlers import ActionDispatcher
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        db_path = Path(tmpdir) / "test.db"
+        media_dir = Path(tmpdir) / "media"
+        media_dir.mkdir(parents=True)
+
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+            media_tmp_dir=media_dir,
+            groq_api_key="gsk_test",
+        )
+        db = AssistantDB(db_path)
+        await db.connect()
+        gateway = TelegramGateway(cfg)
+        dispatcher = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(vault), gateway, config=cfg)
+
+        # 1. Photo Message Handler
+        test_photo = media_dir / "test_photo.jpg"
+        test_photo.write_bytes(b"dummy image")
+        with patch.object(dispatcher, "_query_codex", new_callable=AsyncMock) as mock_codex:
+            mock_codex.return_value = "This is a screenshot of the Telegram bot conversation."
+            handled = await dispatcher.handle_photo_message(
+                photo_path=test_photo,
+                caption="What is this?",
+                chat_id=12345,
+                message_id=101,
+            )
+            assert handled is True
+            mock_codex.assert_awaited_once()
+
+        # 2. Audio Message Handler (Transcribe -> Query)
+        test_audio = media_dir / "voice.ogg"
+        test_audio.write_bytes(b"dummy audio")
+        with patch("services.assistant.telegram_gateway.handlers.transcribe_audio_file", new_callable=AsyncMock) as mock_transcribe:
+            mock_transcribe.return_value = "What is the capital of Alberta?"
+            with patch.object(dispatcher, "_query_codex", new_callable=AsyncMock) as mock_codex:
+                mock_codex.return_value = "The capital of Alberta is Edmonton."
+                handled = await dispatcher.handle_audio_message(
+                    audio_path=test_audio,
+                    chat_id=12345,
+                    message_id=102,
+                )
+                assert handled is True
+                mock_transcribe.assert_awaited_once()
+                mock_codex.assert_awaited_once()
+
+        # 3. Document Message Handler (Code text routing)
+        test_code_doc = media_dir / "script.py"
+        test_code_doc.write_text("print('hello world')", encoding="utf-8")
+        with patch.object(dispatcher, "_query_codex", new_callable=AsyncMock) as mock_codex:
+            mock_codex.return_value = "This script prints hello world."
+            handled = await dispatcher.handle_document_message(
+                doc_path=test_code_doc,
+                file_name="script.py",
+                mime_type="text/x-python",
+                caption="Explain this script",
+                chat_id=12345,
+                message_id=103,
+            )
+            assert handled is True
+            mock_codex.assert_awaited_once()
+
+        await db.close()
 
