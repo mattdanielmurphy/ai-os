@@ -234,6 +234,19 @@ def clean_hermes_output(raw_output: str) -> Optional[str]:
     return result if result else None
 
 
+def extract_hermes_answer(raw_output: str) -> Optional[str]:
+    """Extracts the assistant response from hermes boxed CLI output, falling back to clean_hermes_output."""
+    if not raw_output:
+        return None
+    matches = re.findall(r"╭─+ ⚕ Hermes ─+╮\s*\n(.*?)\n\s*╰─+╯", raw_output, re.DOTALL)
+    if matches:
+        return matches[-1].strip()
+    matches_generic = re.findall(r"╭─+.*?─+╮\s*\n(.*?)\n\s*╰─+╯", raw_output, re.DOTALL)
+    if matches_generic:
+        return matches_generic[-1].strip()
+    return clean_hermes_output(raw_output)
+
+
 def clean_agy_output(raw_output: str) -> Optional[str]:
     """Cleans thread.md artifacts, tool notifications, and divider lines from agy CLI output."""
     if not raw_output:
@@ -774,8 +787,9 @@ class ActionDispatcher:
         image_path: Optional[Path] = None,
         chat_id: Optional[int] = None,
         model: Optional[str] = None,
+        status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
-        """Queries agy CLI non-interactively using free Antigravity quota with gemini-3.8-flash-low."""
+        """Queries agy CLI non-interactively using free Antigravity quota with gemini-3.8-flash-low and progressive updates."""
         try:
             full_prompt = prompt
             if image_path and image_path.exists():
@@ -799,9 +813,36 @@ class ActionDispatcher:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
+
+            output_lines = []
+            last_edit_time = 0.0
+            last_status_text = ""
+
+            async def _update_status(text: str):
+                nonlocal last_edit_time, last_status_text
+                now = time.time()
+                if (now - last_edit_time >= 1.5) and (text != last_status_text) and status_msg_id and chat_id:
+                    last_edit_time = now
+                    last_status_text = text
+                    try:
+                        await self.gateway.edit_message(chat_id, status_msg_id, text)
+                    except Exception as err:
+                        logger.debug(f"Failed to edit status message in Telegram: {err}")
+
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=130.0)
-                output = stdout.decode("utf-8", errors="replace").strip()
+                while True:
+                    line_bytes = await proc.stdout.readline()
+                    if not line_bytes:
+                        break
+                    line = line_bytes.decode("utf-8", errors="replace")
+                    output_lines.append(line)
+                    stripped = line.strip()
+                    if stripped.startswith("[") and "]" in stripped:
+                        tag = stripped[1:stripped.index("]")]
+                        await _update_status(f"⚙️ <i>Running {tag}...</i>")
+
+                await asyncio.wait_for(proc.wait(), timeout=130.0)
+                output = "".join(output_lines).strip()
                 res = clean_agy_output(output)
                 if not res:
                     logger.warning(f"Agy returned empty or unparseable output. Raw: {output[:300]}")
@@ -819,18 +860,17 @@ class ActionDispatcher:
         prompt: str,
         image_path: Optional[Path] = None,
         chat_id: Optional[int] = None,
+        status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
-        """Queries OpenAI Codex via hermes chat CLI using user's Codex subscription."""
+        """Queries OpenAI Codex via hermes chat CLI using user's Codex subscription with live progress updates."""
         try:
             cmd = [
                 "hermes",
                 "chat",
                 "-q", prompt,
-                "-Q",
                 "--provider", "openai-codex",
                 "--source", "tool",
                 "--ignore-rules",
-                "--reasoning", "none",
             ]
             if image_path and image_path.exists():
                 cmd.extend(["--image", str(image_path)])
@@ -840,15 +880,70 @@ class ActionDispatcher:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
+
+            output_lines = []
+            last_edit_time = 0.0
+            last_status_text = ""
+            in_reasoning = False
+
+            async def _update_status(text: str):
+                nonlocal last_edit_time, last_status_text
+                now = time.time()
+                # Rate limit edits to at least 1.5s to respect Telegram limits
+                if (now - last_edit_time >= 1.5) and (text != last_status_text) and status_msg_id and chat_id:
+                    last_edit_time = now
+                    last_status_text = text
+                    try:
+                        await self.gateway.edit_message(chat_id, status_msg_id, text)
+                    except Exception as err:
+                        logger.debug(f"Failed to edit status message in Telegram: {err}")
+
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180.0)
-                output = stdout.decode("utf-8", errors="replace")
+                while True:
+                    line_bytes = await proc.stdout.readline()
+                    if not line_bytes:
+                        break
+                    line = line_bytes.decode("utf-8", errors="replace")
+                    output_lines.append(line)
+                    stripped = line.strip()
+
+                    # 1. Detect reasoning blocks
+                    if stripped.startswith("┌─ Reasoning") or stripped.startswith("┌─"):
+                        in_reasoning = True
+                        await _update_status("🧠 <i>Reasoning through query...</i>")
+                        continue
+                    if in_reasoning:
+                        if stripped.startswith("└─") or stripped.endswith("┘"):
+                            in_reasoning = False
+                        elif stripped and not stripped.startswith("│"):
+                            thought = stripped.strip("*_ ").strip()
+                            if thought:
+                                if len(thought) > 75:
+                                    thought = thought[:72] + "..."
+                                await _update_status(f"💭 <i>{thought}</i>")
+                        continue
+
+                    # 2. Detect tool operations
+                    if "┊" in stripped or stripped.startswith("•") or stripped.startswith("⚙️"):
+                        parts = stripped.replace("┊", "").strip().split()
+                        if parts:
+                            tool_verb = parts[0]
+                            tool_target = " ".join(parts[1:4]) if len(parts) > 1 else ""
+                            if len(tool_target) > 50:
+                                tool_target = tool_target[:47] + "..."
+                            status_line = f"⚙️ <i>{tool_verb} {tool_target}...</i>".strip()
+                            await _update_status(status_line)
+                    elif stripped.startswith("╭─ ⚕ Hermes"):
+                        await _update_status("✍️ <i>Formulating final answer...</i>")
+
+                await asyncio.wait_for(proc.wait(), timeout=180.0)
+                output = "".join(output_lines)
                 session_id_match = re.search(r"session_id:\s*([a-zA-Z0-9_-]+)", output)
                 if session_id_match:
                     self._last_codex_session_id = session_id_match.group(1).strip()
                 else:
                     self._last_codex_session_id = None
-                res = clean_hermes_output(output)
+                res = extract_hermes_answer(output)
                 if not res:
                     logger.warning(f"Codex returned empty or filtered response. Raw: {output[:300]}")
                 return res
@@ -865,21 +960,30 @@ class ActionDispatcher:
         prompt: str,
         image_path: Optional[Path] = None,
         chat_id: Optional[int] = None,
+        status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
         """Unified query dispatcher defaulting to free agy (3.8 Flash Low), falling back to Codex."""
         engine = getattr(self, "active_engine", self.config.default_engine)
         if engine == "agy":
-            reply = await self._query_agy(prompt, image_path=image_path, chat_id=chat_id)
+            reply = await self._query_agy(
+                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
+            )
             if reply:
                 return reply
             logger.warning("Agy query failed or exhausted; automatically falling back to Codex...")
-            return await self._query_codex(prompt, image_path=image_path, chat_id=chat_id)
+            return await self._query_codex(
+                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
+            )
         else:
-            reply = await self._query_codex(prompt, image_path=image_path, chat_id=chat_id)
+            reply = await self._query_codex(
+                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
+            )
             if reply:
                 return reply
             logger.warning("Codex query failed; automatically falling back to Agy...")
-            return await self._query_agy(prompt, image_path=image_path, chat_id=chat_id)
+            return await self._query_agy(
+                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
+            )
 
     async def _dispatch_agy_coding(self, prompt: str, chat_id: int) -> bool:
         """Dispatches an advanced coding task to agy via subagent.py."""
@@ -1096,7 +1200,9 @@ class ActionDispatcher:
         await self.db.add_chat_message(chat_id, "user", clean_text)
 
         try:
-            model_reply = await self._query_model(augmented_prompt, chat_id=chat_id)
+            model_reply = await self._query_model(
+                augmented_prompt, chat_id=chat_id, status_msg_id=status_msg_id
+            )
         finally:
             stop_typing.set()
             try:
@@ -1153,7 +1259,9 @@ class ActionDispatcher:
         await self.db.add_chat_message(chat_id, "user", f"[Photo attached: {photo_path.name}] {user_prompt}")
 
         try:
-            reply = await self._query_model(augmented_prompt, image_path=photo_path, chat_id=chat_id)
+            reply = await self._query_model(
+                augmented_prompt, image_path=photo_path, chat_id=chat_id, status_msg_id=status_msg_id
+            )
         finally:
             stop_typing.set()
             try:
