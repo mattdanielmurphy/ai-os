@@ -892,3 +892,167 @@ def test_clean_agy_output_utility():
     assert "thread.md" not in cleaned
     assert "***" not in cleaned
 
+
+@pytest.mark.asyncio
+async def test_telegram_attachment_methods():
+    """Validates that TelegramGateway delivers audio, voice, photo, video, and documents."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        cfg = AssistantConfig(
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+        )
+        gateway = TelegramGateway(cfg)
+
+        audio_file = tmp_path / "test.mp3"
+        audio_file.write_bytes(b"dummy mp3 data")
+        voice_file = tmp_path / "voice.ogg"
+        voice_file.write_bytes(b"dummy ogg voice data")
+        photo_file = tmp_path / "photo.png"
+        photo_file.write_bytes(b"dummy png data")
+        video_file = tmp_path / "video.mp4"
+        video_file.write_bytes(b"dummy mp4 data")
+        doc_file = tmp_path / "notes.pdf"
+        doc_file.write_bytes(b"dummy pdf data")
+
+        # Test discrete send methods
+        m1 = await gateway.send_audio(12345, audio_file, caption="Meditation audio", title="Morning Mindfulness")
+        assert m1 is not None
+        assert gateway._dry_run_messages[m1]["type"] == "audio"
+        assert gateway._dry_run_messages[m1]["title"] == "Morning Mindfulness"
+
+        m2 = await gateway.send_voice(12345, voice_file, caption="Voice memo")
+        assert m2 is not None
+        assert gateway._dry_run_messages[m2]["type"] == "voice"
+
+        m3 = await gateway.send_photo(12345, photo_file, caption="Chart photo")
+        assert m3 is not None
+        assert gateway._dry_run_messages[m3]["type"] == "photo"
+
+        m4 = await gateway.send_video(12345, video_file, caption="Video preview")
+        assert m4 is not None
+        assert gateway._dry_run_messages[m4]["type"] == "video"
+
+        m5 = await gateway.send_document(12345, doc_file, caption="Exported document")
+        assert m5 is not None
+        assert gateway._dry_run_messages[m5]["type"] == "document"
+
+        # Test unified send_media auto-classification
+        m_audio = await gateway.send_media(12345, audio_file)
+        assert gateway._dry_run_messages[m_audio]["type"] == "audio"
+
+        m_voice = await gateway.send_media(12345, voice_file)
+        assert gateway._dry_run_messages[m_voice]["type"] == "voice"
+
+        m_photo = await gateway.send_media(12345, photo_file)
+        assert gateway._dry_run_messages[m_photo]["type"] == "photo"
+
+        m_video = await gateway.send_media(12345, video_file)
+        assert gateway._dry_run_messages[m_video]["type"] == "video"
+
+        m_doc = await gateway.send_media(12345, doc_file)
+        assert gateway._dry_run_messages[m_doc]["type"] == "document"
+
+        # Test forced document override
+        m_photo_as_doc = await gateway.send_media(12345, photo_file, as_document=True)
+        assert gateway._dry_run_messages[m_photo_as_doc]["type"] == "document"
+
+
+@pytest.mark.asyncio
+async def test_media_extraction_and_delivery():
+    """Validates MEDIA: tag parsing, tool-generated session media detection, and end-to-end delivery."""
+    from services.assistant.telegram_gateway.handlers import (
+        extract_media_from_text,
+        find_session_generated_media,
+        ActionDispatcher,
+    )
+    from unittest.mock import AsyncMock, patch
+    import sqlite3
+    import json
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir).resolve()
+        db_path = tmp_path / "test.db"
+        media_file = tmp_path / "meditation.mp3"
+        media_file.write_bytes(b"dummy mp3 data")
+
+        # 1. Test extract_media_from_text
+        raw_reply = (
+            "Here is your meditation.\n\n"
+            "[[audio_as_voice]]\n"
+            f"MEDIA:{media_file}\n\n"
+            "Enjoy the session!"
+        )
+        cleaned, items = extract_media_from_text(raw_reply)
+        assert "Here is your meditation." in cleaned
+        assert "Enjoy the session!" in cleaned
+        assert "MEDIA:" not in cleaned
+        assert "[[audio_as_voice]]" not in cleaned
+        assert len(items) == 1
+        assert items[0]["path"] == media_file
+        assert items[0]["is_voice"] is True
+        assert items[0]["as_document"] is False
+
+        # 2. Test find_session_generated_media using a mock state.db
+        hermes_dir = tmp_path / ".hermes"
+        hermes_dir.mkdir(parents=True)
+        fake_state_db = hermes_dir / "state.db"
+        conn = sqlite3.connect(str(fake_state_db))
+        cursor = conn.cursor()
+        cursor.execute("CREATE TABLE messages (session_id TEXT, role TEXT, content TEXT)")
+        tool_content = json.dumps({
+            "success": True,
+            "file_path": str(media_file),
+            "media_tag": f"MEDIA:{media_file}",
+            "voice_compatible": True,
+        })
+        cursor.execute(
+            "INSERT INTO messages VALUES ('test_session_123', 'tool', ?)",
+            (tool_content,),
+        )
+        conn.commit()
+        conn.close()
+
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            tool_items = find_session_generated_media("test_session_123")
+            assert len(tool_items) >= 1
+            assert any(item["path"] == media_file for item in tool_items)
+
+        # 3. Test ActionDispatcher end-to-end model response delivery
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=tmp_path / "vault",
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+        )
+        db = AssistantDB(db_path)
+        await db.connect()
+        gateway = TelegramGateway(cfg)
+        dispatcher = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(tmp_path / "vault"), gateway, config=cfg)
+
+        with patch.object(gateway, "send_media", new_callable=AsyncMock) as mock_send_media:
+            mock_send_media.return_value = 2001
+            await dispatcher._deliver_model_response(
+                chat_id=12345,
+                model_reply=raw_reply,
+                status_msg_id=1001,
+            )
+            mock_send_media.assert_awaited_once_with(
+                chat_id=12345,
+                file_path=media_file,
+                is_voice=True,
+                as_document=False,
+            )
+
+        # Verify clean text was saved to chat history without raw MEDIA tags
+        history = await db.get_recent_chat_history(12345, limit=5)
+        assert len(history) == 1
+        assert history[0]["role"] == "assistant"
+        assert "MEDIA:" not in history[0]["content"]
+        assert "Here is your meditation." in history[0]["content"]
+
+        await db.close()
+
+
