@@ -246,7 +246,7 @@
         }
 
         answer = _stripCitations(answer).trim();
-        return answer;
+        return JSON.stringify({ answer: answer, rawChunksCount: rawChunks.length, rawChunks: rawChunks.slice(0, 15) });
     }
 
     async function uploadFileToPerplexity(fileBase64, filename, mimeType) {
