@@ -824,8 +824,8 @@ async def test_multimodal_media_handlers_dispatch():
         # 1. Photo Message Handler
         test_photo = media_dir / "test_photo.jpg"
         test_photo.write_bytes(b"dummy image")
-        with patch.object(dispatcher, "_query_codex", new_callable=AsyncMock) as mock_codex:
-            mock_codex.return_value = "This is a screenshot of the Telegram bot conversation."
+        with patch.object(dispatcher, "_query_model", new_callable=AsyncMock) as mock_query:
+            mock_query.return_value = "This is a screenshot of the Telegram bot conversation."
             handled = await dispatcher.handle_photo_message(
                 photo_path=test_photo,
                 caption="What is this?",
@@ -833,15 +833,15 @@ async def test_multimodal_media_handlers_dispatch():
                 message_id=101,
             )
             assert handled is True
-            mock_codex.assert_awaited_once()
+            mock_query.assert_awaited_once()
 
         # 2. Audio Message Handler (Transcribe -> Query)
         test_audio = media_dir / "voice.ogg"
         test_audio.write_bytes(b"dummy audio")
         with patch("services.assistant.telegram_gateway.handlers.transcribe_audio_file", new_callable=AsyncMock) as mock_transcribe:
             mock_transcribe.return_value = "What is the capital of Alberta?"
-            with patch.object(dispatcher, "_query_codex", new_callable=AsyncMock) as mock_codex:
-                mock_codex.return_value = "The capital of Alberta is Edmonton."
+            with patch.object(dispatcher, "_query_model", new_callable=AsyncMock) as mock_query:
+                mock_query.return_value = "The capital of Alberta is Edmonton."
                 handled = await dispatcher.handle_audio_message(
                     audio_path=test_audio,
                     chat_id=12345,
@@ -849,13 +849,13 @@ async def test_multimodal_media_handlers_dispatch():
                 )
                 assert handled is True
                 mock_transcribe.assert_awaited_once()
-                mock_codex.assert_awaited_once()
+                mock_query.assert_awaited_once()
 
         # 3. Document Message Handler (Code text routing)
         test_code_doc = media_dir / "script.py"
         test_code_doc.write_text("print('hello world')", encoding="utf-8")
-        with patch.object(dispatcher, "_query_codex", new_callable=AsyncMock) as mock_codex:
-            mock_codex.return_value = "This script prints hello world."
+        with patch.object(dispatcher, "_query_model", new_callable=AsyncMock) as mock_query:
+            mock_query.return_value = "This script prints hello world."
             handled = await dispatcher.handle_document_message(
                 doc_path=test_code_doc,
                 file_name="script.py",
@@ -865,7 +865,29 @@ async def test_multimodal_media_handlers_dispatch():
                 message_id=103,
             )
             assert handled is True
-            mock_codex.assert_awaited_once()
+            mock_query.assert_awaited_once()
+
+        # 4. Engine Command & Switching
+        assert await dispatcher.cmd_engine("codex", chat_id=12345) is True
+        assert dispatcher.active_engine == "codex"
+        assert await dispatcher.cmd_engine("agy", chat_id=12345) is True
+        assert dispatcher.active_engine == "agy"
 
         await db.close()
+
+
+def test_clean_agy_output_utility():
+    from services.assistant.telegram_gateway.handlers import clean_agy_output
+
+    sample_agy = (
+        "Here is the breakdown of your project, Matt.\n"
+        "• Task A is complete.\n\n"
+        "***\n\n"
+        "Conversation artifact: [thread.md](file:///Users/matt/.gemini/antigravity-cli/brain/123/thread.md)"
+    )
+    cleaned = clean_agy_output(sample_agy)
+    assert "Here is the breakdown of your project, Matt." in cleaned
+    assert "• Task A is complete." in cleaned
+    assert "thread.md" not in cleaned
+    assert "***" not in cleaned
 
