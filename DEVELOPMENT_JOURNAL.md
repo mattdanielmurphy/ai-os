@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-19
+- **Reverted Telegram Assistant Default Engine to OpenAI Codex (`services/assistant/`):** Switched default AI engine in `config.py` from `agy` (`gemini-3.8-flash-low`) back to `codex` (`openai-codex` via `hermes chat`) to eliminate ~8-10s CLI initialization overhead, restoring ~1-2s conversational turns and multimodal vision via Matt's Codex subscription while retaining Agy fallback and explicit `/agy` coding dispatch. Updated test suite (15 passed) and restarted `aios-assistant`. [[log]](agent-logs/2026-09-19_14-41_switch_default_engine_to_codex.md)
 - **Telegram Bot Codex Migration, Groq Cloud STT, and Multimodal Processing (`services/assistant/`):** Migrated conversational queries and screenshot/photo analysis from `query_aios.js` to OpenAI Codex via `hermes chat --provider openai-codex` backed by Matt's Codex subscription. Integrated free Groq Cloud STT (`whisper-large-v3-turbo`) with ffmpeg audio extraction for sub-second voice note and video query processing (zero local models on macOS). Upgraded table formatting to native vertical cards/blocks with bold labels, added coding delegation via `/agy <prompt>`, and achieved 100% test pass rate across 14 test suites. [[log]](agent-logs/2026-09-19_13-06_telegram_codex_groq_stt_multimodal.md)
 
 ## 2026-09-18
