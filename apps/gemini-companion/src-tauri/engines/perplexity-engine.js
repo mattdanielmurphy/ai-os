@@ -128,6 +128,7 @@
         var decoder = new TextDecoder();
         var buffer = '';
         var answer = '';
+        var answerChunks = [];
         var backendUuid = null;
 
         var rawChunks = [];
@@ -158,13 +159,13 @@
                             backendUuid = parsed.backend_uuid;
                         }
 
-                        // 1. Check blocks (workflow_block, markdown_block, etc.)
+                        // 1. Check blocks (workflow_block, diff_block, markdown_block, etc.)
                         if (parsed.blocks && Array.isArray(parsed.blocks)) {
                             for (var bi = 0; bi < parsed.blocks.length; bi++) {
                                 var block = parsed.blocks[bi];
                                 if (!block) continue;
 
-                                // Workflow block (Perplexity 2025/2026 format)
+                                // Workflow block (Perplexity initial format)
                                 if (block.workflow_block && block.workflow_block.steps) {
                                     for (var si = 0; si < block.workflow_block.steps.length; si++) {
                                         var step = block.workflow_block.steps[si];
@@ -177,11 +178,42 @@
                                                         answer = tp.text;
                                                     }
                                                     if (tp.chunks && Array.isArray(tp.chunks)) {
-                                                        var joined = tp.chunks.join('');
+                                                        for (var ci = 0; ci < tp.chunks.length; ci++) {
+                                                            answerChunks[ci] = tp.chunks[ci];
+                                                        }
+                                                        var joined = answerChunks.join('');
                                                         if (joined.length > answer.length) {
                                                             answer = joined;
                                                         }
                                                     }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Diff block (Perplexity streaming patches for workflow_block)
+                                if (block.diff_block && Array.isArray(block.diff_block.patches)) {
+                                    var patches = block.diff_block.patches;
+                                    for (var pi = 0; pi < patches.length; pi++) {
+                                        var p = patches[pi];
+                                        if (!p || !p.path) continue;
+                                        if (typeof p.value === 'string') {
+                                            if (p.path.endsWith('/text') || p.path.endsWith('/answer') || p.path.endsWith('/output')) {
+                                                if (p.value.length > answer.length) {
+                                                    answer = p.value;
+                                                }
+                                            } else if (p.path.includes('/chunks/')) {
+                                                var parts = p.path.split('/');
+                                                var idx = parseInt(parts[parts.length - 1], 10);
+                                                if (!isNaN(idx)) {
+                                                    answerChunks[idx] = p.value;
+                                                } else {
+                                                    answerChunks.push(p.value);
+                                                }
+                                                var joinedChunks = answerChunks.join('');
+                                                if (joinedChunks.length > answer.length) {
+                                                    answer = joinedChunks;
                                                 }
                                             }
                                         }
@@ -246,7 +278,7 @@
         }
 
         answer = _stripCitations(answer).trim();
-        return JSON.stringify({ answer: answer, rawChunksCount: rawChunks.length, rawChunks: rawChunks.slice(0, 15) });
+        return answer;
     }
 
     async function uploadFileToPerplexity(fileBase64, filename, mimeType) {
