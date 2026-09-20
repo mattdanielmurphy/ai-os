@@ -267,6 +267,12 @@ async def test_awake_silence_watchdog():
 
         config = AssistantConfig(silence_timeout_seconds=2700, silence_cooldown_seconds=7200, dry_run=True)
         gateway = TelegramGateway(config)
+        gateway._dry_run_messages[101] = {
+            "chat_id": 12345,
+            "text": "Take a moment to check in.",
+            "keyboard": [[{"text": "Done", "callback_data": "done"}]],
+            "status": "SENT",
+        }
         watchdog = AwakeSilenceWatchdog(config, db, gateway)
 
         now = datetime.now(timezone.utc)
@@ -291,6 +297,8 @@ async def test_awake_silence_watchdog():
         assert expired == 1
         signals = await db.get_awaiting_signals()
         assert len(signals) == 0
+        assert gateway._dry_run_messages[101]["text"] == "Take a moment to check in."
+        assert gateway._dry_run_messages[101]["keyboard"] == []
 
         # Verify cooldown was stored in user dynamics
         cooldown = await db.get_dynamic("silence_cooldown_until")

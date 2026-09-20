@@ -71,7 +71,7 @@
   "mlops/inference/llama-cpp/references/server.md": 1783709248.79311,
   "creative/popular-web-designs/templates/sentry.md": 1783709248.777913,
   "creative/popular-web-designs/templates/stripe.md": 1783709248.7782657,
-  ".usage.json": 1789852825.029878,
+  ".usage.json": 1789929689.5792854,
   "creative/popular-web-designs/templates/x.ai.md": 1783709248.779536,
   ".curator_backups/2026-07-31T21-28-46Z/manifest.json": 1785533327.6685274,
   "comfyui/workflows/flux_dev_txt2img.json": 1785094409.9402525,
@@ -221,7 +221,7 @@
   "requesting-code-review/SKILL.md": 1783709248.8215878,
   "hermes-agent/references/troubleshooting.md": 1785094410.5688653,
   "p5js/scripts/export-frames.js": 1783709248.7728314,
-  ".bundled_manifest": 1789852889.2386098,
+  ".bundled_manifest": 1789929672.1715288,
   "creative/popular-web-designs/templates/figma.md": 1783709248.774981,
   "creative/popular-web-designs/templates/claude.md": 1783709248.7739809,
   "creative/comfyui/scripts/health_check.py": 1786326341.4388263,
@@ -973,5 +973,6 @@
   "scarf/scarf-template-author/SKILL.md": 1789542973.1582243,
   ".curator_backups/2026-09-19T18-16-28Z/manifest.json": 1789841788.7202134,
   ".curator_backups/2026-09-19T18-16-28Z/skills.tar.gz": 1789841788.710558,
-  ".curator_backups/2026-09-19T18-16-28Z/cron-jobs.json": 1789841788.711726
+  ".curator_backups/2026-09-19T18-16-28Z/cron-jobs.json": 1789841788.711726,
+  "productivity/google-workspace/scripts/__pycache__/_hermes_home.cpython-314.pyc": 1789859719.976611
 }
