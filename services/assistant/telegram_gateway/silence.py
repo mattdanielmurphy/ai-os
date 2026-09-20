@@ -47,13 +47,11 @@ class AwakeSilenceWatchdog:
                     "Muting prompt and triggering silence cooldown."
                 )
 
-                # Mute the message in Telegram
-                mute_text = "⏳ _(Check-in expired)_"
-                await self.gateway.edit_prompt(
+                # Remove interaction controls but preserve the original prompt text.
+                # The user should not see a visible "Check-in expired" replacement.
+                await self.gateway.remove_prompt_keyboard(
                     chat_id=chat_id,
                     message_id=msg_id,
-                    text=mute_text,
-                    remove_keyboard=True,
                 )
 
                 # Mark signal as SILENT_TIMEOUT

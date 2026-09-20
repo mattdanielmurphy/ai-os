@@ -254,6 +254,27 @@ class TelegramGateway:
                 logger.error(f"Failed to edit Telegram message {message_id}: {e2}")
                 return False
 
+    async def remove_prompt_keyboard(self, chat_id: int, message_id: int) -> bool:
+        """Remove a prompt's inline keyboard without changing its visible text."""
+        if not self.config.is_telegram_ready() or not self.app:
+            if message_id in self._dry_run_messages:
+                self._dry_run_messages[message_id]["keyboard"] = []
+                logger.info(f"[DRY-RUN] Removed Prompt keyboard (id={message_id})")
+                return True
+            return False
+
+        try:
+            await self.app.bot.edit_message_reply_markup(
+                chat_id=chat_id,
+                message_id=message_id,
+                reply_markup=None,
+            )
+            logger.info(f"Removed Telegram prompt keyboard (msg_id={message_id})")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to remove Telegram prompt keyboard {message_id}: {e}")
+            return False
+
     async def edit_message(
         self,
         chat_id: int,
