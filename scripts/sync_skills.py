@@ -3,6 +3,7 @@ import os
 import shutil
 import json
 import subprocess
+import filecmp
 from pathlib import Path
 
 HOME = Path.home()
@@ -69,36 +70,29 @@ def main():
                         pass
             del state[rel_path]
 
-    # Handle Additions/Updates
-    for rel_path in all_rel_paths:
-        max_mtime = 0.0
-        newest_file = None
-        
-        # Find newest
-        for loc in all_locations:
-            file_path = loc / rel_path
-            if file_path.exists() and file_path.is_file():
-                try:
-                    mtime = file_path.stat().st_mtime
-                    if mtime > max_mtime:
-                        max_mtime = mtime
-                        newest_file = file_path
-                except OSError:
-                    continue
-        
-        if newest_file and newest_file.is_file() and (rel_path not in state or state[rel_path] < max_mtime):
-            # Sync to all
-            for loc in all_locations:
-                target_path = loc / rel_path
-                if target_path.resolve() != newest_file.resolve():
-                    if target_path.exists() and target_path.is_dir():
-                        continue
-                    target_path.parent.mkdir(parents=True, exist_ok=True)
-                    try:
-                        shutil.copy2(newest_file, target_path)
-                    except (shutil.SameFileError, OSError):
-                        pass
-            state[rel_path] = max_mtime
+    # Handle additions and updates with the repository as the authority.
+    # The old newest-mtime strategy allowed a stale installed copy to win over
+    # a deliberate repository edit. Target-only skills are intentionally left
+    # untouched; only paths owned by the primary source are propagated.
+    for rel_path in sorted(all_rel_paths):
+        source_path = PRIMARY_SOURCE / rel_path
+        if not source_path.is_file():
+            continue
+
+        source_mtime = source_path.stat().st_mtime
+        for loc in TARGET_DIRS:
+            target_path = loc / rel_path
+            if target_path.exists() and target_path.is_dir():
+                continue
+            if target_path.resolve() == source_path.resolve():
+                continue
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                if not target_path.exists() or not filecmp.cmp(source_path, target_path, shallow=False):
+                    shutil.copy2(source_path, target_path)
+            except OSError:
+                pass
+        state[rel_path] = source_mtime
 
     save_state(state)
 
