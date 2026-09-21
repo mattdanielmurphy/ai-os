@@ -161,7 +161,7 @@ def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", pr
 def main():
     parser = argparse.ArgumentParser(description="Dynamic System Prompt Compiler")
     parser.add_argument("--role", default="orchestrator", choices=["orchestrator", "leaf"], help="Agent role")
-    parser.add_argument("--platform", default="antigravity", choices=["antigravity", "claude", "hermes", "agy"], help="Target platform")
+    parser.add_argument("--platform", default="antigravity", choices=["antigravity", "claude", "hermes", "codex", "agy"], help="Target platform")
     parser.add_argument("--prompt", default="", help="User prompt string for keyword matching")
 
     args = parser.parse_args()

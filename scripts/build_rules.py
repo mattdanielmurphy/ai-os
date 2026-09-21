@@ -6,6 +6,7 @@ Combines modular rules from .rules/ into destination targets:
   - CLAUDE.md = common.md + claude_only.md
   - GEMINI.md = common.md + gemini_only.md (written to ~/.gemini/GEMINI.md and synced to ~/projects/ai-os/AGENTS.md)
   - HERMES.md = common.md + hermes_only.md (written to ~/projects/ai-os/HERMES.md and ~/.hermes/HERMES.md)
+  - Codex AGENTS.md = shared common/git/log rules (written to ~/.codex/AGENTS.md)
 """
 
 import os
@@ -24,6 +25,7 @@ CLAUDE_TARGET = PROJECT_ROOT / "CLAUDE.md"
 GEMINI_TARGET = Path("/Users/matt/.gemini/GEMINI.md")
 HERMES_TARGET_PROJECT = PROJECT_ROOT / "HERMES.md"
 HERMES_TARGET_GLOBAL = Path("/Users/matt/.hermes/HERMES.md")
+CODEX_TARGET_GLOBAL = Path("/Users/matt/.codex/AGENTS.md")
 
 def read_file(path: Path) -> str:
     if not path.exists():
@@ -64,6 +66,12 @@ def main():
     hermes_content = compile_prompt(role="orchestrator", platform="hermes", stub=False)
     write_file(HERMES_TARGET_PROJECT, hermes_content)
     write_file(HERMES_TARGET_GLOBAL, hermes_content)
+
+    # Build Codex global instructions from the same shared rule sources.
+    # Codex has no platform-specific rule file yet, so compile_prompt("codex")
+    # intentionally receives core safety, Git, and agent-log protocols only.
+    codex_content = compile_prompt(role="orchestrator", platform="codex", stub=False)
+    write_file(CODEX_TARGET_GLOBAL, codex_content)
 
     # Build LEAF.md for Subagents
     leaf_target = PROJECT_ROOT / "LEAF.md"
