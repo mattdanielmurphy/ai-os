@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-09-21
+- **ChatGPT/Codex Thread Context Footer Trial:** Added a Codex-only global rule that displays a compact, truthful context-size footer after the 100k-token threshold. The initial trial is informational only: no automatic task creation or forced handoff, and no fabricated precise token totals when the runtime lacks a meter.
+
 ## 2026-09-19
 - **Native Media & File Attachments for Telegram Assistor Bot (`services/assistant/`):** Recovered and delivered generated 2-minute Edge TTS mindfulness meditation audio (`tts_20260919_144919_853473.mp3`) directly to Matt on Telegram. Implemented complete media attachment infrastructure across `bot.py` (`send_audio`, `send_voice`, `send_photo`, `send_video`, `send_document`, auto-classifying `send_media`) and `handlers.py` (`extract_media_from_text`, `find_session_generated_media` querying `state.db` for tool outputs, and prompt delivery rules). Verified 17/17 passing tests in test suite and restarted `aios-assistant` service. [[log]](agent-logs/2026-09-19_15-00_telegram_native_media_attachments.md)
 - **Reverted Telegram Assistant Default Engine to OpenAI Codex (`services/assistant/`):** Switched default AI engine in `config.py` from `agy` (`gemini-3.8-flash-low`) back to `codex` (`openai-codex` via `hermes chat`) to eliminate ~8-10s CLI initialization overhead, restoring ~1-2s conversational turns and multimodal vision via Matt's Codex subscription while retaining Agy fallback and explicit `/agy` coding dispatch. Updated test suite (15 passed) and restarted `aios-assistant`. [[log]](agent-logs/2026-09-19_14-41_switch_default_engine_to_codex.md)
