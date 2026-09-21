@@ -1,7 +1,7 @@
 ---
 name: agy
-description: "Delegate to agy CLI and use agy's LiteLLM proxy as a Hermes custom provider. Print mode, interactive mode, quoting, path conventions, and provider routing."
-version: 1.2.0
+description: "Delegate through the agymcp MCP bridge by default; use the agy CLI only as a documented fallback."
+version: 1.3.0
 author: Hermes Agent
 license: MIT
 platforms: [macos]
@@ -35,6 +35,16 @@ When the user says "pass this to agy", "hand this off to agy", "give this to agy
 
 **Why:** The user has explicitly designed agy as the research worker. When they route something there, they already know what they want. Any work you do first is wasted tokens and frustrates them.
 
+## Mandatory MCP Routing
+
+`mcp__agymcp__agy` is the default handoff path for every agent that has access to MCP tools. It provides structured results, explicit working-directory handling, resumable `SESSION_ID` conversations, and safe tracked background work.
+
+1. Before claiming `agymcp` is unavailable, search the complete tool registry for `agymcp` or `agy`; it may be exposed as a deferred tool rather than listed in the initial tool declaration.
+2. For normal one-shot handoffs, call `mcp__agymcp__agy` with the original request, `cd` set to the active project, `include_hermes_prompt=false`, and the smallest appropriate mode. Use `no_tmux=true` unless the caller explicitly needs an attached interactive tmux session.
+3. For long-running work, use `mcp__agymcp__agy_start`, then `agy_status`, `agy_read`, and `agy_result`. For a cached/resumable Antigravity conversation, retain its `SESSION_ID` and call `mcp__agymcp__agy_continue`.
+4. Use the terminal CLI only if the MCP tool is genuinely absent after discovery, or the bridge returns a structured invocation failure. State that fallback reason in the result.
+5. Never substitute a generic model alias such as `claude`; use the exact supported model identifier returned by the bridge or quota/model inventory.
+
 ## Prerequisites
 
 - agy installed at `~/.local/bin/agy` (confirm with `which agy`)
@@ -57,7 +67,7 @@ In the wrong order, agy reads `--dangerously-skip-permissions` as your prompt an
 
 ## Print Mode (One-Shot Tasks)
 
-Print mode runs a single prompt non-interactively, returns the result, and exits. No PTY needed. This is the default integration path:
+Print mode runs a single prompt non-interactively, returns the result, and exits. It is the CLI fallback path, not the default agent handoff path:
 
 ```bash
 agy -p "Your task description here" --dangerously-skip-permissions --print-timeout 5m
@@ -126,10 +136,11 @@ agy -i "initial prompt" --dangerously-skip-permissions
 
 ## Procedure
 
-1. **Formulate a self-contained prompt** — agy knows nothing about your conversation history. Include all context: file paths, error messages, constraints, and what you've already confirmed/found.
-2. **Call agy via a direct terminal command.** Single-quoted string. Full stop. No Python wrappers, no temp files, no intermediate layers, no heredocs. Just `agy -p 'prompt' --dangerously-skip-permissions --print-timeout 5m`.
-3. **Wait for the result** — `--print-timeout` handles the wait. The response comes back in `stdout`.
-4. **Report findings** — summarize what agy found or did.
+1. **Discover the MCP tool** — search for `mcp__agymcp__agy` before considering a shell fallback.
+2. **Dispatch through MCP by default** — preserve the user request, set `cd` to the active project, set `include_hermes_prompt=false`, and use `no_tmux=true` for a normal one-shot.
+3. **Use MCP session primitives when needed** — `agy_start` for tracked background work and `agy_continue(SESSION_ID=...)` for cache-preserving continuation.
+4. **Fall back to the CLI only after a real MCP failure** — use the documented quoted command and record the specific failure.
+5. **Report findings and routing** — backend, automatic/explicit selection, session ID if applicable, and fallback reason if applicable.
 
 ## Verification
 
@@ -294,11 +305,12 @@ See `references/deepseek-openrouter-quirks.md` for the full verification probe a
 
 ## Rules for Hermes Agents
 
-1. **Call agy directly in terminal** — `agy -p 'prompt' --dangerously-skip-permissions --print-timeout 5m`. Single-quoted string, multiline if needed. No Python wrappers, no temp files, no intermediate layers, ever.
-2. **Or use the MCP tool** — `mcp__agymcp__agy(PROMPT=..., cd=..., timeout=...)` when you're already in Hermes and want to delegate without a terminal command. Use `allow_write=true` + `mode=execute` for tasks that write files.
-3. **Prompt after `-p`, flags after prompt** — correct order is critical.
-4. **Self-contained prompts** — include all context agy needs; it has no memory of your session.
-5. **Set a generous timeout** — investigations can take several minutes.
-6. **Report results** — summarize what agy found, don't just dump the raw output.
-7. **Use single quotes always** — they prevent ALL bash interpretation of special characters. If you need a literal single quote in the prompt, use double quotes for the outer string. Never escalate to file-read or Python.
-8. **Triage first: when on a cheap model, delegate research to agy** — before reading large files or doing cross-repo analysis, check if you're on a cheap/fast model. If so, delegate to agy. The user will correct you if you burn tokens on research they expected agy to handle.
+1. **Use the MCP tool by default** — discover `mcp__agymcp__agy` even when it is deferred. Pass `cd`, `include_hermes_prompt=false`, and `no_tmux=true` for normal one-shots. Use `allow_write=true` + `mode=execute` only for authorized write tasks.
+2. **Use `agy_start` and `agy_continue` deliberately** — background work uses `agy_start`; cache-preserving continuation uses the returned `SESSION_ID` with `agy_continue`.
+3. **Use terminal `agy` only as a fallback** — only after MCP discovery or invocation fails, and always report why.
+4. **Prompt after `-p`, flags after prompt** — only relevant to the fallback CLI path.
+5. **Self-contained prompts** — include all context agy needs; it has no memory of your session.
+6. **Set a generous timeout** — investigations can take several minutes.
+7. **Report results** — summarize what agy found, don't just dump the raw output.
+8. **Use single quotes always** — only for the fallback CLI path.
+9. **Triage first: when on a cheap model, delegate research to agy** — before reading large files or doing cross-repo analysis, check if you're on a cheap/fast model. If so, delegate to agy.
