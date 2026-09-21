@@ -148,6 +148,10 @@ def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", pr
         hermes_rules = read_rule("hermes_only", config)
         if hermes_rules:
             sections.append(hermes_rules)
+    elif platform.lower() in ("codex", "chatgpt"):
+        codex_rules = read_rule("codex_only", config)
+        if codex_rules:
+            sections.append(codex_rules)
 
     # Dynamic domain rules
     active_domains = detect_active_domains(workspace_root or PROJECT_ROOT, prompt_text)

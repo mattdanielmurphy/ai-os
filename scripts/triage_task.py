@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+triage_task.py - Automated Task Triaging and Delegation Evaluator for ai-os
+
+Evaluates incoming user tasks against local quota and task complexity to determine
+whether to route to agy (default for substantive work with healthy quota) or keep
+direct in ChatGPT / local engine.
+"""
+
 import os
 import sys
 import json
@@ -8,92 +16,52 @@ from pathlib import Path
 # Add scripts directory to sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from jules_quota import get_jules_status
+from triage_router import evaluate_routing, format_routing_visibility
 from compile_dynamic_prompt import compile_prompt
 
-def evaluate_triage(prompt, files=None, role="orchestrator"):
-    prompt_lower = prompt.lower()
+
+def evaluate_triage(prompt: str, files=None, role: str = "orchestrator", mock_quota_status: str = None) -> dict:
     files = files or []
+    decision = evaluate_routing(prompt, mock_quota_status=mock_quota_status)
 
-    # 1. Inspect Quotas
-    jules_status = get_jules_status()
-    jules_avail = jules_status.get("total_remaining", 0) if jules_status.get("status") == "OK" else 0
-
-    ag_quota_snapshot = {}
-    snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
-    if os.path.exists(snapshot_path):
-        try:
-            with open(snapshot_path) as f:
-                ag_quota_snapshot = json.load(f)
-        except Exception:
-            pass
-
-    # Evaluate local quota pressure
-    low_local_quota = any(val < 0.20 for val in ag_quota_snapshot.values()) if ag_quota_snapshot else True
-
-    # 2. Keyword & Task Characteristic Matching
-    keywords_heavy = ["refactor", "unit test", "tests", "boilerplate", "migrate", "docs", "documentation", "feature"]
-    keywords_quick = ["typo", "fix typo", "rename", "format", "single line", "bugfix"]
-
-    is_heavy_task = any(kw in prompt_lower for kw in keywords_heavy) or len(files) > 3
-    is_quick_task = any(kw in prompt_lower for kw in keywords_quick) and len(files) <= 1
-
-    # 3. Decision Matrix
     compiled_prompt = compile_prompt(role=role, platform="antigravity", prompt_text=prompt)
-    decision = {
-        "engine": "local",
-        "recommended_model": "muse-spark-1.1",
-        "use_jules": False,
-        "jules_fanout": False,
-        "auto_context_files": [],
-        "reasoning": [],
-        "compiled_system_prompt": compiled_prompt,
-        "compiled_system_prompt_len": len(compiled_prompt)
-    }
 
-    # Context Mapping
-    if "mac" in prompt_lower or "hammerspoon" in prompt_lower or "launchagent" in prompt_lower:
-        mac_doc = os.path.expanduser("~/projects/ai-os/docs/MAC_ENVIRONMENT.md")
-        if os.path.exists(mac_doc):
-            decision["auto_context_files"].append(mac_doc)
-            decision["reasoning"].append("Auto-injected MAC_ENVIRONMENT.md context based on macOS/system keywords.")
+    reasoning = [
+        f"Backend selected: {decision['backend']} ({decision['selection_method']})",
+        f"Quota status: {decision['quota_status']} ({decision['quota_details']})",
+    ]
 
-    ag_ctx = os.path.expanduser("~/projects/ai-os/AG_CONTEXT.md")
-    if os.path.exists(ag_ctx):
-        decision["auto_context_files"].append(ag_ctx)
-
-    # Routing Logic
-    if is_heavy_task and jules_avail > 0:
-        decision["engine"] = "jules"
-        decision["use_jules"] = True
-        decision["recommended_model"] = "jules-remote"
-        if len(files) > 2 or "parallel" in prompt_lower or "bulk" in prompt_lower:
-            decision["jules_fanout"] = True
-            decision["reasoning"].append(f"Heavy/bulk task detected. Offloading to Jules Parallel Fan-Out (Jules quota: {jules_avail} remaining).")
-        else:
-            decision["reasoning"].append(f"Heavy task detected. Offloading to Jules to conserve local Pro quota (Jules quota: {jules_avail} remaining).")
-        decision["reasoning"].append("RECOMMENDATION: Preflight suggests Jules offloading. DO NOT AUTO-OFFLOAD. STOP AND ASK THE USER FOR CONFIRMATION.")
-    elif low_local_quota and jules_avail > 0 and not is_quick_task:
-        decision["engine"] = "jules"
-        decision["use_jules"] = True
-        decision["recommended_model"] = "jules-remote"
-        decision["reasoning"].append("Local Pro quota is LOW. Delegating task to Jules.")
-        decision["reasoning"].append("RECOMMENDATION: Preflight suggests Jules offloading. DO NOT AUTO-OFFLOAD. STOP AND ASK THE USER FOR CONFIRMATION.")
-    elif is_quick_task:
-        decision["engine"] = "local"
-        decision["recommended_model"] = "gemini-3.5-flash-lite"
-        decision["reasoning"].append("Quick inline micro-edit detected. Executing locally on fast Flash-Lite tier.")
+    if decision.get("override_reason"):
+        reasoning.append(f"Override reason: {decision['override_reason']}")
+    elif decision.get("is_lightweight"):
+        reasoning.append(f"Lightweight request detected: {decision['lightweight_reason']} -> keeping direct in ChatGPT.")
+    elif decision.get("fallback_occurred"):
+        reasoning.append(f"Substantive request fell back to direct ChatGPT: {decision['fallback_reason']}.")
     else:
-        decision["engine"] = "local"
-        decision["recommended_model"] = "muse-spark-1.1"
-        decision["reasoning"].append("Standard interactive task. Executing locally via primary daily driver model.")
+        reasoning.append("Substantive request routed to agy as default capable reasoning/execution agent.")
 
-    if decision["use_jules"]:
-        rec_msg = "RECOMMENDATION: Preflight suggests Jules offloading. DO NOT AUTO-OFFLOAD. STOP AND ASK THE USER FOR CONFIRMATION."
-        if rec_msg not in decision["reasoning"]:
-            decision["reasoning"].append(rec_msg)
+    if decision.get("thin_handoff"):
+        reasoning.append("Thin handoff generated with verbatim request and repository context.")
 
-    return decision
+    result = {
+        "engine": decision["backend"],
+        "recommended_model": decision["model"],
+        "backend": decision["backend"],
+        "selection_method": decision["selection_method"],
+        "quota_status": decision["quota_status"],
+        "remaining_fraction": decision["remaining_fraction"],
+        "fallback_occurred": decision["fallback_occurred"],
+        "fallback_reason": decision["fallback_reason"],
+        "is_lightweight": decision["is_lightweight"],
+        "lightweight_reason": decision["lightweight_reason"],
+        "thin_handoff": decision["thin_handoff"],
+        "reasoning": reasoning,
+        "routing_visibility": format_routing_visibility(decision),
+        "compiled_system_prompt": compiled_prompt,
+        "compiled_system_prompt_len": len(compiled_prompt),
+    }
+    return result
+
 
 def main():
     parser = argparse.ArgumentParser(description="Automated Task Triaging Engine")
@@ -109,10 +77,10 @@ def main():
     else:
         print(f"Recommended Model: {decision.get('recommended_model', 'N/A')}")
         print(f"Engine: {decision.get('engine', 'N/A')}")
-        print(f"Use Jules: {decision.get('use_jules', False)}")
         print("Reasoning:")
         for r in decision.get("reasoning", []):
             print(f"  - {r}")
+
 
 if __name__ == "__main__":
     main()
