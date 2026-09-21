@@ -246,6 +246,381 @@ def get_quota():
     except Exception:
         return 1.0, 1.0, False
 
+SNAPSHOT_PATH = Path.home() / ".ag_quota_snapshot.json"
+
+def check_quota(timeout_sec: float = 2.0) -> dict:
+    """
+    Evaluates usable Antigravity quota and returns structured quota state:
+    'healthy', 'low', 'exhausted', 'unavailable', or 'unknown'.
+    """
+    # 1. Primary: Run ag-quota -j (canonical local CLI)
+    ag_quota_bin = shutil.which("ag-quota") or os.path.expanduser("~/go/bin/ag-quota")
+    if os.path.exists(ag_quota_bin):
+        try:
+            res = subprocess.run([ag_quota_bin, "-j"], capture_output=True, text=True, timeout=timeout_sec)
+            if res.returncode == 0 and res.stdout.strip():
+                data = json.loads(res.stdout)
+                models = data.get("Models", [])
+                if models:
+                    flash_fractions = []
+                    pro_fractions = []
+                    all_exhausted = True
+                    snapshot = {}
+                    email = data.get("Email", "default")
+                    
+                    for m in models:
+                        model_id = m.get("ModelID", "")
+                        disp = m.get("DisplayName", model_id)
+                        frac = m.get("RemainingFraction", 1.0)
+                        is_ex = m.get("IsExhausted", False)
+                        if isinstance(frac, (int, float)):
+                            snapshot[f"{email} | {disp}"] = round(frac, 4)
+                            if not is_ex and frac > 0:
+                                all_exhausted = False
+                            if "flash" in model_id.lower() or "flash" in disp.lower():
+                                flash_fractions.append(frac)
+                            elif "pro" in model_id.lower() or "pro" in disp.lower():
+                                pro_fractions.append(frac)
+
+                    # Update snapshot cache
+                    try:
+                        with open(SNAPSHOT_PATH, "w", encoding="utf-8") as f:
+                            json.dump(snapshot, f, indent=2)
+                    except Exception:
+                        pass
+
+                    if all_exhausted:
+                        return {
+                            "status": "exhausted",
+                            "remaining_fraction": 0.0,
+                            "primary_model": data.get("DefaultModelID", "gemini-flash"),
+                            "details": "All quota buckets exhausted"
+                        }
+                    
+                    rep_frac = max(flash_fractions) if flash_fractions else (max(pro_fractions) if pro_fractions else 1.0)
+                    status = "healthy" if rep_frac >= 0.20 else "low"
+                    return {
+                        "status": status,
+                        "remaining_fraction": rep_frac,
+                        "primary_model": data.get("DefaultModelID", "gemini-3.7-flash"),
+                        "details": f"{int(rep_frac * 100)}% remaining on primary model"
+                    }
+        except Exception:
+            pass
+
+    # 2. Secondary: Check recent snapshot cache (< 5 minutes old)
+    if SNAPSHOT_PATH.exists():
+        try:
+            mtime = os.path.getmtime(SNAPSHOT_PATH)
+            if time.time() - mtime < 300:
+                with open(SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+                    snapshot = json.load(f)
+                vals = [v for v in snapshot.values() if isinstance(v, (int, float))]
+                if vals:
+                    max_val = max(vals)
+                    if max_val == 0.0:
+                        return {"status": "exhausted", "remaining_fraction": 0.0, "primary_model": "cached", "details": "Cached snapshot shows exhausted"}
+                    status = "healthy" if max_val >= 0.20 else "low"
+                    return {"status": status, "remaining_fraction": max_val, "primary_model": "cached", "details": f"Cached snapshot: {int(max_val * 100)}%"}
+        except Exception:
+            pass
+
+    # 3. Tertiary: Google PA API fallback
+    try:
+        quota_5h, quota_week, is_real = get_quota()
+        if is_real:
+            min_frac = min(quota_5h, quota_week)
+            if min_frac <= 0.0:
+                return {"status": "exhausted", "remaining_fraction": 0.0, "primary_model": "pa-api", "details": "PA API shows exhausted"}
+            status = "healthy" if min_frac >= 0.20 else "low"
+            return {"status": status, "remaining_fraction": min_frac, "primary_model": "pa-api", "details": f"PA API: {int(min_frac * 100)}%"}
+    except Exception:
+        pass
+
+    # 4. Unknown / Unavailable
+    if not (shutil.which("ag-quota") or os.path.exists(os.path.expanduser("~/go/bin/ag-quota"))):
+        return {"status": "unavailable", "remaining_fraction": None, "primary_model": "unknown", "details": "ag-quota binary unavailable"}
+    return {"status": "unknown", "remaining_fraction": None, "primary_model": "unknown", "details": "Quota status could not be determined"}
+
+def is_lightweight_request(query: str) -> tuple[bool, str]:
+    """
+    Identifies whether a request is obviously lightweight (best kept direct in ChatGPT).
+    Returns (is_lightweight, reason).
+    Deliberately low threshold: if complexity is uncertain, returns (False, '').
+    """
+    q_clean = query.strip()
+    q_lower = q_clean.lower().rstrip(".!?;:")
+
+    # 1. Greetings & casual conversation
+    greetings = {
+        "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "how are you", "how are you doing", "how's it going", "hows it going",
+        "what's up", "whats up", "yo", "sup", "thanks", "thank you", "bye", "goodbye",
+        "hello there", "hi there", "hey there"
+    }
+    if q_lower in greetings or (q_lower.startswith(("hi ", "hello ", "hey ")) and len(q_lower.split()) <= 3 and not any(kw in q_lower for kw in ["code", "bug", "plan", "review", "repo", "file"])):
+        return True, "greeting / casual conversation"
+
+    # 2. Trivial math or calculation
+    if evaluate_math_phrase(query) is not None:
+        return True, "trivial calculation"
+
+    # 3. Explicit user instruction not to delegate
+    no_delegate_phrases = [
+        "do not delegate", "don't delegate", "dont delegate",
+        "no delegation", "stay in chatgpt", "handle directly in chatgpt",
+        "handle directly", "answer directly", "chatgpt only"
+    ]
+    if any(p in q_lower for p in no_delegate_phrases):
+        return True, "explicit user request not to delegate"
+
+    # 4. Explicitly marked quick / simple
+    quick_prefixes = ["quick question:", "simple question:", "just a quick question:", "just a quick:", "quick:"]
+    for qp in quick_prefixes:
+        if q_lower.startswith(qp):
+            rest = q_clean[len(qp):].strip()
+            if len(rest) < 120 and not any(kw in rest.lower() for kw in ["architecture", "review", "bug", "implement", "investigate", "compare", "system", "code"]):
+                return True, "explicitly marked quick/simple"
+
+    # 5. Very short rewrites, grammar corrections, or text formatting (< 150 chars)
+    rewrite_prefixes = [
+        "rewrite this sentence", "rewrite this", "fix the grammar in this",
+        "fix grammar in this", "fix the grammar", "fix grammar",
+        "fix typo", "fix the typo", "make this title shorter", "make this shorter",
+        "format this as markdown", "format as markdown", "spellcheck this",
+        "check spelling in this"
+    ]
+    for rp in rewrite_prefixes:
+        if q_lower.startswith(rp) and len(q_clean) < 200:
+            return True, "short text rewrite or formatting"
+
+    # 6. Simple context-free brainstorming or quick list (< 100 chars)
+    simple_brainstorm = [
+        "give me three quick name ideas", "give me 3 quick name ideas",
+        "give me three name ideas", "give me 3 name ideas",
+        "quick name ideas", "name ideas for"
+    ]
+    for sb in simple_brainstorm:
+        if q_lower.startswith(sb) and len(q_clean) < 120:
+            return True, "simple context-free brainstorming"
+
+    # 7. One-line factual questions with zero contextual dependency (< 60 chars)
+    if len(q_clean) < 60 and not any(kw in q_lower for kw in [
+        "project", "file", "repo", "code", "bug", "arch", "design", "plan",
+        "rule", "memory", "wiki", "system", "review", "why", "how do i",
+        "implement", "error", "trace", "test", "session"
+    ]):
+        if q_lower.startswith(("what is ", "what's ", "who is ", "who's ", "when was ", "where is ")) and len(q_clean.split()) <= 8:
+            return True, "context-free factual query"
+
+    return False, ""
+
+def get_git_repo_root(cwd: Path | None = None) -> str | None:
+    target = cwd or Path.cwd()
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(target),
+            capture_output=True,
+            text=True,
+            timeout=1.5
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+def detect_execution_mode(prompt: str) -> str:
+    p_lower = prompt.lower()
+    if any(k in p_lower for k in ["plan", "roadmap", "architecture", "design", "propose", "proposal"]):
+        return "plan"
+    if any(k in p_lower for k in ["review", "audit", "critique", "inspect"]):
+        return "review"
+    if any(k in p_lower for k in ["investigate", "why is", "why does", "diagnose", "root cause", "debug"]):
+        return "investigate"
+    if any(k in p_lower for k in ["implement", "build", "write code", "create", "refactor", "patch", "fix", "add"]):
+        return "build"
+    return "reason"
+
+def build_thin_handoff(
+    prompt: str,
+    cwd: Path | str | None = None,
+    mode: str | None = None,
+    safety_boundary: str | None = None,
+    extra_note: str | None = None
+) -> str:
+    """
+    Constructs a thin handoff to agy per policy:
+    - Original user request, preserved verbatim
+    - Active project/repository and working directory
+    - Minimal necessary execution metadata (mode / safety boundary)
+    - Concise extra note only if critical context cannot be discovered by agy itself.
+    """
+    working_dir = Path(cwd).resolve() if cwd else Path.cwd().resolve()
+    repo_root = get_git_repo_root(working_dir) or str(working_dir)
+    selected_mode = mode or detect_execution_mode(prompt)
+
+    lines = [
+        f"Original user request: {prompt.strip()}",
+        "",
+        f"Active project/repository and working directory: {repo_root}",
+        f"Working directory: {working_dir}",
+        f"Mode: {selected_mode}"
+    ]
+    if safety_boundary:
+        lines.append(f"Safety boundary: {safety_boundary}")
+    if extra_note:
+        lines.append(f"Note: {extra_note}")
+
+    return "\n".join(lines)
+
+def evaluate_routing(
+    query: str,
+    explicit_flags: list | None = None,
+    cwd: Path | str | None = None,
+    safety_boundary: str | None = None,
+    extra_note: str | None = None,
+    mock_quota_status: str | None = None,
+    mock_quota_fraction: float | None = None
+) -> dict:
+    """
+    Core routing evaluator for AI-OS harness.
+    Determines whether to route to agy (default for non-trivial with healthy quota),
+    direct ChatGPT, or other backends.
+    """
+    explicit_flags = explicit_flags or []
+    q_lower = query.lower()
+    
+    # 1. Check Explicit Overrides
+    forced_backend = None
+    override_reason = None
+    
+    # Flag overrides
+    if any(f in explicit_flags for f in ["--chatgpt", "--direct", "--no-delegate"]):
+        forced_backend = "chatgpt"
+        override_reason = "explicit CLI flag (--chatgpt/--direct)"
+    elif any(f in explicit_flags for f in ["--agy", "--force-agy"]):
+        forced_backend = "agy"
+        override_reason = "explicit CLI flag (--agy)"
+    elif any(f in explicit_flags for f in ["--claude"]):
+        forced_backend = "claude"
+        override_reason = "explicit CLI flag (--claude)"
+    elif any(f in explicit_flags for f in ["--codex"]):
+        forced_backend = "codex"
+        override_reason = "explicit CLI flag (--codex)"
+        
+    # In-prompt overrides
+    if not forced_backend:
+        if query.startswith("/agy ") or re.search(r"\b(use agy|delegate to agy|run with agy|pass to agy|ask agy)\b", q_lower):
+            forced_backend = "agy"
+            override_reason = "explicit prompt instruction for agy"
+        elif re.search(r"\b(do not delegate|don't delegate|handle directly in chatgpt|stay in chatgpt|chatgpt only)\b", q_lower):
+            forced_backend = "chatgpt"
+            override_reason = "explicit prompt instruction for direct ChatGPT"
+
+    # Check quota
+    if mock_quota_status:
+        quota_status = mock_quota_status
+        remaining_fraction = mock_quota_fraction if mock_quota_fraction is not None else (1.0 if mock_quota_status == "healthy" else 0.15)
+        quota_info = {"status": quota_status, "remaining_fraction": remaining_fraction, "primary_model": "mock", "details": f"Mock quota: {quota_status}"}
+    else:
+        quota_info = check_quota()
+        quota_status = quota_info.get("status", "unknown")
+        remaining_fraction = quota_info.get("remaining_fraction")
+
+    # 2. Decision Logic
+    if forced_backend:
+        backend = forced_backend
+        selection_method = "explicit"
+        fallback_occurred = False
+        fallback_reason = None
+        is_lw = False
+        lw_reason = ""
+    else:
+        selection_method = "automatic"
+        is_lw, lw_reason = is_lightweight_request(query)
+        
+        if is_lw:
+            backend = "chatgpt"
+            fallback_occurred = False
+            fallback_reason = None
+        else:
+            # Substantive request!
+            if quota_status == "healthy":
+                backend = "agy"
+                fallback_occurred = False
+                fallback_reason = None
+            elif quota_status == "low":
+                backend = "chatgpt"
+                fallback_occurred = True
+                fallback_reason = "low quota"
+            elif quota_status == "exhausted":
+                backend = "chatgpt"
+                fallback_occurred = True
+                fallback_reason = "exhausted quota"
+            elif quota_status == "unavailable":
+                backend = "chatgpt"
+                fallback_occurred = True
+                fallback_reason = "unavailable quota"
+            else:  # unknown
+                backend = "chatgpt"
+                fallback_occurred = True
+                fallback_reason = "unknown quota"
+
+    # Thin handoff construction
+    thin_handoff = None
+    if backend == "agy":
+        clean_query = re.sub(r"^(?:/agy\s*|(?:use agy|delegate to agy|run with agy|pass to agy|ask agy)[:,\s]*)", "", query, flags=re.IGNORECASE).strip() or query
+        thin_handoff = build_thin_handoff(
+            prompt=clean_query,
+            cwd=cwd,
+            safety_boundary=safety_boundary,
+            extra_note=extra_note
+        )
+
+    # Resolve model name for agy
+    resolved_model = "Gemini 3.7 Flash (High)"
+    if backend == "agy":
+        if quota_status == "low":
+            resolved_model = "Gemini 3.1 Pro (Low)"
+        else:
+            resolved_model = "Gemini 3.7 Flash (High)"
+
+    return {
+        "query": query,
+        "backend": backend,
+        "selection_method": selection_method,
+        "override_reason": override_reason,
+        "quota_status": quota_status,
+        "remaining_fraction": remaining_fraction,
+        "quota_details": quota_info.get("details", ""),
+        "fallback_occurred": fallback_occurred,
+        "fallback_reason": fallback_reason,
+        "is_lightweight": is_lw,
+        "lightweight_reason": lw_reason,
+        "thin_handoff": thin_handoff,
+        "model": resolved_model if backend == "agy" else "chatgpt-direct",
+    }
+
+def format_routing_visibility(decision: dict) -> str:
+    backend = decision["backend"]
+    method = decision["selection_method"]
+    quota_st = decision["quota_status"]
+    frac = decision["remaining_fraction"]
+    frac_str = f" ({int(frac * 100)}% remaining)" if frac is not None else ""
+    fallback = decision["fallback_occurred"]
+    fb_reason = decision["fallback_reason"]
+
+    lines = [
+        "[ai-os routing]",
+        f"  Backend: {backend}",
+        f"  Selection: {method}" + (" (healthy quota available)" if backend == "agy" and method == "automatic" else f" ({decision['override_reason']})" if decision.get("override_reason") else ""),
+        f"  Quota: {quota_st}{frac_str}",
+        f"  Fallback: {'true (Reason: ' + fb_reason + ')' if fallback else 'false'}"
+    ]
+    return "\n".join(lines)
+
 def query_gemini_flash_lite(prompt, system_instruction=None):
     """Hits the raw external Google AI API for classification / investigation using GEMINI_API_KEY or Oauth token."""
     key = os.getenv("GEMINI_API_KEY")
@@ -720,85 +1095,40 @@ def main():
     if try_math_calculation(query):
         sys.exit(0)
 
-    # 3. Tier 1 Classification
-    print(f"[triage] Intercepting prompt: '{query[:50]}...'")
-    category = tier1_triage(query)
-    print(f"[triage] Classified category: {category}")
+    # Core routing evaluation
+    decision = evaluate_routing(query, explicit_flags=args, cwd=Path.cwd())
 
-    # 4. Route selection
-    selected_model = "Gemini 3.7 Flash (Low)"
-    
-    is_coding_intent = category in ["coding_standard", "coding_complex"] or any(
-        kw in query.lower() for kw in ["file", "find", "search", "code", "repo", "script", "fix", "debug", "refactor", "build", "run", "git"]
-    )
+    # If --json requested, output JSON and exit
+    if "--json" in args:
+        print(json.dumps(decision, indent=2))
+        sys.exit(0)
 
-    if category == "simple_non_coding" and not is_coding_intent:
-        selected_model = "Gemini 3.7 Flash (Low)"
-    elif category == "coding_standard" or is_coding_intent:
-        quota_5h, quota_week, is_real = get_quota()
-        if is_real and quota_5h < 0.20:
-            print(f"[triage] Quota < 20% ({int(quota_5h * 100)}%). Throttling to Gemini 3.1 Pro (Low) to conserve resources.")
-            selected_model = "Gemini 3.1 Pro (Low)"
-        else:
-            selected_model = "Gemini 3.7 Flash (Low)"
-    elif category == "coding_complex":
-        selected_model = "Gemini 3.1 Pro (High)"
-    elif category == "valve_boilerplate":
-        run_valve_boilerplate(query)
+    # Print visible routing record
+    print(format_routing_visibility(decision))
 
-    # Check if CLI execution was explicitly requested via flags
-    force_cli = any(arg in args for arg in ["--cli", "--terminal", "--agy", "--claude"]) or query.startswith("/")
-
-    if force_cli:
-        print(f"[triage] Explicit CLI flag detected: running terminal agy with {selected_model}")
-        cmd = ["agy", "--model", selected_model]
-        for arg in args:
-            if arg in ["--model", "--cli", "--terminal", "--agy"]:
-                continue
-            cmd.append(arg)
-        with hide_agents_md():
-            sys.exit(subprocess.call(cmd))
-
-    # Route based on prompt intent:
-    if is_coding_intent:
-        # Coding / file / codebase task -> Headless CLI execution via agy
-        exit_code = dispatch_headless_prompt(query, selected_model)
+    # Route based on evaluated backend:
+    if decision["backend"] == "agy":
+        prompt_to_dispatch = decision["thin_handoff"] or query
+        exit_code = dispatch_headless_prompt(prompt_to_dispatch, decision["model"])
+        if exit_code != 0:
+            print(f"\n[ai-os routing] agy invocation failed (exit code {exit_code}). Falling back cleanly to direct handling...")
+            handle_conversational_query(query)
+            sys.exit(0)
+        sys.exit(exit_code)
+    elif decision["backend"] == "claude":
+        cmd = ["claude", query, "--dangerously-skip-permissions"]
+        sys.exit(subprocess.call(cmd))
+    elif decision["backend"] == "codex":
+        cmd = ["codex", "exec", query]
+        sys.exit(subprocess.call(cmd))
     else:
-        # Non-coding conversational query -> Dual Visual HUD + Spoken HAL Voice response
+        # direct chatgpt / local handling
+        if decision.get("fallback_occurred"):
+            print(f"[ai-os routing] Direct fallback active: {decision.get('fallback_reason')}")
         if handle_conversational_query(query):
             sys.exit(0)
-        exit_code = dispatch_headless_prompt(query, selected_model)
-
-    # 6. Tier 2 Executive Investigation on failure
-    if exit_code != 0:
-        print("\n[triage] Initial execution encountered a crash. Triggering Tier 2 Executive Investigation...")
-        error_log = ""
-        if ERROR_LOG_PATH.exists():
-            try:
-                error_log = ERROR_LOG_PATH.read_text()[-2000:] # Last 2k chars
-            except Exception:
-                pass
-        
-        escalated_model = tier2_investigation(query, selected_model, error_log)
-        print(f"[triage] Tier 2 escalation target computed: {escalated_model}")
-
-        if escalated_model == "Claude Fable 5":
-            print("[triage] HALT: Claude Fable 5 is strictly barred from autonomous invocation due to cost limits.")
-            print("[triage] Manual human intervention is required to run this model.")
-            sys.exit(exit_code)
-        
-        # Google Premium and GLM-5.2 are paid endpoints not directly mapped in standard agy list
-        if escalated_model in ["GLM-5.2 (max)", "google-premium"]:
-            print(f"[triage] Out-of-pocket escalation route selected: {escalated_model}.")
-            print("Please configure external API credentials or run manually on premium endpoints.")
-            sys.exit(exit_code)
-
-        # Retry/escalate with Gemini 3.1 Pro (High)
-        print(f"[triage] Automatically retrying with escalated reasoning model: {escalated_model}...")
-        exit_code = dispatch_headless_prompt(query, escalated_model)
-        sys.exit(exit_code)
-
-    sys.exit(0)
+        print(f"\n[ai-os routing] Direct response completed.")
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
