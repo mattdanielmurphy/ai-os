@@ -5,3 +5,7 @@
 - **Architectural Preservation**: When debugging or refactoring established custom UI layouts, CSS modules, or templates, agents MUST isolate the exact root cause while strictly preserving existing styling and DOM structures. No unilateral style simplification.
 - **Technology Stack**: Use HTML for structure, Javascript/Typescript for logic, and Vanilla CSS or CSS Modules for maximum control. Avoid TailwindCSS unless explicitly requested.
 - **Dependency & Framework Freshness Invariant**: When scaffolding or initializing new web applications (especially Next.js, React, or Node/Bun services), agents MUST NEVER scaffold with pinned obsolete or vulnerable major/minor versions. ALWAYS install or resolve `next@latest` (or the latest stable security release) to prevent deploying outdated, vulnerable frameworks.
+- **Universal Modal Dismissal Invariant (Escape Key & Click Outside)**: ALL modal dialogs, drawers, popups, and dropdown menus MUST be dismissable by:
+  1. **Pressing the `Escape` key (`keydown` listener)**.
+  2. **Clicking outside the modal content container (backdrop overlay click)**.
+  Agents MUST NEVER author raw overlay `<div>` elements without wiring up backdrop click detection and `Escape` key handling. Where possible in React/Web apps, use an accessible, unified modal primitive, HTML `<dialog>`, or established headless component pattern that enforces backdrop dismissal and escape listeners by default.
