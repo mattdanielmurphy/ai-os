@@ -6,7 +6,7 @@
 
 ## Permanently Banned Aesthetics ("AI Slop")
 1. **Aggressive Tech Gradients:** Banned. Do NOT use purple-to-pink, blue-to-violet, or neon gloss gradients on text, buttons, hero elements, or card borders.
-2. **Generic Tech Hues:** Avoid default unthinking indigo/violet/purple accents unless explicitly specified by a brand design system.
+2. **Generic Tech Hues & Default Amber/Brown-Orange:** Banned. Do NOT use default unthinking indigo/violet accents or generic amber/brown-orange (`amber-500`, `#f59e0b`, warm mustard) as the default accent. Every new project MUST have a fresh, deliberate, distinct color palette generated for its specific domain rather than falling back to cookie-cutter amber or tech purple.
 3. **Slop Decoration:** No unearned glassmorphism/backdrop blurs without real surface depth, no accent left-rail strips on cards, no icon toppers centered over every heading, and no monument stat numbers taking up storytelling space.
 4. **Compositional Defaulting:** Never default to centered hero + 3 identical card tiles. Commit to a surface archetype before writing layout or tokens.
 5. **Unsolicited Dark Mode Defaulting:** Banned. NEVER default HTML pages, dashboards, cheat sheets, or web artifacts to dark mode unless explicitly requested by the user. Default to clean, high-contrast, editorial light/paper surfaces or support system theme adaptation (`@media (prefers-color-scheme: dark)`).

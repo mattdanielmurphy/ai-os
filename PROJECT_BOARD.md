@@ -20,6 +20,8 @@ Central task registry across all projects and active coding threads. Automatical
 
 ## 📋 Active Engineering Backlog
 
+- [ ] 🔥 **HIGH PRIORITY**: Migrate personal Obsidian LLM Wiki knowledge base into Mem0 database for semantic retrieval [project:: ai-os-memory] [assignee:: agent]
+- [ ] 🔥 **HIGH PRIORITY**: Harvest durable insights, patterns, and decisions from massive agent thread history transcripts into Mem0 [project:: ai-os-memory] [assignee:: agent]
 - [ ] Build unified Thread Browser (as extension of ai-os companion app) [project:: thread-browser] [assignee:: agent]
 - [ ] Fork Hermes WebUI for custom UI controls & unconstrained agent view [project:: hermes-webui] [assignee:: agent]
 - [ ] Design & build Clipboard History GUI App with frequency tracking and AI auto-snippets [project:: clipboard-snippet-app] [assignee:: agent]
