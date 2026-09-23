@@ -193,3 +193,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 ## 2026-09-21
 - **Cross-runtime rule and skill synchronization:** Added Codex as a generated global-rule target and made the repository-owned `skills/` tree authoritative during propagation. Verified all 203 skill entrypoints match across Hermes, Claude, Codex's `~/.agents`, Gemini, agy, and Antigravity installations. [[log]](agent-logs/2026-09-21_12-40_cross-runtime-rules-and-skills-sync.md)
 - 2026-09-22: Telegram check-ins now remain answerable indefinitely by default; the awake-time timeout path is opt-in via a positive `silence_timeout_seconds` value. Added regression coverage and restarted `aios-assistant`.
+## 2026-09-22
+- **`query_aios` recovery correctness:** `--recover` had been bypassing empty-prompt validation and dispatching a fresh provider request. It now records pending/completed query state and only recovers checksum-verified saved output; the planner workflow now waits on the original process.
+- **AI-OS Controls:** Added a local companion show/hide API and an AI-OS-branded Hammerspoon menu entry for Perplexity and Gemini authentication access. Recorded the separate Bartender/custom menu-bar exploration as future backlog.

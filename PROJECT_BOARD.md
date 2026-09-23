@@ -15,6 +15,7 @@ Central task registry across all projects and active coding threads. Automatical
 ## 🚀 In Progress
 
 - [ ] Fix gemini-thread-sync userscript connection & verify sync daemon [project:: gemini-thread-sync] [assignee:: agent]
+- [ ] Add AI-OS Controls menu actions to reveal and hide the Perplexity/Gemini companion windows [project:: query-aios-controls] [assignee:: agent]
 
 ---
 
@@ -27,6 +28,7 @@ Central task registry across all projects and active coding threads. Automatical
 - [ ] Fork Hermes WebUI for custom UI controls & unconstrained agent view [project:: hermes-webui] [assignee:: agent]
 - [ ] Design & build Clipboard History GUI App with frequency tracking and AI auto-snippets [project:: clipboard-snippet-app] [assignee:: agent]
 - [ ] Fix Perplexity thread-sync userscript [project:: perplexity-thread-sync] [assignee:: agent]
+- [ ] Explore a Bartender replacement or a custom expandable menu-bar controls window that exposes app menu-bar actions [project:: menu-bar-controls] [assignee:: user]
 - [ ] Implement system prompt injection helper in gemini-thread-sync [project:: gemini-thread-sync] [assignee:: agent]
 - [ ] Automate adding Apple Music recommendations to the user’s library from deterministic native Apple Music links [project:: music-cross-linker] [assignee:: agent] [due:: 2026-09-29]
 - [ ] Automate creating named Apple Music playlists from curated recommendation sets [project:: music-cross-linker] [assignee:: agent] [due:: 2026-09-29]
