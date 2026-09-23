@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/1",
+  "build": {
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "AIOS Query Companion",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "macOSPrivateApi": true,
+    "allowlist": {
+      "all": true
+    },
+    "windows": [],
+    "security": {
+      "csp": null,
+      "dangerousRemoteDomainIpcAccess": [
+        {
+          "domain": "gemini.google.com",
+          "windows": ["gemini_main", "perplexity_main"],
+          "enableTauriAPI": true
+        },
+        {
+          "domain": "www.perplexity.ai",
+          "windows": ["gemini_main", "perplexity_main"],
+          "enableTauriAPI": true
+        },
+        {
+          "domain": "perplexity.ai",
+          "windows": ["gemini_main", "perplexity_main"],
+          "enableTauriAPI": true
+        }
+      ]
+    },
+    "bundle": {
+      "active": true,
+      "targets": "app",
+      "identifier": "com.matthewmurphy.ai-os",
+      "icon": ["../../gemini-companion/src-tauri/icons/icon.png"]
+    }
+  }
+}
