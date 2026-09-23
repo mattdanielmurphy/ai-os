@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-22
+- **Eliminate duplicate skill discovery:** Consolidated the 69 redundant skill bundles into `skills-archive/duplicate-entrypoints/`, leaving 133 unique skill names. Updated sync to use repository-only sources and hash-verified deletion, removed the legacy Antigravity IDE mirror from active sync, and preserved its previous contents in `~/.gemini/antigravity/skills-legacy-backup-20260922`.
 - **AGY quota check investigation queued:** Added a board task to verify live quota behavior and the cached/skipped result when Antigravity is closed. The current preflight live query has a two-second timeout; the trigger for the observed fallback remains unverified.
   Confirmed Hammerspoon is running with `eventtap` and `axuielement` loaded for a selected-text wrapping prototype.
 - **Dedicated lightweight query companion:** Split `query_aios` runtime from the retired AI-OS workspace GUI. Added a production-only Tauri companion with one hidden Perplexity webview, on-demand hidden Gemini support, no Vite/frontend/PTY runtime, App Nap suppression, and blocked app-level quits. The launch agent now executes the prebuilt release binary directly; warm query verification returned in 1.70 seconds. [[log]](agent-logs/2026-09-22_19-43_dedicated-query-aios-companion.md)
