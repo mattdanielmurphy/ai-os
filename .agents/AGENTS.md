@@ -38,7 +38,7 @@
   - Check whether the transcript file exists at `/Users/matt/.gemini/antigravity-ide/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` or `/Users/matt/.gemini/antigravity-cli/brain/<thread-uuid>/.system_generated/logs/transcript.jsonl` and use the correct absolute path.
 - **Asynchronous Housekeeping Workflow**:
   - Instead of writing the log file and committing manually during the active turn, the orchestrator should generate the log content and run `scripts/housekeep.py` asynchronously (set `WaitMsBeforeAsync` to `500` or `1000`) as its final tool call.
-  - The orchestrator pipes the log content into `python3 scripts/housekeep.py --description <description>` via stdin.
+  - The orchestrator MUST write the log content to a temporary file (e.g. `tmp/log.md`) and run `python3 scripts/housekeep.py --description <description> --file tmp/log.md`. DO NOT use `manage_task send_input` or stdin, as it will cause a deadlock.
   - Once the background housekeeping command is launched, the orchestrator MUST immediately output the final completed task results to the user (ending the active turn).
   - When the background command finishes and wakes the agent up, the agent should output a short, non-intrusive confirmation (e.g. `✓ Housecleaning completed.`) and end the turn.
 - **Fresh Thread Context & Transcript Loading**: When you start a new task in a fresh thread, immediately scan the `agent-logs/` directory for the most recent 2-3 agent log files. When you find relevant agent logs, read their transcript pointers, and then use `view_file` to load/inspect the relevant parts of those transcripts to gather complete context, trace detailed command executions, and ensure you do not repeat past mistakes.
