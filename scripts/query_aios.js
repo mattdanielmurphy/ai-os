@@ -562,6 +562,57 @@ function sendAiosRequest(url, payload, timeoutSec) {
     });
 }
 
+function queryStatePath(outputPath) {
+    return `${path.resolve(outputPath)}.query-state.json`;
+}
+
+function writeQueryState(outputPath, state) {
+    if (!outputPath) return;
+    try {
+        const statePath = queryStatePath(outputPath);
+        fs.mkdirSync(path.dirname(statePath), { recursive: true });
+        const temporaryPath = `${statePath}.${process.pid}.tmp`;
+        fs.writeFileSync(temporaryPath, JSON.stringify(state, null, 2), 'utf8');
+        fs.renameSync(temporaryPath, statePath);
+    } catch (e) {
+        console.error(`[query_aios] Could not update recovery state: ${e.message}`);
+    }
+}
+
+function recoverSavedOutput(outputPath) {
+    const statePath = queryStatePath(outputPath);
+    let state;
+    try {
+        state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+    } catch (e) {
+        console.error(`[query_aios] No recoverable query state found at ${statePath}.`);
+        console.error('[query_aios] Recovery only reads an output produced by a query_aios process that is still or was recently running; it does not start a new query.');
+        process.exit(1);
+    }
+
+    if (state.status !== 'completed' || !fs.existsSync(outputPath)) {
+        const processIsRunning = state.status === 'pending' && Number.isInteger(state.pid) && (() => {
+            try { process.kill(state.pid, 0); return true; } catch (e) { return false; }
+        })();
+        if (processIsRunning) {
+            console.error(`[query_aios] Query ${state.sessionId || '(unknown session)'} is still running in process ${state.pid}. Let that process finish; recovery will not start a duplicate.`);
+        } else {
+            console.error(`[query_aios] No completed output is available for ${outputPath}. Last recorded state: ${state.status || 'unknown'}.`);
+        }
+        process.exit(1);
+    }
+
+    const answer = fs.readFileSync(outputPath, 'utf8');
+    const digest = crypto.createHash('sha256').update(answer).digest('hex');
+    if (!state.outputSha256 || digest !== state.outputSha256) {
+        console.error(`[query_aios] Saved output ${outputPath} does not match the completed query state; refusing to report stale or edited content as recovered.`);
+        process.exit(1);
+    }
+
+    console.error(`[query_aios] ✅ Recovered completed output from ${outputPath} (session: ${state.sessionId || 'unknown'}).`);
+    console.log(answer);
+}
+
 async function main() {
     const args = process.argv.slice(2);
     let provider = 'perplexity';
@@ -647,6 +698,12 @@ async function main() {
                 message = arg;
             }
         }
+    }
+
+    if (recoverMode) {
+        outputPath = outputPath || './tmp/planner_output.txt';
+        recoverSavedOutput(outputPath);
+        return;
     }
 
     const { sessionId } = resolveSessionId({
@@ -747,6 +804,12 @@ async function main() {
         ? 'GPT-6 Sol Thinking'
         : (rawModel || (baseProvider === 'perplexity' ? 'gemini' : 'default'));
     const startTime = Date.now();
+    writeQueryState(outputPath, {
+        status: 'pending',
+        pid: process.pid,
+        sessionId,
+        startedAt: new Date(startTime).toISOString(),
+    });
     console.error(`[query_aios] Querying ${provider} via AI-OS (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s)... (waiting for response)`);
 
     const baseUrl = 'http://127.0.0.1:3031';
@@ -855,6 +918,13 @@ async function main() {
         if (outputPath) {
             fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
             fs.writeFileSync(outputPath, answer, 'utf8');
+            writeQueryState(outputPath, {
+                status: 'completed',
+                sessionId,
+                startedAt: new Date(startTime).toISOString(),
+                completedAt: new Date().toISOString(),
+                outputSha256: crypto.createHash('sha256').update(answer).digest('hex'),
+            });
             console.error(`[query_aios] ✅ Final output received (${chars} chars, ${elapsed}s) and saved to ${outputPath}`);
         }
 
@@ -876,6 +946,11 @@ async function main() {
 
         process.exit(0);
     } catch (err) {
+        writeQueryState(outputPath, {
+            status: 'failed',
+            sessionId,
+            failedAt: new Date().toISOString(),
+        });
         console.error(`[query_aios] Error: ${err.message}`);
         process.exit(1);
     }

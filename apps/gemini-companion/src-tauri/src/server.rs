@@ -634,6 +634,57 @@ async fn handle_prompt_dispatch(
     Ok("Prompt dispatched to Gemini window".to_string())
 }
 
+#[derive(serde::Deserialize)]
+struct CompanionShowRequest {
+    provider: String,
+}
+
+#[derive(serde::Serialize)]
+struct CompanionControlResponse {
+    status: &'static str,
+    provider: Option<&'static str>,
+}
+
+async fn handle_companion_show(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+    Json(payload): Json<CompanionShowRequest>,
+) -> Result<Json<CompanionControlResponse>, (axum::http::StatusCode, String)> {
+    let (win, provider, title) = match payload.provider.as_str() {
+        "perplexity" => (ensure_perplexity_window(&app_handle)?, "perplexity", "Perplexity — AI-OS Controls"),
+        "gemini" => (ensure_gemini_window(&app_handle)?, "gemini", "Gemini — AI-OS Controls"),
+        _ => return Err((axum::http::StatusCode::BAD_REQUEST, "provider must be 'perplexity' or 'gemini'".to_string())),
+    };
+
+    win.set_title(title).map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Could not title companion window: {e}")))?;
+    win.set_decorations(true).map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Could not decorate companion window: {e}")))?;
+    win.set_size(tauri::Size::Logical(tauri::LogicalSize { width: 1120.0, height: 780.0 }))
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Could not resize companion window: {e}")))?;
+    let _ = win.center();
+    win.show().map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Could not show companion window: {e}")))?;
+    let _ = win.unminimize();
+    win.set_focus().map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Could not focus companion window: {e}")))?;
+
+    Ok(Json(CompanionControlResponse {
+        status: "shown",
+        provider: Some(provider),
+    }))
+}
+
+async fn handle_companion_hide(
+    AxumState(app_handle): AxumState<tauri::AppHandle>,
+) -> Json<CompanionControlResponse> {
+    for label in ["perplexity_main", "gemini_main"] {
+        if let Some(win) = app_handle.get_window(label) {
+            let _ = win.hide();
+        }
+    }
+
+    Json(CompanionControlResponse {
+        status: "hidden",
+        provider: None,
+    })
+}
+
 async fn handle_perplexity_prompt(
     AxumState(app_handle): AxumState<tauri::AppHandle>,
     Json(payload): Json<PromptDispatchPayload>,
@@ -1550,6 +1601,8 @@ pub fn spawn_axum_server(app_handle: tauri::AppHandle) {
             .route("/api/debug/ping", axum::routing::get(handle_debug_ping))
             .route("/api/debug/ping_gemini", axum::routing::get(handle_debug_ping_gemini))
             .route("/api/wake", post(handle_wake).get(handle_wake))
+            .route("/api/companion/show", post(handle_companion_show))
+            .route("/api/companion/hide", post(handle_companion_hide))
             .route("/api/health", axum::routing::get(handle_health))
             .route("/v1/chat/completions", post(handle_openai_chat))
             .route("/v1/models", axum::routing::get(handle_openai_models))

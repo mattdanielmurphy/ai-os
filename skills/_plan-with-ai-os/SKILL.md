@@ -21,11 +21,11 @@ Run high-reasoning planning using the unified `query_aios.js` planner.
    - **Thread Controls**: Use `--new-thread` / `-n` to force a new planner thread, `--resume <id>` to resume a specific session, or `--no-resume` to run standalone without modifying stored thread state.
    - **Screenshot & Multiple Attachment Support**: Pass images via multiple `--screenshot <path>`, `--image <path>`, or `-f <path>` flags. All image paths referenced in prompts are also auto-detected and attached in batch.
    - **CRITICAL PERPLEXITY UPLOAD POLICY**: NEVER pass codebase/text files via the `files` argument. For screenshots/visual assets, upload only if quota > 25 AND elements are too complex to transcribe. Otherwise, act as the vision provider and pass `--image-desc "<description>"` in the command.
-4. **On ECONNREFUSED or Failure — MANDATORY EXACT RECOVERY STEPS** (do NOT do anything else):
-   - **Step A**: Immediately run the recover command — do NOT run `pgrep`, `la status`, `grep`, or any diagnostics first:
-     `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 600`
-   - **Step B**: If recover also fails with ECONNREFUSED, the ai-os companion is down. Restart it with `la start agy-proxy`, then retry the original plan command.
-   - ❌ NEVER: grep for port numbers, run `la status` without a name argument, run `pgrep` to diagnose failures, or do any exploratory investigation. Two commands only: `--recover`, then `la start agy-proxy` if needed.
+4. **On slow or failed planner calls**:
+   - The planner request stays attached to the original `query_aios.js` process. If the shell tool returns a running-process/session ID, continue waiting on that same process; do not launch a second request.
+   - If the original process completed and saved its output, recover it with `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt`. Recovery verifies the adjacent query-state checksum and prints the saved result without contacting a provider.
+   - If recovery reports that the query is still running, wait for the original process. If no completed output exists, report that plainly; do not interpret an empty-prompt response as recovery.
+   - For an actual `ECONNREFUSED` result, use the established AI-OS companion recovery path. Do not restart `agy-proxy`; it is a different service.
 5. **Format Output**: Format `./tmp/planner_output.txt` into `implementation_plan.md`.
 
 ---
