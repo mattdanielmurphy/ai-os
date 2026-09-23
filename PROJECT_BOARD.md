@@ -27,6 +27,8 @@ Central task registry across all projects and active coding threads. Automatical
 - [ ] Design & build Clipboard History GUI App with frequency tracking and AI auto-snippets [project:: clipboard-snippet-app] [assignee:: agent]
 - [ ] Fix Perplexity thread-sync userscript [project:: perplexity-thread-sync] [assignee:: agent]
 - [ ] Implement system prompt injection helper in gemini-thread-sync [project:: gemini-thread-sync] [assignee:: agent]
+- [ ] Automate adding Apple Music recommendations to the user’s library from deterministic native Apple Music links [project:: music-cross-linker] [assignee:: agent] [due:: 2026-09-29]
+- [ ] Automate creating named Apple Music playlists from curated recommendation sets [project:: music-cross-linker] [assignee:: agent] [due:: 2026-09-29]
 
 ---
 

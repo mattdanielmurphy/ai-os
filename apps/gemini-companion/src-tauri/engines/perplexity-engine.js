@@ -379,7 +379,9 @@
             modelPref = 'claude50sonnetthinking';
         } else if (engine === 'kimi' || engine === 'k3' || engine === 'kimik3thinking') {
             modelPref = 'kimik3thinking';
-        } else if (engine === 'gpt' || engine === 'gpt5' || engine === 'terra' || engine === 'gpt56_terra_thinking') {
+        } else if (engine === 'gpt' || engine === 'gpt5' || engine === 'gpt6' || engine === 'gpt-6-sol' || engine === 'gpt-5.6-sol' || engine === 'sol' || engine === 'gpt6_sol_thinking') {
+            modelPref = 'gpt6_sol_thinking';
+        } else if (engine === 'terra' || engine === 'gpt56_terra_thinking') {
             modelPref = 'gpt56_terra_thinking';
         } else if (engine === 'gemini' || engine === 'gemini-3.8' || engine === 'flash-thinking' || engine === 'gemini38flashthinking') {
             modelPref = 'gemini38flashthinking';

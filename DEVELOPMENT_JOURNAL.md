@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-09-22
+- **query_aios cold-start recovery and GPT-6 Sol default:** Fixed recovery for a fully unloaded `aios-server` with native launchd enable, bootstrap, and kickstart handling, extended readiness polling, one retry, and surfaced diagnostics. Verified recovery with a real Perplexity query after deliberately stopping the service. Set the default to GPT-6 Sol Thinking (`gpt6_sol_thinking`), retaining explicit Terra selection. [[log]](agent-logs/2026-09-22_19-06_query-aios-reliability-and-model-default.md)
+
 ## 2026-09-21
 - **ChatGPT/Codex Thread Context Footer Trial:** Added a Codex-only global rule that displays a compact, truthful context-size footer after the 100k-token threshold. The initial trial is informational only: no automatic task creation or forced handoff, and no fabricated precise token totals when the runtime lacks a meter.
 
@@ -185,3 +188,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-09-21
 - **Cross-runtime rule and skill synchronization:** Added Codex as a generated global-rule target and made the repository-owned `skills/` tree authoritative during propagation. Verified all 203 skill entrypoints match across Hermes, Claude, Codex's `~/.agents`, Gemini, agy, and Antigravity installations. [[log]](agent-logs/2026-09-21_12-40_cross-runtime-rules-and-skills-sync.md)
+- 2026-09-22: Telegram check-ins now remain answerable indefinitely by default; the awake-time timeout path is opt-in via a positive `silence_timeout_seconds` value. Added regression coverage and restarted `aios-assistant`.
