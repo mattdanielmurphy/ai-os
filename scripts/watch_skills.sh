@@ -10,7 +10,6 @@ WATCH_DIRS=(
     "$HOME/.gemini/config/skills"
     "$HOME/.gemini/antigravity-cli/skills"
     "$HOME/.agy/skills"
-    "$HOME/.gemini/antigravity/skills"
 )
 
 SYNC_SCRIPT="$HOME/projects/ai-os/scripts/sync_skills.py"
