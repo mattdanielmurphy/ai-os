@@ -810,7 +810,7 @@ async function main() {
         sessionId,
         startedAt: new Date(startTime).toISOString(),
     });
-    console.error(`[query_aios] Querying ${provider} via AI-OS (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s)... (waiting for response)`);
+    console.error(`[query_aios] Querying ${provider} via AI-OS (requested model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s)... (waiting for response)`);
 
     const baseUrl = 'http://127.0.0.1:3031';
 
@@ -931,8 +931,16 @@ async function main() {
         console.log('================================================================================');
         console.log('🎉 [AI-OS QUERY COMPLETE — FINAL OUTPUT RECEIVED]');
         console.log(`Provider: ${provider}`);
-        console.log(`Model: ${modelDisplay}`);
-        console.log(`Session / Thread ID: ${sessionId}`);
+        console.log(`Requested model: ${modelDisplay}`);
+        if (baseProvider === 'perplexity') {
+            console.log('Actual model: unverified (Perplexity did not return model provenance to AI-OS)');
+            if (resolvedModel !== 'turbo') {
+                console.log('⚠️ Perplexity may fall back to Sonar when the requested model is unavailable; AI-OS cannot confirm which model produced this response.');
+            }
+        } else {
+            console.log(`Model: ${modelDisplay}`);
+        }
+        console.log(`AI-OS session ID: ${sessionId}`);
         console.log(`Elapsed time: ${elapsed}s`);
         console.log(`Character count: ${chars}`);
         console.log(`Word count: ${words}`);
