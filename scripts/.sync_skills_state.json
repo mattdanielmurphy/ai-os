@@ -1897,5 +1897,8 @@
   },
   ".curator_backups/2026-09-19T18-16-28Z/cron-jobs.json": {
     "sha256": "6de15cc2283558884dca3b8c6ed1a1aa3dedb7cfa57773f8c33dd2a87ffb1bb9"
+  },
+  "custom-skills/_find-saved-manuals/SKILL.md": {
+    "sha256": "5d7ff2b575e52fa216284d626d020421a03623c0d2524101fc38d2df8d9786b4"
   }
 }

@@ -196,3 +196,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 ## 2026-09-22
 - **`query_aios` recovery correctness:** `--recover` had been bypassing empty-prompt validation and dispatching a fresh provider request. It now records pending/completed query state and only recovers checksum-verified saved output; the planner workflow now waits on the original process.
 - **AI-OS Controls:** Added a local companion show/hide API and an AI-OS-branded Hammerspoon menu entry for Perplexity and Gemini authentication access. Recorded the separate Bartender/custom menu-bar exploration as future backlog.
+- **Saved manuals and opening files:** Recorded `~/Documents/Books & Reference Documents/Manuals/` as the first place to check, with exact model matching, and added/synced `_find-saved-manuals`; use Codex `open_in_codex` when Matt asks to pull up a local file. [[log]](agent-logs/2026-09-22_21-05_learn-saved-manuals-location.md)
