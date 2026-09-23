@@ -307,6 +307,39 @@ async def test_awake_silence_watchdog():
         await db.close()
 
 
+@pytest.mark.asyncio
+async def test_awake_silence_watchdog_unlimited_checkin():
+    """The default check-in policy keeps the Telegram action available indefinitely."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db = AssistantDB(Path(tmpdir) / "test_unlimited_silence.db")
+        await db.connect()
+
+        config = AssistantConfig(silence_timeout_seconds=0, dry_run=True)
+        gateway = TelegramGateway(config)
+        gateway._dry_run_messages[102] = {
+            "chat_id": 12345,
+            "text": "Take a moment to check in.",
+            "keyboard": [[{"text": "Done", "callback_data": "done"}]],
+            "status": "SENT",
+        }
+        watchdog = AwakeSilenceWatchdog(config, db, gateway)
+        now = datetime.now(timezone.utc)
+        await db.record_outbound_signal(
+            message_id=102,
+            chat_id=12345,
+            trigger_id="trig_unlimited",
+            sent_at=now,
+            timeout_at=now,
+            status="AWAITING_INPUT",
+        )
+
+        assert await watchdog.tick(awake_seconds_delta=24 * 60 * 60, current_time=now) == 0
+        assert len(await db.get_awaiting_signals()) == 1
+        assert gateway._dry_run_messages[102]["keyboard"]
+
+        await db.close()
+
+
 # -----------------------------------------------------------------------------
 # End-to-End Action Dispatcher Test
 # -----------------------------------------------------------------------------
@@ -1062,5 +1095,4 @@ async def test_media_extraction_and_delivery():
         assert "Here is your meditation." in history[0]["content"]
 
         await db.close()
-
 

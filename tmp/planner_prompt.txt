@@ -1,21 +1,4 @@
-User Request: Perform an exhaustive, critical architectural audit and second-opinion review of the proposed proactive personal assistant plan in implementation_plan.md and tmp/planner_output.txt.
-
-Address the following key questions:
-1. Potential Mistakes & Blind Spots:
-   - What are the subtle failure modes, edge cases, or design mistakes in the proposed architecture (specifically around macOS sleep-wake gap detection, launchd scheduling, Calendar/Focus mode probing via AppleScript/defaults, and silence watchdog)?
-   - Where is this architecture most likely to break in practice when running on a non-24/7 laptop?
-
-2. Telegram vs. iMessage (Photon / BlueBubbles / imsg CLI):
-   - Matt currently uses iMessage as his primary messaging app (and was impressed by Photon), but is considering Telegram if it is significantly more robust, reliable, and full-featured.
-   - Compare Telegram vs iMessage specifically for an executive function & spaced repetition assistant:
-     * Interactive UI: Inline keyboards / 1-tap callback buttons vs free-form text response.
-     * Message Lifecycle: Dynamic message editing (e.g. updating an expired prompt to '(Check-in expired)', removing active buttons upon completion).
-     * Delivery reliability, push notifications, and API stability.
-     * Verdict: Is Telegram worth using a secondary app, or can iMessage realistically match this UX?
-
-3. Alternative Architectural Paths:
-   - What would be another way to go about this system? Are there radically simpler or more reliable paradigms to achieve the same goals without over-engineering?
-   - How can we minimize friction and maximize long-term maintainability?
+User Request: Resolve the existing .git/index.lock situation safely and commit all current changes in /Users/matt/projects/ai-os, as requested. The lock is zero bytes, timestamped Sep 22 18:42, but lsof showed read-only descriptors held by agy PIDs 3921 and 86093; auto_commit.py failed to stage. Auto-review rejected moving the lock because it is actively held and that could permit concurrent writes. Determine safe next steps using repo context, then complete the requested commit if safely possible. Follow repository instructions: never use rm; use auto_commit.py for commits; inspect all changes and nested dirty worktree carefully.
 
 --- AG_CONTEXT.md ---
 # Repository Context & Domain Knowledge
@@ -66,6 +49,11 @@ No matching items found by AI. non-interactively in terminal. Supports URL pre-f
 - **AI-OS Companion App App Nap Elimination & Webview Wake Protocol**: The companion app permanently disables macOS App Nap on startup via `NSProcessInfo beginActivityWithOptions:` and `caffeinate -s -i`. Intercepts `WindowEvent::CloseRequested` to hide rather than destroy windows, supports on-demand dynamic window recreation (`ensure_perplexity_window` / `ensure_gemini_window`), auto-navigates on URL mismatch, runs a 15s tokio background keepalive heartbeat to prevent WebKit WebProcess suspension, and provides `/api/wake` & `/api/health` endpoints used by `query_aios.js` for proactive client-side waking before queries.
 - **Automated Planner Continuation & Truncation Stitching (`query_aios.js`)**: `query_aios.js` inspects responses with `checkIncompleteReason` for unclosed code fences (` ``` `), missing implementation steps in `--plan` mode, mid-sentence cutoffs, and token limit hints. When detected, it automatically dispatches follow-up `"continue"` turns (up to `--max-continues`, default 3) in the same session and stitches the chunks cleanly via `stitchContinuation` into a single, complete output without manual intervention.
 - **AI-OS Companion Server SSE Keepalive (`apps/gemini-companion/src-tauri/src/server.rs`)**: Emits periodic SSE comment heartbeats (`: keepalive\n\n`) every 3 seconds on `/v1/chat/completions` during streaming requests to prevent idle read timeouts in HTTP clients (`httpx`, LiteLLM, Hermes Gateway) while waiting for long reasoning turns. Yields structured error frames instead of raw `io::Error` to prevent TCP socket drops.
+- **Proactive Executive Assistant Service (`services/assistant/`)**: Local-first assistant service managing FSRS spaced repetition (`cold_storage` vs `baby_facts`), Obsidian habit tracking (`Habits Design.md`), and Telegram micro-interventions. Hardened against sleep false-timeouts (tracks awake monotonic time only, avoiding false expiration when Mac sleeps) and gated by a Context Gate (macOS EventKit calendar probe with +45m routine buffer, Shortcuts Focus Mode check, and empathetic silence backoff cooldowns). CLI utility at `services/assistant/cli.py`.
+- **Telegram check-in lifetime (2026-09-22)**: `AssistantConfig.silence_timeout_seconds` defaults to `0` (unlimited), and `AwakeSilenceWatchdog` only retires signals when an explicitly positive timeout is configured. This keeps sent check-ins answerable indefinitely while preserving the optional awake-time timeout path.
+- **Telegram Conversational Assistant & Codex Routing (`services/assistant/`)**: Telegram bot gateway maintains recent conversational context in SQLite `chat_history` (`db.py`), routing queries and vision to OpenAI Codex (`openai-codex` via `hermes chat`) using Matt's Codex subscription with sub-second Groq Cloud STT (`whisper-large-v3-turbo`), mobile vertical key-value cards (zero tables), free `agy` (`gemini-3.8-flash-low`) automatic fallback, and `/agy` explicit coding dispatch.
+- **Cross-runtime global rules and skill synchronization:** `.rules/` is the source of truth for generated Hermes, Gemini/Antigravity, Claude, and Codex instructions. `scripts/build_rules.py` writes Codex's global `/Users/matt/.codex/AGENTS.md`, and `scripts/sync_skills.py` treats the repository-owned `skills/` tree as authoritative while preserving target-only vendor skills.
+- **ChatGPT macOS Front-End & Default Agy Delegation Policy:** ChatGPT is Matt's primary conversational surface and home on macOS, with Antigravity (`agy`) acting as the default capable reasoning and execution agent whenever usable quota is healthy. Only obviously lightweight requests (greetings, trivial math, short rewrites/formatting, context-free one-liners, explicit quick/simple, or "do not delegate") stay direct in ChatGPT. All substantive non-trivial work (analysis, architecture, comparisons, file reads, planning, debugging, implementation) delegates to `agy` via a thin handoff (verbatim prompt, repo/cwd, mode, and safety boundary without prompt-expansion bloat) with clean fallback to direct ChatGPT if quota is low/exhausted/unavailable or invocation fails. Evaluated centrally via `scripts/triage_router.py` (`evaluate_routing`) and `scripts/triage_task.py`.
 
 
 --- GitHub Connector Context ---

@@ -69,7 +69,9 @@ class AssistantConfig:
 
     # Context Gate & Silence Dynamics
     event_routine_buffer_minutes: int = 45  # Delay after class/event ends before contacting
-    silence_timeout_seconds: int = 45 * 60  # 45 minutes of awake time before mutes
+    # Interactive check-ins remain answerable until Matt responds. A non-positive value means
+    # unlimited; keep the awake-time accounting available for an explicitly configured timeout.
+    silence_timeout_seconds: int = 0
     silence_cooldown_seconds: int = 120 * 60  # 2 hours backoff when Matt ignores a prompt
     sleep_gap_threshold_seconds: float = 120.0  # Delta between wall clock and monotonic indicating sleep
     poll_interval_seconds: int = 30  # Scheduler loop tick

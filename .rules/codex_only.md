@@ -57,8 +57,3 @@ For each routed task, make routing visible in the response or task record:
 - **Quota Status**: `healthy` (X% remaining) | `low` | `exhausted` | `unavailable` | `unknown`
 - **Fallback Occurred**: `true` | `false`
 - **Fallback Reason**: (if applicable: `low quota`, `exhausted quota`, `unavailable quota`, `disabled backend`, `invocation failure`)
-
-## 8. Thread Context Visibility (Trial)
-- **Threshold Footer:** Once the active ChatGPT/Codex thread has reached or exceeded 100,000 context tokens, append a compact footer to every final response: `> Thread context: <size>`.
-- **Truthful Measurement:** Use an exact token count only when the runtime exposes an authoritative meter. Otherwise, state `> Thread context: 100k+ (exact count unavailable)`; never invent a precise total.
-- **Scope:** Do not show a context footer below the threshold. This trial is informational only: continue the requested work normally and do not create or switch threads automatically. If the context becomes materially constraining, explicitly recommend a new task in the normal response.

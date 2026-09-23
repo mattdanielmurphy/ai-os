@@ -4,7 +4,7 @@ import http from 'http';
 import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 
 const PPLX_MODEL_MAP = {
     'grok': 'grok46medium',
@@ -18,8 +18,13 @@ const PPLX_MODEL_MAP = {
     'kimi': 'kimik3thinking',
     'k3': 'kimik3thinking',
     'kimik3thinking': 'kimik3thinking',
-    'gpt': 'gpt56_terra_thinking',
-    'gpt5': 'gpt56_terra_thinking',
+    'gpt': 'gpt6_sol_thinking',
+    'gpt6': 'gpt6_sol_thinking',
+    'gpt-6-sol': 'gpt6_sol_thinking',
+    'gpt5': 'gpt6_sol_thinking',
+    'gpt-5.6-sol': 'gpt6_sol_thinking',
+    'sol': 'gpt6_sol_thinking',
+    'gpt6_sol_thinking': 'gpt6_sol_thinking',
     'terra': 'gpt56_terra_thinking',
     'gpt56_terra_thinking': 'gpt56_terra_thinking',
     'gemini': 'gemini38flashthinking',
@@ -351,11 +356,15 @@ async function wakeAios(baseUrl, provider) {
             let body = '';
             res.on('data', (chunk) => body += chunk);
             res.on('end', () => {
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    resolve(null);
+                    return;
+                }
                 try {
                     const data = JSON.parse(body);
                     resolve(data);
                 } catch (e) {
-                    resolve(res.statusCode === 200 ? { status: 'ok' } : null);
+                    resolve({ status: 'ok' });
                 }
             });
         });
@@ -364,6 +373,55 @@ async function wakeAios(baseUrl, provider) {
         req.write(payload);
         req.end();
     });
+}
+
+function ensureAiosLaunchAgent() {
+    const uid = process.getuid();
+    const domain = `gui/${uid}`;
+    const label = 'com.matt.agent.aios-server';
+    const service = `${domain}/${label}`;
+    const plist = path.join(os.homedir(), 'Library', 'LaunchAgents', `${label}.plist`);
+
+    const runLaunchctl = (args) => {
+        try {
+            const output = execFileSync('launchctl', args, {
+                encoding: 'utf8',
+                timeout: 20000,
+                stdio: ['ignore', 'pipe', 'pipe'],
+            });
+            return { ok: true, output: output.trim() };
+        } catch (e) {
+            const detail = [e.stdout, e.stderr].filter(Boolean).join('\n').trim();
+            return { ok: false, detail: detail || `exit ${e.status ?? 'unknown'}` };
+        }
+    };
+
+    const enable = runLaunchctl(['enable', service]);
+    if (!enable.ok) {
+        console.error(`[query_aios] launchctl enable failed: ${enable.detail}`);
+    }
+
+    let kickstart = runLaunchctl(['kickstart', '-k', service]);
+    if (kickstart.ok) return true;
+
+    if (!fs.existsSync(plist)) {
+        console.error(`[query_aios] LaunchAgent plist is missing: ${plist}`);
+        return false;
+    }
+
+    console.error(`[query_aios] AI-OS service is not registered; bootstrapping ${plist}.`);
+    const bootstrap = runLaunchctl(['bootstrap', domain, plist]);
+    if (!bootstrap.ok && !/service already loaded|already exists/i.test(bootstrap.detail)) {
+        console.error(`[query_aios] launchctl bootstrap failed: ${bootstrap.detail}`);
+        return false;
+    }
+
+    kickstart = runLaunchctl(['kickstart', '-k', service]);
+    if (!kickstart.ok) {
+        console.error(`[query_aios] launchctl kickstart failed: ${kickstart.detail}`);
+        return false;
+    }
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -507,7 +565,7 @@ function sendAiosRequest(url, payload, timeoutSec) {
 async function main() {
     const args = process.argv.slice(2);
     let provider = 'perplexity';
-    let rawModel = 'gemini';
+    let rawModel = null;
     let message = '';
     let inputFile = null;
     let outputPath = null;
@@ -529,7 +587,7 @@ async function main() {
         if (arg === '--provider' || arg === '-p') {
             provider = (args[++i] || 'perplexity').toLowerCase();
         } else if (arg === '--model' || arg === '-m') {
-            rawModel = (args[++i] || 'sonnet').toLowerCase();
+            rawModel = (args[++i] || 'gpt').toLowerCase();
         } else if (arg === '--plan' || arg === '--planner') {
             isPlanMode = true;
             const nextArg = args[i + 1];
@@ -598,22 +656,24 @@ async function main() {
         agThreadOverride
     });
 
+    const baseProvider = (provider || '').split(':')[0].toLowerCase();
+    const effectiveRawModel = rawModel || (baseProvider === 'perplexity' ? 'gpt' : (baseProvider === 'gemini' ? 'gemini' : null));
     const THINKING_MODELS = [
         'grok', 'grok-thinking', 'grok_thinking', 'grok-2', 'grok46medium',
         'sonnet', 'claude50sonnetthinking',
         'gemini', 'gemini-3.8', 'gemini38flashthinking', 'gemini-3.7', 'gemini37flashthinking', 'gemini-3.6', 'gemini36flashthinking', 'flash-thinking',
         'kimi', 'k3', 'kimik3thinking',
-        'gpt', 'gpt5', 'terra', 'gpt56_terra_thinking',
+        'gpt', 'gpt5', 'gpt6', 'gpt-6-sol', 'gpt-5.6-sol', 'sol', 'gpt6_sol_thinking', 'terra', 'gpt56_terra_thinking',
         'glm', 'glm-5', 'glm5', 'glm_5_2'
     ];
-    const isThinkingModel = THINKING_MODELS.includes(rawModel) || isPlanMode;
+    const isThinkingModel = THINKING_MODELS.includes(effectiveRawModel) || isPlanMode;
     const minAllowedTimeout = isThinkingModel ? 300 : 120;
     const defaultTimeout = isThinkingModel ? 600 : 300;
 
     if (timeoutSec !== null && timeoutSec < minAllowedTimeout) {
         const userTimeout = timeoutSec;
         timeoutSec = minAllowedTimeout;
-        const modelDisplay = rawModel || (provider === 'perplexity' ? 'gemini' : 'default');
+        const modelDisplay = effectiveRawModel || 'default';
         console.error(`[query_aios] Note: Requested timeout of ${userTimeout}s is too short for ${modelDisplay} (thinking models require adequate reasoning time). Enforcing minimum timeout floor of ${minAllowedTimeout}s.`);
     }
 
@@ -676,15 +736,16 @@ async function main() {
     }
 
     let resolvedModel = null;
-    const baseProvider = (provider || '').split(':')[0].toLowerCase();
     if (baseProvider === 'perplexity') {
-        const requestedModel = (rawModel || 'gemini').toLowerCase();
+        const requestedModel = (effectiveRawModel || 'gpt').toLowerCase();
         resolvedModel = PPLX_MODEL_MAP[requestedModel] || requestedModel;
     } else {
         resolvedModel = rawModel || null;
     }
 
-    const modelDisplay = rawModel || (baseProvider === 'perplexity' ? 'gemini' : 'default');
+    const modelDisplay = baseProvider === 'perplexity' && resolvedModel === 'gpt6_sol_thinking'
+        ? 'GPT-6 Sol Thinking'
+        : (rawModel || (baseProvider === 'perplexity' ? 'gemini' : 'default'));
     const startTime = Date.now();
     console.error(`[query_aios] Querying ${provider} via AI-OS (model: ${modelDisplay}, thread: ${sessionId}, timeout: ${timeoutSec}s)... (waiting for response)`);
 
@@ -692,19 +753,33 @@ async function main() {
 
     let wakeResult = await wakeAios(baseUrl, baseProvider);
     if (!wakeResult) {
-        console.error(`[query_aios] 🔄 AI-OS server at http://127.0.0.1:3031 is not responding. Starting via launch agent...`);
-        try {
-            execSync('la restart aios-server 2>/dev/null || la start aios-server 2>/dev/null', { stdio: 'ignore' });
-        } catch (e) {}
+        console.error(`[query_aios] 🔄 AI-OS server at ${baseUrl} is not responding. Starting its launch agent...`);
+        const waitForServer = async (label, timeoutMs) => {
+            console.error(`[query_aios] Waiting up to ${Math.round(timeoutMs / 1000)}s for AI-OS ${label}...`);
+            const deadline = Date.now() + timeoutMs;
+            while (Date.now() < deadline) {
+                await new Promise(r => setTimeout(r, 750));
+                wakeResult = await wakeAios(baseUrl, baseProvider);
+                if (wakeResult) return true;
+            }
+            return false;
+        };
 
-        for (let i = 0; i < 40; i++) {
-            await new Promise(r => setTimeout(r, 750));
-            wakeResult = await wakeAios(baseUrl, baseProvider);
-            if (wakeResult) {
-                console.error(`[query_aios] ✅ AI-OS server is online and awoken.`);
-                break;
+        // Enable the service first, then either kickstart its existing job or
+        // bootstrap its plist when it was fully unloaded after a manual quit.
+        ensureAiosLaunchAgent();
+        if (!await waitForServer('startup', 90000)) {
+            console.error(`[query_aios] AI-OS did not become ready after startup; restarting it once.`);
+            ensureAiosLaunchAgent();
+            if (!await waitForServer('restart', 90000)) {
+                try {
+                    const service = `gui/${process.getuid()}/com.matt.agent.aios-server`;
+                    const output = execFileSync('launchctl', ['print', service], { encoding: 'utf8', timeout: 10000 });
+                    if (output.trim()) console.error(`[query_aios] Launch agent status:\n${output.trim()}`);
+                } catch (e) {}
             }
         }
+        if (wakeResult) console.error(`[query_aios] ✅ AI-OS server is online and awoken.`);
     } else {
         const winKey = baseProvider === 'gemini' ? 'gemini_window' : 'perplexity_window';
         if (wakeResult[winKey]) {
@@ -714,7 +789,7 @@ async function main() {
 
     if (!wakeResult) {
         console.error(`\n[query_aios] ERROR: AI-OS server is unreachable (http://127.0.0.1:3031).`);
-        console.error(`Check status with: la status aios-server or tail logs at ~/.ai-os/logs/companion_server.error.log\n`);
+        console.error(`Launch-agent diagnostics: launchctl print gui/${process.getuid()}/com.matt.agent.aios-server; la logs aios-server -n 100\n`);
         process.exit(1);
     }
 

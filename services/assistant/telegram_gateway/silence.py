@@ -41,7 +41,11 @@ class AwakeSilenceWatchdog:
             chat_id = sig["chat_id"]
 
             accumulated = await self.db.update_signal_awake_time(msg_id, awake_seconds_delta)
-            if accumulated >= self.config.silence_timeout_seconds:
+            # A non-positive timeout is the explicit "never expire" setting. The previous
+            # 45-minute default made a check-in disappear while it was still useful, and a
+            # plain `>= 0` comparison would make unlimited mode expire on the first tick.
+            timeout_seconds = self.config.silence_timeout_seconds
+            if timeout_seconds > 0 and accumulated >= timeout_seconds:
                 logger.info(
                     f"Outbound signal {msg_id} reached {accumulated:.1f}s awake time without response. "
                     "Muting prompt and triggering silence cooldown."

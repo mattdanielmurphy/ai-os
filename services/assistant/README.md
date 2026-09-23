@@ -14,7 +14,7 @@ A local-first, context-gated personal executive assistant service embedded direc
    - Evaluates availability before dispatching any notification.
    - **Calendar Probe**: Uses macOS EventKit (with AppleScript fallback) to detect active calendar events, with an automatic `+45m` routine buffer (e.g. piano practice / walk home after university class).
    - **Focus Mode Probe**: Detects active Focus Modes (DND, Driving, Theater) via native macOS Shortcuts / system indicators.
-   - **Silence Cooldown**: If a prompt is ignored by Matt, the service records silence as an empathetic signal and backs off completely (default: 2 hours) rather than double-texting or nagging.
+   - **Interactive check-ins**: Telegram prompts remain answerable until Matt responds; the service does not replace or disable an unanswered check-in.
 
 2. **Sleep-Wake Recovery (`run.py`)**:
    - Decouples machine sleep (laptop closed) from user unavailability (ignoring a prompt).
@@ -53,7 +53,7 @@ ai-os/services/assistant/
 ├── telegram_gateway/
 │   ├── bot.py             # python-telegram-bot worker (handles callbacks, edits messages)
 │   ├── handlers.py        # FSRS & Habit button dispatchers
-│   └── silence.py         # Awake-time silence watchdog (mutes expired prompts)
+│   └── silence.py         # Awake-time silence watchdog (optional configured timeout)
 ├── spaced_repetition/
 │   ├── engine.py          # fsrs-python wrapper & deck partitioning
 │   └── cards.py           # SQLite card retrieval and progressive elaboration formatter
