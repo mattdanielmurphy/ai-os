@@ -15,7 +15,6 @@ Central task registry across all projects and active coding threads. Automatical
 ## 🚀 In Progress
 
 - [ ] Fix gemini-thread-sync userscript connection & verify sync daemon [project:: gemini-thread-sync] [assignee:: agent]
-- [ ] Add AI-OS Controls menu actions to reveal and hide the Perplexity/Gemini companion windows [project:: query-aios-controls] [assignee:: agent]
 
 ---
 
@@ -45,6 +44,7 @@ Central task registry across all projects and active coding threads. Automatical
 
 ## ✅ Completed
 
+- [x] Add AI-OS Controls menu actions to reveal and hide the Perplexity/Gemini companion windows [project:: query-aios-controls] [assignee:: agent]
 - [x] Deploy Hermes WebUI with Gemini Flash orchestration, agy cost delegation, and Mac-to-VPS Caddy failover [project:: hermes-webui] [assignee:: agent] [due:: 2026-09-15]
 - [x] Implement Proactive Executive Assistant Service with FSRS, Habit Bridge, and Context Gate [project:: proactive-assistant] [assignee:: agent] [due:: 2026-09-13]
 - [x] Decommission redundant ai-os-wiki web server and prune deprecated sub-apps [project:: ai-os] [assignee:: agent]
