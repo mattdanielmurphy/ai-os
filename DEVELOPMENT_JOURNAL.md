@@ -1,6 +1,8 @@
 # Development Journal
 
 ## 2026-09-22
+- **AGY quota check investigation queued:** Added a board task to verify live quota behavior and the cached/skipped result when Antigravity is closed. The current preflight live query has a two-second timeout; the trigger for the observed fallback remains unverified.
+  Confirmed Hammerspoon is running with `eventtap` and `axuielement` loaded for a selected-text wrapping prototype.
 - **Dedicated lightweight query companion:** Split `query_aios` runtime from the retired AI-OS workspace GUI. Added a production-only Tauri companion with one hidden Perplexity webview, on-demand hidden Gemini support, no Vite/frontend/PTY runtime, App Nap suppression, and blocked app-level quits. The launch agent now executes the prebuilt release binary directly; warm query verification returned in 1.70 seconds. [[log]](agent-logs/2026-09-22_19-43_dedicated-query-aios-companion.md)
 - **query_aios cold-start recovery and GPT-6 Sol default:** Fixed recovery for a fully unloaded `aios-server` with native launchd enable, bootstrap, and kickstart handling, extended readiness polling, one retry, and surfaced diagnostics. Verified recovery with a real Perplexity query after deliberately stopping the service. Set the default to GPT-6 Sol Thinking (`gpt6_sol_thinking`), retaining explicit Terra selection. [[log]](agent-logs/2026-09-22_19-06_query-aios-reliability-and-model-default.md)
 
