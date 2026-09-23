@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-22
+- **Perplexity auth guard and truthful model reporting (`query_aios`):** The Perplexity engine now re-reads its live session token on each query and stops with companion-window sign-in instructions when no token is available. CLI output labels GPT-6 Sol as the requested preference, reports the actual model as unverified, warns about possible Sonar fallback, and labels the displayed ID as AI-OS-local rather than a Perplexity thread ID. Rebuilt and restarted the production companion; health endpoint is online. [[log]](agent-logs/2026-09-22_22-04_perplexity-model-provenance-and-auth-guard.md)
 - **Eliminate duplicate skill discovery:** Consolidated the 69 redundant skill bundles into `skills-archive/duplicate-entrypoints/`, leaving 133 unique skill names. Updated sync to use repository-only sources and hash-verified deletion, removed the legacy Antigravity IDE mirror from active sync, and preserved its previous contents in `~/.gemini/antigravity/skills-legacy-backup-20260922`.
 - **AGY quota check investigation queued:** Added a board task to verify live quota behavior and the cached/skipped result when Antigravity is closed. The current preflight live query has a two-second timeout; the trigger for the observed fallback remains unverified.
   Confirmed Hammerspoon is running with `eventtap` and `axuielement` loaded for a selected-text wrapping prototype.

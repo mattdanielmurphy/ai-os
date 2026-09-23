@@ -53,7 +53,9 @@
     }
 
     function _getSessionToken() {
-        if (_sessionToken) return _sessionToken;
+        // Re-read the live page state for every query. A cached token can outlive
+        // a sign-out and must not make a guest webview look authenticated.
+        _sessionToken = null;
         try {
             if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props) {
                 var props = window.__NEXT_DATA__.props;
@@ -368,6 +370,9 @@
         activateSession(sessionId);
 
         var sessionToken = _getSessionToken();
+        if (!sessionToken) {
+            throw new Error('Perplexity sign-in required in the AI-OS companion window. Open Perplexity from the menu bar, sign in there, then retry. No prompt was sent.');
+        }
         var frontendUuid = _uuid();
 
         var modelPref = 'gemini38flashthinking';
