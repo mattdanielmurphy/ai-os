@@ -411,8 +411,7 @@ def main():
             
             if in_progress or backlog:
                 print("\n=== ACTIVE PROJECT BOARD (PROJECT_BOARD.md) ===")
-                print("Path: file:///Users/matt/projects/ai-os/PROJECT_BOARD.md")
-                print("Launch: http://127.0.0.1:8643/open_zed?path=/Users/matt/projects/ai-os/PROJECT_BOARD.md\n")
+                print("Path: [PROJECT_BOARD.md](/Users/matt/projects/ai-os/PROJECT_BOARD.md)\n")
                 if in_progress:
                     print("🚀 In Progress:")
                     for item in in_progress[:4]:
@@ -454,4 +453,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

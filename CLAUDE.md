@@ -141,7 +141,7 @@
 ## Master Project Board Protocol
 - **Single Source of Truth**: Active multi-project backlog is maintained in `/Users/matt/projects/ai-os/PROJECT_BOARD.md` (synced with Obsidian `Personal/Development/Project Notes/Global Todos.md`).
 - **Hydration & Visibility**: `preflight.py` automatically hydrates in-progress and top backlog items at the start of every session.
-- **Surfacing Requirement**: Agents MUST surface clickable links (`[PROJECT_BOARD.md](file:///Users/matt/projects/ai-os/PROJECT_BOARD.md)`) with 1-click action links whenever initiating new features or concluding tasks.
+- **Surfacing Requirement**: Agents MUST surface the project board with a standard local Markdown link: `[PROJECT_BOARD.md](/Users/matt/projects/ai-os/PROJECT_BOARD.md)`. Do not append editor- or file-manager-specific launcher URLs; the built-in editor handles local file links.
 - **Task Schema**: Always format tasks as `- [ ] <description> [project:: <id>] [assignee:: user|agent] [due:: YYYY-MM-DD]`.
 
 ## Claude Code / Hermes Agent Specific Rules

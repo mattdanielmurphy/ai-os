@@ -37,7 +37,7 @@ def run_link_formatter():
     try:
         from link_formatter import enrich_file_links
         sample = enrich_file_links("[test.md](file:///path/test.md)")
-        if "http://127.0.0.1:8643/open_zed" in sample and "http://127.0.0.1:8643/open_finder" in sample:
+        if sample == "[test.md](file:///path/test.md)":
             return True
         return False
     except Exception:
