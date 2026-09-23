@@ -6,7 +6,7 @@ type: project-board
 
 # 📌 Master Project Board
 
-> **Quick Actions**: [Open in Zed](http://127.0.0.1:8643/open_zed?path=/Users/matt/projects/ai-os/PROJECT_BOARD.md) | [Open in Obsidian](obsidian://open?vault=Personal&file=Development%2FProject%20Notes%2FGlobal%20Todos) | [Open in Finder](http://127.0.0.1:8643/open_finder?path=/Users/matt/projects/ai-os/PROJECT_BOARD.md)
+> **Board file**: [PROJECT_BOARD.md](/Users/matt/projects/ai-os/PROJECT_BOARD.md)
 
 Central task registry across all projects and active coding threads. Automatically hydrated during session pre-flight.
 
