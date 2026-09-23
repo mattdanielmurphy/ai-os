@@ -2,5 +2,6 @@
 members = [
     "crates/aios-core",
     "apps/gemini-companion/src-tauri",
+    "apps/query-aios-companion/src-tauri",
 ]
 resolver = "2"
