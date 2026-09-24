@@ -1,0 +1,249 @@
+{
+  "deck_id": "forallx",
+  "deck_type": "cold_storage",
+  "title": "forallx: An Introduction to Formal Logic — Chapters 1–15",
+  "source": "User-provided forallx Intro to Formal Logic PDF",
+  "scope": "Chapters 1 through 15 inclusive",
+  "cards": [
+    {
+      "card_id": "forallx_ch01_q01",
+      "prompt": "What would show that an argument is invalid?",
+      "options": ["A case where every premise is true and the conclusion is false", "A case where one premise and the conclusion are both false", "A case where the conclusion is true", "A case where the premises are jointly false"],
+      "correct_index": 0,
+      "answer": "A counterexample: all premises true and the conclusion false.",
+      "elaboration": "Validity rules out that combination; one such case is enough to refute validity."
+    },
+    {
+      "card_id": "forallx_ch01_q02",
+      "prompt": "Which description correctly defines a sound argument?",
+      "options": ["It is valid and has true premises", "It has a true conclusion", "It has at least one true premise", "It is invalid but persuasive"],
+      "correct_index": 0,
+      "answer": "A sound argument is valid and all of its premises are true.",
+      "elaboration": "A sound argument guarantees a true conclusion because validity preserves truth from true premises."
+    },
+    {
+      "card_id": "forallx_ch02_q01",
+      "prompt": "A sentence is logically necessary when…",
+      "options": ["it is true in every possible circumstance", "it is true in the actual world only", "it follows from one particular argument", "it contains a logical connective"],
+      "correct_index": 0,
+      "answer": "It is true in every possible circumstance.",
+      "elaboration": "Logical necessity concerns all possibilities, not merely what happens to be true here and now."
+    },
+    {
+      "card_id": "forallx_ch02_q02",
+      "prompt": "When are a set of premises jointly possible?",
+      "options": ["When there is at least one possible circumstance in which all are true", "When each premise is true in a different circumstance", "When their conclusion is necessarily true", "When at least one premise is false"],
+      "correct_index": 0,
+      "answer": "When some possible circumstance makes every premise true together.",
+      "elaboration": "Joint possibility asks whether the premises can all be true at once."
+    },
+    {
+      "card_id": "forallx_ch03_q01",
+      "prompt": "What does it mean for premises Γ to entail a conclusion C?",
+      "options": ["There is no possible case where every member of Γ is true and C is false", "C is grammatically shorter than every premise", "Γ and C are both true in the actual world", "C is true whenever any one premise is true"],
+      "correct_index": 0,
+      "answer": "Γ entails C exactly when no possible case makes all the premises true and C false.",
+      "elaboration": "Entailment is the premise-to-conclusion relation expressed by validity."
+    },
+    {
+      "card_id": "forallx_ch03_q02",
+      "prompt": "Two sentences are logically equivalent when…",
+      "options": ["they have the same truth value in every possible circumstance", "they use the same words", "they are both true in the actual world", "each entails the other only in one selected case"],
+      "correct_index": 0,
+      "answer": "They match in truth value in every possible circumstance.",
+      "elaboration": "Equivalence can be checked by testing whether either sentence can be true while the other is false."
+    },
+    {
+      "card_id": "forallx_ch04_q01",
+      "prompt": "What is the job of a symbolization key?",
+      "options": ["It states which English sentence each sentence letter represents", "It lists the truth values assigned to every sentence", "It defines the argument's conclusion", "It removes ambiguity by changing the English wording"],
+      "correct_index": 0,
+      "answer": "A key pairs sentence letters with the English sentences they stand for.",
+      "elaboration": "The key lets a reader interpret the symbolic form without guessing what its letters mean."
+    },
+    {
+      "card_id": "forallx_ch04_q02",
+      "prompt": "An argument is valid in virtue of its form when…",
+      "options": ["every interpretation of its sentence letters preserves truth from premises to conclusion", "its premises happen to be true in the actual world", "its conclusion repeats a word from a premise", "the argument contains at least one conditional"],
+      "correct_index": 0,
+      "answer": "Its logical pattern guarantees that true premises cannot accompany a false conclusion, regardless of the sentence-letter meanings.",
+      "elaboration": "Symbolization makes the shared logical structure visible while abstracting from topic-specific content."
+    },
+    {
+      "card_id": "forallx_ch05_q01",
+      "prompt": "Which TFL connective best represents ‘neither P nor Q’?",
+      "options": ["¬(P ∨ Q)", "P ∨ Q", "P → Q", "P ↔ Q"],
+      "correct_index": 0,
+      "answer": "¬(P ∨ Q).",
+      "elaboration": "‘Neither’ denies that at least one of the two disjuncts is true."
+    },
+    {
+      "card_id": "forallx_ch05_q02",
+      "prompt": "In standard TFL, what does P ∨ Q require to be true?",
+      "options": ["At least one of P or Q is true, including the case where both are true", "Exactly one of P and Q is true", "Both P and Q are true", "If P is true, then Q is true"],
+      "correct_index": 0,
+      "answer": "At least one disjunct is true; both may be true as well.",
+      "elaboration": "TFL’s disjunction is inclusive, unlike an exclusive ‘either-or’ reading."
+    },
+    {
+      "card_id": "forallx_ch06_q01",
+      "prompt": "Which expression is a well-formed compound sentence of TFL?",
+      "options": ["(P ∧ Q)", "P ∧", "(P Q)", "→ P Q"],
+      "correct_index": 0,
+      "answer": "(P ∧ Q).",
+      "elaboration": "A binary connective joins two sentences, and the parentheses mark the resulting structure."
+    },
+    {
+      "card_id": "forallx_ch06_q02",
+      "prompt": "What is the main connective in ¬(P ∧ Q)?",
+      "options": ["The outer negation ¬", "The conjunction ∧", "P", "Q"],
+      "correct_index": 0,
+      "answer": "The outer negation is the main connective.",
+      "elaboration": "The main connective is the operator introduced last in the sentence’s construction and governs the whole expression."
+    },
+    {
+      "card_id": "forallx_ch07_q01",
+      "prompt": "What kind of ambiguity occurs when the same words allow different grammatical groupings?",
+      "options": ["Structural ambiguity", "Lexical ambiguity", "Truth-functional ambiguity", "A symbolization key"],
+      "correct_index": 0,
+      "answer": "Structural ambiguity.",
+      "elaboration": "Different groupings can correspond to different scopes for connectives, even if the words stay the same."
+    },
+    {
+      "card_id": "forallx_ch07_q02",
+      "prompt": "Why might ‘not both P and Q’ differ from ‘neither P nor Q’?",
+      "options": ["The first can allow one of P or Q to be true; the second requires both false", "They always have exactly the same meaning", "The first is a conditional and the second is a biconditional", "Neither sentence can be represented in TFL"],
+      "correct_index": 0,
+      "answer": "‘Not both’ is ¬(P ∧ Q); ‘neither’ is ¬P ∧ ¬Q, so exactly one may be true in the first but not the second.",
+      "elaboration": "Scope and grouping determine whether negation applies to a conjunction or separately to both parts."
+    },
+    {
+      "card_id": "forallx_ch08_q01",
+      "prompt": "In logic, what is the use/mention distinction?",
+      "options": ["Using an expression to talk about its subject versus mentioning the expression itself", "Using a connective versus omitting it", "Writing a sentence versus assigning it a truth value", "Using a premise versus citing a conclusion"],
+      "correct_index": 0,
+      "answer": "Using a word or sentence to talk about what it means differs from mentioning that expression as an object of discussion.",
+      "elaboration": "Quotation marks commonly signal mention, as in discussing the word ‘and’ itself."
+    },
+    {
+      "card_id": "forallx_ch08_q02",
+      "prompt": "In the sentence ‘“P ∧ Q” contains a connective,’ what is being discussed?",
+      "options": ["The written symbolic expression itself", "The truth of P and Q in the world", "An argument with P and Q as premises", "The connective’s English pronunciation only"],
+      "correct_index": 0,
+      "answer": "The expression ‘P ∧ Q’ is mentioned; the sentence is about the notation itself.",
+      "elaboration": "Quotation marks help distinguish an expression from the sentence it would represent."
+    },
+    {
+      "card_id": "forallx_ch09_q01",
+      "prompt": "On what row is a material conditional P → Q false?",
+      "options": ["P is true and Q is false", "P is false and Q is true", "Both P and Q are true", "Both P and Q are false"],
+      "correct_index": 0,
+      "answer": "Only when P is true and Q is false.",
+      "elaboration": "A conditional rules out a true antecedent paired with a false consequent."
+    },
+    {
+      "card_id": "forallx_ch09_q02",
+      "prompt": "When is the biconditional P ↔ Q true?",
+      "options": ["When P and Q have the same truth value", "Only when P is true", "Only when Q is false", "Whenever at least one of P or Q is true"],
+      "correct_index": 0,
+      "answer": "When both sides are true or both sides are false.",
+      "elaboration": "The biconditional is true exactly when its component sentences agree in truth value."
+    },
+    {
+      "card_id": "forallx_ch10_q01",
+      "prompt": "A connective is truth-functional when…",
+      "options": ["the truth value of the compound is determined entirely by the truth values of its parts", "its English use always indicates a causal relation", "it can only join true sentences", "its meaning depends on the topic of the sentence"],
+      "correct_index": 0,
+      "answer": "The compound’s truth value depends only on the truth values of its component sentences.",
+      "elaboration": "Truth-functional semantics intentionally ignores extra conversational or causal meaning."
+    },
+    {
+      "card_id": "forallx_ch10_q02",
+      "prompt": "Which statement about TFL’s five standard connectives is correct?",
+      "options": ["Each has a truth rule that applies to every sentence with that connective", "Their truth values depend on whether the sentence is about people", "Only negation has a truth table", "Their English translations always have one unambiguous reading"],
+      "correct_index": 0,
+      "answer": "Each connective receives a uniform truth-functional rule.",
+      "elaboration": "Once the component truth values are fixed, the connective’s table determines the compound’s value."
+    },
+    {
+      "card_id": "forallx_ch11_q01",
+      "prompt": "How many rows are in a complete truth table with four distinct sentence letters?",
+      "options": ["16", "8", "12", "4"],
+      "correct_index": 0,
+      "answer": "16 rows, since 2⁴ = 16.",
+      "elaboration": "Each of four sentence letters can be true or false, producing every combination."
+    },
+    {
+      "card_id": "forallx_ch11_q02",
+      "prompt": "What does each row of a complete truth table represent?",
+      "options": ["One assignment of truth values to all sentence letters", "One premise paired with the conclusion", "One possible English translation", "One connective’s definition"],
+      "correct_index": 0,
+      "answer": "A single valuation assigning T or F to every sentence letter.",
+      "elaboration": "A complete table includes every valuation for the letters in the sentence or argument."
+    },
+    {
+      "card_id": "forallx_ch12_q01",
+      "prompt": "Which column pattern makes a sentence a tautology?",
+      "options": ["True on every valuation", "False on every valuation", "True on one row only", "Missing a value on at least one row"],
+      "correct_index": 0,
+      "answer": "A tautology is true on every valuation.",
+      "elaboration": "A contradiction is false on every valuation; a contingent sentence varies across rows."
+    },
+    {
+      "card_id": "forallx_ch12_q02",
+      "prompt": "How can a truth table show that Γ does not entail C?",
+      "options": ["Find a row where every premise is true and C is false", "Find a row where every premise and C are false", "Find a row where C is true", "Find any row where a premise is false"],
+      "correct_index": 0,
+      "answer": "A valuation with all premises true and the conclusion false is a counterexample to entailment.",
+      "elaboration": "Validity and entailment fail as soon as one such row appears."
+    },
+    {
+      "card_id": "forallx_ch13_q01",
+      "prompt": "What important structure does TFL normally treat as a single sentence letter?",
+      "options": ["The internal subject-and-predicate structure of an atomic sentence", "The truth table for negation", "The main connective of a compound", "The order of the argument’s premises"],
+      "correct_index": 0,
+      "answer": "TFL treats an atomic sentence as an unanalyzed unit, represented by one sentence letter.",
+      "elaboration": "This abstraction makes TFL useful for connective patterns but limits what it can express about internal sentence structure."
+    },
+    {
+      "card_id": "forallx_ch13_q02",
+      "prompt": "Why can’t ordinary TFL directly express ‘Everyone admires someone’?",
+      "options": ["It lacks quantifiers and a way to represent relations among individuals", "It has no symbol for negation", "It cannot use sentence letters", "It cannot represent any compound sentence"],
+      "correct_index": 0,
+      "answer": "TFL has no quantifier or predicate-and-variable machinery for representing people and their relations.",
+      "elaboration": "A richer system such as predicate logic is needed to expose that internal structure."
+    },
+    {
+      "card_id": "forallx_ch14_q01",
+      "prompt": "If P is false, what can you conclude about P ∧ Q without evaluating Q?",
+      "options": ["P ∧ Q is false", "P ∧ Q is true", "P ∧ Q has no truth value", "Nothing; Q must be evaluated first"],
+      "correct_index": 0,
+      "answer": "The conjunction is false regardless of Q.",
+      "elaboration": "This is a truth-table shortcut: one false conjunct settles the whole conjunction."
+    },
+    {
+      "card_id": "forallx_ch14_q02",
+      "prompt": "If P is true, what can you conclude about P ∨ Q without evaluating Q?",
+      "options": ["P ∨ Q is true", "P ∨ Q is false", "P ∨ Q is equivalent to Q", "P ∨ Q is contingent"],
+      "correct_index": 0,
+      "answer": "The disjunction is true regardless of Q.",
+      "elaboration": "One true disjunct is enough for an inclusive disjunction to be true."
+    },
+    {
+      "card_id": "forallx_ch15_q01",
+      "prompt": "What can one row of a partial truth table establish about an argument?",
+      "options": ["A row with all premises true and the conclusion false establishes invalidity", "A row with all premises true establishes validity", "A row with a false premise establishes invalidity", "A row with a true conclusion establishes validity"],
+      "correct_index": 0,
+      "answer": "A counterexample row establishes that the argument is invalid.",
+      "elaboration": "Disproof needs only one failing valuation, so a partial table can be decisive."
+    },
+    {
+      "card_id": "forallx_ch15_q02",
+      "prompt": "Why can a partial truth table usually not prove that a sentence is a tautology?",
+      "options": ["A proof must establish truth on every valuation, including rows not yet checked", "Partial tables cannot assign truth values", "A tautology must be true on exactly one row", "Truth tables only evaluate arguments, not sentences"],
+      "correct_index": 0,
+      "answer": "A tautology requires truth on all valuations, so unexamined rows still need to be ruled out.",
+      "elaboration": "Partial tables are especially useful for finding a counterexample, where one row is enough."
+    }
+  ]
+}

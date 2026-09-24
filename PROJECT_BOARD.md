@@ -1,6 +1,6 @@
 ---
 title: "Master Project Board"
-updated: 2026-09-22
+updated: 2026-09-24
 type: project-board
 ---
 
@@ -45,6 +45,7 @@ Central task registry across all projects and active coding threads. Automatical
 ## ✅ Completed
 
 - [x] Add AI-OS Controls menu actions to reveal and hide the Perplexity/Gemini companion windows [project:: query-aios-controls] [assignee:: agent]
+- [x] Add forallx chapters 1–15 FSRS quizzes and repeat unanswered morning Telegram check-ins every 15 minutes [project:: proactive-assistant] [assignee:: agent] [due:: 2026-09-24]
 - [x] Deploy Hermes WebUI with Gemini Flash orchestration, agy cost delegation, and Mac-to-VPS Caddy failover [project:: hermes-webui] [assignee:: agent] [due:: 2026-09-15]
 - [x] Implement Proactive Executive Assistant Service with FSRS, Habit Bridge, and Context Gate [project:: proactive-assistant] [assignee:: agent] [due:: 2026-09-13]
 - [x] Decommission redundant ai-os-wiki web server and prune deprecated sub-apps [project:: ai-os] [assignee:: agent]

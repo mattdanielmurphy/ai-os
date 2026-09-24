@@ -9,15 +9,18 @@ import re
 import shutil
 import subprocess
 import time
+import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
 
 from telegram import Update
 from telegram.ext import (
+    ApplicationHandlerStop,
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    TypeHandler,
     filters,
 )
 
@@ -347,6 +350,9 @@ class ActionDispatcher:
         elif action_type == "briefing" and len(parts) >= 2:
             sub = parts[1]
             if sub == "gratitude":
+                trigger_id = await self._morning_trigger_for_message(message_id)
+                if trigger_id:
+                    await self._set_morning_reminders_active(trigger_id, False)
                 await self.gateway.send_message(
                     chat_id,
                     "🙏 *Daily Gratitude Reflection*\n\n"
@@ -355,6 +361,11 @@ class ActionDispatcher:
                 )
                 return True
             elif sub == "meditate_done":
+                trigger_id = await self._morning_trigger_for_message(message_id)
+                if trigger_id:
+                    await self._finish_morning_checkin(trigger_id)
+                else:
+                    await self.db.resolve_signal(message_id, "RESPONDED")
                 await self.gateway.edit_prompt(
                     chat_id=chat_id,
                     message_id=message_id,
@@ -362,16 +373,31 @@ class ActionDispatcher:
                     "Breath is grounded, posture is aligned, and awareness is reset. Wishing you a calm, focused day, Matt.",
                     remove_keyboard=True,
                 )
-                await self.db.resolve_signal(message_id, "RESPONDED")
                 return True
             elif sub == "review":
+                trigger_id = await self._morning_trigger_for_message(message_id)
+                if trigger_id:
+                    await self._finish_morning_checkin(trigger_id)
                 await self.cmd_quiz(chat_id)
+                return True
+            elif sub == "ack":
+                trigger_id = await self._morning_trigger_for_message(message_id)
+                if trigger_id:
+                    await self._finish_morning_checkin(trigger_id)
+                await self.gateway.edit_prompt(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text="✅ *Check-in acknowledged.* I’ll stop the morning reminders. Have a good start, Matt.",
+                    remove_keyboard=True,
+                )
                 return True
 
         elif action_type == "cmd" and len(parts) >= 2:
             cmd_name = parts[1]
             if cmd_name == "quiz":
                 return await self.cmd_quiz(chat_id)
+            elif cmd_name == "forallx":
+                return await self.cmd_quiz(chat_id, card_id_prefix="forallx_")
             elif cmd_name == "habits":
                 return await self.cmd_habits(chat_id)
             elif cmd_name == "status":
@@ -382,25 +408,13 @@ class ActionDispatcher:
                 return await self.cmd_engine("", chat_id)
 
         elif action_type == "engine" and len(parts) >= 2:
-            eng = parts[1]
-            if eng == "agy":
-                self.active_engine = "agy"
-                await self.gateway.edit_prompt(
-                    chat_id=chat_id,
-                    message_id=message_id,
-                    text="⚡️ <b>Engine set to Agy (Gemini 3.8 Flash Low)</b>\n\nUsing free Antigravity quota.",
-                    remove_keyboard=True,
-                )
-                return True
-            elif eng == "codex":
-                self.active_engine = "codex"
-                await self.gateway.edit_prompt(
-                    chat_id=chat_id,
-                    message_id=message_id,
-                    text="🧠 <b>Engine set to OpenAI Codex</b>\n\nUsing your Codex subscription.",
-                    remove_keyboard=True,
-                )
-                return True
+            await self.gateway.edit_prompt(
+                chat_id=chat_id,
+                message_id=message_id,
+                text="🧠 <b>AI Engine</b>\n\nThis bot now routes directly to Codex.",
+                remove_keyboard=True,
+            )
+            return True
 
         logger.warning(f"Unknown callback query format: {callback_data}")
         return False
@@ -492,6 +506,31 @@ class ActionDispatcher:
         await self.db.resolve_signal(message_id, "RESPONDED")
         return True
 
+    async def _morning_trigger_for_message(self, message_id: int) -> Optional[str]:
+        for signal in await self.db.get_awaiting_signals():
+            if signal["message_id"] == message_id and signal["trigger_id"].startswith("trig_morning_"):
+                return signal["trigger_id"]
+        return None
+
+    async def _set_morning_reminders_active(self, trigger_id: str, active: bool) -> None:
+        if not re.fullmatch(r"trig_morning_\d{4}-\d{2}-\d{2}", trigger_id):
+            return
+        raw = await self.db.get_dynamic("morning_reminder_state")
+        if not raw:
+            return
+        try:
+            state = json.loads(raw)
+        except (TypeError, json.JSONDecodeError):
+            return
+        if state.get("trigger_id") == trigger_id:
+            state["active"] = active
+            await self.db.set_dynamic("morning_reminder_state", json.dumps(state))
+
+    async def _finish_morning_checkin(self, trigger_id: str) -> None:
+        if trigger_id.startswith("trig_morning_"):
+            await self.db.resolve_signals_for_trigger(trigger_id, "RESPONDED")
+            await self._set_morning_reminders_active(trigger_id, False)
+
     # -------------------------------------------------------------------------
     # Executive Commands
     # -------------------------------------------------------------------------
@@ -503,6 +542,7 @@ class ActionDispatcher:
             "• `/morning` — Trigger your daily morning grounding and briefing\n"
             "• `/gratitude <thought>` — Log a gratitude entry directly into your vault\n"
             "• `/quiz` or `/review` — Start an immediate spaced repetition quiz\n"
+            "• `/forallx` — Quiz on *forallx*, chapters 1–15, scheduled with FSRS\n"
             "• `/status` — View active triggers, due cards, and gate status\n"
             "• `/habits` — View today's habit check-ins\n"
             "• `/reset` or `/clear` — Reset conversation context and memory\n"
@@ -514,6 +554,9 @@ class ActionDispatcher:
             [
                 {"text": "🌅 Morning Briefing", "callback_data": "cmd:morning"},
                 {"text": "📚 Quiz Me", "callback_data": "cmd:quiz"},
+            ],
+            [
+                {"text": "∀x Logic Quiz", "callback_data": "cmd:forallx"},
             ],
             [
                 {"text": "📊 Status", "callback_data": "cmd:status"},
@@ -564,6 +607,8 @@ class ActionDispatcher:
             f"Recorded to `{log_path.name}` in your Obsidian vault."
         )
         await self.gateway.send_message(chat_id, reply)
+        today_trigger = f"trig_morning_{datetime.now().astimezone().strftime('%Y-%m-%d')}"
+        await self._finish_morning_checkin(today_trigger)
         return True
 
     async def cmd_status(self, chat_id: int) -> bool:
@@ -602,17 +647,34 @@ class ActionDispatcher:
         await self.gateway.send_message(chat_id, status_text, keyboard_rows=keyboard)
         return True
 
-    async def cmd_quiz(self, chat_id: int) -> bool:
+    async def cmd_quiz(self, chat_id: int, card_id_prefix: Optional[str] = None) -> bool:
         now = datetime.now(timezone.utc)
-        due_cards = await self.db.get_due_cards(now)
-        card = due_cards[0] if due_cards else await self.db.get_any_card()
+        due_cards = await self.db.get_due_cards(now, card_id_prefix=card_id_prefix)
+        card = due_cards[0] if due_cards else await self.db.get_any_card(card_id_prefix=card_id_prefix)
 
         if not card:
+            if card_id_prefix:
+                await self.gateway.send_message(
+                    chat_id,
+                    "ℹ️ The *forallx* chapter 1–15 deck has not been imported yet.",
+                )
+                return False
             await self.gateway.send_message(
                 chat_id,
                 "ℹ️ *No flashcards in your deck yet.*\n\nUse the assistant CLI to add review cards:\n`python3 services/assistant/cli.py add-card --prompt ... --answer ...`",
             )
             return False
+
+        if card_id_prefix and not due_cards:
+            due_at = datetime.fromisoformat(card["due_at"])
+            if due_at.tzinfo is None:
+                due_at = due_at.replace(tzinfo=timezone.utc)
+            next_local = due_at.astimezone().strftime("%a, %b %-d at %-I:%M %p")
+            await self.gateway.send_message(
+                chat_id,
+                f"📚 Your next *forallx* review is due {next_local}. I’ll keep it on the FSRS schedule; use `/forallx` again then.",
+            )
+            return True
 
         text, keyboard = format_review_prompt(card)
         msg_id = await self.gateway.send_prompt(chat_id, text, keyboard)
@@ -739,46 +801,18 @@ class ActionDispatcher:
 
     async def cmd_reset(self, chat_id: int) -> bool:
         await self.db.clear_chat_history(chat_id)
-        engine = getattr(self, "active_engine", self.config.default_engine)
-        engine_label = "Agy (Gemini 3.8 Flash Low - Free)" if engine == "agy" else "OpenAI Codex"
         await self.gateway.send_message(
             chat_id,
-            f"🧹 *Conversation Context Cleared*\n\nStarted a fresh conversation session with {engine_label}.",
+            "🧹 *Conversation Context Cleared*\n\nStarted a fresh conversation with Codex.",
         )
         return True
 
     async def cmd_engine(self, engine_choice: str, chat_id: int) -> bool:
-        """Inspects or switches the active AI engine between free Agy (3.8 Flash Low) and Codex."""
-        choice = engine_choice.strip().lower()
-        if choice in ("agy", "free", "gemini", "flash", "flash-low", "flash_low"):
-            self.active_engine = "agy"
-            await self.gateway.send_message(
-                chat_id,
-                "⚡️ <b>Engine Switched to Agy (Gemini 3.8 Flash Low)</b>\n\nAll queries and visual inspections will use free Antigravity quota.",
-            )
-            return True
-        elif choice in ("codex", "openai"):
-            self.active_engine = "codex"
-            await self.gateway.send_message(
-                chat_id,
-                "🧠 <b>Engine Switched to OpenAI Codex</b>\n\nAll queries and visual inspections will route to your Codex subscription.",
-            )
-            return True
-
-        current = getattr(self, "active_engine", self.config.default_engine)
-        curr_label = "⚡️ Agy (Gemini 3.8 Flash Low - Free)" if current == "agy" else "🧠 OpenAI Codex (Subscription)"
-        keyboard = [
-            [
-                {"text": "⚡️ Use Free Agy (3.8 Flash Low)", "callback_data": "engine:agy"},
-                {"text": "🧠 Use Codex Subscription", "callback_data": "engine:codex"},
-            ]
-        ]
-        text = (
-            f"⚙️ <b>AI Engine Routing</b>\n\n"
-            f"Current active engine: <b>{curr_label}</b>\n\n"
-            f"Select which engine to route conversational queries and visual inspections to:"
+        """Reports the fixed direct-Codex route retained for the Telegram assistant."""
+        await self.gateway.send_message(
+            chat_id,
+            "🧠 <b>AI Engine</b>\n\nThis bot routes directly to your Codex subscription. No Hermes or alternate engine is in the message path.",
         )
-        await self.gateway.send_prompt(chat_id, text, keyboard)
         return True
 
     async def _query_agy(
@@ -810,6 +844,7 @@ class ActionDispatcher:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 cwd=str(self.config.media_tmp_dir),
+                stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -862,97 +897,48 @@ class ActionDispatcher:
         chat_id: Optional[int] = None,
         status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
-        """Queries OpenAI Codex via hermes chat CLI using user's Codex subscription with live progress updates."""
+        """Queries the installed Codex CLI directly with the user's ChatGPT subscription."""
         try:
+            response_dir = self.config.media_tmp_dir / "codex_responses"
+            response_dir.mkdir(parents=True, exist_ok=True)
+            response_path = response_dir / f"{uuid.uuid4().hex}.txt"
             cmd = [
-                "hermes",
-                "chat",
-                "-q", prompt,
-                "--provider", "openai-codex",
-                "--source", "tool",
+                self.config.codex_command,
+                "exec",
+                "--ephemeral",
+                "--sandbox", "read-only",
+                "--skip-git-repo-check",
                 "--ignore-rules",
+                "--color", "never",
+                "--output-last-message", str(response_path),
             ]
             if image_path and image_path.exists():
                 cmd.extend(["--image", str(image_path)])
+            cmd.append(prompt)
 
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
+                cwd=str(self.config.media_tmp_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-
-            output_lines = []
-            last_edit_time = 0.0
-            last_status_text = ""
-            in_reasoning = False
-
-            async def _update_status(text: str):
-                nonlocal last_edit_time, last_status_text
-                now = time.time()
-                # Rate limit edits to at least 1.5s to respect Telegram limits
-                if (now - last_edit_time >= 1.5) and (text != last_status_text) and status_msg_id and chat_id:
-                    last_edit_time = now
-                    last_status_text = text
-                    try:
-                        await self.gateway.edit_message(chat_id, status_msg_id, text)
-                    except Exception as err:
-                        logger.debug(f"Failed to edit status message in Telegram: {err}")
-
             try:
-                while True:
-                    line_bytes = await proc.stdout.readline()
-                    if not line_bytes:
-                        break
-                    line = line_bytes.decode("utf-8", errors="replace")
-                    output_lines.append(line)
-                    stripped = line.strip()
-
-                    # 1. Detect reasoning blocks
-                    if stripped.startswith("┌─ Reasoning") or stripped.startswith("┌─"):
-                        in_reasoning = True
-                        await _update_status("🧠 <i>Reasoning through query...</i>")
-                        continue
-                    if in_reasoning:
-                        if stripped.startswith("└─") or stripped.endswith("┘"):
-                            in_reasoning = False
-                        elif stripped and not stripped.startswith("│"):
-                            thought = stripped.strip("*_ ").strip()
-                            if thought:
-                                if len(thought) > 75:
-                                    thought = thought[:72] + "..."
-                                await _update_status(f"💭 <i>{thought}</i>")
-                        continue
-
-                    # 2. Detect tool operations
-                    if "┊" in stripped or stripped.startswith("•") or stripped.startswith("⚙️"):
-                        parts = stripped.replace("┊", "").strip().split()
-                        if parts:
-                            tool_verb = parts[0]
-                            tool_target = " ".join(parts[1:4]) if len(parts) > 1 else ""
-                            if len(tool_target) > 50:
-                                tool_target = tool_target[:47] + "..."
-                            status_line = f"⚙️ <i>{tool_verb} {tool_target}...</i>".strip()
-                            await _update_status(status_line)
-                    elif stripped.startswith("╭─ ⚕ Hermes"):
-                        await _update_status("✍️ <i>Formulating final answer...</i>")
-
-                await asyncio.wait_for(proc.wait(), timeout=180.0)
-                output = "".join(output_lines)
-                session_id_match = re.search(r"session_id:\s*([a-zA-Z0-9_-]+)", output)
-                if session_id_match:
-                    self._last_codex_session_id = session_id_match.group(1).strip()
-                else:
-                    self._last_codex_session_id = None
-                res = extract_hermes_answer(output)
-                if not res:
-                    logger.warning(f"Codex returned empty or filtered response. Raw: {output[:300]}")
-                return res
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=180.0)
+                if proc.returncode != 0:
+                    logger.warning("Direct Codex query failed (exit %s): %s", proc.returncode, stderr.decode("utf-8", errors="replace")[:300])
+                    return None
+                if not response_path.exists():
+                    logger.warning("Direct Codex query completed without a final-response file")
+                    return None
+                result = response_path.read_text(encoding="utf-8").strip()
+                return result or None
             except asyncio.TimeoutError:
                 proc.kill()
-                logger.warning("Codex query timed out after 180s")
+                await proc.wait()
+                logger.warning("Direct Codex query timed out after 180s")
                 return None
         except Exception as e:
-            logger.error(f"Error querying Codex from assistant: {e}")
+            logger.error(f"Error querying direct Codex from assistant: {e}")
             return None
 
     async def _query_model(
@@ -962,28 +948,10 @@ class ActionDispatcher:
         chat_id: Optional[int] = None,
         status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
-        """Unified query dispatcher defaulting to free agy (3.8 Flash Low), falling back to Codex."""
-        engine = getattr(self, "active_engine", self.config.default_engine)
-        if engine == "agy":
-            reply = await self._query_agy(
-                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
-            )
-            if reply:
-                return reply
-            logger.warning("Agy query failed or exhausted; automatically falling back to Codex...")
-            return await self._query_codex(
-                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
-            )
-        else:
-            reply = await self._query_codex(
-                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
-            )
-            if reply:
-                return reply
-            logger.warning("Codex query failed; automatically falling back to Agy...")
-            return await self._query_agy(
-                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
-            )
+        """Direct Codex-only dispatcher for every conversational request."""
+        return await self._query_codex(
+            prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
+        )
 
     async def _dispatch_agy_coding(self, prompt: str, chat_id: int) -> bool:
         """Dispatches an advanced coding task to agy via subagent.py."""
@@ -1019,7 +987,6 @@ class ActionDispatcher:
         chat_id: int,
         model_reply: str,
         status_msg_id: Optional[int] = None,
-        session_id: Optional[str] = None,
     ) -> bool:
         """
         Cleans the model's text response, saves it to history, updates status/sends message,
@@ -1028,15 +995,7 @@ class ActionDispatcher:
         # 1. Extract MEDIA: tags and directives from the response text
         clean_text, media_items = extract_media_from_text(model_reply)
 
-        # 2. Check if the session generated any media via tools (TTS, image generation, etc.)
-        effective_session_id = session_id or getattr(self, "_last_codex_session_id", None)
-        if effective_session_id:
-            tool_media = find_session_generated_media(effective_session_id)
-            for tm in tool_media:
-                if not any(item["path"] == tm["path"] for item in media_items):
-                    media_items.append(tm)
-
-        # 3. Fallback: check for recently created local paths mentioned in text
+        # 2. Fallback: check for recently created local paths mentioned in text
         if not media_items:
             mentioned = find_deliverable_paths_in_text(clean_text)
             for p in mentioned:
@@ -1147,6 +1106,8 @@ class ActionDispatcher:
             return await self.cmd_status(chat_id)
         elif lower_text in ("quiz", "review", "test"):
             return await self.cmd_quiz(chat_id)
+        elif lower_text in ("forallx", "logic quiz", "quiz forallx"):
+            return await self.cmd_quiz(chat_id, card_id_prefix="forallx_")
         elif lower_text in ("habits", "habit"):
             return await self.cmd_habits(chat_id)
         elif lower_text in ("morning", "briefing", "good morning"):
@@ -1171,16 +1132,9 @@ class ActionDispatcher:
             note = re.sub(r"^(note:\s*|capture:\s*|idea:\s*)", "", clean_text, flags=re.IGNORECASE).strip()
             return await self.cmd_capture(note, chat_id)
 
-        # 4.5. Check for explicit agy coding task
-        if re.match(r"^(agy:\s*|code:\s*)", lower_text):
-            coding_task = re.sub(r"^(agy:\s*|code:\s*)", "", clean_text, flags=re.IGNORECASE).strip()
-            return await self._dispatch_agy_coding(coding_task, chat_id)
-
-        # 5. Conversational Assistant (defaulting to free Agy 3.8 Flash Low, fallback to Codex)
-        engine = getattr(self, "active_engine", self.config.default_engine)
-        engine_label = "Gemini 3.8 Flash Low (Free)" if engine == "agy" else "Codex"
+        # 5. Conversational Assistant (direct Codex only)
         status_msg_id = await self.gateway.send_message(
-            chat_id, f"💬 <i>Thinking with {engine_label}...</i>"
+            chat_id, "💬 <i>Thinking with Codex...</i>"
         )
 
         stop_typing = asyncio.Event()
@@ -1215,7 +1169,6 @@ class ActionDispatcher:
                 chat_id=chat_id,
                 model_reply=model_reply,
                 status_msg_id=status_msg_id,
-                session_id=getattr(self, "_last_codex_session_id", None),
             )
 
         fail_msg = (
@@ -1236,10 +1189,8 @@ class ActionDispatcher:
     ) -> bool:
         """Inspects and explains user-provided photos/screenshots using Agy Vision or Codex Vision."""
         user_prompt = caption.strip() if caption and caption.strip() else "Please inspect and explain what is shown in this image in detail:"
-        engine = getattr(self, "active_engine", self.config.default_engine)
-        engine_label = "Gemini 3.8 Flash Low (Free)" if engine == "agy" else "Codex Vision"
         status_msg_id = await self.gateway.send_message(
-            chat_id, f"🖼️ <i>Analyzing image with {engine_label}...</i>"
+            chat_id, "🖼️ <i>Analyzing image with Codex...</i>"
         )
 
         stop_typing = asyncio.Event()
@@ -1274,7 +1225,6 @@ class ActionDispatcher:
                 chat_id=chat_id,
                 model_reply=reply,
                 status_msg_id=status_msg_id,
-                session_id=getattr(self, "_last_codex_session_id", None),
             )
 
         fail_msg = "⚠️ <i>Unable to analyze image right now.</i>"
@@ -1389,6 +1339,15 @@ class ActionDispatcher:
 
 def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) -> None:
     """Registers callback queries, command handlers, and media/text message handlers with python-telegram-bot."""
+    async def telegram_authorization_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else None
+        if dispatcher.config.is_authorized_telegram_chat(chat_id):
+            return
+        logger.warning("Ignoring Telegram update from unauthorized chat %s", chat_id)
+        if chat_id is not None:
+            await gateway.send_message(chat_id, "This is a private bot.")
+        raise ApplicationHandlerStop
+
     async def telegram_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
         if not query or not query.data:
@@ -1415,6 +1374,10 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
     async def telegram_quiz_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id if update.effective_chat else 0
         await dispatcher.cmd_quiz(chat_id)
+
+    async def telegram_forallx_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await dispatcher.cmd_quiz(chat_id, card_id_prefix="forallx_")
 
     async def telegram_habits_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id if update.effective_chat else 0
@@ -1451,14 +1414,6 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
             await dispatcher.cmd_gratitude(text, chat_id)
         else:
             await gateway.send_message(chat_id, "Usage: `/gratitude <what you are thankful for>`")
-
-    async def telegram_agy_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        chat_id = update.effective_chat.id if update.effective_chat else 0
-        text = " ".join(context.args) if context.args else ""
-        if text:
-            await dispatcher._dispatch_agy_coding(text, chat_id)
-        else:
-            await gateway.send_message(chat_id, "Usage: `/agy <coding instruction>`")
 
     async def telegram_engine_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id if update.effective_chat else 0
@@ -1554,21 +1509,21 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
         message_id = msg.message_id
         await dispatcher.handle_text_message(msg.text, chat_id, message_id)
 
+    gateway.add_handler(TypeHandler(Update, telegram_authorization_handler), group=-1)
     gateway.add_callback_handler(telegram_callback_handler)
     gateway.add_handler(CommandHandler(["start", "help"], telegram_start_handler))
     gateway.add_handler(CommandHandler(["morning", "briefing"], telegram_morning_handler))
     gateway.add_handler(CommandHandler(["gratitude", "thankful"], telegram_gratitude_handler))
     gateway.add_handler(CommandHandler(["status", "info"], telegram_status_handler))
     gateway.add_handler(CommandHandler(["quiz", "review"], telegram_quiz_handler))
+    gateway.add_handler(CommandHandler("forallx", telegram_forallx_handler))
     gateway.add_handler(CommandHandler(["habits", "habit"], telegram_habits_handler))
     gateway.add_handler(CommandHandler(["reset", "clear", "new"], telegram_reset_handler))
     gateway.add_handler(CommandHandler(["capture", "note"], telegram_capture_handler))
     gateway.add_handler(CommandHandler(["remind", "todo"], telegram_remind_handler))
     gateway.add_handler(CommandHandler(["engine", "model"], telegram_engine_handler))
-    gateway.add_handler(CommandHandler(["agy", "code"], telegram_agy_handler))
     gateway.add_handler(MessageHandler(filters.PHOTO, telegram_photo_handler))
     gateway.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, telegram_audio_handler))
     gateway.add_handler(MessageHandler(filters.VIDEO | filters.VIDEO_NOTE, telegram_video_handler))
     gateway.add_handler(MessageHandler(filters.Document.ALL, telegram_document_handler))
     gateway.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, telegram_text_handler))
-

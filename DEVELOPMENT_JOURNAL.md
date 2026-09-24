@@ -207,3 +207,8 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 ## 2026-09-23
 - **ChatGPT local file links:** Replaced Zed/Finder launcher links with standard Markdown paths in the shared project-board rule, board header, and preflight output. The shared file-link formatter now preserves links unchanged.
 - Trello is available as an uninstalled Kanban plugin; no plugin or external board was connected as part of this link cleanup. [[log]](agent-logs/2026-09-23_00-02_chatgpt-local-file-links.md)
+
+## 2026-09-24
+- Added a 30-card, chapter-labeled `forallx` FSRS deck for chapters 1–15, an idempotent JSON deck importer, and a `/forallx` Telegram command that surfaces only due cards.
+- Added daily morning check-in reminders every 15 minutes through noon local time, gated by context and stopped by a reply or acknowledgment; imported all 30 cards into the assistant database.
+- Researched Retell, Vapi, and Twilio trial options for a future voice-call check-in; no calling provider was configured.

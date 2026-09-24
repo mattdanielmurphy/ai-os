@@ -55,9 +55,9 @@ class TelegramGateway:
             self._is_running = False
             logger.info("Telegram Bot polling stopped.")
 
-    def add_handler(self, handler) -> None:
+    def add_handler(self, handler, group: int = 0) -> None:
         if self.app:
-            self.app.add_handler(handler)
+            self.app.add_handler(handler, group=group)
 
     def add_callback_handler(self, handler_fn: Callable) -> None:
         if self.app:
@@ -611,5 +611,4 @@ class TelegramGateway:
             return await self.send_video(chat_id, path, caption=caption)
         else:
             return await self.send_document(chat_id, path, caption=caption)
-
 
