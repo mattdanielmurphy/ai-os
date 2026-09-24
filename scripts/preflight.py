@@ -38,47 +38,112 @@ def run_step(name, func, *args):
     except Exception as e:
         return name, f"ERROR: {e}"
 
+def summarize_quota_payload(data):
+    """Return a conservative, display-safe summary of ag-quota JSON."""
+    accounts = data if isinstance(data, list) else [{"quota_summary": data}]
+    snapshot = {}
+    primary_fraction = None
+    warning_count = 0
+
+    for index, account in enumerate(accounts):
+        if not isinstance(account, dict):
+            continue
+        quota = account.get("quota_summary", account)
+        if not isinstance(quota, dict):
+            continue
+        email = account.get("email") or quota.get("Email", "unknown")
+        models = quota.get("Models", [])
+        default_model = quota.get("DefaultModelID")
+        selected = None
+
+        if isinstance(models, list):
+            for model in models:
+                if not isinstance(model, dict):
+                    continue
+                model_id = model.get("ModelID", "")
+                fraction = model.get("RemainingFraction")
+                exhausted = bool(model.get("IsExhausted", False))
+                if isinstance(fraction, (int, float)):
+                    fraction = max(0.0, min(1.0, float(fraction)))
+                    label = model.get("DisplayName") or model_id
+                    snapshot[f"{email} | {label}"] = round(fraction, 4)
+                if model_id == default_model:
+                    selected = model
+
+        if selected is None and isinstance(models, list):
+            selected = next(
+                (
+                    model for model in models
+                    if isinstance(model, dict)
+                    and not str(model.get("ModelID", "")).startswith(("tab_", "chat_"))
+                ),
+                None,
+            )
+
+        if not isinstance(selected, dict):
+            continue
+        fraction = selected.get("RemainingFraction")
+        exhausted = bool(selected.get("IsExhausted", False))
+        if not isinstance(fraction, (int, float)):
+            continue
+        fraction = 0.0 if exhausted else max(0.0, min(1.0, float(fraction)))
+        if index == 0:
+            primary_fraction = fraction
+        if exhausted or fraction < 0.25:
+            warning_count += 1
+
+    return {
+        "snapshot": snapshot,
+        "account_count": len(accounts),
+        "primary_remaining_fraction": primary_fraction,
+        "warning_count": warning_count,
+    }
+
+
 def step_quota():
     snapshot_path = os.path.expanduser("~/.ag_quota_snapshot.json")
-    if os.path.exists(snapshot_path):
-        mtime = os.path.getmtime(snapshot_path)
-        if time.time() - mtime < 60:
-            try:
-                with open(snapshot_path, "r", encoding="utf-8") as f:
-                    snapshot = json.load(f)
-                warnings = [f"{k}: {v*100:.1f}% remaining" for k, v in snapshot.items() if isinstance(v, (int, float)) and v < 0.25]
-                if warnings:
-                    return f"ag-quota (cached): WARNING ({'; '.join(warnings[:2])})"
-                return "ag-quota (cached): OK"
-            except Exception:
-                pass
-    out, code = run_cmd(["ag-quota", "--all", "-j"], timeout=2)
+    out, code = run_cmd(["ag-quota", "--all", "-j"], timeout=5)
     if code == 0 and out:
         try:
-            data = json.loads(out)
-            snapshot = {}
-            warnings = []
-            if isinstance(data, list):
-                for acct in data:
-                    email = acct.get("email") or acct.get("quota_summary", {}).get("Email", "unknown")
-                    models = acct.get("quota_summary", {}).get("Models", [])
-                    for m in models:
-                        frac = m.get("RemainingFraction", 1.0)
-                        is_ex = m.get("IsExhausted", False)
-                        disp = m.get("DisplayName") or m.get("ModelID", "")
-                        key = f"{email} | {disp}"
-                        if isinstance(frac, (int, float)):
-                            snapshot[key] = round(frac, 4)
-                        if is_ex or (isinstance(frac, (int, float)) and frac < 0.25):
-                            warnings.append(f"{key}: {frac*100:.1f}% remaining")
+            summary = summarize_quota_payload(json.loads(out))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return "ag-quota: UNAVAILABLE (invalid live response)"
+        if summary["primary_remaining_fraction"] is None:
+            return "ag-quota: UNAVAILABLE (no usable default-model quota found)"
+        try:
             with open(snapshot_path, "w", encoding="utf-8") as f:
-                json.dump(snapshot, f, indent=2)
-            if warnings:
-                return f"ag-quota: WARNING ({'; '.join(warnings[:2])})"
-            return "ag-quota: OK"
-        except Exception:
-            return "ag-quota: OK"
-    return "ag-quota: Skipped/Cached"
+                json.dump(summary["snapshot"], f, indent=2)
+        except OSError:
+            pass
+        remaining = summary["primary_remaining_fraction"] * 100
+        state = "WARNING" if summary["warning_count"] else "LIVE"
+        return (
+            f"ag-quota: {state} ({summary['account_count']} accounts; "
+            f"active default: {remaining:.1f}% remaining)"
+        )
+
+    try:
+        age_seconds = time.time() - os.path.getmtime(snapshot_path)
+        if age_seconds < 900:
+            with open(snapshot_path, "r", encoding="utf-8") as f:
+                snapshot = json.load(f)
+            values = [value for value in snapshot.values() if isinstance(value, (int, float))]
+            if values:
+                return (
+                    "ag-quota: CACHED "
+                    f"({int(age_seconds)}s old; highest recorded bucket: {max(values) * 100:.1f}%)"
+                )
+    except (OSError, ValueError, json.JSONDecodeError):
+        pass
+    return "ag-quota: UNAVAILABLE (live check failed; no recent cache)"
+
+def summarize_planner_ping(data):
+    if "PPLX=true" not in data:
+        return "AI-OS Planner (:3031): OK"
+    if "AUTH=true" not in data:
+        return "AI-OS Planner (:3031): ONLINE (Perplexity sign-in required)"
+    return "AI-OS Planner (:3031): OK (Perplexity Connected)"
+
 
 def step_aios_planner():
     """Verify AI-OS companion app and Perplexity bridge are alive on port 3031."""
@@ -86,9 +151,7 @@ def step_aios_planner():
         req = urllib.request.Request("http://127.0.0.1:3031/api/debug/ping")
         with urllib.request.urlopen(req, timeout=0.8) as resp:
             data = resp.read().decode("utf-8")
-            if "PPLX=true" in data:
-                return "AI-OS Planner (:3031): OK (Perplexity Connected)"
-            return "AI-OS Planner (:3031): OK"
+            return summarize_planner_ping(data)
     except Exception:
         pass
     return "AI-OS Planner (:3031): OFFLINE (launch agent: aios-server)"
