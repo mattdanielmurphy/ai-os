@@ -31,8 +31,13 @@ A local-first, context-gated personal executive assistant service embedded direc
      - `baby_facts`: Trivia and quick factual associations (0.85 retention target).
    - Lightweight micro-dosing format (10–30s recall prompt with inline 1-tap rating buttons: `Again`, `Hard`, `Good`, `Easy`).
    - Progressive elaboration: Edits the Telegram message in-place to reveal the answer, 1-sentence novel application context, and next scheduled review date.
+   - The original `forallx` question bank covers chapters 1–15 (30 multiple-choice cards). `/forallx` reviews only cards from this deck when they are due; FSRS schedules the next review after the confidence rating.
 
-4. **Obsidian Habit Bridge (`habit_bridge/`)**:
+4. **Morning check-in reminders (`run.py`)**:
+   - If the scheduled daily check-in is unanswered, Telegram sends a reminder every 15 minutes through noon local time.
+   - The existing Context Gate also applies to reminders. A reply, completion button, or “I’m up” button stops the reminders; the original check-in remains answerable until handled.
+
+5. **Obsidian Habit Bridge (`habit_bridge/`)**:
    - Zero-database habit definition and daily logging directly into the iCloud Obsidian Personal Vault (`Habits Design.md` schema).
    - Reads habit YAML definitions from `habits/definitions/*.md`.
    - On button press (`[🌟 Full Session]` or `[⚡️ 2-Min Emergency]`), appends completion to `habits/logs/YYYY-MM-DD.md` (updating YAML frontmatter `completed` list and markdown task line).
@@ -81,6 +86,14 @@ ai-os/services/assistant/
 ---
 
 ## Running and Testing
+
+### Import and review the `forallx` deck
+```bash
+PYTHONPATH=. services/assistant/.venv/bin/python services/assistant/cli.py import-deck \
+  --path services/assistant/spaced_repetition/decks/forallx_intro_formal_logic_ch01-15.json
+```
+
+The importer validates the full JSON deck before writing. Re-running it skips card IDs already present so review history and due dates are preserved. Use `--dry-run` to validate without importing. In Telegram, send `/forallx` to review a due card.
 
 ### Run Tests
 ```bash

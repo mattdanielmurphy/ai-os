@@ -1,8 +1,10 @@
 """Main event loop & launchd entrypoint for the Proactive Executive Assistant Service."""
 
 import asyncio
+import json
 import logging
 import os
+import re
 import signal
 import sys
 import time
@@ -138,6 +140,9 @@ class AssistantDaemon:
                 # 4. Evaluate and process next pending trigger
                 await self._process_pending_triggers(now_utc)
 
+                # 5. Repeat the daily morning check-in until acknowledged, up to noon.
+                await self._process_morning_reminders(now_utc)
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -246,8 +251,118 @@ class AssistantDaemon:
                 timeout_at=timeout_at,
                 status="AWAITING_INPUT",
             )
+            if trigger_type == "morning_briefing" and trigger_id.startswith("trig_morning_"):
+                if re.fullmatch(r"trig_morning_\d{4}-\d{2}-\d{2}", trigger_id):
+                    await self.db.set_dynamic(
+                        "morning_reminder_state",
+                        json.dumps(
+                            {
+                                "trigger_id": trigger_id,
+                                "last_sent_at": now_utc.isoformat(),
+                                "next_attempt_at": (
+                                    now_utc
+                                    + timedelta(seconds=self.config.morning_reminder_interval_seconds)
+                                ).isoformat(),
+                                "reminder_count": 0,
+                                "active": True,
+                            }
+                        ),
+                    )
             await self.db.update_trigger_status(trigger_id, "FIRED")
             logger.info(f"Trigger '{trigger_id}' FIRED successfully as Telegram message {message_id}.")
+
+    async def _process_morning_reminders(self, now_utc: datetime) -> None:
+        """Repeat today's unanswered daily briefing at a gentle 15-minute cadence."""
+        now_local = now_utc.astimezone()
+        trigger_id = f"trig_morning_{now_local.strftime('%Y-%m-%d')}"
+        state_raw = await self.db.get_dynamic("morning_reminder_state")
+        state = None
+        if state_raw:
+            try:
+                state = json.loads(state_raw)
+            except (TypeError, json.JSONDecodeError):
+                logger.warning("Ignoring malformed morning reminder state; recovering from signals.")
+
+        # Recover the cadence from the signal ledger after a crash between sending and saving state.
+        if not isinstance(state, dict) or state.get("trigger_id") != trigger_id:
+            signals = await self.db.get_awaiting_signals()
+            matching = [s for s in signals if s.get("trigger_id") == trigger_id]
+            if not matching:
+                return
+            last_sent_at = datetime.fromisoformat(matching[0]["sent_at"])
+            if last_sent_at.tzinfo is None:
+                last_sent_at = last_sent_at.replace(tzinfo=timezone.utc)
+            state = {
+                "trigger_id": trigger_id,
+                "last_sent_at": last_sent_at.isoformat(),
+                "next_attempt_at": (
+                    last_sent_at
+                    + timedelta(seconds=self.config.morning_reminder_interval_seconds)
+                ).isoformat(),
+                "reminder_count": max(0, len(matching) - 1),
+                "active": True,
+            }
+            await self.db.set_dynamic("morning_reminder_state", json.dumps(state))
+
+        if not state.get("active") or state.get("trigger_id") != trigger_id:
+            return
+        if now_local.hour >= self.config.morning_reminder_cutoff_hour:
+            state["active"] = False
+            await self.db.set_dynamic("morning_reminder_state", json.dumps(state))
+            return
+
+        due_at_raw = state.get("next_attempt_at") or state.get("last_sent_at")
+        due_at = datetime.fromisoformat(due_at_raw)
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        if now_utc < due_at:
+            return
+
+        gate = await self.evaluator.evaluate(now_utc)
+        if not gate.allowed:
+            state["next_attempt_at"] = (
+                now_utc + timedelta(seconds=max(60, gate.retry_after_seconds))
+            ).isoformat()
+            await self.db.set_dynamic("morning_reminder_state", json.dumps(state))
+            logger.info(f"Morning reminder suppressed by Context Gate ({gate.reason}).")
+            return
+
+        chat_id = self.config.telegram_chat_id or 0
+        reminder_count = int(state.get("reminder_count", 0)) + 1
+        text = (
+            "⏰ *Morning check-in nudge*\n\n"
+            "Your morning grounding and check-in are still waiting. Reply with a quick note, "
+            "or tap *I’m up* and I’ll stop nudging. The original check-in remains available. "
+            "I’ll check again in 15 minutes if you haven’t replied."
+        )
+        keyboard = [[{"text": "✅ I’m up", "callback_data": "briefing:ack"}]]
+        message_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+        if not message_id:
+            state["next_attempt_at"] = (now_utc + timedelta(minutes=1)).isoformat()
+            await self.db.set_dynamic("morning_reminder_state", json.dumps(state))
+            return
+
+        timeout_at = now_utc + timedelta(seconds=self.config.silence_timeout_seconds)
+        await self.db.record_outbound_signal(
+            message_id=message_id,
+            chat_id=chat_id,
+            trigger_id=trigger_id,
+            sent_at=now_utc,
+            timeout_at=timeout_at,
+            status="AWAITING_INPUT",
+        )
+        state.update(
+            {
+                "last_sent_at": now_utc.isoformat(),
+                "next_attempt_at": (
+                    now_utc
+                    + timedelta(seconds=self.config.morning_reminder_interval_seconds)
+                ).isoformat(),
+                "reminder_count": reminder_count,
+            }
+        )
+        await self.db.set_dynamic("morning_reminder_state", json.dumps(state))
+        logger.info(f"Sent morning check-in reminder #{reminder_count} for {trigger_id}.")
 
     async def _ensure_daily_morning_briefing(self, now_utc: datetime) -> None:
         """

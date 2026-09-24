@@ -858,7 +858,7 @@ async def test_multimodal_media_handlers_dispatch():
             groq_api_key="gsk_test",
         )
         db = AssistantDB(db_path)
-        assert cfg.default_engine == "codex"
+        assert cfg.codex_command.endswith("/codex")
         await db.connect()
         gateway = TelegramGateway(cfg)
         dispatcher = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(vault), gateway, config=cfg)
@@ -909,11 +909,9 @@ async def test_multimodal_media_handlers_dispatch():
             assert handled is True
             mock_query.assert_awaited_once()
 
-        # 4. Engine Command & Switching
+        # 4. Engine Command reports the fixed direct-Codex route.
         assert await dispatcher.cmd_engine("codex", chat_id=12345) is True
-        assert dispatcher.active_engine == "codex"
         assert await dispatcher.cmd_engine("agy", chat_id=12345) is True
-        assert dispatcher.active_engine == "agy"
 
         await db.close()
 
@@ -1095,4 +1093,3 @@ async def test_media_extraction_and_delivery():
         assert "Here is your meditation." in history[0]["content"]
 
         await db.close()
-
