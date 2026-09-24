@@ -47,11 +47,9 @@ class MorningBriefingBuilder:
 
         lines = [
             f"🌅 *Morning Grounding & Briefing* — {date_str}\n",
-            f"🫁 *60-Second Mindful Centering*",
+            "*Step 1 of 3 · 60-Second Mindful Centering*",
             f"_{centering}_\n",
-            f"🙏 *Daily Gratitude*",
-            "Take a quiet moment: What is one small, tangible thing you're genuinely glad is part of your life today?",
-            "_(Tap 'Record Gratitude' below or reply directly with your note)_\n",
+            "When you are finished, tap the button below. The next part of the morning flow will appear then.\n",
         ]
 
         # Spaced Repetition Summary
@@ -84,14 +82,7 @@ class MorningBriefingBuilder:
 
         # Build inline keyboard
         keyboard: List[List[Dict[str, str]]] = [
-            [
-                {"text": "🙏 Record Gratitude", "callback_data": "briefing:gratitude"},
-                {"text": "🧘 Done Centering", "callback_data": "briefing:meditate_done"},
-            ]
+            [{"text": "🧘 Done Centering", "callback_data": "briefing:meditate_done"}]
         ]
-
-        if due_cards_count > 0:
-            btn_text = f"⚡ Review {due_cards_count} Card{'s' if due_cards_count != 1 else ''}"
-            keyboard.append([{"text": btn_text, "callback_data": "briefing:review"}])
 
         return message_text, keyboard

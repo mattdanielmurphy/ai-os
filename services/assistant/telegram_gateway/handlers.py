@@ -352,25 +352,23 @@ class ActionDispatcher:
             if sub == "gratitude":
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
-                    await self._set_morning_reminders_active(trigger_id, False)
-                await self.gateway.send_message(
-                    chat_id,
-                    "🙏 *Daily Gratitude Reflection*\n\n"
-                    "What is one small, specific thing you appreciate having in your day?\n\n"
-                    "Reply directly to this message, or type `/gratitude <thought>` to record it in your journal.",
+                    await self._set_morning_flow_stage(trigger_id, "gratitude")
+                await self.gateway.edit_prompt(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=self._gratitude_step_text(),
+                    remove_keyboard=True,
                 )
                 return True
             elif sub == "meditate_done":
                 trigger_id = await self._morning_trigger_for_message(message_id)
-                if trigger_id:
-                    await self._finish_morning_checkin(trigger_id)
-                else:
-                    await self.db.resolve_signal(message_id, "RESPONDED")
+                if not trigger_id:
+                    return False
+                await self._set_morning_flow_stage(trigger_id, "gratitude")
                 await self.gateway.edit_prompt(
                     chat_id=chat_id,
                     message_id=message_id,
-                    text="🧘 *Morning Centering Complete*\n\n"
-                    "Breath is grounded, posture is aligned, and awareness is reset. Wishing you a calm, focused day, Matt.",
+                    text=self._gratitude_step_text(),
                     remove_keyboard=True,
                 )
                 return True
@@ -378,6 +376,7 @@ class ActionDispatcher:
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
                     await self._finish_morning_checkin(trigger_id)
+                    await self._set_morning_flow_stage(trigger_id, "complete")
                 await self.cmd_quiz(chat_id)
                 return True
             elif sub == "ack":
@@ -512,6 +511,51 @@ class ActionDispatcher:
                 return signal["trigger_id"]
         return None
 
+    @staticmethod
+    def _morning_flow_key(trigger_id: str) -> str:
+        return f"morning_flow:{trigger_id}"
+
+    async def _set_morning_flow_stage(
+        self, trigger_id: str, stage: str, due_cards_count: Optional[int] = None
+    ) -> None:
+        state = {"stage": stage}
+        if due_cards_count is not None:
+            state["due_cards_count"] = due_cards_count
+        else:
+            raw = await self.db.get_dynamic(self._morning_flow_key(trigger_id))
+            try:
+                state.update(json.loads(raw) if raw else {})
+            except (TypeError, json.JSONDecodeError):
+                pass
+            state["stage"] = stage
+        await self.db.set_dynamic(self._morning_flow_key(trigger_id), json.dumps(state))
+
+    async def _morning_flow_stage(self, trigger_id: str) -> str:
+        raw = await self.db.get_dynamic(self._morning_flow_key(trigger_id))
+        try:
+            state = json.loads(raw) if raw else {}
+        except (TypeError, json.JSONDecodeError):
+            state = {}
+        return state.get("stage", "centering")
+
+    @staticmethod
+    def _gratitude_step_text() -> str:
+        return (
+            "🧘 *Centering complete* ✓\n\n"
+            "*Step 2 of 3 · Daily Gratitude*\n"
+            "What is one small, specific thing you appreciate having in your day?\n\n"
+            "Reply directly to this message with just that thought. I’ll log it, then give you the fresh review at the end."
+        )
+
+    @staticmethod
+    def _review_step_text(due_cards_count: int) -> str:
+        card_label = f"{due_cards_count} due card{'s' if due_cards_count != 1 else ''}"
+        return (
+            "🙏 *Gratitude logged* ✓\n\n"
+            "*Step 3 of 3 · Fresh C&H*\n"
+            f"You have {card_label}. Claim a fresh review card to finish the morning flow."
+        )
+
     async def _set_morning_reminders_active(self, trigger_id: str, active: bool) -> None:
         if not re.fullmatch(r"trig_morning_\d{4}-\d{2}-\d{2}", trigger_id):
             return
@@ -589,6 +633,9 @@ class ActionDispatcher:
                 sent_at=now_utc,
                 timeout_at=timeout_at,
                 status="AWAITING_INPUT",
+            )
+            await self._set_morning_flow_stage(
+                "trig_morning_manual", "centering", len(due_cards)
             )
         return True
 
@@ -1095,10 +1142,33 @@ class ActionDispatcher:
                     await self._handle_habit(habit_name, "full", chat_id, prompt_msg_id)
                     return True
 
-            # Morning briefing active prompt (user replied to morning prompt)
+            # A morning prompt accepts free text only during the gratitude step. This
+            # prevents completion chatter (for example, "done centering") from being
+            # journaled as gratitude.
             elif trigger_id.startswith("trig_morning_") or trigger_id == "trig_morning_manual":
-                await self.cmd_gratitude(clean_text, chat_id)
-                await self.db.resolve_signal(prompt_msg_id, "RESPONDED")
+                if await self._morning_flow_stage(trigger_id) == "gratitude":
+                    log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
+                    due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
+                    await self._set_morning_flow_stage(trigger_id, "review", len(due_cards))
+                    await self.gateway.edit_prompt(
+                        chat_id=chat_id,
+                        message_id=prompt_msg_id,
+                        text=self._review_step_text(len(due_cards)),
+                        keyboard_rows=[[{
+                            "text": "⚡ Claim a Fresh C&H",
+                            "callback_data": "briefing:review",
+                        }]],
+                        remove_keyboard=False,
+                    )
+                    await self.gateway.send_message(
+                        chat_id,
+                        f"Recorded to `{log_path.name}` in your Obsidian vault.",
+                    )
+                    return True
+                await self.gateway.send_message(
+                    chat_id,
+                    "Your morning flow is still on *centering*. Tap *Done Centering* when you’re ready for the gratitude step.",
+                )
                 return True
 
         # 2. Check for natural command keywords

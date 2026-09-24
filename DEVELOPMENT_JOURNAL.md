@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-24
+- **Gated morning grounding flow:** Replaced the parallel Morning Briefing buttons with an in-place sequence—centering, gratitude, then a fresh C&H/review prompt. Direct text is journaled only during the gratitude step, preventing command-like completion messages from being written to the Obsidian gratitude log; restarted `aios-assistant` after 18 passing tests.
 - **Agy execution and quota reliability:** Repaired the local `agy-bridge` CLI's noninteractive default, added a guard against zero-exit empty replies, and preserved the fix in the tracked `agy-mcp` checkout. Pre-flight is now live-first and shows active default-model capacity instead of an opaque cached “OK”.
 - **Truthful query companion readiness:** Added a token-free Perplexity auth-ready signal to the companion debug probe and rebuilt/restarted `aios-server`; pre-flight now distinguishes an online unsigned-in window from an authenticated query path.
 - **Voice-preserving message assembly skill:** Added `_assemble-without-ghostwriting` for organizing a user’s ideas into a compact outline without drafting sentence-level copy or anchoring their voice.
