@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import FrozenSet, Optional
 
 try:
     from dotenv import load_dotenv
@@ -42,6 +42,13 @@ class AssistantConfig:
         if os.getenv("TELEGRAM_CHAT_ID")
         else None
     )
+    telegram_allowed_chat_ids: FrozenSet[int] = field(
+        default_factory=lambda: frozenset(
+            int(value.strip())
+            for value in os.getenv("TELEGRAM_ALLOWED_CHAT_IDS", "").split(",")
+            if value.strip()
+        )
+    )
     dry_run: bool = field(
         default_factory=lambda: os.getenv("ASSISTANT_DRY_RUN", "0") in ("1", "true", "True")
     )
@@ -59,12 +66,11 @@ class AssistantConfig:
         )
     )
 
-    # AI Engine Routing (default: codex subscription, fallback to agy)
-    default_engine: str = field(
-        default_factory=lambda: os.getenv("ASSISTANT_DEFAULT_ENGINE", "codex")
-    )
-    agy_model: str = field(
-        default_factory=lambda: os.getenv("ASSISTANT_AGY_MODEL", "gemini-3.8-flash-low")
+    # Direct Codex transport. Telegram deliberately does not route through Hermes.
+    codex_command: str = field(
+        default_factory=lambda: os.getenv(
+            "CODEX_CLI_PATH", "/Applications/ChatGPT.app/Contents/Resources/codex"
+        )
     )
 
     # Context Gate & Silence Dynamics
@@ -83,6 +89,8 @@ class AssistantConfig:
     # Morning Grounding & Briefing Schedule
     morning_briefing_hour: int = 8
     morning_briefing_minute: int = 0
+    morning_reminder_interval_seconds: int = 15 * 60
+    morning_reminder_cutoff_hour: int = 12
 
     @property
     def habits_definitions_dir(self) -> Path:
@@ -94,3 +102,13 @@ class AssistantConfig:
 
     def is_telegram_ready(self) -> bool:
         return bool(self.telegram_bot_token and self.telegram_chat_id and not self.dry_run)
+
+    @property
+    def effective_telegram_allowed_chat_ids(self) -> FrozenSet[int]:
+        """Configured allowlist, with the outbound chat retained as the safe default."""
+        if self.telegram_allowed_chat_ids:
+            return self.telegram_allowed_chat_ids
+        return frozenset({self.telegram_chat_id}) if self.telegram_chat_id else frozenset()
+
+    def is_authorized_telegram_chat(self, chat_id: Optional[int]) -> bool:
+        return chat_id is not None and chat_id in self.effective_telegram_allowed_chat_ids
