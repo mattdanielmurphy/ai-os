@@ -707,17 +707,14 @@ async def test_morning_briefing_builder_and_gratitude():
     assert "Morning Grounding & Briefing" in text
     assert "Friday, September 18" in text
     assert "60-Second Mindful Centering" in text
-    assert "Daily Gratitude" in text
+    assert "Daily Gratitude" not in text
     assert "4 cards" in text
     assert "MUSIC 102 Lecture" in text
     assert "2:00 PM – 3:20 PM" in text
 
     # Check keyboard rows
-    assert len(keyboard) == 2
-    assert keyboard[0][0]["callback_data"] == "briefing:gratitude"
-    assert keyboard[0][1]["callback_data"] == "briefing:meditate_done"
-    assert keyboard[1][0]["callback_data"] == "briefing:review"
-    assert "4 Cards" in keyboard[1][0]["text"]
+    assert len(keyboard) == 1
+    assert keyboard[0][0]["callback_data"] == "briefing:meditate_done"
 
     # 2. Gratitude Logging to Vault test
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -767,17 +764,27 @@ async def test_morning_briefing_dispatch_and_callbacks():
         assert len(signals) == 1
         assert signals[0]["trigger_id"] == "trig_morning_manual"
 
-        # 3. Test callback briefing:meditate_done
+        # 3. Completion chatter cannot be saved as gratitude before centering is done.
+        await daemon.dispatcher.handle_text_message("done centering, give me the cards", 12345, 999)
+        today_log = vault / "habits" / "logs" / f"{datetime.now().strftime('%Y-%m-%d')}.md"
+        assert not today_log.exists()
+
+        # 4. Centering advances to gratitude without resolving the check-in.
         success = await daemon.dispatcher.handle_callback_str("briefing:meditate_done", 12345, signals[0]["message_id"])
         assert success is True
-        resolved = await daemon.db.get_awaiting_signals()
-        assert len(resolved) == 0
+        active = await daemon.db.get_awaiting_signals()
+        assert len(active) == 1
+        assert "Daily Gratitude" in daemon.gateway._dry_run_messages[signals[0]["message_id"]]["text"]
 
-        # 4. Test gratitude text reply
+        # 5. Only the gratitude stage journals a direct text reply, then exposes
+        # the fresh review step instead of silently ending the morning flow.
         await daemon.dispatcher.handle_text_message("I am grateful for high-bandwidth thinking", 12345, 999)
         today_log = vault / "habits" / "logs" / f"{datetime.now().strftime('%Y-%m-%d')}.md"
         assert today_log.exists()
         assert "high-bandwidth thinking" in today_log.read_text(encoding="utf-8")
+        prompt = daemon.gateway._dry_run_messages[signals[0]["message_id"]]
+        assert "Fresh C&H" in prompt["text"]
+        assert prompt["keyboard"][0][0]["callback_data"] == "briefing:review"
 
         await daemon.db.close()
 

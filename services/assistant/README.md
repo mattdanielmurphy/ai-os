@@ -34,8 +34,9 @@ A local-first, context-gated personal executive assistant service embedded direc
    - The original `forallx` question bank covers chapters 1–15 (30 multiple-choice cards). `/forallx` reviews only cards from this deck when they are due; FSRS schedules the next review after the confidence rating.
 
 4. **Morning check-in reminders (`run.py`)**:
-   - If the scheduled daily check-in is unanswered, Telegram sends a reminder every 15 minutes through noon local time.
-   - The existing Context Gate also applies to reminders. A reply, completion button, or “I’m up” button stops the reminders; the original check-in remains answerable until handled.
+   - The daily briefing advances in one in-place sequence: centering, gratitude, then a fresh C&H/review prompt.
+   - Only the gratitude stage accepts a typed journal entry; completion chatter cannot be saved as gratitude.
+   - If the scheduled daily check-in is unanswered, Telegram sends a reminder every 15 minutes through noon local time. The existing Context Gate also applies to reminders.
 
 5. **Obsidian Habit Bridge (`habit_bridge/`)**:
    - Zero-database habit definition and daily logging directly into the iCloud Obsidian Personal Vault (`Habits Design.md` schema).

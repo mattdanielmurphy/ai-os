@@ -252,6 +252,9 @@ class AssistantDaemon:
                 status="AWAITING_INPUT",
             )
             if trigger_type == "morning_briefing" and trigger_id.startswith("trig_morning_"):
+                await self.dispatcher._set_morning_flow_stage(
+                    trigger_id, "centering", len(due_cards)
+                )
                 if re.fullmatch(r"trig_morning_\d{4}-\d{2}-\d{2}", trigger_id):
                     await self.db.set_dynamic(
                         "morning_reminder_state",
