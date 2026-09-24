@@ -1,6 +1,7 @@
 """Card prompt formatting and progressive elaboration for Telegram (supporting Multiple Choice & Struggle Rating)."""
 
 import json
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -34,6 +35,9 @@ def format_review_prompt(card: Dict[str, Any]) -> Tuple[str, List[List[Dict[str,
     deck_label = "📚 Coursework" if deck_type == "cold_storage" else "💡 Baby Facts"
     prompt = card.get("prompt", "")
     card_id = card["card_id"]
+    chapter_match = re.match(r"forallx_ch(\d{2})_", card_id)
+    if chapter_match:
+        deck_label = f"∀x · Chapter {int(chapter_match.group(1))}"
 
     options = _parse_options(card.get("options"))
     labels = ["A", "B", "C", "D", "E", "F"]

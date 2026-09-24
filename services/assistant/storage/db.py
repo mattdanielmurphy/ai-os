@@ -299,25 +299,49 @@ class AssistantDB:
         return dict(row) if row else None
 
     async def get_due_cards(
-        self, current_time: Optional[datetime] = None, limit: int = 10
+        self,
+        current_time: Optional[datetime] = None,
+        limit: int = 10,
+        card_id_prefix: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         assert self._conn is not None
         now_str = (current_time or datetime.now(timezone.utc)).isoformat()
+        prefix_clause = ""
+        params: List[Any] = [now_str]
+        if card_id_prefix:
+            prefix_clause = "AND substr(card_id, 1, ?) = ?"
+            params.extend((len(card_id_prefix), card_id_prefix))
+        params.append(limit)
         cursor = await self._conn.execute(
-            """
+            f"""
             SELECT * FROM fsrs_cards
-            WHERE due_at <= ?
-            ORDER BY due_at ASC
+            WHERE due_at <= ? {prefix_clause}
+            ORDER BY due_at ASC, card_id ASC
             LIMIT ?
             """,
-            (now_str, limit),
+            params,
         )
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
-    async def get_any_card(self) -> Optional[Dict[str, Any]]:
+    async def get_any_card(
+        self, card_id_prefix: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         assert self._conn is not None
-        cursor = await self._conn.execute("SELECT * FROM fsrs_cards ORDER BY due_at ASC LIMIT 1")
+        if card_id_prefix:
+            cursor = await self._conn.execute(
+                """
+                SELECT * FROM fsrs_cards
+                WHERE substr(card_id, 1, ?) = ?
+                ORDER BY due_at ASC, card_id ASC
+                LIMIT 1
+                """,
+                (len(card_id_prefix), card_id_prefix),
+            )
+        else:
+            cursor = await self._conn.execute(
+                "SELECT * FROM fsrs_cards ORDER BY due_at ASC, card_id ASC LIMIT 1"
+            )
         row = await cursor.fetchone()
         return dict(row) if row else None
 
@@ -371,7 +395,9 @@ class AssistantDB:
     async def get_awaiting_signals(self) -> List[Dict[str, Any]]:
         assert self._conn is not None
         cursor = await self._conn.execute(
-            "SELECT * FROM outbound_signals WHERE status = 'AWAITING_INPUT'"
+            """SELECT * FROM outbound_signals
+               WHERE status = 'AWAITING_INPUT'
+               ORDER BY sent_at DESC, message_id DESC"""
         )
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
@@ -401,6 +427,14 @@ class AssistantDB:
         await self._conn.execute(
             "UPDATE outbound_signals SET status = ? WHERE message_id = ?",
             (status, message_id),
+        )
+        await self._conn.commit()
+
+    async def resolve_signals_for_trigger(self, trigger_id: str, status: str) -> None:
+        assert self._conn is not None
+        await self._conn.execute(
+            "UPDATE outbound_signals SET status = ? WHERE trigger_id = ? AND status = 'AWAITING_INPUT'",
+            (status, trigger_id),
         )
         await self._conn.commit()
 
@@ -470,4 +504,3 @@ class AssistantDB:
         )
         await self._conn.commit()
         return cursor.rowcount
-
