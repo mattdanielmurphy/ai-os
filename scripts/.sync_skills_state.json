@@ -1900,5 +1900,8 @@
   },
   "custom-skills/_find-saved-manuals/SKILL.md": {
     "sha256": "5d7ff2b575e52fa216284d626d020421a03623c0d2524101fc38d2df8d9786b4"
+  },
+  "_assemble-without-ghostwriting/SKILL.md": {
+    "sha256": "db4268d6f090d1c63d9ce4d817b33a6887f69687dc9c70ef4123c4fd152e3653"
   }
 }

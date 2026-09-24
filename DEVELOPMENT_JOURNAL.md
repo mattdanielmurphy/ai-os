@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-09-24
+- **Voice-preserving message assembly skill:** Added `_assemble-without-ghostwriting` for organizing a user’s ideas into a compact outline without drafting sentence-level copy or anchoring their voice.
+
 ## 2026-09-22
 - **Perplexity auth guard and truthful model reporting (`query_aios`):** The Perplexity engine now re-reads its live session token on each query and stops with companion-window sign-in instructions when no token is available. CLI output labels GPT-6 Sol as the requested preference, reports the actual model as unverified, warns about possible Sonar fallback, and labels the displayed ID as AI-OS-local rather than a Perplexity thread ID. Rebuilt and restarted the production companion; health endpoint is online. [[log]](agent-logs/2026-09-22_22-04_perplexity-model-provenance-and-auth-guard.md)
 - **Eliminate duplicate skill discovery:** Consolidated the 69 redundant skill bundles into `skills-archive/duplicate-entrypoints/`, leaving 133 unique skill names. Updated sync to use repository-only sources and hash-verified deletion, removed the legacy Antigravity IDE mirror from active sync, and preserved its previous contents in `~/.gemini/antigravity/skills-legacy-backup-20260922`.
@@ -194,6 +197,7 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 ## 2026-09-21
 - **Cross-runtime rule and skill synchronization:** Added Codex as a generated global-rule target and made the repository-owned `skills/` tree authoritative during propagation. Verified all 203 skill entrypoints match across Hermes, Claude, Codex's `~/.agents`, Gemini, agy, and Antigravity installations. [[log]](agent-logs/2026-09-21_12-40_cross-runtime-rules-and-skills-sync.md)
 - 2026-09-22: Telegram check-ins now remain answerable indefinitely by default; the awake-time timeout path is opt-in via a positive `silence_timeout_seconds` value. Added regression coverage and restarted `aios-assistant`.
+
 ## 2026-09-22
 - **`query_aios` recovery correctness:** `--recover` had been bypassing empty-prompt validation and dispatching a fresh provider request. It now records pending/completed query state and only recovers checksum-verified saved output; the planner workflow now waits on the original process.
 - **AI-OS Controls:** Added a local companion show/hide API and an AI-OS-branded Hammerspoon menu entry for Perplexity and Gemini authentication access. Recorded the separate Bartender/custom menu-bar exploration as future backlog.
