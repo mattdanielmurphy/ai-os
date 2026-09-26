@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 
-def _parse_options(options_field: Any) -> List[str]:
+def parse_options(options_field: Any) -> List[str]:
     if not options_field:
         return []
     if isinstance(options_field, list):
@@ -29,7 +29,7 @@ def format_review_prompt(card: Dict[str, Any]) -> Tuple[str, List[List[Dict[str,
     """
     Formats the review prompt. If the card contains multiple choice options,
     renders options A, B, C, D with 1-tap choice buttons.
-    Otherwise falls back to the open recall format.
+    Otherwise falls back to an answer-reveal step before FSRS ratings.
     """
     deck_type = card.get("deck_type", "cold_storage")
     deck_label = "📚 Coursework" if deck_type == "cold_storage" else "💡 Baby Facts"
@@ -39,7 +39,7 @@ def format_review_prompt(card: Dict[str, Any]) -> Tuple[str, List[List[Dict[str,
     if chapter_match:
         deck_label = f"∀x · Chapter {int(chapter_match.group(1))}"
 
-    options = _parse_options(card.get("options"))
+    options = parse_options(card.get("options"))
     labels = ["A", "B", "C", "D", "E", "F"]
 
     if options:
@@ -67,7 +67,25 @@ def format_review_prompt(card: Dict[str, Any]) -> Tuple[str, List[List[Dict[str,
     text = (
         f"🧠 *Spaced Repetition Review* · _{deck_label}_\n\n"
         f"*Question:*\n{prompt}\n\n"
-        f"_Take 10–30s. Rate your recall below:_"
+        f"_Think of your answer, then reveal it before rating your recall._"
+    )
+    keyboard = [
+        [{"text": "📖 Show Answer", "callback_data": f"fsrs_reveal:{card_id}"}],
+    ]
+    return text, keyboard
+
+
+def format_answer_reveal_prompt(
+    card: Dict[str, Any],
+) -> Tuple[str, List[List[Dict[str, str]]]]:
+    """Reveal an open-recall card's answer before asking for an FSRS rating."""
+    card_id = card["card_id"]
+    text = (
+        "📖 *Answer revealed*\n\n"
+        f"*Question:*\n{card.get('prompt', '')}\n\n"
+        f"*Answer:*\n{card.get('answer', '')}\n\n"
+        f"💡 *Progressive Elaboration:*\n{card.get('elaboration', '')}\n\n"
+        "_Now rate how well you recalled it:_"
     )
     keyboard = [
         [
@@ -95,7 +113,7 @@ def format_feedback_prompt(
     elaboration = card.get("elaboration", "")
     correct_idx = int(card.get("correct_index", 0))
 
-    options = _parse_options(card.get("options"))
+    options = parse_options(card.get("options"))
     labels = ["A", "B", "C", "D", "E", "F"]
 
     is_correct = chosen_idx == correct_idx

@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-26
+- **FSRS answers before difficulty ratings:** Cards without options now receive multiple-choice distractors in one LLM request for up to five due cards, and cached choices follow the existing correctness-feedback/rating flow. If generation fails, the review reveals the answer before enabling ratings; later FSRS updates preserve the choices.
 - **Morning reminder acknowledgement resumes the check-in:** The “I’m up” callback now disables repeat nudges and restores the persisted centering, gratitude, or review stage in the tapped prompt instead of finishing the flow. Stale prompts are retired while the current stage stays answerable.
 
 ## 2026-09-24
