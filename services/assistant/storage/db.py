@@ -298,6 +298,17 @@ class AssistantDB:
         row = await cursor.fetchone()
         return dict(row) if row else None
 
+    async def update_card_options(
+        self, card_id: str, options: str, correct_index: int
+    ) -> None:
+        """Persist generated or curated answer choices without touching FSRS state."""
+        assert self._conn is not None
+        await self._conn.execute(
+            "UPDATE fsrs_cards SET options = ?, correct_index = ? WHERE card_id = ?",
+            (options, correct_index, card_id),
+        )
+        await self._conn.commit()
+
     async def get_due_cards(
         self,
         current_time: Optional[datetime] = None,
@@ -459,6 +470,11 @@ class AssistantDB:
             """,
             (key, value),
         )
+        await self._conn.commit()
+
+    async def delete_dynamic(self, key: str) -> None:
+        assert self._conn is not None
+        await self._conn.execute("DELETE FROM user_dynamics WHERE key = ?", (key,))
         await self._conn.commit()
 
     # -------------------------------------------------------------------------

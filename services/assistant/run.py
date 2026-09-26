@@ -24,7 +24,7 @@ from services.assistant.context_gate.evaluator import ContextGateEvaluator
 from services.assistant.context_gate.focus_mode import FocusModeProbe
 from services.assistant.habit_bridge.logger import HabitLogger, format_habit_prompt
 from services.assistant.habit_bridge.parser import HabitParser
-from services.assistant.spaced_repetition.cards import format_review_prompt
+from services.assistant.spaced_repetition.cards import format_review_prompt, parse_options
 from services.assistant.spaced_repetition.engine import FSRSEngine
 from services.assistant.storage.db import AssistantDB
 from services.assistant.telegram_gateway.bot import TelegramGateway
@@ -199,12 +199,30 @@ class AssistantDaemon:
         # Gate cleared: Fire prompt
         chat_id = self.config.telegram_chat_id or 0
         message_id: Optional[int] = None
+        fsrs_answer_required = False
 
         if trigger_type == "fsrs_review":
             card = await self.db.get_card(target_id)
             if card:
+                due_cards = await self.db.get_due_cards(now_utc)
+                card, status_msg_id = await self.dispatcher.prepare_review_card(
+                    card,
+                    due_cards or [card],
+                    chat_id,
+                )
                 text, keyboard = format_review_prompt(card)
-                message_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+                if status_msg_id:
+                    message_id = status_msg_id
+                    await self.gateway.edit_prompt(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        text=text,
+                        keyboard_rows=keyboard,
+                        remove_keyboard=False,
+                    )
+                else:
+                    message_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+                fsrs_answer_required = bool(parse_options(card.get("options")))
             else:
                 logger.error(f"FSRS review trigger for missing card '{target_id}'")
                 await self.db.update_trigger_status(trigger_id, "EXPIRED")
@@ -251,6 +269,8 @@ class AssistantDaemon:
                 timeout_at=timeout_at,
                 status="AWAITING_INPUT",
             )
+            if fsrs_answer_required:
+                await self.db.set_dynamic(f"fsrs_answer_required:{message_id}", "true")
             if trigger_type == "morning_briefing" and trigger_id.startswith("trig_morning_"):
                 await self.dispatcher._set_morning_flow_stage(
                     trigger_id, "centering", len(due_cards)
