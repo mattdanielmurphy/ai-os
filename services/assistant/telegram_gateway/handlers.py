@@ -382,7 +382,81 @@ class ActionDispatcher:
             elif sub == "ack":
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
-                    await self._finish_morning_checkin(trigger_id)
+                    await self._set_morning_reminders_active(trigger_id, False)
+                    flow_state = await self._morning_flow_state(trigger_id)
+                    stage = flow_state.get("stage", "centering")
+                    try:
+                        due_cards_count = max(0, int(flow_state.get("due_cards_count", 0)))
+                    except (TypeError, ValueError):
+                        due_cards_count = 0
+
+                    if stage == "gratitude":
+                        text = self._gratitude_step_text()
+                        keyboard = []
+                    elif stage == "review":
+                        text = self._review_step_text(due_cards_count)
+                        keyboard = [[{
+                            "text": "⚡ Claim a Fresh C&H",
+                            "callback_data": "briefing:review",
+                        }]]
+                    elif stage == "complete":
+                        await self._finish_morning_checkin(trigger_id)
+                        await self.gateway.edit_prompt(
+                            chat_id=chat_id,
+                            message_id=message_id,
+                            text="✅ *Check-in acknowledged.* I’ll stop the morning reminders. Have a good start, Matt.",
+                            remove_keyboard=True,
+                        )
+                        return True
+                    else:
+                        text, keyboard = MorningBriefingBuilder().build_prompt(
+                            due_cards_count=due_cards_count
+                        )
+
+                    # Move the active check-in onto the reminder the user just tapped.
+                    # This closes stale duplicate prompts but keeps the current morning
+                    # stage answerable, with reminders disabled for the rest of the flow.
+                    stale_prompts = [
+                        signal
+                        for signal in await self.db.get_awaiting_signals()
+                        if signal["trigger_id"] == trigger_id
+                        and signal["message_id"] != message_id
+                    ]
+                    await self.db.resolve_signals_for_trigger(trigger_id, "RESPONDED")
+                    now_utc = datetime.now(timezone.utc)
+                    timeout_at = now_utc + timedelta(
+                        seconds=self.config.silence_timeout_seconds
+                    )
+                    await self.db.record_outbound_signal(
+                        message_id=message_id,
+                        chat_id=chat_id,
+                        trigger_id=trigger_id,
+                        sent_at=now_utc,
+                        timeout_at=timeout_at,
+                        status="AWAITING_INPUT",
+                    )
+                    await self.gateway.edit_prompt(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        text=f"✅ *You’re up.* Morning reminders are off.\n\n{text}",
+                        keyboard_rows=keyboard,
+                        remove_keyboard=not keyboard,
+                    )
+                    for stale_prompt in stale_prompts:
+                        try:
+                            await self.gateway.edit_prompt(
+                                chat_id=stale_prompt["chat_id"],
+                                message_id=stale_prompt["message_id"],
+                                text="✅ The morning flow moved to another check-in message. Continue from the active morning prompt.",
+                                remove_keyboard=True,
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                "Could not retire stale morning prompt %s: %s",
+                                stale_prompt["message_id"],
+                                exc,
+                            )
+                    return True
                 await self.gateway.edit_prompt(
                     chat_id=chat_id,
                     message_id=message_id,
@@ -531,12 +605,16 @@ class ActionDispatcher:
         await self.db.set_dynamic(self._morning_flow_key(trigger_id), json.dumps(state))
 
     async def _morning_flow_stage(self, trigger_id: str) -> str:
+        state = await self._morning_flow_state(trigger_id)
+        return state.get("stage", "centering")
+
+    async def _morning_flow_state(self, trigger_id: str) -> Dict[str, Any]:
         raw = await self.db.get_dynamic(self._morning_flow_key(trigger_id))
         try:
             state = json.loads(raw) if raw else {}
         except (TypeError, json.JSONDecodeError):
             state = {}
-        return state.get("stage", "centering")
+        return state if isinstance(state, dict) else {}
 
     @staticmethod
     def _gratitude_step_text() -> str:

@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-09-26
+- **Morning reminder acknowledgement resumes the check-in:** The “I’m up” callback now disables repeat nudges and restores the persisted centering, gratitude, or review stage in the tapped prompt instead of finishing the flow. Stale prompts are retired while the current stage stays answerable.
+
 ## 2026-09-24
 - **Gated morning grounding flow:** Replaced the parallel Morning Briefing buttons with an in-place sequence—centering, gratitude, then a fresh C&H/review prompt. Direct text is journaled only during the gratitude step, preventing command-like completion messages from being written to the Obsidian gratitude log; restarted `aios-assistant` after 18 passing tests.
 - **Agy execution and quota reliability:** Repaired the local `agy-bridge` CLI's noninteractive default, added a guard against zero-exit empty replies, and preserved the fix in the tracked `agy-mcp` checkout. Pre-flight is now live-first and shows active default-model capacity instead of an opaque cached “OK”.
