@@ -783,7 +783,7 @@ async def test_morning_briefing_dispatch_and_callbacks():
         assert today_log.exists()
         assert "high-bandwidth thinking" in today_log.read_text(encoding="utf-8")
         prompt = daemon.gateway._dry_run_messages[signals[0]["message_id"]]
-        assert "Fresh C&H" in prompt["text"]
+        assert "Spaced-Repetition Review" in prompt["text"]
         assert prompt["keyboard"][0][0]["callback_data"] == "briefing:review"
 
         await daemon.db.close()

@@ -394,10 +394,24 @@ class ActionDispatcher:
             elif sub == "review":
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
-                    await self._finish_morning_checkin(trigger_id)
-                    await self._set_morning_flow_stage(trigger_id, "complete")
-                await self.cmd_quiz(chat_id)
-                return True
+                    await self._set_morning_reminders_active(trigger_id, False)
+                    started = await self.cmd_quiz(
+                        chat_id,
+                        morning_trigger_id=trigger_id,
+                        morning_prompt_message_id=message_id,
+                    )
+                    if started and await self._morning_flow_stage(trigger_id) == "review":
+                        # The FSRS card now owns the response path. Keep the morning
+                        # flow pending until its rating earns the separate reward.
+                        await self.db.resolve_signals_for_trigger(trigger_id, "RESPONDED")
+                        await self.gateway.edit_prompt(
+                            chat_id=chat_id,
+                            message_id=message_id,
+                            text="🧠 *One review card is ready.* Complete it to earn your C&H reward.",
+                            remove_keyboard=True,
+                        )
+                    return started
+                return await self.cmd_quiz(chat_id)
             elif sub == "ack":
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
@@ -414,10 +428,7 @@ class ActionDispatcher:
                         keyboard = []
                     elif stage == "review":
                         text = self._review_step_text(due_cards_count)
-                        keyboard = [[{
-                            "text": "⚡ Claim a Fresh C&H",
-                            "callback_data": "briefing:review",
-                        }]]
+                        keyboard = self._morning_review_keyboard(due_cards_count)
                     elif stage == "complete":
                         await self._finish_morning_checkin(trigger_id)
                         await self.gateway.edit_prompt(
@@ -601,6 +612,23 @@ class ActionDispatcher:
             chat_id=chat_id, message_id=message_id, text=completed_text, remove_keyboard=True
         )
 
+        morning_trigger_id = await self.db.get_dynamic(self._morning_review_key(message_id))
+        if morning_trigger_id:
+            await self._set_morning_flow_stage(morning_trigger_id, "complete")
+            await self._finish_morning_checkin(morning_trigger_id)
+            reward_text = self._morning_reward_text()
+            try:
+                await self.gateway.send_message(chat_id, reward_text)
+            except Exception:
+                logger.exception("Could not send the C&H morning reward; adding it to the review card")
+                await self.gateway.edit_prompt(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=f"{completed_text}\n\n{reward_text}",
+                    remove_keyboard=True,
+                )
+            await self.db.delete_dynamic(self._morning_review_key(message_id))
+
         # Mark outbound signal as responded
         await self.db.resolve_signal(message_id, "RESPONDED")
         await self.db.delete_dynamic(f"fsrs_answered:{message_id}")
@@ -636,6 +664,10 @@ class ActionDispatcher:
     @staticmethod
     def _morning_flow_key(trigger_id: str) -> str:
         return f"morning_flow:{trigger_id}"
+
+    @staticmethod
+    def _morning_review_key(message_id: int) -> str:
+        return f"morning_review_for:{message_id}"
 
     async def _set_morning_flow_stage(
         self, trigger_id: str, stage: str, due_cards_count: Optional[int] = None
@@ -676,11 +708,54 @@ class ActionDispatcher:
     @staticmethod
     def _review_step_text(due_cards_count: int) -> str:
         card_label = f"{due_cards_count} due card{'s' if due_cards_count != 1 else ''}"
+        if due_cards_count:
+            next_action = (
+                f"You have {card_label}. Review one card to finish the morning flow "
+                "and earn your C&H reward."
+            )
+        else:
+            next_action = (
+                "No cards are due today. Claim your C&H reward to finish the morning flow."
+            )
         return (
             "🙏 *Gratitude logged* ✓\n\n"
-            "*Step 3 of 3 · Fresh C&H*\n"
-            f"You have {card_label}. Claim a fresh review card to finish the morning flow."
+            "*Step 3 of 3 · Spaced-Repetition Review*\n"
+            f"{next_action}"
         )
+
+    @staticmethod
+    def _morning_review_keyboard(due_cards_count: int) -> List[List[Dict[str, str]]]:
+        button_text = "🧠 Review one card" if due_cards_count else "🎁 Claim C&H reward"
+        return [[{"text": button_text, "callback_data": "briefing:review"}]]
+
+    @staticmethod
+    def _morning_reward_text(review_skipped: bool = False) -> str:
+        if review_skipped:
+            return (
+                "🎁 *C&H reward earned!* No card was due today, so your morning review "
+                "is complete. Enjoy it now."
+            )
+        return "🎁 *C&H reward earned!* One card is enough for today. Enjoy it now."
+
+    async def _complete_morning_without_review(
+        self, trigger_id: str, chat_id: int, prompt_message_id: Optional[int]
+    ) -> None:
+        await self._set_morning_flow_stage(trigger_id, "complete")
+        await self._finish_morning_checkin(trigger_id)
+        reward_text = self._morning_reward_text(review_skipped=True)
+        if prompt_message_id is not None:
+            await self.gateway.edit_prompt(
+                chat_id=chat_id,
+                message_id=prompt_message_id,
+                text=(
+                    "🙏 *Gratitude logged* ✓\n\n"
+                    "🧠 No spaced-repetition card is due today.\n\n"
+                    + reward_text
+                ),
+                remove_keyboard=True,
+            )
+        else:
+            await self.gateway.send_message(chat_id, reward_text)
 
     async def _set_morning_reminders_active(self, trigger_id: str, active: bool) -> None:
         if not re.fullmatch(r"trig_morning_\d{4}-\d{2}-\d{2}", trigger_id):
@@ -938,9 +1013,23 @@ class ActionDispatcher:
             )
         return await self.db.get_card(card["card_id"]) or card, status_msg_id
 
-    async def cmd_quiz(self, chat_id: int, card_id_prefix: Optional[str] = None) -> bool:
+    async def cmd_quiz(
+        self,
+        chat_id: int,
+        card_id_prefix: Optional[str] = None,
+        *,
+        morning_trigger_id: Optional[str] = None,
+        morning_prompt_message_id: Optional[int] = None,
+    ) -> bool:
         now = datetime.now(timezone.utc)
         due_cards = await self.db.get_due_cards(now, card_id_prefix=card_id_prefix)
+        if morning_trigger_id and not due_cards:
+            await self._complete_morning_without_review(
+                morning_trigger_id,
+                chat_id,
+                morning_prompt_message_id,
+            )
+            return True
         card = due_cards[0] if due_cards else await self.db.get_any_card(card_id_prefix=card_id_prefix)
 
         if not card:
@@ -995,6 +1084,11 @@ class ActionDispatcher:
                 sent_at=sent_at,
                 timeout_at=sent_at + timedelta(seconds=self.config.silence_timeout_seconds),
             )
+            if morning_trigger_id:
+                await self.db.set_dynamic(
+                    self._morning_review_key(msg_id),
+                    morning_trigger_id,
+                )
             if parse_options(card.get("options")):
                 await self.db.set_dynamic(f"fsrs_answer_required:{msg_id}", "true")
             logger.info(f"Dispatched interactive quiz card '{card['card_id']}' as msg {msg_id}")
@@ -1417,10 +1511,7 @@ class ActionDispatcher:
                         chat_id=chat_id,
                         message_id=prompt_msg_id,
                         text=self._review_step_text(len(due_cards)),
-                        keyboard_rows=[[{
-                            "text": "⚡ Claim a Fresh C&H",
-                            "callback_data": "briefing:review",
-                        }]],
+                        keyboard_rows=self._morning_review_keyboard(len(due_cards)),
                         remove_keyboard=False,
                     )
                     await self.gateway.send_message(

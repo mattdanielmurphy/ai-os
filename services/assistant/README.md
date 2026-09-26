@@ -34,7 +34,7 @@ A local-first, context-gated personal executive assistant service embedded direc
    - The original `forallx` question bank covers chapters 1–15 (30 multiple-choice cards). `/forallx` reviews only cards from this deck when they are due; FSRS schedules the next review after the confidence rating.
 
 4. **Morning check-in reminders (`run.py`)**:
-   - The daily briefing advances in one in-place sequence: centering, gratitude, then a fresh C&H/review prompt.
+   - The daily briefing advances through centering, gratitude, one due spaced-repetition card, then the separate C&H reward. When no card is due, it skips review and still completes the morning flow.
    - Only the gratitude stage accepts a typed journal entry; completion chatter cannot be saved as gratitude.
    - If the scheduled daily check-in is unanswered, Telegram sends a reminder every 15 minutes through noon local time. The existing Context Gate also applies to reminders.
 
