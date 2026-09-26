@@ -2,7 +2,8 @@
 
 ## 1. Primary Operating Decision
 - **Daily Interface & Home**: ChatGPT on macOS is Matt's primary conversational surface, router, and front-end.
-- **Default Reasoning & Execution Agent**: Antigravity (`agy`) is the default capable reasoning and execution backend whenever usable Antigravity quota is available.
+- **Default Reasoning & Execution Agent**: For every non-trivial request, use `agy` by default while its quota is available. Use the exact model identifier `gemini-3.8-flash-high`. Do not silently downgrade to another model tier.
+- **Thread Continuity**: After the first `agy` dispatch in a ChatGPT or Codex thread, retain its `SESSION_ID`. For each later non-trivial request in that same parent thread, use `agymcp:agy_continue` with that `SESSION_ID` by default. Start a fresh `agy` conversation only when Matt requests fresh context, the stored session is unavailable, or `agy` reports that it cannot resume it.
 - **Broad `agy` Scope**: Do NOT define `agy` eligibility narrowly as file-writing or terminal execution. Route substantive non-trivial requests to `agy` by default, including:
   - Technical questions requiring sustained reasoning.
   - Multi-part questions.
@@ -44,8 +45,7 @@ Do NOT construct large prompt expansions, task decompositions, or pre-triage sum
 
 ## 6. Quota Modeling & Clean Fallback
 Before delegating to `agy`, verify quota state (via `ag-quota -j` or cached snapshot `~/.ag_quota_snapshot.json`):
-- `healthy` (quota >= 20%): Route non-trivial work to `agy` by default.
-- `low` (quota < 20%): Preserve quota for higher-value tasks; fall back to direct ChatGPT by default unless forced.
+- `available`: Route non-trivial work to `agy` using `gemini-3.8-flash-high`.
 - `exhausted` (quota 0% / exhausted): Fall back cleanly to direct ChatGPT.
 - `unavailable` / `unknown`: Fall back cleanly to direct ChatGPT, noting the status.
 - **Invocation Failure**: If calling `agy` fails or times out, fall back cleanly to direct ChatGPT rather than blocking the user.

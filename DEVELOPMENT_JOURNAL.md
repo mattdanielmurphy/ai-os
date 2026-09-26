@@ -213,3 +213,7 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - Added a 30-card, chapter-labeled `forallx` FSRS deck for chapters 1–15, an idempotent JSON deck importer, and a `/forallx` Telegram command that surfaces only due cards.
 - Added daily morning check-in reminders every 15 minutes through noon local time, gated by context and stopped by a reply or acknowledgment; imported all 30 cards into the assistant database.
 - Researched Retell, Vapi, and Twilio trial options for a future voice-call check-in; no calling provider was configured.
+
+## 2026-09-25
+
+- Set `agy` as the default for non-trivial ChatGPT/Codex work while quota is available, pinned to `gemini-3.8-flash-high`, and required `SESSION_ID` continuation within each parent thread. [[log]](agent-logs/2026-09-25_20-15_agy-routing-thread-continuity.md)
