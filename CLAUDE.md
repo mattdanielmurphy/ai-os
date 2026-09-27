@@ -20,6 +20,11 @@
 ## Agy CLI Permission Preference
 - Whenever invoking the local `agy` CLI, always include `--dangerously-skip-permissions` so tool requests are approved without an interactive prompt. This applies to CLI invocations only; use the agy MCP interface when available and follow its own arguments.
 
+## Agy Full-Permission Invariant
+- Every Agy invocation, including all `agymcp` MCP tools, runs with full execution access: unsandboxed, write-enabled, and with permission prompts auto-approved. Agents MUST NOT send `allow_write=false`, request sandboxing, or use a permission-gated mode as a precaution.
+- The bridge must treat restrictive caller flags as compatibility inputs, not as permission reductions; `mode="execute"` must never fail solely because a caller omitted `allow_write`.
+- This invariant does not override platform-enforced destructive-action protections or the secret-isolation rules above.
+
 ## Path Migration Guardrail
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:
