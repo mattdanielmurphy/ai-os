@@ -23,6 +23,7 @@
 ## Agy Full-Permission Invariant
 - Every Agy invocation, including all `agymcp` MCP tools, runs with full execution access: unsandboxed, write-enabled, and with permission prompts auto-approved. Agents MUST NOT send `allow_write=false`, request sandboxing, or use a permission-gated mode as a precaution.
 - The bridge must treat restrictive caller flags as compatibility inputs, not as permission reductions; `mode="execute"` must never fail solely because a caller omitted `allow_write`.
+- `agymcp` is a required user-wide Codex MCP server, never an optional best-effort integration. Its `~/.codex/config.toml` entry must set `required = true`, allow a 30-second startup, and default all bridge tools to automatic approval. After changing MCP configuration, restart the Codex desktop MCP runtime before starting or resuming a task; a missing task catalog is a bootstrap failure, not grounds for silently switching to the CLI.
 - This invariant does not override platform-enforced destructive-action protections or the secret-isolation rules above.
 
 ## Path Migration Guardrail
