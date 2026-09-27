@@ -1903,5 +1903,11 @@
   },
   "_assemble-without-ghostwriting/SKILL.md": {
     "sha256": "db4268d6f090d1c63d9ce4d817b33a6887f69687dc9c70ef4123c4fd152e3653"
+  },
+  "_fetch-youtube-transcript/SKILL.md": {
+    "sha256": "961ded32e07d44a1488d301dd8c070ca7f19c74459506e3455c2f797564b771e"
+  },
+  "_fetch-youtube-transcript/agents/openai.yaml": {
+    "sha256": "2f9307a949a401e7337bbf2027fc056f3e13f3f6d56a1452cb5df65a4161aeb3"
   }
 }

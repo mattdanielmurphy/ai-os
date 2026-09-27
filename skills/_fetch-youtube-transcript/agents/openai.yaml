@@ -1,0 +1,3 @@
+interface:
+  display_name: "Fetch YouTube Transcript"
+  short_description: "Get a video's transcript before discussing it"
