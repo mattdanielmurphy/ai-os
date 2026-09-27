@@ -131,6 +131,7 @@ def run_tests():
     # SECTION 2: PRE_TOOL_USE HARD GUARDRAIL TESTS
     # ─────────────────────────────────────────────────────────────
     print("\n--- [2. PreToolUse Deterministic Security Guardrails] ---")
+    os.environ["CODEX_HOOKS_MODE"] = "enforce"
 
     guardrail_cases = [
         # (tool, input, cwd, expected_block, description)
@@ -169,14 +170,13 @@ def run_tests():
     # ─────────────────────────────────────────────────────────────
     print("\n--- [3. Shadow Mode vs. Enforce Mode] ---")
     total += 1
-    # Test shadow mode via environment variable
-    os.environ["CODEX_HOOKS_SHADOW"] = "1"
+    os.environ["CODEX_HOOKS_MODE"] = "shadow"
     res_shadow = evaluate_tool_call({
         "tool_name": "execute_command",
         "tool_input": {"command": "rm -rf something.txt"},
         "cwd": "/Users/matt/projects/ai-os"
     })
-    os.environ.pop("CODEX_HOOKS_SHADOW", None)
+    os.environ.pop("CODEX_HOOKS_MODE", None)
 
     if res_shadow.get("continue") is True and res_shadow.get("decision") == "approve":
         print(f"  ✅ [PASS] Shadow mode approves would-be violations while logging audit event")
@@ -208,11 +208,13 @@ def run_tests():
 
     total += 1
     cli_tool = CURRENT_DIR / "on_pre_tool_use.py"
+    env_enforce = {**os.environ, "CODEX_HOOKS_MODE": "enforce"}
     proc = subprocess.run(
         [sys.executable, str(cli_tool)],
         input=json.dumps({"tool_name": "execute_command", "tool_input": {"command": "rm file.txt"}, "cwd": "/Users/matt/projects/ai-os"}),
         capture_output=True,
-        text=True
+        text=True,
+        env=env_enforce
     )
     try:
         wire_out = json.loads(proc.stdout.strip())

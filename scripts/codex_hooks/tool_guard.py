@@ -46,6 +46,8 @@ FORBIDDEN_TOOLING = {"npm", "pnpm", "yarn"}
 
 def get_hook_mode() -> str:
     """Returns 'shadow', 'enforce', or 'disabled'."""
+    if os.environ.get("CODEX_HOOKS_MODE"):
+        return os.environ["CODEX_HOOKS_MODE"].lower()
     if os.environ.get("CODEX_HOOKS_SHADOW") == "1":
         return "shadow"
     if os.environ.get("CODEX_HOOKS_DISABLED") == "1":
