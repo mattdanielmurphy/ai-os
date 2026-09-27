@@ -16,7 +16,7 @@ AI-OS replaces the previous 24 KB monolithic global `~/.codex/AGENTS.md` bundle 
   - `on_pre_tool_use.py`: CLI adapter for `PreToolUse`.
   - `rollout.py`: Rollout phase manager (`shadow`, `enforce`, `disabled`).
   - `rollback.py`: Instant 1-second recovery tool.
-  - `test_hooks.py`: 27-case automated test and benchmark suite.
+  - `test_hooks.py`: 30-case automated test and benchmark suite.
 - `~/.codex/policies/` & `config/codex_policies/`: Pre-compiled policy packs:
   - `policy_git.md`: Git detection & protocol.
   - `policy_reminders.md`: Apple Reminders protocol.

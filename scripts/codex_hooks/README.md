@@ -81,7 +81,7 @@ This subsystem replaces the static 24 KB monolithic global `~/.codex/AGENTS.md` 
 - **`on_pre_tool_use.py`**: Executable CLI adapter for `PreToolUse` event.
 - **`rollout.py`**: CLI to monitor metrics and switch operating modes (`shadow`, `enforce`, `disabled`).
 - **`rollback.py`**: Instant 1-second recovery tool restoring monolithic `AGENTS.md.bak`.
-- **`test_hooks.py`**: Standalone automated test and benchmark suite (27/27 test cases).
+- **`test_hooks.py`**: Standalone automated test and benchmark suite (30/30 test cases).
 
 ---
 
