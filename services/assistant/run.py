@@ -67,6 +67,7 @@ class AssistantDaemon:
         )
         self.silence_watchdog = AwakeSilenceWatchdog(self.config, self.db, self.gateway)
         self._running = False
+        self._mcq_warmer_task: Optional[asyncio.Task] = None
 
     async def setup(self) -> None:
         """Initializes database, TCC permission checks, and Telegram handlers."""
@@ -91,6 +92,10 @@ class AssistantDaemon:
         """Shuts down gateway and database connections gracefully."""
         logger.info("Shutting down Proactive Assistant Daemon...")
         self._running = False
+        if self._mcq_warmer_task and not self._mcq_warmer_task.done():
+            self._mcq_warmer_task.cancel()
+            await asyncio.gather(self._mcq_warmer_task, return_exceptions=True)
+        self._mcq_warmer_task = None
         await self.gateway.stop()
         await self.db.close()
         logger.info("Assistant Daemon stopped cleanly.")
@@ -98,6 +103,7 @@ class AssistantDaemon:
     async def run(self) -> None:
         await self.setup()
         self._running = True
+        self._mcq_warmer_task = asyncio.create_task(self._warm_review_options())
 
         last_wall_time = time.time()
         last_mono_time = time.monotonic()
@@ -150,6 +156,31 @@ class AssistantDaemon:
 
             # Wait for next poll interval
             await asyncio.sleep(self.config.poll_interval_seconds)
+
+    async def _warm_review_options(self) -> None:
+        """Generate missing multiple-choice options away from the review delivery path."""
+        while self._running:
+            delay_seconds = 300
+            try:
+                prepared = await self.dispatcher.generate_pending_review_options()
+                if prepared is None:
+                    delay_seconds = 60
+                elif prepared > 0:
+                    logger.info("Pre-generated multiple-choice options for %s card(s).", prepared)
+                    delay_seconds = 15
+                else:
+                    logger.warning("No multiple-choice options were saved; retrying later.")
+                    delay_seconds = 900
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.warning(
+                    "Background multiple-choice generation failed (%s)",
+                    type(exc).__name__,
+                    exc_info=True,
+                )
+                delay_seconds = 900
+            await asyncio.sleep(delay_seconds)
 
     async def _handle_sleep_recovery(self) -> None:
         """
@@ -204,24 +235,8 @@ class AssistantDaemon:
         if trigger_type == "fsrs_review":
             card = await self.db.get_card(target_id)
             if card:
-                due_cards = await self.db.get_due_cards(now_utc)
-                card, status_msg_id = await self.dispatcher.prepare_review_card(
-                    card,
-                    due_cards or [card],
-                    chat_id,
-                )
                 text, keyboard = format_review_prompt(card)
-                if status_msg_id:
-                    message_id = status_msg_id
-                    await self.gateway.edit_prompt(
-                        chat_id=chat_id,
-                        message_id=message_id,
-                        text=text,
-                        keyboard_rows=keyboard,
-                        remove_keyboard=False,
-                    )
-                else:
-                    message_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+                message_id = await self.gateway.send_prompt(chat_id, text, keyboard)
                 fsrs_answer_required = bool(parse_options(card.get("options")))
             else:
                 logger.error(f"FSRS review trigger for missing card '{target_id}'")

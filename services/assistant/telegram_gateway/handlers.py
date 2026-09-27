@@ -27,6 +27,7 @@ from telegram.ext import (
 
 from ..config import AssistantConfig
 from ..briefing.engine import MorningBriefingBuilder
+from ..briefing.comic import calvin_hobbes_page_url, fetch_daily_calvin_hobbes_comic
 from ..briefing.gratitude import record_gratitude
 from ..context_gate.calendar import CalendarProbe
 from ..habit_bridge.logger import HabitLogger, format_habit_completed
@@ -616,17 +617,7 @@ class ActionDispatcher:
         if morning_trigger_id:
             await self._set_morning_flow_stage(morning_trigger_id, "complete")
             await self._finish_morning_checkin(morning_trigger_id)
-            reward_text = self._morning_reward_text()
-            try:
-                await self.gateway.send_message(chat_id, reward_text)
-            except Exception:
-                logger.exception("Could not send the C&H morning reward; adding it to the review card")
-                await self.gateway.edit_prompt(
-                    chat_id=chat_id,
-                    message_id=message_id,
-                    text=f"{completed_text}\n\n{reward_text}",
-                    remove_keyboard=True,
-                )
+            await self._send_morning_reward(chat_id)
             await self.db.delete_dynamic(self._morning_review_key(message_id))
 
         # Mark outbound signal as responded
@@ -742,20 +733,36 @@ class ActionDispatcher:
     ) -> None:
         await self._set_morning_flow_stage(trigger_id, "complete")
         await self._finish_morning_checkin(trigger_id)
-        reward_text = self._morning_reward_text(review_skipped=True)
         if prompt_message_id is not None:
             await self.gateway.edit_prompt(
                 chat_id=chat_id,
                 message_id=prompt_message_id,
-                text=(
-                    "🙏 *Gratitude logged* ✓\n\n"
-                    "🧠 No spaced-repetition card is due today.\n\n"
-                    + reward_text
-                ),
+                text="🧠 No spaced-repetition card is due today. Your morning review is complete.",
                 remove_keyboard=True,
             )
-        else:
-            await self.gateway.send_message(chat_id, reward_text)
+        await self._send_morning_reward(chat_id, review_skipped=True)
+
+    async def _send_morning_reward(self, chat_id: int, review_skipped: bool = False) -> bool:
+        reward_text = self._morning_reward_text(review_skipped=review_skipped)
+        try:
+            image_url, page_url = await fetch_daily_calvin_hobbes_comic()
+            caption = (
+                f"{reward_text}\n\n"
+                f"[Calvin and Hobbes by Bill Watterson · GoComics]({page_url})"
+            )
+            if await self.gateway.send_photo_url(chat_id, image_url, caption=caption):
+                return True
+        except Exception as exc:
+            logger.warning("Could not load the C&H comic image (%s)", type(exc).__name__)
+
+        page_url = calvin_hobbes_page_url()
+        logger.info("Sending the GoComics page link because the inline image was unavailable")
+        return bool(
+            await self.gateway.send_message(
+                chat_id,
+                f"{reward_text}\n\n[Open today's Calvin and Hobbes comic on GoComics]({page_url})",
+            )
+        )
 
     async def _set_morning_reminders_active(self, trigger_id: str, active: bool) -> None:
         if not re.fullmatch(r"trig_morning_\d{4}-\d{2}-\d{2}", trigger_id):
@@ -973,45 +980,18 @@ class ActionDispatcher:
             saved += 1
         return saved
 
-    async def prepare_review_card(
-        self,
-        card: Dict[str, Any],
-        candidate_cards: List[Dict[str, Any]],
-        chat_id: int,
-    ) -> Tuple[Dict[str, Any], Optional[int]]:
-        """Ensure the next open card has MC options, batching generation for up to five."""
-        if parse_options(card.get("options")):
-            return card, None
-
-        generation_cards = [
-            candidate
-            for candidate in candidate_cards
-            if not parse_options(candidate.get("options"))
-        ][:5]
-        if card["card_id"] not in {item["card_id"] for item in generation_cards}:
-            generation_cards.insert(0, card)
-            generation_cards = generation_cards[:5]
-
-        if not generation_cards or self.config.dry_run or not self.config.is_telegram_ready():
-            return card, None
-
-        count = len(generation_cards)
-        status_msg_id = await self.gateway.send_message(
-            chat_id,
-            f"🧠 Preparing multiple-choice options for {count} review question{'s' if count != 1 else ''}…",
+    async def generate_pending_review_options(self) -> Optional[int]:
+        """Prepare one background batch; never hold up an active review for generation."""
+        if self.config.dry_run or not self.config.is_telegram_ready():
+            return None
+        cards = await self.db.get_cards_without_options(limit=5)
+        if not cards:
+            return None
+        return await self._generate_multiple_choice_options(
+            cards,
+            self.config.telegram_chat_id or 0,
+            status_msg_id=None,
         )
-        try:
-            await self._generate_multiple_choice_options(
-                generation_cards,
-                chat_id,
-                status_msg_id,
-            )
-        except Exception as exc:
-            logger.warning(
-                "Could not prepare multiple-choice options (%s)",
-                type(exc).__name__,
-            )
-        return await self.db.get_card(card["card_id"]) or card, status_msg_id
 
     async def cmd_quiz(
         self,
@@ -1056,24 +1036,8 @@ class ActionDispatcher:
             )
             return True
 
-        card, status_msg_id = await self.prepare_review_card(
-            card,
-            due_cards or [card],
-            chat_id,
-        )
-
         text, keyboard = format_review_prompt(card)
-        if status_msg_id:
-            msg_id = status_msg_id
-            await self.gateway.edit_prompt(
-                chat_id=chat_id,
-                message_id=msg_id,
-                text=text,
-                keyboard_rows=keyboard,
-                remove_keyboard=False,
-            )
-        else:
-            msg_id = await self.gateway.send_prompt(chat_id, text, keyboard)
+        msg_id = await self.gateway.send_prompt(chat_id, text, keyboard)
         if msg_id:
             trigger_id = f"trig_fsrs_{card['card_id']}"
             sent_at = datetime.now(timezone.utc)
@@ -1341,6 +1305,11 @@ class ActionDispatcher:
                 await proc.wait()
                 logger.warning("Direct Codex query timed out after 180s")
                 return None
+            except asyncio.CancelledError:
+                if proc.returncode is None:
+                    proc.kill()
+                await proc.wait()
+                raise
         except Exception as e:
             logger.error(f"Error querying direct Codex from assistant: {e}")
             return None
@@ -1507,17 +1476,47 @@ class ActionDispatcher:
                     log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
                     due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
                     await self._set_morning_flow_stage(trigger_id, "review", len(due_cards))
-                    await self.gateway.edit_prompt(
-                        chat_id=chat_id,
-                        message_id=prompt_msg_id,
-                        text=self._review_step_text(len(due_cards)),
-                        keyboard_rows=self._morning_review_keyboard(len(due_cards)),
-                        remove_keyboard=False,
-                    )
+                    await self.gateway.remove_prompt_keyboard(chat_id, prompt_msg_id)
                     await self.gateway.send_message(
                         chat_id,
                         f"Recorded to `{log_path.name}` in your Obsidian vault.",
                     )
+                    previous_signals = [
+                        signal
+                        for signal in await self.db.get_awaiting_signals()
+                        if signal["trigger_id"] == trigger_id
+                    ]
+                    next_prompt_id = await self.gateway.send_prompt(
+                        chat_id,
+                        self._review_step_text(len(due_cards)),
+                        self._morning_review_keyboard(len(due_cards)),
+                    )
+                    if next_prompt_id:
+                        sent_at = datetime.now(timezone.utc)
+                        await self.db.record_outbound_signal(
+                            message_id=next_prompt_id,
+                            chat_id=chat_id,
+                            trigger_id=trigger_id,
+                            sent_at=sent_at,
+                            timeout_at=sent_at
+                            + timedelta(seconds=self.config.silence_timeout_seconds),
+                            status="AWAITING_INPUT",
+                        )
+                        for signal in previous_signals:
+                            await self.gateway.remove_prompt_keyboard(
+                                chat_id, signal["message_id"]
+                            )
+                            await self.db.resolve_signal(
+                                signal["message_id"], "RESPONDED"
+                            )
+                    else:
+                        await self.gateway.edit_prompt(
+                            chat_id=chat_id,
+                            message_id=prompt_msg_id,
+                            text=self._review_step_text(len(due_cards)),
+                            keyboard_rows=self._morning_review_keyboard(len(due_cards)),
+                            remove_keyboard=False,
+                        )
                     return True
                 await self.gateway.send_message(
                     chat_id,
