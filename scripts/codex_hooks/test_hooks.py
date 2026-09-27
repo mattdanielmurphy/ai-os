@@ -153,12 +153,15 @@ def run_tests():
         ("execute_command", {"command": "git init"}, "/Users/matt/projects/cool-app", False, "Allow 'git init' in project folder"),
         ("execute_command", {"command": "echo test > /tmp/output.txt"}, "/Users/matt/projects/ai-os", True, "Block write to /tmp/"),
         ("execute_command", {"command": "echo test > ./tmp/output.txt"}, "/Users/matt/projects/ai-os", False, "Allow write to ./tmp/"),
+        ("execute_command", {"command": "sudo rm -rf ./tmp/old.txt"}, "/Users/matt/projects/ai-os", True, "Block 'sudo rm -rf'"),
+        ("execute_command", {"command": "find . -type f -name '*.tmp' -delete"}, "/Users/matt/projects/ai-os", True, "Block 'find ... -delete'"),
+        ("execute_command", {"command": "find . -type f -name '*.tmp' -exec rm {} +"}, "/Users/matt/projects/ai-os", True, "Block 'find ... -exec rm'"),
     ]
 
     for tool_name, tool_inp, cwd, exp_block, desc in guardrail_cases:
         total += 1
         res = evaluate_tool_call({"tool_name": tool_name, "tool_input": tool_inp, "cwd": cwd})
-        is_blocked = not res.get("continue", True)
+        is_blocked = (res.get("decision") == "block") or (res.get("hookSpecificOutput", {}).get("permissionDecision") == "deny")
         if is_blocked == exp_block:
             print(f"  ✅ [PASS] {desc}")
             passed += 1
@@ -218,7 +221,7 @@ def run_tests():
     )
     try:
         wire_out = json.loads(proc.stdout.strip())
-        if wire_out.get("continue") is False and wire_out.get("decision") == "block":
+        if wire_out.get("decision") == "block" and wire_out.get("continue") is True:
             print(f"  ✅ [PASS] on_pre_tool_use.py CLI blocks rm and returns valid wire JSON")
             passed += 1
         else:

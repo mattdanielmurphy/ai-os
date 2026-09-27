@@ -108,10 +108,17 @@ def check_destructive_commands(tokens: List[str]) -> Optional[str]:
     if not tokens:
         return None
 
-    cmd = Path(tokens[0]).name.lower()
+    # Handle wrapper prefixes like sudo, env, nohup, builtin, command
+    idx = 0
+    while idx < len(tokens) and tokens[idx].lower() in {"sudo", "env", "nohup", "builtin", "command", "exec"}:
+        idx += 1
+    if idx >= len(tokens):
+        return None
+
+    cmd = Path(tokens[idx]).name.lower()
     if cmd in DESTRUCTIVE_COMMANDS:
         # Check node_modules exception
-        args = tokens[1:]
+        args = tokens[idx + 1:]
         is_node_modules = any("node_modules" in a for a in args)
         if is_node_modules:
             return None
@@ -119,6 +126,24 @@ def check_destructive_commands(tokens: List[str]) -> Optional[str]:
             "AI-OS Guardrail Violation: 'rm' and 'rmdir' are strictly prohibited. "
             "You MUST use 'mv <path> ~/.Trash/' instead (Exception: node_modules)."
         )
+
+    # Check find with -delete or -exec rm
+    if cmd == "find":
+        find_args = tokens[idx + 1:]
+        if "-delete" in find_args:
+            return (
+                "AI-OS Guardrail Violation: 'find ... -delete' is strictly prohibited. "
+                "You MUST use 'mv <path> ~/.Trash/' instead (Exception: node_modules)."
+            )
+        for i, tok in enumerate(find_args):
+            if tok in ("-exec", "-execdir") and i + 1 < len(find_args):
+                next_tok = Path(find_args[i + 1]).name.lower()
+                if next_tok in DESTRUCTIVE_COMMANDS:
+                    if not any("node_modules" in a for a in find_args):
+                        return (
+                            "AI-OS Guardrail Violation: 'find ... -exec rm' is strictly prohibited. "
+                            "You MUST use 'mv <path> ~/.Trash/' instead (Exception: node_modules)."
+                        )
     return None
 
 
@@ -127,20 +152,27 @@ def check_secret_file_access(command_str: str, tokens: List[str]) -> Optional[st
     if not tokens:
         return None
 
-    cmd = Path(tokens[0]).name.lower()
-    # Reading tools: cat, head, tail, less, more, source, ., grep, view_file
-    read_tools = {"cat", "head", "tail", "less", "more", "source", ".", "grep", "rg", "bat", "open"}
-
     # Allowed safe tooling
     if "aios-env" in command_str:
         return None
 
+    # Handle wrapper prefixes
+    idx = 0
+    while idx < len(tokens) and tokens[idx].lower() in {"sudo", "env", "nohup", "builtin", "command"}:
+        idx += 1
+    if idx >= len(tokens):
+        return None
+
+    cmd = Path(tokens[idx]).name.lower()
+    # Reading tools: cat, head, tail, less, more, source, ., grep, view_file, xxd, etc.
+    read_tools = {"cat", "head", "tail", "less", "more", "source", ".", "grep", "rg", "bat", "open", "xxd", "hexdump", "od", "strings"}
+
     # Check if any token looks like a secret file being targeted
-    for token in tokens[1:]:
+    for token in tokens[idx + 1:]:
         clean_token = token.strip("\"' ")
         for pattern in SECRET_PATTERNS:
             if pattern.search(clean_token):
-                if cmd in read_tools or len(tokens) == 2:
+                if cmd in read_tools or len(tokens[idx:]) <= 2:
                     return (
                         f"AI-OS Secret Isolation Violation: Access to raw secret file '{clean_token}' is blocked. "
                         "Never inspect or print raw secret files. Use 'aios-env check --key <KEY>' or 'aios-env list' instead."
@@ -327,7 +359,7 @@ def evaluate_tool_call(payload: Dict[str, Any]) -> Dict[str, Any]:
             # Enforce mode: HARD BLOCK
             log_audit_event("PRE_TOOL_USE_BLOCKED", violation, tool_name, tool_input, cwd, blocked=True)
             return {
-                "continue": False,
+                "continue": True,
                 "decision": "block",
                 "reason": violation,
                 "hookSpecificOutput": {

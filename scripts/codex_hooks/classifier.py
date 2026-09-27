@@ -107,7 +107,7 @@ def is_git_repository(cwd_str: str) -> bool:
 
 
 def load_policy_pack(pack_name: str) -> str:
-    """Reads a compiled policy pack from ~/.codex/policies/."""
+    """Reads a compiled policy pack from ~/.codex/policies/ or in-repo fallback."""
     pack_file = POLICIES_DIR / f"{pack_name}.md"
     if pack_file.exists():
         try:
@@ -115,6 +115,16 @@ def load_policy_pack(pack_name: str) -> str:
                 return f.read().strip()
         except Exception:
             pass
+
+    # In-repo fallback
+    repo_pack_file = Path("/Users/matt/projects/ai-os/config/codex_policies") / f"{pack_name}.md"
+    if repo_pack_file.exists():
+        try:
+            with open(repo_pack_file, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+
     return ""
 
 
@@ -125,12 +135,16 @@ def retrieve_mem0_context(prompt: str) -> str:
         if not aios_memory_path.exists():
             return ""
 
-        # Run query with quick timeout (sub-500ms)
+        # Prefer hermes venv python where mem0 and dependencies are installed
+        hermes_python = Path("/Users/matt/.hermes/hermes-agent/venv/bin/python")
+        python_exec = str(hermes_python) if hermes_python.exists() else sys.executable
+
+        # Run query with generous timeout for warm/cold vector search
         res = subprocess.run(
-            [sys.executable, str(aios_memory_path), "prefetch", prompt],
+            [python_exec, str(aios_memory_path), "prefetch", prompt],
             capture_output=True,
             text=True,
-            timeout=1.2
+            timeout=6.0
         )
         if res.returncode == 0:
             return res.stdout.strip()
