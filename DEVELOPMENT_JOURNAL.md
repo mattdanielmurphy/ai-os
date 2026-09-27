@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-09-27
+- **Dynamic Codex Hook-Based Policy Engine (`scripts/codex_hooks/`):** Replaced the static 24 KB monolithic global `~/.codex/AGENTS.md` with an event-driven policy system decoupled from `preflight.py`. Added a sub-millisecond 3-tier prompt classifier (`UserPromptSubmit`) with zero token injection for casual chats and conditional Mem0 recall, deterministic hard execution gates (`PreToolUse`) blocking `rm`, secret reads, and `npm`/`pnpm`, plus rollout/rollback management and 27 passing automated tests.
 - **FSRS option warm-up:** Moved distractor generation off manual and scheduled review paths into a cancellable background worker that batches five cards at a time; review prompts render immediately from stored choices.
 - **Morning step placement and comic reward:** Gratitude now posts its confirmation before a fresh review prompt at the bottom of Telegram, and the earned reward sends an inline GoComics image with a source link.
 
