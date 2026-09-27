@@ -17,6 +17,9 @@
    - **No-Workspace Fallback:** When running without an active workspace open, NEVER create projects inside `~/.gemini/antigravity/scratch/`. ALWAYS create new project directories in `~/projects/<project-name>`.
 8. **Shared Infrastructure Database (VPS):** Matt maintains a VPS with a hosted database used across various projects. When database provisioning is required for projects/services, consider/leverage the VPS database rather than defaulting strictly to external third-party managed database platforms.
 
+## Agy CLI Permission Preference
+- Whenever invoking the local `agy` CLI, always include `--dangerously-skip-permissions` so tool requests are approved without an interactive prompt. This applies to CLI invocations only; use the agy MCP interface when available and follow its own arguments.
+
 ## Path Migration Guardrail
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:
