@@ -11,7 +11,7 @@ Combines modular rules from .rules/ into destination targets:
 
 import os
 from pathlib import Path
-from compile_dynamic_prompt import compile_prompt
+from compile_dynamic_prompt import compile_prompt, compile_codex_policy_packs
 
 PROJECT_ROOT = Path("/Users/matt/projects/ai-os")
 RULES_DIR = PROJECT_ROOT / ".rules"
@@ -68,10 +68,15 @@ def main():
     write_file(HERMES_TARGET_GLOBAL, hermes_content)
 
     # Build Codex global instructions from the same shared rule sources.
-    # Codex has no platform-specific rule file yet, so compile_prompt("codex")
-    # intentionally receives core safety, Git, and agent-log protocols only.
-    codex_content = compile_prompt(role="orchestrator", platform="codex", stub=False)
+    # Codex now uses minimal instructions backed by dynamic runtime hooks.
+    codex_content = compile_prompt(role="orchestrator", platform="codex", stub=False, minimal=True)
     write_file(CODEX_TARGET_GLOBAL, codex_content)
+
+    # Compile dynamic policy packs for Codex hook engine
+    codex_policies_dir = Path("/Users/matt/.codex/policies")
+    compile_codex_policy_packs(codex_policies_dir)
+    compile_codex_policy_packs(PROJECT_ROOT / "config" / "codex_policies")
+    print(f"✅ Compiled Codex dynamic policy packs to {codex_policies_dir}")
 
     # Build LEAF.md for Subagents
     leaf_target = PROJECT_ROOT / "LEAF.md"
