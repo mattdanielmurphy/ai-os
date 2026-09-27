@@ -34,6 +34,7 @@ def run_cmd(args, check=True):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--result-path", help="Path to write JSON status")
+    parser.add_argument("--paths", nargs="+", help="Stage and commit only these paths, leaving unrelated worktree changes untouched")
     args, unknown = parser.parse_known_args()
     result_path = args.result_path
     # 0. Check and update any active task in-progress to review status
@@ -54,7 +55,7 @@ def main():
 
     # 1. Stage all changes
     print("Staging changes...")
-    run_cmd(["git", "add", "."])
+    run_cmd(["git", "add", "--", *args.paths] if args.paths else ["git", "add", "."])
 
     # 2. Check if there are any staged changes
     _, code = run_cmd(["git", "diff", "--cached", "--quiet"], check=False)
@@ -143,4 +144,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
