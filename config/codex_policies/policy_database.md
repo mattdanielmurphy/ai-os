@@ -1,0 +1,1 @@
+8. **Shared Infrastructure Database (VPS):** Matt maintains a VPS with a hosted database used across various projects. When database provisioning is required for projects/services, consider/leverage the VPS database rather than defaulting strictly to external third-party managed database platforms.

@@ -1,0 +1,2 @@
+# Music Recommendations & Apple Music Links
+- When Matt asks for music recommendations, present every resolved recommendation as a direct, clickable native Apple Music URL. Resolve links deterministically through the `music-cross-linker` iTunes Search/Lookup flow, never by hand-constructing Apple Music search links or guessing catalog IDs. Explicitly flag any recommendation without an exact Apple Music Canada catalog match rather than substituting a different release.

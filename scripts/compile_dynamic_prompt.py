@@ -107,9 +107,128 @@ def detect_active_domains(workspace_root: Path, prompt_text: str = "") -> set:
 
     return domains
 
-def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", prompt_text: str = "", stub: bool = False, workspace_root: Path = None) -> str:
+def compile_minimal_codex_prompt() -> str:
+    return """# AI-OS Global Codex Instructions
+
+## 1. Identity & Environment Baseline
+- **User**: Matthew Daniel Murphy (Matt) | `matt@mattmurphy.ca` | America/Edmonton (MST/MDT)
+- **Environment**: macOS Apple Silicon | Default shell: `zsh` | Package manager: `bun`
+- **Path Guardrail**: Host migrated from `/Users/matthewmurphy/` to `/Users/matt/`. Always use `/Users/matt/`.
+- **Model Family Naming**: Refer to model families by clean canonical brand names (Sonnet, Flash, Opus, Haiku, Gemini, GPT) without speculative version numbers.
+
+## 2. Dynamic Policy Runtime Notice
+- AI-OS employs dynamic environment hooks (`UserPromptSubmit` and `PreToolUse`).
+- Project protocols (Git tracking, agent logs), personal context (reminders, IDs), and domain styling are injected on-demand into developer context per turn.
+- Hard safety constraints (secret file isolation, trash vs. `rm`, `bun` enforcement) are actively intercepted and enforced at the execution boundary. Always follow dynamically supplied context and gate feedback.
+
+## 3. macOS Orchestration & Delegation
+- ChatGPT/Codex on macOS is Matt's daily conversational surface and dispatcher.
+- For substantive engineering tasks requiring sustained multi-step planning or autonomous coding, prefer delegating to Antigravity (`agymcp:agy`) when quota is healthy.
+- Keep casual queries, factual Q&A, and quick rewrites direct in Codex. Keep task handoffs to `agy` thin and verbatim.
+"""
+
+def extract_markdown_sections(text: str) -> dict:
+    """Split markdown text into sections by heading (# and ##)."""
+    sections = {}
+    current_key = "header"
+    current_lines = []
+    
+    for line in text.split("\n"):
+        if re.match(r"^#{1,2}\s+", line):
+            if current_lines:
+                sections[current_key] = "\n".join(current_lines).strip()
+            current_key = re.sub(r"^#{1,2}\s+", "", line).strip()
+            current_lines = [line]
+        else:
+            current_lines.append(line)
+            
+    if current_lines:
+        sections[current_key] = "\n".join(current_lines).strip()
+    return sections
+
+def compile_codex_policy_packs(output_dir: Path = None) -> dict:
+    """
+    Extracts modular policy packs from .rules/ for the Codex dynamic hook engine.
+    Writes policy packs to output_dir if provided, and returns the dictionary of packs.
+    """
+    config = load_rules_config()
+    core_safety_raw = read_rule("core_safety", config)
+    git_proto_raw = read_rule("git_protocol", config)
+    agent_logs_raw = read_rule("agent_logs", config)
+    codex_only_raw = read_rule("codex_only", config)
+    ui_web_raw = read_rule("ui_web", config)
+    
+    cs_sections = extract_markdown_sections(core_safety_raw)
+
+    def find_cs(*keywords):
+        for k, v in cs_sections.items():
+            if any(kw.lower() in k.lower() for kw in keywords):
+                return v
+        return ""
+
+    packs = {}
+
+    # 1. policy_git: Project detection & Git protocol
+    packs["policy_git"] = "\n\n".join(filter(None, [
+        find_cs("Project Detection"),
+        git_proto_raw
+    ])).strip()
+
+    # 2. policy_reminders: Apple Reminders protocol
+    packs["policy_reminders"] = find_cs("Apple Reminders", "Personal To-Dos").strip()
+
+    # 3. policy_music: Music recommendations & Apple Music links
+    packs["policy_music"] = find_cs("Music Recommendations").strip()
+
+    # 4. policy_personal_ids: Zero-placeholder personal context
+    packs["policy_personal_ids"] = find_cs("Zero-Placeholder Policy").strip()
+
+    # 5. policy_frontend: Non-destructive UI styling & span-only layouts
+    packs["policy_frontend"] = "\n\n".join(filter(None, [
+        find_cs("Architectural Preservation"),
+        ui_web_raw
+    ])).strip()
+
+    # 6. policy_agy_delegation: Thin handoff, quota modeling, planner dispatch
+    packs["policy_agy_delegation"] = "\n\n".join(filter(None, [
+        codex_only_raw,
+        find_cs("Strict Planner"),
+        find_cs("Transparent Model Escalation")
+    ])).strip()
+
+    # 7. policy_database: VPS database infrastructure
+    db_match = re.search(r"(\d+\.\s*\*\*Shared Infrastructure Database[\s\S]*?)(?=\n\n|\n##|\n#|\Z)", core_safety_raw)
+    packs["policy_database"] = (db_match.group(1).strip() if db_match else "- Matt maintains a VPS with a hosted database used across various projects. When database provisioning is required for projects/services, consider/leverage the VPS database rather than defaulting strictly to external third-party managed database platforms.")
+
+    # 8. policy_skills_authoring: Custom skill conventions
+    packs["policy_skills_authoring"] = find_cs("Custom Skills Naming").strip()
+
+    # 9. policy_rules_engine: Rule persistence and build_rules.py
+    packs["policy_rules_engine"] = find_cs("Proactive System Directive").strip()
+
+    # 10. policy_dev_workflow: Work logs, project board, search-to-memory, LLM wiki
+    packs["policy_dev_workflow"] = "\n\n".join(filter(None, [
+        agent_logs_raw,
+        find_cs("Search-to-Memory"),
+        find_cs("Personal Knowledge Base")
+    ])).strip()
+
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for name, content in packs.items():
+            file_path = output_dir / f"{name}.md"
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content + "\n")
+
+    return packs
+
+def compile_prompt(role: str = "orchestrator", platform: str = "antigravity", prompt_text: str = "", stub: bool = False, workspace_root: Path = None, minimal: bool = True) -> str:
     if stub and role.lower() != "leaf":
         return compile_stub(platform)
+
+    # For Codex / ChatGPT, default to the minimal, hook-backed instructions
+    if platform.lower() in ("codex", "chatgpt") and minimal and role.lower() != "leaf":
+        return compile_minimal_codex_prompt()
 
     config = load_rules_config()
     sections = []
