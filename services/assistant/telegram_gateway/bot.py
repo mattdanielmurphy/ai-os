@@ -482,6 +482,57 @@ class TelegramGateway:
                 logger.warning(f"Failed to send photo ({e2}). Retrying as document fallback...")
                 return await self.send_document(chat_id, path, caption=caption)
 
+    async def send_photo_url(
+        self,
+        chat_id: int,
+        photo_url: str,
+        caption: Optional[str] = None,
+    ) -> Optional[int]:
+        """Ask Telegram to fetch and send an image hosted by GoComics."""
+        if not photo_url.startswith("https://featureassets.gocomics.com/assets/"):
+            logger.warning("send_photo_url rejected a URL outside the GoComics image host")
+            return None
+
+        if not self.config.is_telegram_ready() or not self.app:
+            self._mock_message_id_seq += 1
+            msg_id = self._mock_message_id_seq
+            self._dry_run_messages[msg_id] = {
+                "chat_id": chat_id,
+                "type": "photo",
+                "url": photo_url,
+                "caption": caption,
+                "status": "SENT",
+            }
+            logger.info(f"[DRY-RUN] Sent remote photo (id={msg_id}) to chat {chat_id}")
+            return msg_id
+
+        caption_html = markdown_to_telegram_html(caption) if caption else None
+        try:
+            message = await self.app.bot.send_photo(
+                chat_id=chat_id,
+                photo=photo_url,
+                caption=caption_html,
+                parse_mode=ParseMode.HTML if caption_html else None,
+            )
+            logger.info(f"Sent GoComics photo to Telegram (msg_id={message.message_id})")
+            return message.message_id
+        except Exception as exc:
+            logger.warning(
+                "Failed to send GoComics photo with formatted caption (%s)",
+                type(exc).__name__,
+            )
+            try:
+                message = await self.app.bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo_url,
+                    caption=caption,
+                )
+                logger.info(f"Sent GoComics photo with plain caption (msg_id={message.message_id})")
+                return message.message_id
+            except Exception as fallback_exc:
+                logger.error("Failed to send GoComics photo (%s)", type(fallback_exc).__name__)
+                return None
+
     async def send_video(
         self,
         chat_id: int,
@@ -611,4 +662,3 @@ class TelegramGateway:
             return await self.send_video(chat_id, path, caption=caption)
         else:
             return await self.send_document(chat_id, path, caption=caption)
-

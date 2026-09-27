@@ -1,5 +1,9 @@
 # Development Journal
 
+## 2026-09-27
+- **FSRS option warm-up:** Moved distractor generation off manual and scheduled review paths into a cancellable background worker that batches five cards at a time; review prompts render immediately from stored choices.
+- **Morning step placement and comic reward:** Gratitude now posts its confirmation before a fresh review prompt at the bottom of Telegram, and the earned reward sends an inline GoComics image with a source link.
+
 ## 2026-09-26
 - **FSRS answers before difficulty ratings:** Cards without options now receive multiple-choice distractors in one LLM request for up to five due cards, and cached choices follow the existing correctness-feedback/rating flow. If generation fails, the review reveals the answer before enabling ratings; later FSRS updates preserve the choices.
 - **Morning reminder acknowledgement resumes the check-in:** The “I’m up” callback now disables repeat nudges and restores the persisted centering, gratitude, or review stage in the tapped prompt instead of finishing the flow. Stale prompts are retired while the current stage stays answerable.

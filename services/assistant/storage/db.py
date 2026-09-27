@@ -309,6 +309,21 @@ class AssistantDB:
         )
         await self._conn.commit()
 
+    async def get_cards_without_options(self, limit: int = 5) -> List[Dict[str, Any]]:
+        """Return cards that still need multiple-choice options, oldest due first."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """
+            SELECT * FROM fsrs_cards
+            WHERE options IS NULL OR trim(options) = '' OR trim(options) = '[]'
+            ORDER BY due_at ASC, card_id ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
     async def get_due_cards(
         self,
         current_time: Optional[datetime] = None,

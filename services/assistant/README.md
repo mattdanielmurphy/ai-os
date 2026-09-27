@@ -31,10 +31,12 @@ A local-first, context-gated personal executive assistant service embedded direc
      - `baby_facts`: Trivia and quick factual associations (0.85 retention target).
    - Lightweight micro-dosing format (10–30s recall prompt with inline 1-tap rating buttons: `Again`, `Hard`, `Good`, `Easy`).
    - Progressive elaboration: Edits the Telegram message in-place to reveal the answer, 1-sentence novel application context, and next scheduled review date.
+   - Missing multiple-choice options are generated in background batches while the daemon is idle; starting a review never waits for the model call.
    - The original `forallx` question bank covers chapters 1–15 (30 multiple-choice cards). `/forallx` reviews only cards from this deck when they are due; FSRS schedules the next review after the confidence rating.
 
 4. **Morning check-in reminders (`run.py`)**:
    - The daily briefing advances through centering, gratitude, one due spaced-repetition card, then the separate C&H reward. When no card is due, it skips review and still completes the morning flow.
+   - Gratitude is confirmed first, followed by a fresh review-step prompt at the bottom of the chat. The earned reward includes an inline Calvin and Hobbes comic image from GoComics, with a source link.
    - Only the gratitude stage accepts a typed journal entry; completion chatter cannot be saved as gratitude.
    - If the scheduled daily check-in is unanswered, Telegram sends a reminder every 15 minutes through noon local time. The existing Context Gate also applies to reminders.
 
