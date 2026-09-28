@@ -1909,5 +1909,8 @@
   },
   "_fetch-youtube-transcript/agents/openai.yaml": {
     "sha256": "2f9307a949a401e7337bbf2027fc056f3e13f3f6d56a1452cb5df65a4161aeb3"
+  },
+  "custom-skills/substantive-engineering-verification/SKILL.md": {
+    "sha256": "f858f3523f0e63c15cc7d530774cbe7e0b0d3c89d69767afc4e33ab8158509a3"
   }
 }
