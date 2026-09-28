@@ -229,3 +229,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 - Set `agy` as the default for non-trivial ChatGPT/Codex work while quota is available, pinned to `gemini-3.8-flash-high`, and required `SESSION_ID` continuation within each parent thread. [[log]](agent-logs/2026-09-25_20-15_agy-routing-thread-continuity.md)
 - **2026-09-27 13:00**: Added a global agy CLI rule requiring `--dangerously-skip-permissions` on local CLI invocations, per Matt's standing preference. Rebuilt and verified generated Codex, Gemini, Claude, and Hermes instructions; MCP remains preferred when available.
+- **2026-09-27 22:12**: Changed the default agy model from `gemini-3.8-flash-high` to `gemini-3.8-flash-medium`; regenerated and verified the Codex policy pack.
