@@ -324,23 +324,41 @@ def evaluate_tool_call(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     violation: Optional[str] = None
 
-    # 1. Shell commands (execute_command, Bash, bash, sh, zsh, terminal)
-    if any(k in tool_name.lower() for k in ["command", "bash", "sh", "exec", "terminal"]):
-        cmd_str = ""
-        if isinstance(tool_input, dict):
-            for key in ["command", "cmd", "CommandLine", "script"]:
-                if key in tool_input and isinstance(tool_input[key], str):
-                    cmd_str = tool_input[key]
-                    break
-        elif isinstance(tool_input, str):
-            cmd_str = tool_input
+    # 1. Extract commands and file paths from any input representation
+    cmds_to_check: List[str] = []
+    paths_to_check: List[str] = []
 
-        if cmd_str:
-            violation = evaluate_command_string(cmd_str, cwd)
+    if isinstance(tool_input, dict):
+        for key in ["cmd", "command", "CommandLine", "script", "code"]:
+            if key in tool_input and isinstance(tool_input[key], str):
+                cmds_to_check.append(tool_input[key])
+        for key in ["path", "file_path", "target_file", "TargetFile", "file", "filename", "uri", "AbsolutePath"]:
+            if key in tool_input and isinstance(tool_input[key], str):
+                paths_to_check.append(tool_input[key])
+    elif isinstance(tool_input, str):
+        # Check if tool_input is a JavaScript invocation (e.g. tools.exec_command, tools.read_file)
+        js_cmds = re.findall(r"(?:cmd|command)\s*:\s*[\"'\`]([^\"'\`]+)[\"'\`]", tool_input)
+        if js_cmds:
+            cmds_to_check.extend(js_cmds)
+        js_paths = re.findall(r"(?:path|file_path|target_file|file)\s*:\s*[\"'\`]([^\"'\`]+)[\"'\`]", tool_input)
+        if js_paths:
+            paths_to_check.extend(js_paths)
+        if not js_cmds and not js_paths:
+            # Fallback raw string command
+            cmds_to_check.append(tool_input)
 
-    # 2. File operations (view_file, read_file, write_to_file, replace_file_content)
-    if not violation and any(k in tool_name.lower() for k in ["file", "view", "read", "write", "replace"]):
-        violation = evaluate_file_tool(tool_name, tool_input, cwd)
+    # 2. Evaluate extracted shell commands
+    for cmd_str in cmds_to_check:
+        violation = evaluate_command_string(cmd_str, cwd)
+        if violation:
+            break
+
+    # 3. Evaluate extracted file paths
+    if not violation:
+        for path_str in paths_to_check:
+            violation = evaluate_file_tool(tool_name, path_str, cwd)
+            if violation:
+                break
 
     # If violation detected
     if violation:
