@@ -32,11 +32,15 @@ HOOKS_JSON_DISABLED = CODEX_DIR / "hooks.json.disabled"
 
 def get_current_status():
     mode = "enforce"
+    mem0_enabled = False
+    mem0_latency = 2028.36
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 mode = data.get("mode", "enforce")
+                mem0_enabled = bool(data.get("enable_mem0_on_prompt", False))
+                mem0_latency = float(data.get("mem0_measured_latency_ms", 2028.36))
         except Exception:
             pass
 
@@ -70,6 +74,7 @@ def get_current_status():
     print(f"Hooks Installed:      {'YES' if hooks_installed else 'NO'}")
     print(f"Global AGENTS.md:     {agents_size} bytes ({agents_lines} lines)")
     print(f"Compiled Policies:    {policies_count} files in {POLICIES_DIR}")
+    print(f"Mem0 on Prompt:       {'ENABLED' if mem0_enabled else f'DISABLED (Fast gate < 15ms | Measured cold: {mem0_latency:.1f}ms)'}")
     print(f"Audit Log Events:     {audit_events} total ({blocked_events} blocked, {shadow_events} shadow)")
     print("================================")
 
@@ -136,11 +141,19 @@ def set_mode(mode: str):
         sys.exit(1)
 
     CODEX_DIR.mkdir(parents=True, exist_ok=True)
-    config_data = {
-        "mode": mode,
-        "updated_at": datetime.now().isoformat(),
-        "description": "AI-OS Codex Dynamic Hook Engine Configuration"
-    }
+    config_data = {}
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+        except Exception:
+            pass
+
+    config_data["mode"] = mode
+    config_data["updated_at"] = datetime.now().isoformat()
+    config_data.setdefault("description", "AI-OS Codex Dynamic Hook Engine Configuration")
+    config_data.setdefault("enable_mem0_on_prompt", False)
+    config_data.setdefault("mem0_measured_latency_ms", 2028.36)
 
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config_data, f, indent=2)
@@ -152,19 +165,54 @@ def set_mode(mode: str):
     get_current_status()
 
 
+def set_mem0(enabled: bool):
+    CODEX_DIR.mkdir(parents=True, exist_ok=True)
+    config_data = {}
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+        except Exception:
+            pass
+
+    config_data["enable_mem0_on_prompt"] = enabled
+    config_data["updated_at"] = datetime.now().isoformat()
+    config_data.setdefault("mode", "enforce")
+    config_data.setdefault("description", "AI-OS Codex Dynamic Hook Engine Configuration")
+    config_data.setdefault("mem0_measured_latency_ms", 2028.36)
+
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(config_data, f, indent=2)
+
+    state_str = "ENABLED" if enabled else "DISABLED"
+    print(f"✅ Mem0 semantic recall on prompt submission: {state_str}")
+    if enabled:
+        print("⚠️  Warning: Cold Mem0 search measured at ~2,028ms; prompt submission will incur vector search overhead.")
+    else:
+        print("⚡ Mem0 retrieval on prompt bypassed: Prompt submission runs at native sub-millisecond fast-gate.")
+    get_current_status()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Manage AI-OS Codex Hooks Rollout")
     parser.add_argument("--mode", choices=["shadow", "enforce", "disabled"], help="Set hook operating mode")
     parser.add_argument("--status", action="store_true", help="Display current hook status and metrics")
     parser.add_argument("--install", action="store_true", help="Install ~/.codex/hooks.json wire configuration")
+    parser.add_argument("--enable-mem0", action="store_true", help="Enable Mem0 semantic recall on prompt submission")
+    parser.add_argument("--disable-mem0", action="store_true", help="Disable Mem0 semantic recall on prompt submission (default)")
 
     args = parser.parse_args()
 
     if args.install:
         install_hooks(force=True)
+    if args.enable_mem0:
+        set_mem0(True)
+    elif args.disable_mem0:
+        set_mem0(False)
+
     if args.mode:
         set_mode(args.mode)
-    elif args.status or (not args.install and len(sys.argv) == 1):
+    elif not args.enable_mem0 and not args.disable_mem0 and (args.status or (not args.install and len(sys.argv) == 1)):
         get_current_status()
 
 

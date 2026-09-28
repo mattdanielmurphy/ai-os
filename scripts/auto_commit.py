@@ -136,7 +136,12 @@ def main():
 
     # 6. Push changes to remote repository
     print("Pushing commits to remote repository...")
-    _, push_code = run_cmd(["git", "push"], check=False)
+    branch, _ = run_cmd(["git", "symbolic-ref", "-q", "--short", "HEAD"], check=False)
+    if not branch:
+        # Detached HEAD (e.g. in a worktree) -> push HEAD to origin/main
+        _, push_code = run_cmd(["git", "push", "origin", "HEAD:main"], check=False)
+    else:
+        _, push_code = run_cmd(["git", "push"], check=False)
     if push_code == 0:
         print("Git push completed successfully!")
     else:

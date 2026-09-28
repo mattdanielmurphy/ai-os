@@ -156,6 +156,11 @@ def run_tests():
         ("execute_command", {"command": "sudo rm -rf ./tmp/old.txt"}, "/Users/matt/projects/ai-os", True, "Block 'sudo rm -rf'"),
         ("execute_command", {"command": "find . -type f -name '*.tmp' -delete"}, "/Users/matt/projects/ai-os", True, "Block 'find ... -delete'"),
         ("execute_command", {"command": "find . -type f -name '*.tmp' -exec rm {} +"}, "/Users/matt/projects/ai-os", True, "Block 'find ... -exec rm'"),
+        ("exec", "const r = await tools.exec_command({cmd: 'rm -rf ./tmp/old.txt', workdir: '/Users/matt/projects/ai-os'});", "/Users/matt/projects/ai-os", True, "Block JS tools.exec_command 'rm -rf'"),
+        ("exec", "const r = await tools.exec_command({cmd: 'cat .env'});", "/Users/matt/projects/ai-os", True, "Block JS tools.exec_command 'cat .env'"),
+        ("exec", "await tools.read_file({path: '/Users/matt/projects/ai-os/.env'})", "/Users/matt/projects/ai-os", True, "Block JS tools.read_file on '.env'"),
+        ("exec", "await tools.read_file({path: 'package.json'})", "/Users/matt/projects/ai-os", False, "Allow JS tools.read_file on 'package.json'"),
+        ("exec", "const r = await tools.exec_command({cmd: 'bun add lodash'});", "/Users/matt/projects/ai-os", False, "Allow JS tools.exec_command 'bun add'"),
     ]
 
     for tool_name, tool_inp, cwd, exp_block, desc in guardrail_cases:

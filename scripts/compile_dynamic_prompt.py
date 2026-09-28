@@ -13,7 +13,16 @@ import re
 import argparse
 from pathlib import Path
 
-PROJECT_ROOT = Path("/Users/matt/projects/ai-os")
+import subprocess
+
+def get_project_root() -> Path:
+    try:
+        res = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True)
+        return Path(res.stdout.strip()).resolve()
+    except Exception:
+        return Path(__file__).resolve().parent.parent
+
+PROJECT_ROOT = get_project_root()
 RULES_DIR = PROJECT_ROOT / ".rules"
 CONFIG_PATH = PROJECT_ROOT / "config" / "rules_config.json"
 

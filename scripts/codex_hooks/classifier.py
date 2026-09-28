@@ -17,6 +17,7 @@ Implements a 3-tier routing architecture:
 import os
 import sys
 import re
+import json
 import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional, Set, List
@@ -128,10 +129,24 @@ def load_policy_pack(pack_name: str) -> str:
     return ""
 
 
+def is_mem0_prompt_enabled() -> bool:
+    """Checks hooks_config.json to see if Mem0 retrieval is enabled on prompt submission."""
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return bool(data.get("enable_mem0_on_prompt", False))
+        except Exception:
+            pass
+    return False
+
+
 def retrieve_mem0_context(prompt: str) -> str:
     """Queries local Mem0 via aios_memory.py for relevant user facts."""
     try:
-        aios_memory_path = Path("/Users/matt/projects/ai-os/scripts/aios_memory.py")
+        current_script_dir = Path(__file__).resolve().parent.parent
+        worktree_aios_memory = current_script_dir / "aios_memory.py"
+        aios_memory_path = worktree_aios_memory if worktree_aios_memory.exists() else Path("/Users/matt/projects/ai-os/scripts/aios_memory.py")
         if not aios_memory_path.exists():
             return ""
 
@@ -139,14 +154,14 @@ def retrieve_mem0_context(prompt: str) -> str:
         hermes_python = Path("/Users/matt/.hermes/hermes-agent/venv/bin/python")
         python_exec = str(hermes_python) if hermes_python.exists() else sys.executable
 
-        # Run query with generous timeout for warm/cold vector search
+        # Run query with 2.5s timeout (within Codex 3.0s hook budget)
         res = subprocess.run(
             [python_exec, str(aios_memory_path), "prefetch", prompt],
             capture_output=True,
             text=True,
-            timeout=6.0
+            timeout=2.5
         )
-        if res.returncode == 0:
+        if res.returncode == 0 and res.stdout.strip():
             return res.stdout.strip()
     except Exception:
         pass
@@ -221,13 +236,14 @@ def classify_and_inject(payload: Dict[str, Any]) -> Dict[str, Any]:
             context_chunks.append(f"<!-- {pack} -->\n{content}")
 
     # ─────────────────────────────────────────────────────────────
-    # TIER 2: Conditional Mem0 Semantic Recall (30-60ms)
+    # TIER 2: Conditional Mem0 Semantic Recall (Cold: ~2.0s, Warm: ~1.8s)
     # ─────────────────────────────────────────────────────────────
-    # Only retrieve from Mem0 if user asked for preferences, past setup, or reminders
-    if MEMORY_RECALL_PATTERNS.search(prompt) or "policy_reminders" in selected_packs:
-        mem0_block = retrieve_mem0_context(prompt)
-        if mem0_block:
-            context_chunks.append(mem0_block)
+    # Only retrieve from Mem0 if explicitly enabled in hooks_config.json AND user asked for preferences/setup
+    if is_mem0_prompt_enabled():
+        if MEMORY_RECALL_PATTERNS.search(prompt) or "policy_reminders" in selected_packs:
+            mem0_block = retrieve_mem0_context(prompt)
+            if mem0_block:
+                context_chunks.append(mem0_block)
 
     # Assemble final additionalContext string
     if not context_chunks:
