@@ -210,6 +210,20 @@ def test_resolve_executable_returns_path_for_python():
     assert out is None or os.path.isabs(out)
 
 
+@pytest.mark.skipif(is_windows(), reason="POSIX-only check")
+def test_resolve_executable_finds_user_bin_when_path_is_stripped(
+    tmp_path, monkeypatch: pytest.MonkeyPatch,
+):
+    executable = tmp_path / ".local" / "bin" / "agy-probe"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("#!/bin/sh\nprintf 'AGY_PATH_PROBE_OK\\n'\n", encoding="utf-8")
+    executable.chmod(0o755)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+
+    assert resolve_executable("agy-probe") == str(executable.resolve())
+
+
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------

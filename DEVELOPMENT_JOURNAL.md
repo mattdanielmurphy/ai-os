@@ -1,7 +1,7 @@
 # Development Journal
 
 ## 2026-09-29
-- **Agy MCP handoff reliability:** Traced an immediate failure to a timeout supplied in milliseconds where the bridge expects seconds, and a Chrome-extension Codex process whose stripped `PATH` hid the installed `agy` executable. Added POSIX user-bin discovery, truthful backend diagnostics, and explicit timeout-unit descriptions. No tests were run. [[log]](agent-logs/2026-09-29_11-34_agy-mcp-handoff-reliability.md)
+- **Agy MCP handoff reliability:** Traced an immediate failure to a timeout supplied in milliseconds where the bridge expects seconds, and a Chrome-extension Codex process whose stripped `PATH` hid the installed `agy` executable. Added POSIX user-bin discovery, truthful backend diagnostics, timeout-unit descriptions, and regression tests. The focused suite passed 294 tests, and a live adapter probe succeeded with a stripped `PATH`. Added the always-test requirement to `.rules/core_safety.md`. [[log]](agent-logs/2026-09-29_11-34_agy-mcp-handoff-reliability.md)
 
 ## 2026-09-27
 - **First-party Agy MCP integration and full permissions:** Moved the maintained bridge into `tools/agy-mcp`, migrated it to MCP v2, and repointed the global editable installation to the monorepo. Every bridge invocation now receives write-enabled, unsandboxed, noninteractive execution; Codex now treats it as a required startup dependency rather than applying the optional one-second MCP grace period. [[log]](agent-logs/2026-09-27_17-20_agy-mcp-monorepo-and-full-permissions.md)

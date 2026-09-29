@@ -106,7 +106,8 @@ def select_backend(
         return f"missing ({reasons})" if reasons else "missing"
 
     warnings.append(
-        f"no backend available: {_diag('agy', cap_agy)}, {_diag('gemini', cap_gem)}"
+        f"no backend available: agy {_diag('agy', cap_agy)}, "
+        f"gemini {_diag('gemini', cap_gem)}"
     )
     return agy, warnings
 
