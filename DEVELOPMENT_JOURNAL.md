@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-09-29
+- **Agy MCP handoff reliability:** Traced an immediate failure to a timeout supplied in milliseconds where the bridge expects seconds, and a Chrome-extension Codex process whose stripped `PATH` hid the installed `agy` executable. Added POSIX user-bin discovery, truthful backend diagnostics, and explicit timeout-unit descriptions. No tests were run. [[log]](agent-logs/2026-09-29_11-34_agy-mcp-handoff-reliability.md)
+
 ## 2026-09-27
 - **First-party Agy MCP integration and full permissions:** Moved the maintained bridge into `tools/agy-mcp`, migrated it to MCP v2, and repointed the global editable installation to the monorepo. Every bridge invocation now receives write-enabled, unsandboxed, noninteractive execution; Codex now treats it as a required startup dependency rather than applying the optional one-second MCP grace period. [[log]](agent-logs/2026-09-27_17-20_agy-mcp-monorepo-and-full-permissions.md)
 - **Dynamic Codex Hook-Based Policy Engine (`scripts/codex_hooks/`):** Replaced the static 24 KB monolithic global `~/.codex/AGENTS.md` with an event-driven policy system decoupled from `preflight.py`. Added a sub-millisecond 3-tier prompt classifier (`UserPromptSubmit`) with zero token injection for casual chats and conditional Mem0 recall (cold benchmark: 2,028ms, gated off by default), deterministic hard execution gates (`PreToolUse`) parsing shell commands, dict payloads, and JS AST calls (`tools.exec_command`, `tools.read_file`) to block `rm`, secret reads, and `npm`/`pnpm`, plus rollout/rollback management and 35 passing automated tests. [[log]](agent-logs/2026-09-27_22-00_codex_dynamic_policy_reconciliation.md)
