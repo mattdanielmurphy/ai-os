@@ -4,6 +4,7 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
+from urllib.parse import urlsplit
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
@@ -488,9 +489,16 @@ class TelegramGateway:
         photo_url: str,
         caption: Optional[str] = None,
     ) -> Optional[int]:
-        """Ask Telegram to fetch and send an image hosted by GoComics."""
-        if not photo_url.startswith("https://featureassets.gocomics.com/assets/"):
-            logger.warning("send_photo_url rejected a URL outside the GoComics image host")
+        """Ask Telegram to fetch and send an image hosted by an allowed comic CDN."""
+        parsed_url = urlsplit(photo_url)
+        if (
+            parsed_url.scheme != "https"
+            or parsed_url.hostname not in {"static.explosm.net", "files.explosm.net"}
+        ):
+            logger.warning(
+                "send_photo_url rejected a URL outside allowed comic hosts: %s",
+                photo_url,
+            )
             return None
 
         if not self.config.is_telegram_ready() or not self.app:
@@ -514,11 +522,11 @@ class TelegramGateway:
                 caption=caption_html,
                 parse_mode=ParseMode.HTML if caption_html else None,
             )
-            logger.info(f"Sent GoComics photo to Telegram (msg_id={message.message_id})")
+            logger.info(f"Sent comic photo to Telegram (msg_id={message.message_id})")
             return message.message_id
         except Exception as exc:
             logger.warning(
-                "Failed to send GoComics photo with formatted caption (%s)",
+                "Failed to send comic photo with formatted caption (%s)",
                 type(exc).__name__,
             )
             try:
@@ -527,10 +535,10 @@ class TelegramGateway:
                     photo=photo_url,
                     caption=caption,
                 )
-                logger.info(f"Sent GoComics photo with plain caption (msg_id={message.message_id})")
+                logger.info(f"Sent comic photo with plain caption (msg_id={message.message_id})")
                 return message.message_id
             except Exception as fallback_exc:
-                logger.error("Failed to send GoComics photo (%s)", type(fallback_exc).__name__)
+                logger.error("Failed to send comic photo (%s)", type(fallback_exc).__name__)
                 return None
 
     async def send_video(
