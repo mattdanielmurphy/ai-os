@@ -1100,3 +1100,310 @@ async def test_media_extraction_and_delivery():
         assert "Here is your meditation." in history[0]["content"]
 
         await db.close()
+
+
+# -----------------------------------------------------------------------------
+# Cyanide & Happiness Comic & Morning Review Continuation Tests
+# -----------------------------------------------------------------------------
+def test_cyanide_and_happiness_comic_module():
+    from services.assistant.briefing.comic import (
+        _ExplosmComicParser,
+        _fetch_comic_image_and_page,
+        cyanide_and_happiness_page_url,
+    )
+    from unittest.mock import MagicMock, patch
+
+    # 1. Page URL generation
+    assert cyanide_and_happiness_page_url() == "https://explosm.net/comics/latest"
+    assert (
+        cyanide_and_happiness_page_url("abled")
+        == "https://explosm.net/comics/abled"
+    )
+    assert (
+        cyanide_and_happiness_page_url("https://explosm.net/comics/crosses")
+        == "https://explosm.net/comics/crosses"
+    )
+
+    # 2. HTML parser extracts primary comic image with data-nimg="fill"
+    sample_html = (
+        '<html><head><title>Cyanide &amp; Happiness</title></head><body>'
+        '<img src="https://static.explosm.net/2021/11/rob.jpg" decoding="async" />'
+        '<img src="https://static.explosm.net/2026/09/28150930/abled.png" data-nimg="fill" />'
+        '</body></html>'
+    )
+    parser = _ExplosmComicParser()
+    parser.feed(sample_html)
+    assert parser.image_url == "https://static.explosm.net/2026/09/28150930/abled.png"
+
+    # 3. Next.js __NEXT_DATA__ JSON fallback
+    next_data_html = (
+        '<html><body>'
+        '<script id="__NEXT_DATA__" type="application/json">'
+        '{"props":{"pageProps":{"urqlState":{"123":{"data":"{\\"comic\\":{\\"comicDetails\\":{\\"comicimgstaticbucketurl\\":{\\"mediaItemUrl\\":\\"https://static.explosm.net/2026/09/27142859/crosses.png\\"}}}}"}'
+        '}}}}</script></body></html>'
+    )
+    mock_resp = MagicMock()
+    mock_resp.geturl.return_value = "https://explosm.net/comics/crosses"
+    mock_resp.read.return_value = next_data_html.encode("utf-8")
+    mock_resp.__enter__.return_value = mock_resp
+    mock_resp.__exit__.return_value = None
+
+    with patch("services.assistant.briefing.comic.urlopen", return_value=mock_resp):
+        img_url, page_url = _fetch_comic_image_and_page("https://explosm.net/comics/crosses")
+        assert img_url == "https://static.explosm.net/2026/09/27142859/crosses.png"
+        assert page_url == "https://explosm.net/comics/crosses"
+
+    # 4. Host validation rejects unsupported image hosts
+    bad_html = '<html><body><img src="https://untrusted.com/comic.png" data-nimg="fill" /></body></html>'
+    mock_bad_resp = MagicMock()
+    mock_bad_resp.geturl.return_value = "https://explosm.net/comics/bad"
+    mock_bad_resp.read.return_value = bad_html.encode("utf-8")
+    mock_bad_resp.__enter__.return_value = mock_bad_resp
+    mock_bad_resp.__exit__.return_value = None
+
+    with patch("services.assistant.briefing.comic.urlopen", return_value=mock_bad_resp):
+        with pytest.raises(ValueError, match="supported Cyanide and Happiness comic image URL"):
+            _fetch_comic_image_and_page("https://explosm.net/comics/bad")
+
+
+@pytest.mark.asyncio
+async def test_morning_review_multi_card_continuation_and_reward():
+    from unittest.mock import patch
+    from services.assistant.run import AssistantDaemon
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        db_path = Path(tmpdir) / "test.db"
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+            morning_review_card_threshold=1,
+        )
+        daemon = AssistantDaemon(config=cfg)
+        await daemon.db.connect()
+
+        now = datetime.now(timezone.utc)
+        # Seed two due flashcards
+        await daemon.db.add_or_update_card(
+            card_id="card_1",
+            deck_type="cold_storage",
+            prompt="Question 1",
+            answer="Answer 1",
+            elaboration="Context 1",
+            stability=1.0,
+            difficulty=1.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now - timedelta(minutes=10),
+        )
+        await daemon.db.add_or_update_card(
+            card_id="card_2",
+            deck_type="cold_storage",
+            prompt="Question 2",
+            answer="Answer 2",
+            elaboration="Context 2",
+            stability=1.0,
+            difficulty=1.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now - timedelta(minutes=5),
+        )
+
+        # 1. Trigger /morning
+        await daemon.dispatcher.cmd_morning(chat_id=12345)
+        signals = await daemon.db.get_awaiting_signals()
+        assert len(signals) == 1
+        morning_msg_id = signals[0]["message_id"]
+
+        # 2. Complete centering
+        await daemon.dispatcher.handle_callback_str("briefing:meditate_done", 12345, morning_msg_id)
+
+        # 3. Log gratitude
+        await daemon.dispatcher.handle_text_message("Grateful for crisp morning air", 12345, 999)
+        active_signals = await daemon.db.get_awaiting_signals()
+        review_prompt_msg_id = active_signals[0]["message_id"]
+        review_prompt = daemon.gateway._dry_run_messages[review_prompt_msg_id]
+        assert "Spaced-Repetition Review" in review_prompt["text"]
+        assert review_prompt["keyboard"][0][0]["callback_data"] == "briefing:review"
+
+        # 4. Start review step (dispatches Card 1)
+        fake_comic = (
+            "https://static.explosm.net/2026/09/28150930/abled.png",
+            "https://explosm.net/comics/abled",
+        )
+        with patch(
+            "services.assistant.telegram_gateway.handlers.fetch_daily_cyanide_and_happiness_comic",
+            return_value=fake_comic,
+        ):
+            await daemon.dispatcher.handle_callback_str("briefing:review", 12345, review_prompt_msg_id)
+
+            card_signals = [
+                s for s in await daemon.db.get_awaiting_signals()
+                if s["trigger_id"].startswith("trig_fsrs_")
+            ]
+            assert len(card_signals) == 1
+            card_msg_id = card_signals[0]["message_id"]
+            card_id = card_signals[0]["trigger_id"].replace("trig_fsrs_", "")
+
+            # 5. Reveal and rate Card 1 (Good: 3)
+            await daemon.db.set_dynamic(f"fsrs_revealed:{card_msg_id}", "true")
+            await daemon.dispatcher.handle_callback_str(f"fsrs:{card_id}:3", 12345, card_msg_id)
+
+            # Check: Comic reward was sent exactly once
+            photo_messages = [
+                msg for msg in daemon.gateway._dry_run_messages.values()
+                if msg.get("type") == "photo"
+            ]
+            assert len(photo_messages) == 1
+            assert "Cyanide & Happiness by Explosm" in photo_messages[0]["caption"]
+            assert photo_messages[0]["url"] == fake_comic[0]
+
+            # Check: Because Card 2 is still due, prompt offers more review vs finish
+            choice_signals = [
+                s for s in await daemon.db.get_awaiting_signals()
+                if s["trigger_id"] == "trig_morning_manual"
+            ]
+            assert len(choice_signals) == 1
+            choice_msg = daemon.gateway._dry_run_messages[choice_signals[0]["message_id"]]
+            assert "Daily target met!" in choice_msg["text"]
+            assert choice_msg["keyboard"][0][0]["callback_data"] == "briefing:review_more"
+            assert choice_msg["keyboard"][0][1]["callback_data"] == "briefing:finish"
+
+            # 6. User chooses "Review more"
+            await daemon.dispatcher.handle_callback_str(
+                "briefing:review_more", 12345, choice_signals[0]["message_id"]
+            )
+
+            # Card 2 is dispatched
+            card2_signals = [
+                s for s in await daemon.db.get_awaiting_signals()
+                if s["trigger_id"].startswith("trig_fsrs_")
+            ]
+            assert len(card2_signals) == 1
+            card2_msg_id = card2_signals[0]["message_id"]
+            card2_id = card2_signals[0]["trigger_id"].replace("trig_fsrs_", "")
+            assert card2_id != card_id
+
+            # 7. Rate Card 2
+            await daemon.db.set_dynamic(f"fsrs_revealed:{card2_msg_id}", "true")
+            await daemon.dispatcher.handle_callback_str(f"fsrs:{card2_id}:3", 12345, card2_msg_id)
+
+            # Check: Comic was NOT sent a second time (still exactly 1 photo)
+            photo_messages_after = [
+                msg for msg in daemon.gateway._dry_run_messages.values()
+                if msg.get("type") == "photo"
+            ]
+            assert len(photo_messages_after) == 1
+
+            # Check: All cards completed, morning flow stage is complete
+            flow_state = await daemon.dispatcher._morning_flow_state("trig_morning_manual")
+            assert flow_state.get("stage") == "complete"
+            assert flow_state.get("reward_granted") is True
+            assert flow_state.get("reviewed_cards_count") == 2
+
+        await daemon.db.close()
+
+
+@pytest.mark.asyncio
+async def test_morning_review_finish_choice():
+    from unittest.mock import patch
+    from services.assistant.run import AssistantDaemon
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        db_path = Path(tmpdir) / "test.db"
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+            morning_review_card_threshold=1,
+        )
+        daemon = AssistantDaemon(config=cfg)
+        await daemon.db.connect()
+
+        now = datetime.now(timezone.utc)
+        await daemon.db.add_or_update_card(
+            card_id="card_A",
+            deck_type="cold_storage",
+            prompt="Question A",
+            answer="Answer A",
+            elaboration="",
+            stability=1.0,
+            difficulty=1.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now - timedelta(minutes=10),
+        )
+        await daemon.db.add_or_update_card(
+            card_id="card_B",
+            deck_type="cold_storage",
+            prompt="Question B",
+            answer="Answer B",
+            elaboration="",
+            stability=1.0,
+            difficulty=1.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now - timedelta(minutes=5),
+        )
+
+        await daemon.dispatcher.cmd_morning(chat_id=12345)
+        signals = await daemon.db.get_awaiting_signals()
+        m_id = signals[0]["message_id"]
+
+        await daemon.dispatcher.handle_callback_str("briefing:meditate_done", 12345, m_id)
+        await daemon.dispatcher.handle_text_message("Grateful for good coffee", 12345, 999)
+
+        active = await daemon.db.get_awaiting_signals()
+        rev_id = active[0]["message_id"]
+
+        fake_comic = (
+            "https://static.explosm.net/2026/09/28150930/abled.png",
+            "https://explosm.net/comics/abled",
+        )
+        with patch(
+            "services.assistant.telegram_gateway.handlers.fetch_daily_cyanide_and_happiness_comic",
+            return_value=fake_comic,
+        ):
+            await daemon.dispatcher.handle_callback_str("briefing:review", 12345, rev_id)
+
+            card_signals = [
+                s for s in await daemon.db.get_awaiting_signals()
+                if s["trigger_id"].startswith("trig_fsrs_")
+            ]
+            c_msg_id = card_signals[0]["message_id"]
+            c_id = card_signals[0]["trigger_id"].replace("trig_fsrs_", "")
+
+            await daemon.db.set_dynamic(f"fsrs_revealed:{c_msg_id}", "true")
+            await daemon.dispatcher.handle_callback_str(f"fsrs:{c_id}:3", 12345, c_msg_id)
+
+            choice_signals = [
+                s for s in await daemon.db.get_awaiting_signals()
+                if s["trigger_id"] == "trig_morning_manual"
+            ]
+            choice_id = choice_signals[0]["message_id"]
+
+            # User taps "Finish for today"
+            success = await daemon.dispatcher.handle_callback_str("briefing:finish", 12345, choice_id)
+            assert success is True
+
+            flow_state = await daemon.dispatcher._morning_flow_state("trig_morning_manual")
+            assert flow_state.get("stage") == "complete"
+            assert flow_state.get("reward_granted") is True
+            assert flow_state.get("reviewed_cards_count") == 1
+
+            # Card B is still in database and due
+            card_b = await daemon.db.get_card("card_B")
+            assert card_b["reps"] == 0
+
+        await daemon.db.close()
+

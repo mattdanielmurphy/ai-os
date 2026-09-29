@@ -1,47 +1,58 @@
-"""Fetch a rotating Calvin and Hobbes comic image from the GoComics archive."""
+"""Fetch Cyanide and Happiness comic images from Explosm."""
 
 import asyncio
-from datetime import date, timedelta
+import json
+import logging
+import re
 from html.parser import HTMLParser
-from typing import Dict, Optional, Tuple
+from typing import Optional, Tuple
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+logger = logging.getLogger("assistant.briefing.comic")
 
-COMIC_RUN_START = date(1985, 11, 18)
-COMIC_RUN_END = date(1995, 12, 31)
+EXPLOSM_BASE_URL = "https://explosm.net"
+EXPLOSM_LATEST_URL = "https://explosm.net/comics/latest"
+ALLOWED_COMIC_HOSTS = {"static.explosm.net", "files.explosm.net"}
 
 
-class _OpenGraphParser(HTMLParser):
+class _ExplosmComicParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
-        self.values: Dict[str, str] = {}
+        self.image_url: Optional[str] = None
+        self.og_image: Optional[str] = None
 
     def handle_starttag(self, tag: str, attrs) -> None:
-        if tag != "meta":
-            return
-        values = dict(attrs)
-        key = values.get("property") or values.get("name")
-        if key in {"og:image", "og:title"} and values.get("content"):
-            self.values[key] = values["content"]
+        attrs_dict = dict(attrs)
+        if tag == "meta":
+            key = attrs_dict.get("property") or attrs_dict.get("name")
+            if key == "og:image" and attrs_dict.get("content"):
+                self.og_image = attrs_dict["content"]
+        elif tag == "img":
+            src = attrs_dict.get("src")
+            if not src:
+                return
+            parsed = urlsplit(src)
+            if parsed.hostname in ALLOWED_COMIC_HOSTS:
+                # The primary comic strip has data-nimg="fill"
+                if attrs_dict.get("data-nimg") == "fill" and not self.image_url:
+                    self.image_url = src
 
 
-def daily_calvin_hobbes_date(today: Optional[date] = None) -> date:
-    """Select a different archive date each day and cycle through the strip's run."""
-    current_day = today or date.today()
-    run_length = (COMIC_RUN_END - COMIC_RUN_START).days + 1
-    offset = (current_day - COMIC_RUN_START).days % run_length
-    return COMIC_RUN_START + timedelta(days=offset)
+def cyanide_and_happiness_page_url(slug_or_url: Optional[str] = None) -> str:
+    """Return the Explosm comic page URL."""
+    if not slug_or_url:
+        return EXPLOSM_LATEST_URL
+    clean = str(slug_or_url).strip()
+    if clean.startswith("http://") or clean.startswith("https://"):
+        return clean
+    return f"{EXPLOSM_BASE_URL}/comics/{clean.lstrip('/')}"
 
 
-def calvin_hobbes_page_url(comic_day: Optional[date] = None) -> str:
-    selected_day = comic_day or daily_calvin_hobbes_date()
-    return f"https://www.gocomics.com/calvinandhobbes/{selected_day:%Y/%m/%d}"
-
-
-def _fetch_image_url(page_url: str) -> str:
+def _fetch_comic_image_and_page(target_url: str) -> Tuple[str, str]:
+    """Fetch the page and extract both the comic image URL and canonical page URL."""
     request = Request(
-        page_url,
+        target_url,
         headers={
             "User-Agent": (
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -49,26 +60,68 @@ def _fetch_image_url(page_url: str) -> str:
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Accept-Language": "en-CA,en;q=0.9",
-            "Referer": "https://www.gocomics.com/calvinandhobbes",
+            "Referer": EXPLOSM_BASE_URL,
         },
     )
     with urlopen(request, timeout=12) as response:
-        parser = _OpenGraphParser()
-        parser.feed(response.read(2_000_000).decode("utf-8", "replace"))
+        canonical_page_url = response.geturl()
+        html_content = response.read(2_000_000).decode("utf-8", "replace")
 
-    image_url = parser.values.get("og:image")
+    parser = _ExplosmComicParser()
+    parser.feed(html_content)
+    image_url = parser.image_url
+
+    # Fallback 1: Extract from Next.js state (__NEXT_DATA__)
+    if not image_url:
+        match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', html_content)
+        if match:
+            try:
+                data = json.loads(match.group(1))
+                urql = data.get("props", {}).get("pageProps", {}).get("urqlState", {})
+                for entry in urql.values():
+                    try:
+                        inner = json.loads(entry.get("data", "{}"))
+                        if "comic" in inner and isinstance(inner["comic"], dict):
+                            details = inner["comic"].get("comicDetails", {})
+                            bucket = details.get("comicimgstaticbucketurl") or {}
+                            cand = bucket.get("mediaItemUrl") or details.get("comicimgurl")
+                            if cand:
+                                if cand.startswith("http://") or cand.startswith("https://"):
+                                    image_url = cand
+                                else:
+                                    image_url = f"https://files.explosm.net/comics/{cand.lstrip('/')}"
+                                break
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+    # Fallback 2: OpenGraph image tag if hosted on an allowed domain
+    if not image_url and parser.og_image:
+        parsed_og = urlsplit(parser.og_image)
+        if parsed_og.hostname in ALLOWED_COMIC_HOSTS:
+            image_url = parser.og_image
+
     parsed_url = urlsplit(image_url or "")
     if (
         parsed_url.scheme != "https"
-        or parsed_url.hostname != "featureassets.gocomics.com"
-        or not parsed_url.path.startswith("/assets/")
+        or parsed_url.hostname not in ALLOWED_COMIC_HOSTS
+        or not parsed_url.path
     ):
-        raise ValueError("GoComics page did not provide a supported comic image URL")
-    return image_url
+        raise ValueError("Explosm page did not provide a supported Cyanide and Happiness comic image URL")
+
+    return image_url, canonical_page_url
 
 
-async def fetch_daily_calvin_hobbes_comic() -> Tuple[str, str]:
-    """Return the publisher-hosted image URL and its dated archive page URL."""
-    page_url = calvin_hobbes_page_url()
-    image_url = await asyncio.to_thread(_fetch_image_url, page_url)
-    return image_url, page_url
+async def fetch_daily_cyanide_and_happiness_comic(
+    page_url: Optional[str] = None,
+) -> Tuple[str, str]:
+    """Return the publisher-hosted image URL and its Explosm archive page URL."""
+    target = page_url or cyanide_and_happiness_page_url()
+    return await asyncio.to_thread(_fetch_comic_image_and_page, target)
+
+
+# Compatibility aliases
+fetch_daily_comic = fetch_daily_cyanide_and_happiness_comic
+calvin_hobbes_page_url = cyanide_and_happiness_page_url
+fetch_daily_calvin_hobbes_comic = fetch_daily_cyanide_and_happiness_comic

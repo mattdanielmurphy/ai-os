@@ -91,6 +91,7 @@ class AssistantConfig:
     morning_briefing_minute: int = 0
     morning_reminder_interval_seconds: int = 15 * 60
     morning_reminder_cutoff_hour: int = 12
+    morning_review_card_threshold: int = 1
 
     @property
     def habits_definitions_dir(self) -> Path:
