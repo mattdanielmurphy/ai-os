@@ -180,7 +180,10 @@ class BridgeRequest(BaseModel):
     sandbox: bool = False
     mode: Mode = "ask"
     return_all_messages: bool = False
-    timeout: int = 900
+    timeout: int = Field(
+        default=900,
+        description="Execution timeout in SECONDS (not milliseconds). Default is 900 (15 min), maximum is 86400 (24h).",
+    )
     detach: bool = False
     allow_write: bool = True
     # ``None`` means "use the value from config (env / config.toml)".
@@ -238,7 +241,7 @@ class BridgeRequest(BaseModel):
         if value > _TIMEOUT_MAX_SECONDS:
             raise ValueError(
                 f"timeout exceeds {_TIMEOUT_MAX_SECONDS} seconds "
-                f"({value} given); use mode='long' for jobs that exceed 24h",
+                f"({value} given); timeout must be in SECONDS (not milliseconds); use mode='long' for jobs that exceed 24h",
             )
         return value
 

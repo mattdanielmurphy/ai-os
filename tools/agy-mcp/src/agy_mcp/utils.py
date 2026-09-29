@@ -291,19 +291,28 @@ def resolve_executable(name_or_path: str | os.PathLike[str]) -> str | None:
     npm global directories (``%APPDATA%/npm``, ``%LOCALAPPDATA%/npm``,
     ``%ProgramFiles%/nodejs``, ``%NPM_CONFIG_PREFIX%``) so that ``gemini``
     installed via ``npm i -g @google/gemini-cli`` resolves without the user
-    having to fix PATH manually. Returns the absolute path or ``None``.
+    having to fix PATH manually. On POSIX systems we probe standard user binary
+    directories (``~/.local/bin``, ``~/.gemini/antigravity-cli/bin``, Homebrew,
+    ``~/.bun/bin``) when PATH is stripped. Returns the absolute path or ``None``.
     """
 
     import shutil
 
-    direct = shutil.which(str(name_or_path))
+    raw_str = str(name_or_path)
+    expanded = expand_user_path(raw_str)
+    direct = shutil.which(str(expanded))
     if direct:
         return direct
-    if not is_windows():
-        return None
-    candidate = Path(str(name_or_path))
-    if candidate.exists():
+    candidate = Path(expanded)
+    if candidate.is_file() and os.access(candidate, os.X_OK):
         return str(candidate.resolve())
+    if not is_windows():
+        if "/" not in raw_str and "\\" not in raw_str:
+            for base in posix_fallback_paths():
+                probe = base / raw_str
+                if probe.is_file() and os.access(probe, os.X_OK):
+                    return str(probe.resolve())
+        return None
     for ext in (".exe", ".cmd", ".bat", ".com"):
         result = shutil.which(str(name_or_path) + ext)
         if result:
@@ -317,6 +326,29 @@ def resolve_executable(name_or_path: str | os.PathLike[str]) -> str | None:
             if probe.is_file():
                 return str(probe)
     return None
+
+
+def posix_fallback_paths() -> list[Path]:
+    """Return existing standard user binary directories on POSIX systems.
+
+    Probes well-known user bin prefixes (e.g. ``~/.local/bin``,
+    ``~/.gemini/antigravity-cli/bin``, Homebrew, ``~/.bun/bin``) so that binaries
+    like ``agy`` and ``gemini`` resolve even when launched under non-interactive
+    or stripped environments (e.g. Chrome extension hosts, LaunchAgents).
+    Windows returns an empty list.
+    """
+
+    if is_windows():
+        return []
+    home = Path.home()
+    candidates = [
+        home / ".local" / "bin",
+        home / ".gemini" / "antigravity-cli" / "bin",
+        Path("/opt/homebrew/bin"),
+        Path("/usr/local/bin"),
+        home / ".bun" / "bin",
+    ]
+    return [p for p in candidates if p.is_dir()]
 
 
 def windows_npm_paths() -> list[Path]:
@@ -807,6 +839,7 @@ __all__ = [
     "ensure_directory",
     "expand_user_path",
     "is_windows",
+    "posix_fallback_paths",
     "prepare_subprocess_command",
     "redact_command",
     "redact_text",

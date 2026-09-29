@@ -270,8 +270,11 @@ class Supervisor:
         ]
 
         if not cap.bin_path:
+            error_msg = " | ".join(route_warnings_redacted)
+            if not error_msg and cap_warnings:
+                error_msg = "; ".join(cap_warnings)
             error_text = (
-                " | ".join(route_warnings_redacted)
+                error_msg
                 or self.safety.redact(f"backend={backend_name!r} unavailable")
             )
             return BridgeResponse(

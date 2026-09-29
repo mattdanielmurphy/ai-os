@@ -95,11 +95,18 @@ def select_backend(
         )
         return gemini, warnings
     # Neither available — return agy so the caller sees the upstream warnings.
+    def _diag(name: str, cap: Capability) -> str:
+        if cap.bin_path:
+            if not cap.authenticated and name == "agy":
+                return "unauthenticated"
+            if not cap.supports_print and name == "agy":
+                return "unusable (--print missing)"
+            return "ok"
+        reasons = "; ".join(cap.warnings)
+        return f"missing ({reasons})" if reasons else "missing"
+
     warnings.append(
-        "no backend available: agy "
-        + ("ok" if cap_agy.bin_path else "missing")
-        + ", gemini "
-        + ("ok" if cap_gem.bin_path else "missing")
+        f"no backend available: {_diag('agy', cap_agy)}, {_diag('gemini', cap_gem)}"
     )
     return agy, warnings
 
