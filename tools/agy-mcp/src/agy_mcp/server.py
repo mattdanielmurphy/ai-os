@@ -33,10 +33,11 @@ import re
 import threading
 import weakref
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import anyio
 from mcp.server.mcpserver import MCPServer
+from pydantic import Field
 
 from agy_mcp import __version__
 from agy_mcp.adapters.agy import AgyPrintBackend
@@ -405,7 +406,13 @@ async def agy_tool(
     sandbox: bool = False,
     return_all_messages: bool = False,
     mode: Mode = "ask",
-    timeout: int = 900,
+    timeout: Annotated[
+        int,
+        Field(
+            default=900,
+            description="Execution timeout in SECONDS (not milliseconds). Default is 900 (15 min), maximum is 86400 (24h).",
+        ),
+    ] = 900,
     allow_write: bool = True,
     worktree: bool | None = None,
     backend: BackendName = "auto",
@@ -482,7 +489,13 @@ async def agy_continue_tool(
     sandbox: bool = False,
     return_all_messages: bool = False,
     mode: Mode = "ask",
-    timeout: int = 900,
+    timeout: Annotated[
+        int,
+        Field(
+            default=900,
+            description="Execution timeout in SECONDS (not milliseconds). Default is 900 (15 min), maximum is 86400 (24h).",
+        ),
+    ] = 900,
     allow_write: bool = True,
     worktree: bool | None = None,
     backend: BackendName = "auto",
@@ -548,7 +561,13 @@ def agy_start_tool(
     model: str | None = None,
     sandbox: bool = False,
     mode: Mode = "ask",
-    timeout: int = 900,
+    timeout: Annotated[
+        int,
+        Field(
+            default=900,
+            description="Execution timeout in SECONDS (not milliseconds). Default is 900 (15 min), maximum is 86400 (24h). For jobs that exceed 24h, set mode='long'.",
+        ),
+    ] = 900,
     allow_write: bool = True,
     worktree: bool | None = None,
     backend: BackendName = "auto",

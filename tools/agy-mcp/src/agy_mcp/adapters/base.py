@@ -382,7 +382,7 @@ class BaseAdapter(abc.ABC):
     # ------------------------------------------------------------------
 
     def locate_binary(self, default_name: str) -> str | None:
-        candidate = self.bin_override or shutil_which_or_none(default_name)
+        candidate = self.bin_override or default_name
         if candidate:
             resolved = resolve_executable(candidate)
             if resolved:

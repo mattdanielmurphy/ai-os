@@ -415,10 +415,13 @@ def _run_unsafe(
     # usable binary. Creating a worktree just to tear it down moments later
     # leaks state and wastes time (Phase 3 review P1.3).
     if not cap.bin_path and not request.dry_run:
+        error_msg = " | ".join(route_warnings_redacted)
+        if not error_msg and cap_warnings:
+            error_msg = "; ".join(cap_warnings)
         return BridgeResponse(
             success=False,
             error=(
-                " | ".join(route_warnings_redacted)
+                error_msg
                 or safety.redact(f"backend={backend_name!r} unavailable")
             ),
             warnings=cap_warnings,
