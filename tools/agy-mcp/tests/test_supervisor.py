@@ -353,7 +353,8 @@ def test_start_short_circuits_when_backend_unavailable(tmp_path: Path):
     request = BridgeRequest(prompt="hi", cwd=str(tmp_path))
     response = supervisor.start(request)
     assert response.success is False
-    assert "agy" in (response.error or "")
+    assert "agy missing" in (response.error or "")
+    assert "agy missing" in (response.warnings[0] if response.warnings else "")
     # No job dir should have been created.
     assert not any(tmp_path.iterdir())
 
@@ -446,10 +447,10 @@ def test_start_execute_runs_inside_retained_worktree(tmp_path: Path):
     )
     assert adapter.run_requests
     run_cwd = Path(adapter.run_requests[0].cwd)
-    assert run_cwd == Path(response.cwd)
+    assert run_cwd == Path(response.cwd).expanduser()
     assert run_cwd.exists()
     record = supervisor.status(response.job_id)
-    assert record.cwd == str(run_cwd)
+    assert Path(record.cwd).expanduser() == run_cwd
 
     cleanup_worktree(
         WorktreeHandle(

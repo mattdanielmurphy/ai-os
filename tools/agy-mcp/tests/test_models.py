@@ -80,6 +80,7 @@ def test_bridge_request_rejects_oversized_timeout():
     with pytest.raises(ValidationError) as excinfo:
         BridgeRequest(prompt="x", timeout=86_401)  # 1s over 24h
     assert "timeout exceeds" in str(excinfo.value)
+    assert "SECONDS (not milliseconds)" in str(excinfo.value)
 
 
 def test_bridge_request_rejects_oversized_session_id():

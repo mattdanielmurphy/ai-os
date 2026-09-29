@@ -468,8 +468,14 @@ def test_select_backend_auto_falls_back_to_gemini_when_agy_unauth(monkeypatch):
 
 
 def test_select_backend_auto_returns_agy_when_both_missing(monkeypatch):
-    cap_agy = _capability("agy", bin_path="", supports_print=False)
-    cap_gem = _capability("gemini", bin_path="", supports_streaming=False)
+    cap_agy = _capability(
+        "agy", bin_path="", supports_print=False,
+        warnings=["'agy' not found on PATH; set AGY_BIN to override"],
+    )
+    cap_gem = _capability(
+        "gemini", bin_path="", supports_streaming=False,
+        warnings=["'gemini' not found on PATH"],
+    )
     fake_agy = _FakeAdapter(capability=cap_agy, run_result=_result())
     fake_gem = _FakeAdapter(capability=cap_gem, run_result=_result())
 
@@ -481,6 +487,8 @@ def test_select_backend_auto_returns_agy_when_both_missing(monkeypatch):
     adapter, warnings = _select_backend(request, _default_config(), _safety())
     assert adapter is fake_agy
     assert any("no backend available" in w for w in warnings)
+    assert any("agy missing ('agy' not found on PATH" in w for w in warnings)
+    assert any("gemini missing ('gemini' not found on PATH" in w for w in warnings)
 
 
 def test_select_backend_explicit_returns_requested(monkeypatch):
@@ -1082,7 +1090,7 @@ def test_run_unsafe_execute_retains_worktree_after_success(monkeypatch, tmp_path
     assert fake.run_calls
     run_cwd = Path(fake.run_calls[0].cwd)
     assert run_cwd.exists()
-    assert run_cwd == Path(resp.cwd)
+    assert run_cwd == Path(resp.cwd).expanduser()
     assert ".agy-mcp/worktrees/sess-bridge" in resp.cwd
     assert any("retained for review" in warning for warning in resp.warnings)
 

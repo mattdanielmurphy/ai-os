@@ -1374,6 +1374,24 @@ def test_agy_read_translate_schema_is_anyof_enum_or_null(reset_state):
     assert null_branch == {"type": "null"}
 
 
+def test_agy_timeout_schema_explains_seconds_for_all_entrypoints(reset_state):
+    import asyncio
+
+    async def _get_schemas() -> dict[str, dict]:
+        tools = await server.mcp.list_tools()
+        return {
+            tool.name: tool.input_schema
+            for tool in tools
+            if tool.name in {"agy", "agy_continue", "agy_start"}
+        }
+
+    schemas = asyncio.run(_get_schemas())
+    assert set(schemas) == {"agy", "agy_continue", "agy_start"}
+    for schema in schemas.values():
+        timeout = schema["properties"]["timeout"]
+        assert "SECONDS (not milliseconds)" in timeout["description"]
+
+
 # ---------------------------------------------------------------------------
 # Phase 9: structuredContent / typed return regression suite
 # ---------------------------------------------------------------------------
