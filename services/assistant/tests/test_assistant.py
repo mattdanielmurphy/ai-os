@@ -388,6 +388,10 @@ async def test_end_to_end_action_dispatcher():
             timeout_at=now + timedelta(minutes=45),
         )
 
+        # Simulate user revealing answer before rating
+        ok_reveal = await dispatcher.handle_callback_str("fsrs_reveal:c99", chat_id=999, message_id=201)
+        assert ok_reveal is True
+
         # Simulate user tapping "Good" button (rating=3)
         ok = await dispatcher.handle_callback_str("fsrs:c99:3", chat_id=999, message_id=201)
         assert ok is True
@@ -734,6 +738,7 @@ async def test_morning_briefing_builder_and_gratitude():
 
 @pytest.mark.asyncio
 async def test_morning_briefing_dispatch_and_callbacks():
+    from unittest.mock import patch
     from services.assistant.briefing.engine import MorningBriefingBuilder
     from services.assistant.run import AssistantDaemon
 
@@ -782,9 +787,30 @@ async def test_morning_briefing_dispatch_and_callbacks():
         today_log = vault / "habits" / "logs" / f"{datetime.now().strftime('%Y-%m-%d')}.md"
         assert today_log.exists()
         assert "high-bandwidth thinking" in today_log.read_text(encoding="utf-8")
-        prompt = daemon.gateway._dry_run_messages[signals[0]["message_id"]]
+        active_review_signals = await daemon.db.get_awaiting_signals()
+        assert len(active_review_signals) == 1
+        prompt = daemon.gateway._dry_run_messages[active_review_signals[0]["message_id"]]
         assert "Spaced-Repetition Review" in prompt["text"]
         assert prompt["keyboard"][0][0]["callback_data"] == "briefing:review"
+
+        # 6. Tapping review when no card is due completes the morning check-in and grants C&H reward
+        fake_comic = (
+            "https://static.explosm.net/2026/09/28150930/abled.png",
+            "https://explosm.net/comics/abled",
+        )
+        with patch(
+            "services.assistant.telegram_gateway.handlers.fetch_daily_cyanide_and_happiness_comic",
+            return_value=fake_comic,
+        ):
+            ok_rev = await daemon.dispatcher.handle_callback_str(
+                "briefing:review", 12345, active_review_signals[0]["message_id"]
+            )
+            assert ok_rev is True
+            flow_state = await daemon.dispatcher._morning_flow_state("trig_morning_manual")
+            assert flow_state.get("stage") == "complete"
+            assert flow_state.get("reward_granted") is True
+            signals_after = await daemon.db.get_awaiting_signals()
+            assert len(signals_after) == 0
 
         await daemon.db.close()
 
