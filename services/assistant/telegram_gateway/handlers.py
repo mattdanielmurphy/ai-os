@@ -779,6 +779,7 @@ class ActionDispatcher:
         stage: str,
         due_cards_count: Optional[int] = None,
         threshold: Optional[int] = None,
+        reward_granted: Optional[bool] = None,
     ) -> None:
         raw = await self.db.get_dynamic(self._morning_flow_key(trigger_id))
         try:
@@ -796,7 +797,9 @@ class ActionDispatcher:
             state["threshold"] = self.morning_review_card_threshold
         if "reviewed_cards_count" not in state:
             state["reviewed_cards_count"] = 0
-        if "reward_granted" not in state:
+        if reward_granted is not None:
+            state["reward_granted"] = reward_granted
+        elif "reward_granted" not in state:
             state["reward_granted"] = False
         await self.db.set_dynamic(self._morning_flow_key(trigger_id), json.dumps(state))
 
@@ -885,7 +888,7 @@ class ActionDispatcher:
     async def _complete_morning_without_review(
         self, trigger_id: str, chat_id: int, prompt_message_id: Optional[int]
     ) -> None:
-        await self._set_morning_flow_stage(trigger_id, "complete")
+        await self._set_morning_flow_stage(trigger_id, "complete", reward_granted=True)
         await self._finish_morning_checkin(trigger_id)
         if prompt_message_id is not None:
             await self.gateway.edit_prompt(

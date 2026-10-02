@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-10-02
+- **Telegram morning check-in Cyanide & Happiness reward and review continuation:** Enforced that C&H means Cyanide and Happiness from Explosm (not Calvin and Hobbes). Maintained the one-card minimum threshold for earning the comic reward, followed by an explicit button choice to review remaining due cards or finish for today. Additional cards use the existing FSRS flow without repeating the comic. Fixed test assertions in `test_assistant.py` (21/21 passing), set `reward_granted=True` on zero-due completions, and restarted the `aios-assistant` service. [[log]](agent-logs/2026-10-02_09-15_telegram-morning-checkin-cyanide-and-happiness.md)
+
 ## 2026-09-29
 - **Agy MCP handoff reliability:** Traced an immediate failure to a timeout supplied in milliseconds where the bridge expects seconds, and a Chrome-extension Codex process whose stripped `PATH` hid the installed `agy` executable. Added POSIX user-bin discovery, truthful backend diagnostics, timeout-unit descriptions, and regression tests. The focused suite passed 294 tests, and a live adapter probe succeeded with a stripped `PATH`. Added the always-test requirement to `.rules/core_safety.md`. [[log]](agent-logs/2026-09-29_11-34_agy-mcp-handoff-reliability.md)
 
@@ -7,7 +10,7 @@
 - **First-party Agy MCP integration and full permissions:** Moved the maintained bridge into `tools/agy-mcp`, migrated it to MCP v2, and repointed the global editable installation to the monorepo. Every bridge invocation now receives write-enabled, unsandboxed, noninteractive execution; Codex now treats it as a required startup dependency rather than applying the optional one-second MCP grace period. [[log]](agent-logs/2026-09-27_17-20_agy-mcp-monorepo-and-full-permissions.md)
 - **Dynamic Codex Hook-Based Policy Engine (`scripts/codex_hooks/`):** Replaced the static 24 KB monolithic global `~/.codex/AGENTS.md` with an event-driven policy system decoupled from `preflight.py`. Added a sub-millisecond 3-tier prompt classifier (`UserPromptSubmit`) with zero token injection for casual chats and conditional Mem0 recall (cold benchmark: 2,028ms, gated off by default), deterministic hard execution gates (`PreToolUse`) parsing shell commands, dict payloads, and JS AST calls (`tools.exec_command`, `tools.read_file`) to block `rm`, secret reads, and `npm`/`pnpm`, plus rollout/rollback management and 35 passing automated tests. [[log]](agent-logs/2026-09-27_22-00_codex_dynamic_policy_reconciliation.md)
 - **FSRS option warm-up:** Moved distractor generation off manual and scheduled review paths into a cancellable background worker that batches five cards at a time; review prompts render immediately from stored choices.
-- **Morning step placement and comic reward:** Gratitude now posts its confirmation before a fresh review prompt at the bottom of Telegram, and the earned reward sends an inline GoComics image with a source link.
+- **Morning step placement and comic reward:** Gratitude now posts its confirmation before a fresh review prompt at the bottom of Telegram, and the earned reward sends an inline Cyanide & Happiness comic image from Explosm with a source link.
 
 ## 2026-09-26
 - **FSRS answers before difficulty ratings:** Cards without options now receive multiple-choice distractors in one LLM request for up to five due cards, and cached choices follow the existing correctness-feedback/rating flow. If generation fails, the review reveals the answer before enabling ratings; later FSRS updates preserve the choices.
