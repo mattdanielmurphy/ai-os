@@ -56,6 +56,7 @@ When this fallback is a non-trivial task, direct ChatGPT uses the orchestrator-w
 
 ## 7. Routing Visibility
 For each routed task, make routing visible in the response or task record:
+- **Orchestrator-worker notice:** When the orchestrator-worker pattern is actually used, begin the user-facing response with this bold notice: **Orchestrator-worker mode:** I delegated this task to GPT 6 Luna with low reasoning. Use `/fast` to have the first agent handle a future request directly. Do not show this notice for `agy`, direct, or `/fast` work.
 - **Backend Selected**: `agy` | `chatgpt (direct)` | other
 - **Selection Origin**: `automatic` | `explicit`
 - **Quota Status**: `healthy` (X% remaining) | `low` | `exhausted` | `unavailable` | `unknown`
