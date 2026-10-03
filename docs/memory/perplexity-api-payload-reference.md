@@ -4,6 +4,10 @@
 > **Source Endpoint:** `POST https://www.perplexity.ai/rest/sse/perplexity_ask`  
 > **Protocol Version:** `2.18`
 
+## Current Companion Authentication Note (2026-10-03)
+
+The signed-in Perplexity webview can store a `pplx:account:<id>:pplx-next-auth-session` record containing a user and expiry while no longer exposing the older `read_write_token` through `__NEXT_DATA__` or `document.cookie`. The companion prefers the legacy token when present; otherwise it accepts an unexpired NextAuth session marker and sends its same-origin request with browser credentials included. The debug probe uses the engine's exported auth diagnostic; `_getSessionToken` itself is private to the engine closure. A successful live companion query confirmed the cookie-backed path on this date.
+
 ---
 
 ## 1. Raw Payload Snapshot
