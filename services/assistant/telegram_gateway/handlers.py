@@ -1422,10 +1422,14 @@ class ActionDispatcher:
                         await _update_status(f"⚙️ <i>Running {tag}...</i>")
 
                 await asyncio.wait_for(proc.wait(), timeout=130.0)
+                if proc.returncode != 0:
+                    logger.warning(f"Agy exited with non-zero code {proc.returncode}")
+                    return None
                 output = "".join(output_lines).strip()
                 res = clean_agy_output(output)
                 if not res:
                     logger.warning(f"Agy returned empty or unparseable output. Raw: {output[:300]}")
+                    return None
                 return res
             except asyncio.TimeoutError:
                 proc.kill()
@@ -1498,7 +1502,33 @@ class ActionDispatcher:
         chat_id: Optional[int] = None,
         status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
-        """Direct Codex-only dispatcher for every conversational request."""
+        """Routes conversational requests primarily to agy (Gemini 3.8 Flash High) using free Antigravity quota,
+
+        falling back seamlessly to ChatGPT / Codex CLI if quota is exhausted or agy fails.
+        """
+        try:
+            logger.info("Attempting primary query via agy (gemini-3.8-flash-high)...")
+            res = await self._query_agy(
+                prompt,
+                image_path=image_path,
+                chat_id=chat_id,
+                model="gemini-3.8-flash-high",
+                status_msg_id=status_msg_id,
+            )
+            if res and res.strip():
+                return res
+            logger.warning("agy query returned empty or failed, falling back to Codex / ChatGPT...")
+        except Exception as e:
+            logger.warning(f"agy query exception ({e}), falling back to Codex / ChatGPT...")
+
+        if chat_id and status_msg_id:
+            try:
+                await self.gateway.edit_message(
+                    chat_id, status_msg_id, "🔄 <i>Agy unavailable; falling back to ChatGPT...</i>"
+                )
+            except Exception:
+                pass
+
         return await self._query_codex(
             prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
         )
