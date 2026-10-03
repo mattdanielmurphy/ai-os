@@ -82,8 +82,8 @@ def run_tests():
         "cwd": "/Users/matt/projects/ai-os"
     })
     ctx3 = res3["hookSpecificOutput"]["additionalContext"] or ""
-    if "policy_git" in ctx3 and "policy_dev_workflow" in ctx3:
-        print(f"  ✅ [PASS] Project CWD: Injected policy_git & policy_dev_workflow")
+    if "policy_git" in ctx3 and "policy_default_planning" in ctx3:
+        print(f"  ✅ [PASS] Project CWD: Injected git and default-planning policies")
         passed += 1
     else:
         print(f"  ❌ [FAIL] Project CWD failed to inject expected policies")

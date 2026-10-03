@@ -218,6 +218,11 @@ def classify_and_inject(payload: Dict[str, Any]) -> Dict[str, Any]:
     # ─────────────────────────────────────────────────────────────
     selected_packs: Set[str] = set()
 
+    # Every request that reaches Tier 1 is potentially non-trivial. Inject
+    # the compact planning policy unconditionally so its planning gate cannot
+    # depend on a user happening to mention an implementation keyword.
+    selected_packs.add("policy_default_planning")
+
     # If inside an active git workspace, include git & dev workflow
     if is_git_repository(cwd):
         selected_packs.add("policy_git")
@@ -230,7 +235,12 @@ def classify_and_inject(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     # Collect policy pack texts
     context_chunks: List[str] = []
-    for pack in sorted(list(selected_packs)):
+    priority_packs = {
+        "policy_default_planning": 0,
+        "policy_git": 1,
+        "policy_dev_workflow": 2,
+    }
+    for pack in sorted(selected_packs, key=lambda name: (priority_packs.get(name, 10), name)):
         content = load_policy_pack(pack)
         if content:
             context_chunks.append(f"<!-- {pack} -->\n{content}")

@@ -1,6 +1,9 @@
 # ChatGPT & Codex macOS Orchestration Rules
 
-## 1. Primary Operating Decision
+## 1. Default Planning Gate
+- Treat every request as non-trivial unless it is plainly lightweight under the direct-handling boundary below. Before any non-trivial reasoning, delegation, or implementation, invoke the repository-owned `_plan-with-ai-os` skill: verify that `origin` is a GitHub remote, then run `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` so Perplexity produces the plan. Do not proceed when no GitHub remote exists; ask Matt whether to create or migrate a private GitHub repository. `/fast` explicitly bypasses this planning gate.
+
+## 2. Primary Operating Decision
 - **Daily Interface & Home**: ChatGPT on macOS is Matt's primary conversational surface, router, and front-end.
 - **Default Reasoning & Execution Agent**: For every non-trivial request, use `agy` by default while its quota is available. Use the exact model identifier `gemini-3.8-flash-medium`. Do not silently upgrade or downgrade to another model tier unless Matt requests it or a task-specific rule requires it.
 - **Non-`agy` Default**: When a non-trivial request is not delegated to `agy` (for example, because quota is unavailable or the route selects Codex), use an orchestrator-worker pattern: the primary agent coordinates and reviews the work, delegating implementation or investigation to `gpt-6-luna` with `low` reasoning. This does not apply when Matt explicitly invokes `/fast`.
@@ -30,7 +33,7 @@ Keep direct in ChatGPT ONLY when the request is obviously lightweight and delega
 
 ## 4. Explicit User Backend Selection
 Always honor explicit backend overrides:
-- **Force Direct First-Agent Work**: `/fast` bypasses the orchestrator-worker pattern. The first agent answers or performs the work directly without delegating to a worker.
+- **Force Direct First-Agent Work**: `/fast` bypasses both the `_plan-with-ai-os` planning gate and the orchestrator-worker pattern. The first agent answers or performs the work directly without planning or delegating to a worker.
 - **Force Direct ChatGPT**: If Matt specifies direct handling (`--chatgpt`, `--direct`, "do not delegate", "handle directly in chatgpt"), answer directly without delegating.
 - **Force `agy`**: If Matt specifies `agy` (`/agy`, `--agy`, "use agy", "run with agy"), invoke `agy` even if quota is low or the task is simple.
 - **Other Backends**: If Matt specifies another supported engine (e.g. `--claude`), honor that choice.
