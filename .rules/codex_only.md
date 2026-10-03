@@ -3,6 +3,7 @@
 ## 1. Primary Operating Decision
 - **Daily Interface & Home**: ChatGPT on macOS is Matt's primary conversational surface, router, and front-end.
 - **Default Reasoning & Execution Agent**: For every non-trivial request, use `agy` by default while its quota is available. Use the exact model identifier `gemini-3.8-flash-medium`. Do not silently upgrade or downgrade to another model tier unless Matt requests it or a task-specific rule requires it.
+- **Non-`agy` Default**: When a non-trivial request is not delegated to `agy` (for example, because quota is unavailable or the route selects Codex), use an orchestrator-worker pattern: the primary agent coordinates and reviews the work, delegating implementation or investigation to `gpt-6-luna` with `low` reasoning. This does not apply when Matt explicitly invokes `/fast`.
 - **Thread Continuity**: After the first `agy` dispatch in a ChatGPT or Codex thread, retain its `SESSION_ID`. For each later non-trivial request in that same parent thread, use `agymcp:agy_continue` with that `SESSION_ID` by default. Start a fresh `agy` conversation only when Matt requests fresh context, the stored session is unavailable, or `agy` reports that it cannot resume it.
 - **Broad `agy` Scope**: Do NOT define `agy` eligibility narrowly as file-writing or terminal execution. Route substantive non-trivial requests to `agy` by default, including:
   - Technical questions requiring sustained reasoning.
@@ -29,6 +30,7 @@ Keep direct in ChatGPT ONLY when the request is obviously lightweight and delega
 
 ## 4. Explicit User Backend Selection
 Always honor explicit backend overrides:
+- **Force Direct First-Agent Work**: `/fast` bypasses the orchestrator-worker pattern. The first agent answers or performs the work directly without delegating to a worker.
 - **Force Direct ChatGPT**: If Matt specifies direct handling (`--chatgpt`, `--direct`, "do not delegate", "handle directly in chatgpt"), answer directly without delegating.
 - **Force `agy`**: If Matt specifies `agy` (`/agy`, `--agy`, "use agy", "run with agy"), invoke `agy` even if quota is low or the task is simple.
 - **Other Backends**: If Matt specifies another supported engine (e.g. `--claude`), honor that choice.
@@ -49,6 +51,8 @@ Before delegating to `agy`, verify quota state (via `ag-quota -j` or cached snap
 - `exhausted` (quota 0% / exhausted): Fall back cleanly to direct ChatGPT.
 - `unavailable` / `unknown`: Fall back cleanly to direct ChatGPT, noting the status.
 - **Invocation Failure**: If calling `agy` fails or times out, fall back cleanly to direct ChatGPT rather than blocking the user.
+
+When this fallback is a non-trivial task, direct ChatGPT uses the orchestrator-worker pattern above; `/fast` remains the explicit direct-first-agent escape hatch.
 
 ## 7. Routing Visibility
 For each routed task, make routing visible in the response or task record:

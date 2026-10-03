@@ -113,6 +113,9 @@
 
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
+## 2026-10-03
+- **Codex non-`agy` worker default and `/fast` direct override:** Added the shared Codex routing rule that non-trivial work outside `agy` uses an orchestrator-worker pattern with `gpt-6-luna` at low reasoning. Updated the repository-owned `/fast` skill to make the first agent work directly, bypassing that worker pattern, then rebuilt rules and synchronized skills across local runtimes.
+
 ## 2026-08-05
 - **Marked Gemini Userscript as GENERATED & Made It Impossible to Edit:** The ai-os webview userscript (`userscripts/gemini.js`) was a symlink to a generated file from the separate `userscript-bundler` project, but nothing made that clear. Added a `GENERATED FILE — DO NOT EDIT` banner (naming source modules + rebuild command) to the bundler's compiled output, made the compiled file read-only (`chmod 0444`) after each build, renamed the ai-os symlink to `gemini-DO-NOT-EDIT.js`, updated `main.rs` to read it, and documented the full workflow in `docs/memory/userscripts-directory.md` + `AG_CONTEXT.md`. [[log]](agent-logs/2026-08-05_04-15_mark-gemini-userscript-generated.md)
 - **2026-08-05**: Reorganized documentation into 6 clear domain boundaries and integrated Quartz 4.0 off-the-shelf Markdown wiki engine accessible via `ai-os wiki` on `http://localhost:3333`.
