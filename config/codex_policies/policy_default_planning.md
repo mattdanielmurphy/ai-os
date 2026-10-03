@@ -1,0 +1,2 @@
+## 1. Default Planning Gate
+- Treat every request as non-trivial unless it is plainly lightweight under the direct-handling boundary below. Before any non-trivial reasoning, delegation, or implementation, invoke the repository-owned `_plan-with-ai-os` skill: verify that `origin` is a GitHub remote, then run `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` so Perplexity produces the plan. Do not proceed when no GitHub remote exists; ask Matt whether to create or migrate a private GitHub repository. `/fast` explicitly bypasses this planning gate.

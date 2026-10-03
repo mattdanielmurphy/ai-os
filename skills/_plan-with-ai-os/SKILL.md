@@ -14,7 +14,7 @@ Run high-reasoning planning using the unified `query_aios.js` planner.
 ## Workflow Steps
 
 1. **Sanity Check**: Analyze the user's request against the current active project directory.
-2. **Pre-flight Git Check**: Ensure a GitHub remote is configured (`git config --get remote.origin.url`). If missing, STOP and ask the user if they want to create a remote repository.
+2. **Pre-flight GitHub Check**: Verify that `origin` exists and targets GitHub (`https://github.com/...` or `git@github.com:...`). If it is missing or targets another host, STOP and ask the user whether to create or migrate a private GitHub repository before planning.
 3. **Execute Unified Planner (Single-Step Prompt & Query)**:
    - Run `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` using `run_command` (with `WaitMsBeforeAsync: 500`). Antigravity will notify you when the task completes.
    - This single command automatically: inspects Git context, reads agent logs, resolves contextual Antigravity thread mappings (auto-resuming ongoing planner threads on turn 2+ or creating fresh threads on turn 1), generates `./tmp/planner_prompt.txt`, dispatches the query to Perplexity (Gemini Flash Thinking), and writes the completed plan to `./tmp/planner_output.txt`.

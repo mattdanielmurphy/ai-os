@@ -1746,7 +1746,7 @@
     "sha256": "c760a68c53f12e54609a9330dbbe2f378d06b4d107f7acb9b8ac83ff22abd517"
   },
   "fast/SKILL.md": {
-    "sha256": "95e796e906c2e3a8c80c7a1bc708b97d5448edbf67adfa6a51a76451d62d0262"
+    "sha256": "ace2120f456e0f212ac7abc691ff3a11ff370b2efe282af5043b1da130c36b05"
   },
   "hermes-agent/references/petdex.md": {
     "sha256": "2254eabf40c360efb54e4df482f3b84820b54a15e6954c4a7e9e7fee4eb90f77"
@@ -1818,7 +1818,7 @@
     "sha256": "79bb9547b6a7a302d3e6fff86c861f1b27f71f160c1225955469c3c11a5a19e1"
   },
   "_plan-with-ai-os/SKILL.md": {
-    "sha256": "5ba0a7ee03d7bcbaa74a51680e4ae9dab8ecbd0f2b94f41408d50b4756ab9171"
+    "sha256": "edf9f6548a9e8bca829aaeba76a0c08f352ff0eabf724708bc68525f32afacbc"
   },
   "rule/SKILL.md": {
     "sha256": "b3cec0b47096e2788160c19312cbec4344f1ece175957615711bd62157cde43f"

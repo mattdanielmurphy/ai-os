@@ -168,6 +168,7 @@ def compile_codex_policy_packs(output_dir: Path = None) -> dict:
     ui_web_raw = read_rule("ui_web", config)
     
     cs_sections = extract_markdown_sections(core_safety_raw)
+    codex_sections = extract_markdown_sections(codex_only_raw)
 
     def find_cs(*keywords):
         for k, v in cs_sections.items():
@@ -176,6 +177,11 @@ def compile_codex_policy_packs(output_dir: Path = None) -> dict:
         return ""
 
     packs = {}
+
+    # 0. policy_default_planning: Compact unconditional planning gate.  Keep
+    # this separate from the larger routing policy so it fits beside domain
+    # packs in Codex's limited dynamic-context budget.
+    packs["policy_default_planning"] = codex_sections.get("1. Default Planning Gate", "").strip()
 
     # 1. policy_git: Project detection & Git protocol
     packs["policy_git"] = "\n\n".join(filter(None, [

@@ -115,6 +115,9 @@
 A running narrative of key decisions, pivots, and direction changes. One entry per session. **Agents MUST append to this at the end of every conversation.**
 
 ## 2026-10-03
+- **Default Perplexity planning gate:** Made the repository-owned `_plan-with-ai-os` workflow the default for all non-trivial Codex work. The policy verifies a GitHub `origin`, then invokes `query_aios.js --plan` before delegation or implementation; `/fast` bypasses the planning and worker paths.
+
+## 2026-10-03
 - **Codex non-`agy` worker default and `/fast` direct override:** Added the shared Codex routing rule that non-trivial work outside `agy` uses an orchestrator-worker pattern with `gpt-6-luna` at low reasoning. Updated the repository-owned `/fast` skill to make the first agent work directly, bypassing that worker pattern, then rebuilt rules and synchronized skills across local runtimes.
 
 ## 2026-08-05
