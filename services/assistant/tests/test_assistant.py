@@ -1433,3 +1433,57 @@ async def test_morning_review_finish_choice():
 
         await daemon.db.close()
 
+
+@pytest.mark.asyncio
+async def test_query_model_agy_primary_with_codex_fallback(monkeypatch):
+    """Verifies that _query_model routes to agy first, falling back to Codex if agy fails."""
+    config = AssistantConfig(dry_run=True)
+    temp_dir = Path(tempfile.mkdtemp())
+    db = AssistantDB(temp_dir / "test.db")
+    await db.connect()
+    fsrs = FSRSEngine(config)
+    habit_logger = HabitLogger(temp_dir / "habits")
+    gateway = TelegramGateway(config)
+    dispatcher = ActionDispatcher(db, fsrs, habit_logger, gateway, config=config)
+
+    # 1. Primary agy success
+    agy_called = False
+    codex_called = False
+
+    async def mock_query_agy(prompt, image_path=None, chat_id=None, model=None, status_msg_id=None):
+        nonlocal agy_called
+        agy_called = True
+        assert model == "gemini-3.8-flash-high"
+        return "Response from agy"
+
+    async def mock_query_codex(prompt, image_path=None, chat_id=None, status_msg_id=None):
+        nonlocal codex_called
+        codex_called = True
+        return "Response from codex"
+
+    monkeypatch.setattr(dispatcher, "_query_agy", mock_query_agy)
+    monkeypatch.setattr(dispatcher, "_query_codex", mock_query_codex)
+
+    res = await dispatcher._query_model("Hello AI")
+    assert res == "Response from agy"
+    assert agy_called is True
+    assert codex_called is False
+
+    # 2. Agy failure / empty -> Codex fallback
+    agy_called = False
+    codex_called = False
+
+    async def mock_query_agy_fail(prompt, image_path=None, chat_id=None, model=None, status_msg_id=None):
+        nonlocal agy_called
+        agy_called = True
+        return None
+
+    monkeypatch.setattr(dispatcher, "_query_agy", mock_query_agy_fail)
+
+    res_fallback = await dispatcher._query_model("Hello AI")
+    assert res_fallback == "Response from codex"
+    assert agy_called is True
+    assert codex_called is True
+
+    await db.close()
+

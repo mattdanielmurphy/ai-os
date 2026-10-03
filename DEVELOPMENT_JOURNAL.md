@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-10-03
+- **Universal AI Thread Search & Telegram agy Routing:** Added full ChatGPT/Codex indexing to `scripts/recent_threads.py` with structured `--handoff` reference card generation (~200 tokens) and native `--open` execution. Upgraded Hammerspoon `⌃⌘G` (`modules/gemini_thread_search.lua`) into a universal cross-agent chooser (Enter=paste handoff card, ⌘+Enter=open native) and added "Search AI Threads (⌃⌘G)" to the Hammerspoon menu bar. Re-routed Telegram assistant conversational queries in `services/assistant/telegram_gateway/handlers.py` to prioritize `agy` (`gemini-3.8-flash-high`) on free Antigravity quota with automatic fallback to ChatGPT/Codex CLI (22/22 passing tests); restarted `aios-assistant`. [[log]](agent-logs/2026-10-03_11-00_universal-thread-search-and-telegram-agy-bridge.md)
+
 ## 2026-10-02
 - **Telegram morning check-in Cyanide & Happiness reward and review continuation:** Enforced that C&H means Cyanide and Happiness from Explosm (not Calvin and Hobbes). Maintained the one-card minimum threshold for earning the comic reward, followed by an explicit button choice to review remaining due cards or finish for today. Additional cards use the existing FSRS flow without repeating the comic. Fixed test assertions in `test_assistant.py` (21/21 passing), set `reward_granted=True` on zero-due completions, and restarted the `aios-assistant` service. [[log]](agent-logs/2026-10-02_09-15_telegram-morning-checkin-cyanide-and-happiness.md)
 
