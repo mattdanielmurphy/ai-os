@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-10-03
+- **Perplexity companion auth compatibility:** Corrected `/api/debug/ping` to call the engine's private-scope auth diagnostic and support current unexpired NextAuth session state when the legacy token is absent. Rebuilt/restarted `aios-server`; live auth probe and a one-token Perplexity query succeeded. [[log]](agent-logs/2026-10-03_12-49_perplexity-companion-auth-compatibility.md)
 - **Universal AI Thread Search & Telegram agy Routing:** Added full ChatGPT/Codex indexing to `scripts/recent_threads.py` with structured `--handoff` reference card generation (~200 tokens) and native `--open` execution. Upgraded Hammerspoon `⌃⌘G` (`modules/gemini_thread_search.lua`) into a universal cross-agent chooser (Enter=paste handoff card, ⌘+Enter=open native) and added "Search AI Threads (⌃⌘G)" to the Hammerspoon menu bar. Re-routed Telegram assistant conversational queries in `services/assistant/telegram_gateway/handlers.py` to prioritize `agy` (`gemini-3.8-flash-high`) on free Antigravity quota with automatic fallback to ChatGPT/Codex CLI (22/22 passing tests); restarted `aios-assistant`. [[log]](agent-logs/2026-10-03_11-00_universal-thread-search-and-telegram-agy-bridge.md)
 
 ## 2026-10-02

@@ -56,32 +56,90 @@
         // Re-read the live page state for every query. A cached token can outlive
         // a sign-out and must not make a guest webview look authenticated.
         _sessionToken = null;
-        try {
-            if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props) {
-                var props = window.__NEXT_DATA__.props;
-                var token = _deepFind(props, 'read_write_token');
-                if (token) { _sessionToken = token; return token; }
-                token = _deepFind(props, 'readWriteToken');
-                if (token) { _sessionToken = token; return token; }
-            }
-        } catch (e) { }
+        var sources = [
+            ['next-data', function () { return window.__NEXT_DATA__; }],
+            ['pplx-global', function () { return window.__PPLX__ || window.__pplx; }],
+            ['perplexity-global', function () { return window.__PERPLEXITY__ || window.perplexity; }]
+        ];
+        for (var s = 0; s < sources.length; s++) {
+            try {
+                var root = sources[s][1]();
+                var token = _findSessionToken(root);
+                if (token) {
+                    _sessionToken = token;
+                    _sessionTokenSource = sources[s][0];
+                    return token;
+                }
+            } catch (e) { }
+        }
+        // Perplexity has moved bootstrap state between Next.js props, globals,
+        // and browser storage over time. Inspect only auth/session-shaped
+        // storage entries and never accept a generic application token.
+        for (var storeIndex = 0; storeIndex < 2; storeIndex++) {
+            try {
+                var storage = storeIndex === 0 ? window.localStorage : window.sessionStorage;
+                for (var i = 0; i < storage.length; i++) {
+                    var key = storage.key(i);
+                    if (!/(auth|session|token|pplx|perplexity)/i.test(key || '')) continue;
+                    var stored = storage.getItem(key);
+                    var parsed = stored;
+                    if (typeof stored === 'string') {
+                        try { parsed = JSON.parse(stored); } catch (e) { }
+                    }
+                    var storedToken = _findSessionToken(parsed);
+                    if (storedToken) {
+                        _sessionToken = storedToken;
+                        _sessionTokenSource = storeIndex === 0 ? 'local-storage' : 'session-storage';
+                        return storedToken;
+                    }
+                }
+            } catch (e) { }
+        }
         try {
             var cookies = document.cookie.split(';');
             for (var i = 0; i < cookies.length; i++) {
                 var c = cookies[i].trim();
                 if (c.startsWith('pplx_token=') || c.startsWith('next-auth.session-token=')) {
                     _sessionToken = c.split('=').slice(1).join('=');
+                    _sessionTokenSource = 'cookie';
                     return _sessionToken;
                 }
             }
         } catch (e) { }
+        return null;
+    }
+
+    var _sessionTokenSource = null;
+
+    function _findSessionToken(root) {
+        if (!root || typeof root !== 'object') return null;
+        return _deepFind(root, 'read_write_token') ||
+            _deepFind(root, 'readWriteToken') ||
+            _deepFind(root, 'pplx_token') ||
+            _deepFind(root, 'pplxToken');
+    }
+
+    function _authDiagnostics() {
+        var token = _getSessionToken();
+        if (token) return { ready: true, source: _sessionTokenSource };
+        var hasNextAuthSession = _hasNextAuthSession();
+        return { ready: hasNextAuthSession, source: hasNextAuthSession ? 'next-auth-session' : null };
+    }
+
+    function _hasNextAuthSession() {
         try {
-            if (window.__pplx && window.__pplx.token) {
-                _sessionToken = window.__pplx.token;
-                return _sessionToken;
+            var storage = window.localStorage;
+            for (var i = 0; i < storage.length; i++) {
+                var key = storage.key(i);
+                if (!key || !/^pplx:account:[^:]+:pplx-next-auth-session$/.test(key)) continue;
+                var value = JSON.parse(storage.getItem(key));
+                if (!value || !value.user || typeof value.user !== 'object') continue;
+                var expiresAt = Date.parse(value.expires);
+                if (!isFinite(expiresAt) || expiresAt <= Date.now()) continue;
+                return true;
             }
         } catch (e) { }
-        return null;
+        return false;
     }
 
     function _deepFind(obj, key, depth) {
@@ -370,7 +428,7 @@
         activateSession(sessionId);
 
         var sessionToken = _getSessionToken();
-        if (!sessionToken) {
+        if (!sessionToken && !_hasNextAuthSession()) {
             throw new Error('Perplexity sign-in required in the AI-OS companion window. Open Perplexity from the menu bar, sign in there, then retry. No prompt was sent.');
         }
         var frontendUuid = _uuid();
@@ -545,7 +603,8 @@
         send: send,
         newConversation: newConversation,
         uploadFileToPerplexity: uploadFileToPerplexity,
-        injectAndSendPrompt: injectAndSendPrompt
+        injectAndSendPrompt: injectAndSendPrompt,
+        authDiagnostics: _authDiagnostics
     };
     console.log('[AI-OS] Perplexity engine loaded');
 })();

@@ -1334,9 +1334,13 @@ async fn handle_debug_ping(
         {}
         (function() {{
             var qId = {};
-            var authReady = false;
-            try {{ authReady = typeof _getSessionToken === 'function' && !!_getSessionToken(); }} catch (e) {{}}
-            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | AUTH=' + authReady + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined' && typeof window.webkit.messageHandlers.ipc !== 'undefined');
+            var auth = {{ ready: false, source: null }};
+            try {{
+                if (window.__aiosPerplexity && window.__aiosPerplexity.authDiagnostics) {{
+                    auth = window.__aiosPerplexity.authDiagnostics();
+                }}
+            }} catch (e) {{}}
+            var diag = 'URL=' + window.location.href + ' | PPLX=' + (typeof window.__aiosPerplexity !== 'undefined') + ' | AUTH=' + !!auth.ready + (auth.source ? ' (' + auth.source + ')' : '') + ' | TAURI=' + (typeof window.__TAURI__ !== 'undefined') + ' | WEBKIT=' + (typeof window.webkit !== 'undefined' && typeof window.webkit.messageHandlers !== 'undefined' && typeof window.webkit.messageHandlers.ipc !== 'undefined');
             var payload = {{ query_id: qId, queryId: qId, response: diag, error: null }};
             var jsonStr = JSON.stringify(payload);
             var b64 = btoa(unescape(encodeURIComponent(diag)));
