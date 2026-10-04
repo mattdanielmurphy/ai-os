@@ -1818,7 +1818,7 @@
     "sha256": "79bb9547b6a7a302d3e6fff86c861f1b27f71f160c1225955469c3c11a5a19e1"
   },
   "_plan-with-ai-os/SKILL.md": {
-    "sha256": "edf9f6548a9e8bca829aaeba76a0c08f352ff0eabf724708bc68525f32afacbc"
+    "sha256": "17f2d09a71e26d972929cfe29d5391f72af2657e6ccc1f47a56619d7302b51de"
   },
   "rule/SKILL.md": {
     "sha256": "b3cec0b47096e2788160c19312cbec4344f1ece175957615711bd62157cde43f"
@@ -1912,5 +1912,8 @@
   },
   "custom-skills/substantive-engineering-verification/SKILL.md": {
     "sha256": "f858f3523f0e63c15cc7d530774cbe7e0b0d3c89d69767afc4e33ab8158509a3"
+  },
+  "_plan-with-ai-os/workflow.md": {
+    "sha256": "7f9e32d58b14e0730b63bef4d0c29cdbf8046b01bee674dc5ef6a3d39a1a6e75"
   }
 }

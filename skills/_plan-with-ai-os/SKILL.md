@@ -28,6 +28,10 @@ Run high-reasoning planning using the unified `query_aios.js` planner.
    - For an actual `ECONNREFUSED` result, use the established AI-OS companion recovery path. Do not restart `agy-proxy`; it is a different service.
 5. **Format Output**: Format `./tmp/planner_output.txt` into `implementation_plan.md`.
 
+6. **Implement by Default**: After a successful plan is available, continue the user's requested task by implementing the plan in the same task. Treat the plan as the execution guide, not as the final deliverable, unless the user explicitly asked for a plan only. Infer routine implementation choices from the request, Matt's known preferences, and established project conventions. Pause and ask Matt only when a material ambiguity or consequential architectural decision cannot be responsibly resolved from that context and choosing would risk an outcome he may regret. If a decision does require input, explain the specific choice and its consequences; continue any independent work that does not depend on the answer.
+
+   This continuation rule applies only after a successful planner result. It does not bypass the GitHub-origin requirement, planner dispatch, recovery, fallback, or failure rules above. A failed or incomplete planning request must follow those existing rules and must not be treated as permission to invent a plan and proceed.
+
 ---
 
 **Vision Provider & Image Attachment Protocol**: Perplexity file upload quota is 50/week. If remaining upload quota is > 25 AND a screenshot contains complex visual elements that cannot be easily/accurately transcribed into text, passing the image file to Perplexity is permitted. If quota is <= 25 or the visual content is easily describable, the main orchestrator MUST act as the vision provider and describe it textually via `--image-desc` instead of uploading.
