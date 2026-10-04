@@ -201,8 +201,9 @@ def get_antigravity_brain_threads(pb_titles: Dict[str, str], json_summaries: Dic
         mtime = d.stat().st_mtime
         title = pb_titles.get(cid) or json_summaries.get(cid)
 
-        # Fallback to thread.md or task.md
+        # Fallback to thread.md or transcript.jsonl or task.md
         prompt_snippet = ""
+        msg_count = None
         thread_md = d / "thread.md"
         if thread_md.exists():
             try:
@@ -210,7 +211,30 @@ def get_antigravity_brain_threads(pb_titles: Dict[str, str], json_summaries: Dic
                 clean = re.sub(r"<[^>]+>", " ", raw_text)
                 # Remove header boilerplate
                 clean = re.sub(r"Thread Started — [^\n]+", "", clean)
-                prompt_snippet = " ".join(clean.split())[:140]
+                prompt_snippet = " ".join(clean.split())[:350]
+            except Exception:
+                pass
+
+        transcript_path = d / ".system_generated" / "logs" / "transcript.jsonl"
+        if not prompt_snippet and transcript_path.exists():
+            try:
+                with open(transcript_path, "r", encoding="utf-8") as tf:
+                    t_count = 0
+                    for line in tf:
+                        if not line.strip():
+                            continue
+                        obj = json.loads(line)
+                        typ = obj.get("type")
+                        if typ in ("USER_INPUT", "PLANNER_RESPONSE", "ASSISTANT_RESPONSE"):
+                            t_count += 1
+                        if typ == "USER_INPUT" and not prompt_snippet:
+                            raw = obj.get("content", "")
+                            m = re.search(r"<USER_REQUEST>(.*?)</USER_REQUEST>", raw, re.DOTALL)
+                            text = m.group(1).strip() if m else raw.strip()
+                            clean = re.sub(r"<[^>]+>", " ", text)
+                            prompt_snippet = " ".join(clean.split())[:350]
+                    if t_count > 0:
+                        msg_count = t_count
             except Exception:
                 pass
 
@@ -234,7 +258,7 @@ def get_antigravity_brain_threads(pb_titles: Dict[str, str], json_summaries: Dic
             "url": None,
             "file_path": str(thread_md if thread_md.exists() else d),
             "snippet": prompt_snippet,
-            "message_count": None,
+            "message_count": msg_count,
         })
 
     return threads
@@ -590,13 +614,13 @@ def main():
 
     # Filter by search term if provided
     if args.search:
-        term = args.search.lower()
-        all_threads = [
-            t for t in all_threads
-            if term in t.get("title", "").lower()
-            or term in (t.get("snippet") or "").lower()
-            or term in (t.get("id") or "").lower()
-        ]
+        tokens = [t.lower() for t in args.search.split() if t.strip()]
+        if tokens:
+            def matches_thread(t: Dict[str, Any]) -> bool:
+                searchable = f"{t.get('title', '')} {t.get('snippet', '')} {t.get('id', '')}".lower()
+                return all(tok in searchable for tok in tokens)
+
+            all_threads = [t for t in all_threads if matches_thread(t)]
 
     # Sort descending by timestamp
     all_threads.sort(key=lambda t: t.get("timestamp") or 0.0, reverse=True)
