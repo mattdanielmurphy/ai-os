@@ -384,10 +384,30 @@ class ActionDispatcher:
                     remove_keyboard=True,
                 )
                 return True
-            elif sub == "meditate_done":
+            elif sub == "meditate_done" or sub.startswith("breath:"):
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if not trigger_id:
                     return False
+                count = 3
+                if sub.startswith("breath:"):
+                    try:
+                        count = int(sub.split(":")[1])
+                    except (IndexError, ValueError):
+                        count = 3
+                now_utc = datetime.now(timezone.utc)
+                today_str = now_utc.strftime("%Y-%m-%d")
+                heuristic_data = {
+                    "breaths": count,
+                    "target": 3,
+                    "completed_at": now_utc.isoformat(),
+                    "trigger_id": trigger_id,
+                    "message_id": message_id,
+                }
+                await self.db.set_dynamic(
+                    f"morning_centering_heuristic:{today_str}",
+                    json.dumps(heuristic_data),
+                )
+                logger.info("Mindful centering heuristic logged: %s", heuristic_data)
                 await self._set_morning_flow_stage(trigger_id, "gratitude")
                 await self.gateway.edit_prompt(
                     chat_id=chat_id,
