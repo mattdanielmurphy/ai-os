@@ -710,7 +710,7 @@ async def test_morning_briefing_builder_and_gratitude():
 
     assert "Morning Grounding & Briefing" in text
     assert "Friday, September 18" in text
-    assert "60-Second Mindful Centering" in text
+    assert "10-Breath Mindful Centering" in text
     assert "Daily Gratitude" not in text
     assert "4 cards" in text
     assert "MUSIC 102 Lecture" in text
