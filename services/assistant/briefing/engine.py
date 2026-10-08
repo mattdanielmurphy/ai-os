@@ -8,19 +8,19 @@ from services.assistant.context_gate.calendar import CalendarEvent
 
 CENTERING_PROMPTS = [
     (
-        "Take a slow, deep breath in through your nose... hold it gently... and exhale fully through your mouth. "
+        "Take 10 slow, intentional breaths. Count each one: inhale... exhale (1)... inhale... exhale (2)... "
         "Notice your physical points of contact with your chair or the floor. "
-        "Unclench your jaw, soften your shoulders, and allow this morning to begin without hurry."
+        "Unclench your jaw, soften your shoulders, and complete all 10 breaths before moving forward."
     ),
     (
-        "Pause for 60 seconds. Close your eyes or soften your gaze. "
-        "Notice where you might be holding subtle tension—in the brow, neck, or hands. "
-        "Breathe directly into those areas and let them release. Ground yourself in the present moment."
+        "Count 10 grounded breaths. Close your eyes or soften your gaze. "
+        "Count each exhale from 1 up to 10. Notice where you hold subtle tension—in the brow, neck, or hands. "
+        "Breathe directly into those areas and let them release on each count."
     ),
     (
-        "Take three intentional, steady breaths. "
+        "Count 10 steady, deliberate breaths. "
         "As you inhale, feel the clarity and space of the morning. "
-        "As you exhale, let go of any residue or pressure from yesterday. You are completely in control of today's pace."
+        "As you exhale, let go of any residue or pressure from yesterday. Reach 10 breaths at your own pace."
     ),
 ]
 
@@ -47,7 +47,7 @@ class MorningBriefingBuilder:
 
         lines = [
             f"🌅 *Morning Grounding & Briefing* — {date_str}\n",
-            "*Step 1 of 3 · 60-Second Mindful Centering*",
+            "*Step 1 of 3 · 10-Breath Mindful Centering*",
             f"_{centering}_\n",
             "When you are finished, tap the button below. The next part of the morning flow will appear then.\n",
         ]
