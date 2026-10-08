@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-10-08
+- **Fix Telegram morning check-in breath callbacks:** Fixed callback parsing bug where `briefing:breath:<N>` was split on colon into `["briefing", "breath", "<N>"]`, causing `sub.startswith("breath:")` to evaluate to False and drop all breath button taps. Added count extraction from `parts[2]`, deactivated morning reminders upon centering completion, added fallback trigger lookup from `outbound_signals`, verified with full test suite (23/23 passing), and restarted `aios-assistant`. [[log]](agent-logs/2026-10-08_10-05_fix-telegram-morning-checkin-breath-callbacks.md)
+
 ## 2026-10-07
 - **Morning briefing tiered breath centering & heuristics:** Replaced vague 60-second centering with 3 intentional breaths and a tiered 4-button micro-habit grid (`1 Breath (micro)`, `2 Breaths`, `3 Breaths (target)`, `4 Breaths (bonus)`). Added heuristic tracking in `handlers.py` writing to `user_dynamics` in `assistant.db`. Updated test suite (22/22 passing) and reloaded `aios-assistant`. [[log]](agent-logs/2026-10-07_22-15_morning-briefing-tiered-breaths-and-anti-scope-creep-guardrail.md)
 - **Anti-Scope-Creep Guardrail (Rabbit-Hole Interceptor):** Codified rule in `.rules/core_safety.md` instructing agents to intercept massive from-scratch rewrites, advocate for sustainable marginal increments, and call out wheel-spinning. Rebuilt rules across all environments via `build_rules.py`. [[log]](agent-logs/2026-10-07_22-15_morning-briefing-tiered-breaths-and-anti-scope-creep-guardrail.md)

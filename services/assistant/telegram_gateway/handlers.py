@@ -384,12 +384,17 @@ class ActionDispatcher:
                     remove_keyboard=True,
                 )
                 return True
-            elif sub == "meditate_done" or sub.startswith("breath:"):
+            elif sub in ("meditate_done", "breath") or sub.startswith("breath:"):
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if not trigger_id:
                     return False
                 count = 3
-                if sub.startswith("breath:"):
+                if sub == "breath" and len(parts) >= 3:
+                    try:
+                        count = int(parts[2])
+                    except (IndexError, ValueError):
+                        count = 3
+                elif sub.startswith("breath:"):
                     try:
                         count = int(sub.split(":")[1])
                     except (IndexError, ValueError):
@@ -408,6 +413,7 @@ class ActionDispatcher:
                     json.dumps(heuristic_data),
                 )
                 logger.info("Mindful centering heuristic logged: %s", heuristic_data)
+                await self._set_morning_reminders_active(trigger_id, False)
                 await self._set_morning_flow_stage(trigger_id, "gratitude")
                 await self.gateway.edit_prompt(
                     chat_id=chat_id,
@@ -783,6 +789,18 @@ class ActionDispatcher:
         for signal in await self.db.get_awaiting_signals():
             if signal["message_id"] == message_id and signal["trigger_id"].startswith("trig_morning_"):
                 return signal["trigger_id"]
+        # Fallback: check outbound_signals directly in case signal was resolved or transitioned
+        try:
+            assert self.db._conn is not None
+            cursor = await self.db._conn.execute(
+                "SELECT trigger_id FROM outbound_signals WHERE message_id = ?",
+                (message_id,),
+            )
+            row = await cursor.fetchone()
+            if row and row["trigger_id"].startswith("trig_morning_"):
+                return row["trigger_id"]
+        except Exception:
+            pass
         return None
 
     @staticmethod

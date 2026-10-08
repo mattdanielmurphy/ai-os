@@ -816,6 +816,95 @@ async def test_morning_briefing_dispatch_and_callbacks():
         await daemon.db.close()
 
 
+@pytest.mark.asyncio
+async def test_morning_centering_breath_callbacks():
+    import json
+    from datetime import datetime, timezone
+    from pathlib import Path
+    import tempfile
+    from services.assistant.config import AssistantConfig
+    from services.assistant.run import AssistantDaemon
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        db_path = Path(tmpdir) / "test.db"
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+        )
+        daemon = AssistantDaemon(config=cfg)
+        await daemon.db.connect()
+
+        now_utc = datetime.now(timezone.utc)
+        today_str = now_utc.strftime("%Y-%m-%d")
+        trigger_id = f"trig_morning_{today_str}"
+        msg_id = 101
+        await daemon.db.record_outbound_signal(
+            message_id=msg_id,
+            chat_id=12345,
+            trigger_id=trigger_id,
+            sent_at=now_utc,
+            timeout_at=now_utc,
+            status="AWAITING_INPUT",
+        )
+        daemon.gateway._dry_run_messages[msg_id] = {
+            "text": "Morning prompt",
+            "keyboard": [[{"text": "🌬️ 4 Breaths (bonus)", "callback_data": "briefing:breath:4"}]],
+        }
+
+        # Set reminder state as active
+        await daemon.db.set_dynamic(
+            "morning_reminder_state",
+            json.dumps({"trigger_id": trigger_id, "active": True, "reminder_count": 1}),
+        )
+
+        # Tap 4 Breaths (bonus) button: callback data "briefing:breath:4"
+        success = await daemon.dispatcher.handle_callback_str(
+            "briefing:breath:4", 12345, msg_id
+        )
+        assert success is True
+
+        # Check prompt edited in place to Step 2 (Gratitude) and keyboard removed
+        edited_prompt = daemon.gateway._dry_run_messages[msg_id]
+        assert "Step 2 of 3 · Daily Gratitude" in edited_prompt["text"]
+        assert edited_prompt["keyboard"] == []
+
+        # Check stage advanced to gratitude
+        stage = await daemon.dispatcher._morning_flow_stage(trigger_id)
+        assert stage == "gratitude"
+
+        # Check reminder deactivated
+        reminder_raw = await daemon.db.get_dynamic("morning_reminder_state")
+        assert json.loads(reminder_raw)["active"] is False
+
+        # Check heuristic logged with 4 breaths
+        heuristic_raw = await daemon.db.get_dynamic(f"morning_centering_heuristic:{today_str}")
+        assert heuristic_raw is not None
+        heuristic = json.loads(heuristic_raw)
+        assert heuristic["breaths"] == 4
+        assert heuristic["target"] == 3
+        assert heuristic["trigger_id"] == trigger_id
+
+        # Test briefing:breath:1 micro-breath option
+        await daemon.dispatcher.cmd_morning(chat_id=12345)
+        new_signals = [s for s in await daemon.db.get_awaiting_signals() if s["trigger_id"] == "trig_morning_manual"]
+        assert len(new_signals) == 1
+        manual_msg_id = new_signals[0]["message_id"]
+
+        success_1 = await daemon.dispatcher.handle_callback_str(
+            "briefing:breath:1", 12345, manual_msg_id
+        )
+        assert success_1 is True
+        heuristic_1 = json.loads(await daemon.db.get_dynamic(f"morning_centering_heuristic:{today_str}"))
+        assert heuristic_1["breaths"] == 1
+
+        await daemon.db.close()
+
+
+
 # -----------------------------------------------------------------------------
 # Telegram Vertical Card & Formatter Tests
 # -----------------------------------------------------------------------------
