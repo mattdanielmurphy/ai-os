@@ -8,19 +8,19 @@ from services.assistant.context_gate.calendar import CalendarEvent
 
 CENTERING_PROMPTS = [
     (
-        "Take 10 slow, intentional breaths. Count each one: inhale... exhale (1)... inhale... exhale (2)... "
+        "Take 3 slow, intentional breaths. Count each one: inhale... exhale (1)... inhale... exhale (2)... inhale... exhale (3). "
         "Notice your physical points of contact with your chair or the floor. "
-        "Unclench your jaw, soften your shoulders, and complete all 10 breaths before moving forward."
+        "Unclench your jaw, soften your shoulders, and complete your breaths before moving forward."
     ),
     (
-        "Count 10 grounded breaths. Close your eyes or soften your gaze. "
-        "Count each exhale from 1 up to 10. Notice where you hold subtle tension—in the brow, neck, or hands. "
+        "Count 3 grounded breaths. Close your eyes or soften your gaze. "
+        "Count each exhale from 1 to 3. Notice where you hold subtle tension—in the brow, neck, or hands. "
         "Breathe directly into those areas and let them release on each count."
     ),
     (
-        "Count 10 steady, deliberate breaths. "
+        "Count 3 steady, deliberate breaths. "
         "As you inhale, feel the clarity and space of the morning. "
-        "As you exhale, let go of any residue or pressure from yesterday. Reach 10 breaths at your own pace."
+        "As you exhale, let go of any residue or pressure from yesterday. Reach 3 breaths at your own pace."
     ),
 ]
 
@@ -47,9 +47,9 @@ class MorningBriefingBuilder:
 
         lines = [
             f"🌅 *Morning Grounding & Briefing* — {date_str}\n",
-            "*Step 1 of 3 · 10-Breath Mindful Centering*",
+            "*Step 1 of 3 · Mindful Centering*",
             f"_{centering}_\n",
-            "When you are finished, tap the button below. The next part of the morning flow will appear then.\n",
+            "Pick a breath count below. Even 1 micro-breath breaks morning inertia.\n",
         ]
 
         # Spaced Repetition Summary
@@ -80,9 +80,16 @@ class MorningBriefingBuilder:
 
         message_text = "\n".join(lines).strip()
 
-        # Build inline keyboard
+        # Build inline keyboard with tiered micro-habit options
         keyboard: List[List[Dict[str, str]]] = [
-            [{"text": "🧘 Done Centering", "callback_data": "briefing:meditate_done"}]
+            [
+                {"text": "🌬️ 1 Breath (micro)", "callback_data": "briefing:breath:1"},
+                {"text": "🌬️ 2 Breaths", "callback_data": "briefing:breath:2"},
+            ],
+            [
+                {"text": "🌬️ 3 Breaths (target)", "callback_data": "briefing:breath:3"},
+                {"text": "🌬️ 4 Breaths (bonus)", "callback_data": "briefing:breath:4"},
+            ],
         ]
 
         return message_text, keyboard

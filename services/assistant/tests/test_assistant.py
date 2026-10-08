@@ -710,15 +710,16 @@ async def test_morning_briefing_builder_and_gratitude():
 
     assert "Morning Grounding & Briefing" in text
     assert "Friday, September 18" in text
-    assert "10-Breath Mindful Centering" in text
+    assert "Step 1 of 3 · Mindful Centering" in text
     assert "Daily Gratitude" not in text
     assert "4 cards" in text
     assert "MUSIC 102 Lecture" in text
     assert "2:00 PM – 3:20 PM" in text
 
     # Check keyboard rows
-    assert len(keyboard) == 1
-    assert keyboard[0][0]["callback_data"] == "briefing:meditate_done"
+    assert len(keyboard) == 2
+    assert keyboard[0][0]["callback_data"] == "briefing:breath:1"
+    assert keyboard[1][0]["callback_data"] == "briefing:breath:3"
 
     # 2. Gratitude Logging to Vault test
     with tempfile.TemporaryDirectory() as tmpdir:

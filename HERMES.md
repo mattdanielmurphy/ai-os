@@ -127,6 +127,15 @@
   - `log.md`: Append-only chronological action log.
 - **Rule**: Agents MUST NEVER guess or search for alternative wiki directories (e.g. `~/wiki`). All note routing, personal knowledge updates, and wiki operations MUST route directly to this path.
 
+# Anti-Scope-Creep & Habit Sustainability Guardrail (Rabbit-Hole Interceptor)
+- **Context**: Matt is a known procrastinator and rabbit-holer who can get drawn into building massive, from-scratch systems or premature redesigns instead of taking atomic, high-leverage actions.
+- **Rule**:
+  1. **Flag Big From-Scratch Projects**: Whenever Matt proposes creating a large new project from scratch, building custom tools for one-off tasks, or undertaking sweeping architectural rewrites when existing tools, libraries, or narrow fixes suffice:
+     - Agents MUST actively intercept and flag the scope creep as a red flag.
+     - Proactively offer the fastest, lowest-friction alternative (e.g. cloning an existing repo, adopting an established CLI/library, or taking an atomic incremental step).
+  2. **Sustainable Marginal Change**: Treat software architecture like habit formation: sweeping, all-or-nothing transformations breed instability, bugs, and burnout. Always advocate for sustainable, marginal, test-driven increments over massive overhauls.
+  3. **Call Out Wheel-Spinning**: If an agent observes Matt rabbit-holing into micro-optimizations or theoretical rabbit holes on throwaway tasks, directly and constructively call it out and redirect focus to the primary high-leverage outcome.
+
 # Git Protocol Rules
 
 ## Auto-Commit Protocol
