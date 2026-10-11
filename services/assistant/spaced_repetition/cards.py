@@ -85,16 +85,20 @@ def format_answer_reveal_prompt(
         f"*Question:*\n{card.get('prompt', '')}\n\n"
         f"*Answer:*\n{card.get('answer', '')}\n\n"
         f"💡 *Progressive Elaboration:*\n{card.get('elaboration', '')}\n\n"
-        "_Now rate how well you recalled it:_"
+        "*Rate your recall (1/4 to 4/4):*\n"
+        "• *1/4 Again:* Missed, blanked, or lucky guess\n"
+        "• *2/4 Hard:* Recalled with struggle / effort\n"
+        "• *3/4 Good:* Recalled correctly with normal effort\n"
+        "• *4/4 Easy:* Instant, effortless recall"
     )
     keyboard = [
         [
-            {"text": "🔴 Again", "callback_data": f"fsrs_rate:{card_id}:1"},
-            {"text": "🟠 Hard", "callback_data": f"fsrs_rate:{card_id}:2"},
+            {"text": "1/4 · Again", "callback_data": f"fsrs_rate:{card_id}:1"},
+            {"text": "2/4 · Hard", "callback_data": f"fsrs_rate:{card_id}:2"},
         ],
         [
-            {"text": "🟢 Good", "callback_data": f"fsrs_rate:{card_id}:3"},
-            {"text": "⚡️ Easy", "callback_data": f"fsrs_rate:{card_id}:4"},
+            {"text": "3/4 · Good", "callback_data": f"fsrs_rate:{card_id}:3"},
+            {"text": "4/4 · Easy", "callback_data": f"fsrs_rate:{card_id}:4"},
         ],
     ]
     return text, keyboard
@@ -105,7 +109,8 @@ def format_feedback_prompt(
 ) -> Tuple[str, List[List[Dict[str, str]]]]:
     """
     Stage 2: Shows correctness feedback, reveals the answer and elaboration,
-    and prompts for the struggle/confidence calibration rating.
+    and prompts for the struggle/confidence calibration rating with clean, un-truncated
+    1/4 to 4/4 hierarchy buttons.
     """
     card_id = card["card_id"]
     prompt = card.get("prompt", "")
@@ -120,17 +125,6 @@ def format_feedback_prompt(
 
     if is_correct:
         status_banner = "🎯 *Correct!*"
-        # Struggle / confidence rating keyboard for correct answers
-        keyboard = [
-            [
-                {"text": "⚡️ Instant / Easy", "callback_data": f"fsrs_rate:{card_id}:4"},
-                {"text": "🟢 Confident / Good", "callback_data": f"fsrs_rate:{card_id}:3"},
-            ],
-            [
-                {"text": "🟠 Struggled / Hard", "callback_data": f"fsrs_rate:{card_id}:2"},
-                {"text": "🎲 Lucky Guess / Again", "callback_data": f"fsrs_rate:{card_id}:1"},
-            ],
-        ]
     else:
         chosen_str = (
             f"{labels[chosen_idx]}) {options[chosen_idx]}"
@@ -138,20 +132,29 @@ def format_feedback_prompt(
             else f"Option {chosen_idx + 1}"
         )
         status_banner = f"❌ *Incorrect.* _(You picked {chosen_str})_"
-        # Struggle rating for incorrect answers
-        keyboard = [
-            [
-                {"text": "🔴 Slipped my mind (Again)", "callback_data": f"fsrs_rate:{card_id}:1"},
-                {"text": "🟠 Almost had it (Hard)", "callback_data": f"fsrs_rate:{card_id}:2"},
-            ]
-        ]
+
+    # Struggle / confidence rating keyboard with clean, un-truncated 1/4 - 4/4 hierarchy
+    keyboard = [
+        [
+            {"text": "1/4 · Again", "callback_data": f"fsrs_rate:{card_id}:1"},
+            {"text": "2/4 · Hard", "callback_data": f"fsrs_rate:{card_id}:2"},
+        ],
+        [
+            {"text": "3/4 · Good", "callback_data": f"fsrs_rate:{card_id}:3"},
+            {"text": "4/4 · Easy", "callback_data": f"fsrs_rate:{card_id}:4"},
+        ],
+    ]
 
     text = (
         f"{status_banner}\n\n"
         f"*Question:*\n{prompt}\n\n"
         f"*Answer:*\n{answer}\n\n"
         f"💡 *Progressive Elaboration:*\n{elaboration}\n\n"
-        f"_How was that recall? Rate your struggle / confidence:_"
+        "*Rate your recall (1/4 to 4/4):*\n"
+        "• *1/4 Again:* Missed, blanked, or lucky guess\n"
+        "• *2/4 Hard:* Recalled with struggle / effort\n"
+        "• *3/4 Good:* Recalled correctly with normal effort\n"
+        "• *4/4 Easy:* Instant, effortless recall"
     )
     return text, keyboard
 
@@ -166,12 +169,12 @@ def format_review_completed(
     Shows the final scheduled date and progressive elaboration.
     """
     rating_names = {
-        1: "🔴 Again (Guess / Missed)",
-        2: "🟠 Hard (Struggled)",
-        3: "🟢 Good (Confident)",
-        4: "⚡️ Easy (Instant Recall)",
+        1: "1/4 · Again (Missed / Guess)",
+        2: "2/4 · Hard (Struggled)",
+        3: "3/4 · Good (Normal Recall)",
+        4: "4/4 · Easy (Instant Recall)",
     }
-    rating_str = rating_names.get(rating_val, "Rated")
+    rating_str = rating_names.get(rating_val, f"Rated {rating_val}/4")
 
     prompt = card.get("prompt", "")
     answer = card.get("answer", "")

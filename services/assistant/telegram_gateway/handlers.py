@@ -276,12 +276,18 @@ def clean_agy_output(raw_output: str) -> Optional[str]:
     return result if result else None
 
 
-def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> str:
+def build_conversational_prompt(
+    prompt: str,
+    history: List[Dict[str, Any]],
+    system_context: Optional[str] = None,
+) -> str:
     """
     Constructs a contextual prompt including prior conversation turns,
     ensuring that references like 'Send that markdown again' or 'What about X?'
     have full context even across session restarts or long pauses.
     Enforces Telegram presentation rules (vertical cards, no tables) and native attachment delivery.
+    Injects active system & task context (e.g. morning routine, active flashcard, habit state)
+    so the assistant can seamlessly answer content questions and discuss the system on a meta level.
     """
     presentation_rule = (
         "[Formatting & Delivery Rules: You are chatting with Matt on mobile Telegram.\n"
@@ -289,8 +295,16 @@ def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> s
         "2. Native Attachments: You have full native Telegram file delivery capabilities! Whenever you generate, convert, locate, or refer to an audio recording, voice note, photo, image, video, PDF, document, or code export for Matt, attach it by outputting MEDIA:/absolute/path/to/file on its own line (e.g. MEDIA:/path/to/audio.mp3). Use [[audio_as_voice]] on the preceding line for voice bubble playback. The Telegram gateway will automatically extract the file, upload it as a native attachment, and deliver it directly to Matt in this chat.]\n\n"
     )
 
+    context_section = ""
+    if system_context and system_context.strip():
+        context_section = (
+            f"[Active System & Task Context]\n"
+            f"{system_context.strip()}\n"
+            f"[End Active System & Task Context]\n\n"
+        )
+
     if not history:
-        return f"{presentation_rule}{prompt}"
+        return f"{presentation_rule}{context_section}{prompt}"
 
     history_lines = []
     for msg in history:
@@ -303,11 +317,12 @@ def build_conversational_prompt(prompt: str, history: List[Dict[str, Any]]) -> s
     history_block = "\n\n".join(history_lines)
     return (
         f"{presentation_rule}"
+        f"{context_section}"
         f"[Prior Conversation Context]\n"
         f"{history_block}\n"
         f"[End Prior Context]\n\n"
         f"User's Latest Message: {prompt}\n\n"
-        f"Please respond directly to the user's latest message above, maintaining continuous context from the prior conversation history."
+        f"Please respond directly to the user's latest message above, maintaining continuous context from the active system state and prior conversation history."
     )
 
 
@@ -598,6 +613,8 @@ class ActionDispatcher:
             logger.warning(f"FSRS pick received for unknown card {card_id}")
             return False
 
+        await self.db.set_dynamic(f"last_active_card_id:{chat_id}", card_id)
+        await self.db.set_dynamic(f"last_active_card_msg_id:{chat_id}", str(message_id))
         await self.db.set_dynamic(f"fsrs_answered:{message_id}", "true")
         feedback_text, struggle_keyboard = format_feedback_prompt(card, chosen_idx)
         await self.gateway.edit_prompt(
@@ -612,6 +629,8 @@ class ActionDispatcher:
     async def _handle_fsrs(
         self, card_id: str, rating_val: int, chat_id: int, message_id: int
     ) -> bool:
+        await self.db.set_dynamic(f"last_active_card_id:{chat_id}", card_id)
+        await self.db.set_dynamic(f"last_active_card_msg_id:{chat_id}", str(message_id))
         card = await self.db.get_card(card_id)
         if not card:
             logger.warning(f"FSRS callback received for unknown card {card_id} (test card)")
@@ -853,6 +872,126 @@ class ActionDispatcher:
             state = {}
         return state if isinstance(state, dict) else {}
 
+    async def _build_active_system_context(self, chat_id: int) -> Optional[str]:
+        """
+        Assembles structured system context regarding any active or recent
+        flashcard, morning flow routine, habit check, or calendar state.
+        This allows the conversational model to immediately answer questions about
+        card content as well as meta-level discussions about the routine or system.
+        """
+        context_parts: List[str] = []
+
+        signals = await self.db.get_awaiting_signals()
+        active_signal = next((s for s in signals if s["chat_id"] == chat_id), None)
+
+        card_id = None
+        card_msg_id = None
+        morning_trigger_id = None
+
+        if active_signal:
+            trigger_id = active_signal["trigger_id"]
+            if trigger_id.startswith("trig_fsrs_"):
+                card_id = trigger_id.replace("trig_fsrs_", "")
+                card_msg_id = active_signal["message_id"]
+                morning_trigger_id = await self.db.get_dynamic(self._morning_review_key(card_msg_id))
+            elif trigger_id.startswith("trig_morning_") or trigger_id == "trig_morning_manual":
+                morning_trigger_id = trigger_id
+
+        # Fallback to last active card/morning if no signal is active right now
+        if not card_id:
+            card_id = await self.db.get_dynamic(f"last_active_card_id:{chat_id}")
+            card_msg_id_str = await self.db.get_dynamic(f"last_active_card_msg_id:{chat_id}")
+            if card_msg_id_str and card_msg_id_str.isdigit():
+                card_msg_id = int(card_msg_id_str)
+        if not morning_trigger_id:
+            morning_trigger_id = await self.db.get_dynamic(f"last_active_morning_trigger:{chat_id}")
+
+        # 1. Active Flashcard Context
+        if card_id:
+            card = await self.db.get_card(card_id)
+            if card:
+                deck_type = card.get("deck_type", "cold_storage")
+                deck_label = "📚 Coursework" if deck_type == "cold_storage" else "💡 Baby Facts"
+                chapter_match = re.match(r"forallx_ch(\d{2})_", card_id)
+                if chapter_match:
+                    deck_label = f"∀x · Chapter {int(chapter_match.group(1))} (Intro to Formal Logic)"
+
+                options = parse_options(card.get("options"))
+                options_str = "Open Recall (No multiple-choice options)"
+                if options:
+                    labels = ["A", "B", "C", "D", "E", "F"]
+                    lines = []
+                    for i, opt in enumerate(options):
+                        lbl = labels[i] if i < len(labels) else str(i + 1)
+                        is_corr = " (Correct Answer)" if i == int(card.get("correct_index", 0)) else ""
+                        lines.append(f"    {lbl}) {opt}{is_corr}")
+                    options_str = "\n".join(lines)
+
+                card_state_desc = "Card displayed on screen."
+                if card_msg_id:
+                    answered = await self.db.get_dynamic(f"fsrs_answered:{card_msg_id}")
+                    revealed = await self.db.get_dynamic(f"fsrs_revealed:{card_msg_id}")
+                    if answered == "true" or revealed == "true":
+                        card_state_desc = (
+                            "Answer revealed to user. Card prompt is currently showing "
+                            "interactive recall rating buttons (1/4 Again, 2/4 Hard, 3/4 Good, 4/4 Easy)."
+                        )
+                    elif options:
+                        card_state_desc = (
+                            "Card is actively showing multiple-choice options (A, B, C, D) and awaiting user's selection."
+                        )
+                    else:
+                        card_state_desc = "Card is actively showing open-recall question, awaiting answer reveal."
+
+                card_block = (
+                    f"• Active Flashcard on Screen:\n"
+                    f"  - Deck: {deck_label}\n"
+                    f"  - Card ID: {card_id}\n"
+                    f"  - Question / Prompt: {card.get('prompt', '')}\n"
+                    f"  - Canonical Answer: {card.get('answer', '')}\n"
+                    f"  - Options:\n{options_str}\n"
+                    f"  - Progressive Elaboration: {card.get('elaboration', '')}\n"
+                    f"  - Current UI State: {card_state_desc}"
+                )
+                context_parts.append(card_block)
+
+        # 2. Morning Routine Context
+        if morning_trigger_id:
+            stage = await self._morning_flow_stage(morning_trigger_id)
+            flow_state = await self._morning_flow_state(morning_trigger_id)
+            reviewed_count = flow_state.get("reviewed_cards_count", 0)
+            threshold = flow_state.get("threshold", self.morning_review_card_threshold)
+            reward_granted = flow_state.get("reward_granted", False)
+            due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
+
+            step_num = 1 if stage == "centering" else (2 if stage == "gratitude" else 3)
+            morning_block = (
+                f"• Active Morning Grounding & Briefing Flow:\n"
+                f"  - Current Stage: Step {step_num} of 3 ({stage.capitalize()})\n"
+                f"  - Reviewed Cards Today: {reviewed_count}/{threshold} (Threshold to earn reward: {threshold} card{'s' if threshold != 1 else ''})\n"
+                f"  - Reward Comic Granted: {reward_granted} (Cyanide & Happiness daily comic from Explosm)\n"
+                f"  - Remaining Due Cards: {len(due_cards)} due\n"
+                f"  - Routine Sequence Architecture:\n"
+                f"    Step 1: Mindful Centering (1-4 intentional breaths to break inertia)\n"
+                f"    Step 2: Daily Gratitude (logged to Obsidian vault habits/logs/YYYY-MM-DD.md)\n"
+                f"    Step 3: Spaced-Repetition Review (FSRS minimum threshold of 1 card to maintain habit consistency per Atomic Habits)\n"
+                f"    Reward: Cyanide & Happiness (C&H) comic from Explosm upon meeting the 1-card threshold"
+            )
+            context_parts.append(morning_block)
+
+        # 3. System Meta-Guidance
+        if context_parts:
+            meta_block = (
+                "• Instructions for You as the AI Assistant:\n"
+                "  1. Content Inquiries: Matt can ask any question about the card's subject matter (e.g. logic concepts, definitions, nuances), or why an answer is correct or incorrect. Provide crisp, clear, accurate explanations.\n"
+                "  2. Meta-System Inquiries: Matt can also discuss or critique the card system, morning flow, habit design, buttons, or rating hierarchy on a meta level. Discuss these thoughtfully, candidly, and constructively.\n"
+                "  3. Non-Destructive Interaction: The interactive prompt and its buttons are STILL ACTIVE in Telegram. Remind Matt after addressing his questions that he can continue by tapping the buttons whenever he's ready, or ask more questions."
+            )
+            context_parts.append(meta_block)
+            return "\n\n".join(context_parts)
+
+        return None
+
     @staticmethod
     def _gratitude_step_text() -> str:
         return (
@@ -1044,6 +1183,9 @@ class ActionDispatcher:
             )
             await self._set_morning_flow_stage(
                 "trig_morning_manual", "centering", len(due_cards)
+            )
+            await self.db.set_dynamic(
+                f"last_active_morning_trigger:{chat_id}", "trig_morning_manual"
             )
         return True
 
@@ -1263,10 +1405,15 @@ class ActionDispatcher:
                 sent_at=sent_at,
                 timeout_at=sent_at + timedelta(seconds=self.config.silence_timeout_seconds),
             )
+            await self.db.set_dynamic(f"last_active_card_id:{chat_id}", card["card_id"])
+            await self.db.set_dynamic(f"last_active_card_msg_id:{chat_id}", str(msg_id))
             if morning_trigger_id:
                 await self.db.set_dynamic(
                     self._morning_review_key(msg_id),
                     morning_trigger_id,
+                )
+                await self.db.set_dynamic(
+                    f"last_active_morning_trigger:{chat_id}", morning_trigger_id
                 )
             if parse_options(card.get("options")):
                 await self.db.set_dynamic(f"fsrs_answer_required:{msg_id}", "true")
@@ -1676,31 +1823,46 @@ class ActionDispatcher:
                 card = await self.db.get_card(card_id)
                 if card:
                     options = parse_options(card.get("options"))
-                    option_map = {"a": 0, "1": 0, "b": 1, "2": 1, "c": 2, "3": 2, "d": 3, "4": 3}
-                    if options and lower_text in option_map:
-                        idx = option_map[lower_text]
-                        await self._handle_fsrs_pick(card_id, idx, chat_id, prompt_msg_id)
-                        return True
+                    answered = await self.db.get_dynamic(f"fsrs_answered:{prompt_msg_id}")
 
-                    if options:
-                        try:
-                            for idx, opt in enumerate(options):
-                                if lower_text == opt.strip().lower():
-                                    await self._handle_fsrs_pick(card_id, idx, chat_id, prompt_msg_id)
-                                    return True
-                        except Exception:
-                            pass
+                    # Case A: Card has multiple-choice options and has NOT been answered yet -> Option Pick
+                    if options and answered != "true":
+                        option_labels = ["a", "b", "c", "d", "e", "f"][:len(options)]
+                        # Match single letter ("a", "b") or single number ("1", "2")
+                        if lower_text in option_labels:
+                            idx = option_labels.index(lower_text)
+                            await self._handle_fsrs_pick(card_id, idx, chat_id, prompt_msg_id)
+                            return True
+                        elif lower_text in [str(i + 1) for i in range(len(options))]:
+                            idx = int(lower_text) - 1
+                            await self._handle_fsrs_pick(card_id, idx, chat_id, prompt_msg_id)
+                            return True
+                        # Match exact option text string
+                        for idx, opt in enumerate(options):
+                            if lower_text == opt.strip().lower():
+                                await self._handle_fsrs_pick(card_id, idx, chat_id, prompt_msg_id)
+                                return True
 
-                    struggle_map = {
-                        "again": 1, "lucky": 1, "guess": 1, "1": 1,
-                        "hard": 2, "struggled": 2, "struggle": 2, "2": 2,
-                        "good": 3, "confident": 3, "3": 3,
-                        "easy": 4, "instant": 4, "4": 4,
-                    }
-                    for kw, r_val in struggle_map.items():
-                        if kw in lower_text.split():
+                    # Case B: Card is awaiting struggle / recall rating (1, 2, 3, 4)
+                    else:
+                        RATING_EXACT_MAP = {
+                            "1": 1, "again": 1, "1/4": 1, "1/4 again": 1, "rate 1": 1,
+                            "lucky": 1, "guess": 1, "lucky guess": 1,
+                            "2": 2, "hard": 2, "2/4": 2, "2/4 hard": 2, "rate 2": 2,
+                            "struggled": 2, "struggle": 2,
+                            "3": 3, "good": 3, "3/4": 3, "3/4 good": 3, "rate 3": 3,
+                            "confident": 3,
+                            "4": 4, "easy": 4, "4/4": 4, "4/4 easy": 4, "rate 4": 4,
+                            "instant": 4,
+                        }
+                        if lower_text in RATING_EXACT_MAP:
+                            r_val = RATING_EXACT_MAP[lower_text]
                             await self._handle_fsrs(card_id, r_val, chat_id, prompt_msg_id)
                             return True
+
+                    # NOTE: If user message is NOT an exact option pick or rating command,
+                    # DO NOT consume or swallow it! Let it fall through so the conversational
+                    # assistant can read it with full active card & morning context.
 
             # Habit check active prompt
             elif trigger_id.startswith("trig_habit_"):
@@ -1713,101 +1875,96 @@ class ActionDispatcher:
                     await self._handle_habit(habit_name, "full", chat_id, prompt_msg_id)
                     return True
 
-            # A morning prompt accepts free text only during the gratitude step. This
-            # prevents completion chatter (for example, "done centering") from being
-            # journaled as gratitude.
+            # Morning prompt active check
             elif trigger_id.startswith("trig_morning_") or trigger_id == "trig_morning_manual":
                 stage = await self._morning_flow_stage(trigger_id)
                 if stage == "gratitude":
-                    log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
-                    due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
-                    await self._set_morning_flow_stage(
-                        trigger_id,
-                        "review",
-                        len(due_cards),
-                        threshold=self.morning_review_card_threshold,
-                    )
-                    await self.gateway.remove_prompt_keyboard(chat_id, prompt_msg_id)
-                    await self.gateway.send_message(
-                        chat_id,
-                        f"Recorded to `{log_path.name}` in your Obsidian vault.",
-                    )
-                    previous_signals = [
-                        signal
-                        for signal in await self.db.get_awaiting_signals()
-                        if signal["trigger_id"] == trigger_id
-                    ]
-                    next_prompt_id = await self.gateway.send_prompt(
-                        chat_id,
-                        self._review_step_text(
-                            len(due_cards), threshold=self.morning_review_card_threshold
-                        ),
-                        self._morning_review_keyboard(
-                            len(due_cards), threshold=self.morning_review_card_threshold
-                        ),
-                    )
-                    if next_prompt_id:
-                        sent_at = datetime.now(timezone.utc)
-                        await self.db.record_outbound_signal(
-                            message_id=next_prompt_id,
-                            chat_id=chat_id,
-                            trigger_id=trigger_id,
-                            sent_at=sent_at,
-                            timeout_at=sent_at
-                            + timedelta(seconds=self.config.silence_timeout_seconds),
-                            status="AWAITING_INPUT",
+                    # Check if the user is asking a question or making a meta comment rather than journaling gratitude
+                    is_question_or_meta = (
+                        "?" in clean_text
+                        or re.match(
+                            r"^(why|how|what|where|who|when|can you|could you|is there|explain|tell me|meta|card|system)\b",
+                            lower_text,
                         )
-                        for signal in previous_signals:
-                            await self.gateway.remove_prompt_keyboard(
-                                chat_id, signal["message_id"]
-                            )
-                            await self.db.resolve_signal(
-                                signal["message_id"], "RESPONDED"
-                            )
-                    else:
-                        await self.gateway.edit_prompt(
-                            chat_id=chat_id,
-                            message_id=prompt_msg_id,
-                            text=self._review_step_text(
+                        or (len(clean_text.split()) > 15 and any(w in lower_text for w in ("card", "system", "button", "fsrs", "logic", "morning", "review")))
+                    )
+                    if not is_question_or_meta:
+                        log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
+                        due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
+                        await self._set_morning_flow_stage(
+                            trigger_id,
+                            "review",
+                            len(due_cards),
+                            threshold=self.morning_review_card_threshold,
+                        )
+                        await self.gateway.remove_prompt_keyboard(chat_id, prompt_msg_id)
+                        await self.gateway.send_message(
+                            chat_id,
+                            f"Recorded to `{log_path.name}` in your Obsidian vault.",
+                        )
+                        previous_signals = [
+                            signal
+                            for signal in await self.db.get_awaiting_signals()
+                            if signal["trigger_id"] == trigger_id
+                        ]
+                        next_prompt_id = await self.gateway.send_prompt(
+                            chat_id,
+                            self._review_step_text(
                                 len(due_cards), threshold=self.morning_review_card_threshold
                             ),
-                            keyboard_rows=self._morning_review_keyboard(
+                            self._morning_review_keyboard(
                                 len(due_cards), threshold=self.morning_review_card_threshold
                             ),
-                            remove_keyboard=False,
                         )
-                    return True
+                        if next_prompt_id:
+                            sent_at = datetime.now(timezone.utc)
+                            await self.db.record_outbound_signal(
+                                message_id=next_prompt_id,
+                                chat_id=chat_id,
+                                trigger_id=trigger_id,
+                                sent_at=sent_at,
+                                timeout_at=sent_at
+                                + timedelta(seconds=self.config.silence_timeout_seconds),
+                                status="AWAITING_INPUT",
+                            )
+                            for signal in previous_signals:
+                                await self.gateway.remove_prompt_keyboard(
+                                    chat_id, signal["message_id"]
+                                )
+                                await self.db.resolve_signal(
+                                    signal["message_id"], "RESPONDED"
+                                )
+                        else:
+                            await self.gateway.edit_prompt(
+                                chat_id=chat_id,
+                                message_id=prompt_msg_id,
+                                text=self._review_step_text(
+                                    len(due_cards), threshold=self.morning_review_card_threshold
+                                ),
+                                keyboard_rows=self._morning_review_keyboard(
+                                    len(due_cards), threshold=self.morning_review_card_threshold
+                                ),
+                                remove_keyboard=False,
+                            )
+                        return True
+                    # If question or meta comment, let it fall through to conversational assistant!
                 elif stage == "review":
                     flow_state = await self._morning_flow_state(trigger_id)
                     if flow_state.get("reward_granted"):
-                        if any(w in lower_text for w in ("more", "continue", "next", "keep going", "review")):
+                        if any(w in lower_text.split() for w in ("more", "continue", "next", "review")):
                             await self.cmd_quiz(chat_id, morning_trigger_id=trigger_id)
                             return True
-                        elif any(w in lower_text for w in ("finish", "done", "stop", "end", "complete")):
+                        elif any(w in lower_text.split() for w in ("finish", "done", "stop", "complete")):
                             await self._set_morning_flow_stage(trigger_id, "complete")
                             await self._finish_morning_checkin(trigger_id)
                             await self.gateway.send_message(
                                 chat_id, "🌅 *Morning flow complete.* Have a great day, Matt!"
                             )
                             return True
-                        else:
-                            await self.gateway.send_message(
-                                chat_id,
-                                "Tap *Review more* to practice another card, or *Finish for today* to wrap up your morning flow.",
-                            )
-                            return True
-                    else:
-                        await self.gateway.send_message(
-                            chat_id,
-                            "Tap *Review one card* to start your morning spaced-repetition review.",
-                        )
-                        return True
+                    # If not an explicit continue/finish command, let it fall through to conversational assistant!
                 else:
-                    await self.gateway.send_message(
-                        chat_id,
-                        "Your morning flow is still on *centering*. Tap *Done Centering* when you’re ready for the gratitude step.",
-                    )
-                    return True
+                    # Centering stage: let questions and meta comments fall through to conversational assistant!
+                    pass
 
         # 2. Check for natural command keywords
         if lower_text in ("status", "info"):
@@ -1840,9 +1997,9 @@ class ActionDispatcher:
             note = re.sub(r"^(note:\s*|capture:\s*|idea:\s*)", "", clean_text, flags=re.IGNORECASE).strip()
             return await self.cmd_capture(note, chat_id)
 
-        # 5. Conversational Assistant (direct Codex only)
+        # 5. Conversational Assistant (Agy primary, Codex fallback)
         status_msg_id = await self.gateway.send_message(
-            chat_id, "💬 <i>Thinking with Codex...</i>"
+            chat_id, "💬 <i>Thinking...</i>"
         )
 
         stop_typing = asyncio.Event()
@@ -1858,7 +2015,10 @@ class ActionDispatcher:
         typing_task = asyncio.create_task(_typing_heartbeat())
 
         recent_history = await self.db.get_recent_chat_history(chat_id, limit=8)
-        augmented_prompt = build_conversational_prompt(clean_text, recent_history)
+        system_context = await self._build_active_system_context(chat_id)
+        augmented_prompt = build_conversational_prompt(
+            clean_text, recent_history, system_context=system_context
+        )
         await self.db.add_chat_message(chat_id, "user", clean_text)
 
         try:
@@ -1898,7 +2058,7 @@ class ActionDispatcher:
         """Inspects and explains user-provided photos/screenshots using Agy Vision or Codex Vision."""
         user_prompt = caption.strip() if caption and caption.strip() else "Please inspect and explain what is shown in this image in detail:"
         status_msg_id = await self.gateway.send_message(
-            chat_id, "🖼️ <i>Analyzing image with Codex...</i>"
+            chat_id, "🖼️ <i>Analyzing image...</i>"
         )
 
         stop_typing = asyncio.Event()
@@ -1914,7 +2074,10 @@ class ActionDispatcher:
         typing_task = asyncio.create_task(_typing_heartbeat())
 
         recent_history = await self.db.get_recent_chat_history(chat_id, limit=6)
-        augmented_prompt = build_conversational_prompt(user_prompt, recent_history)
+        system_context = await self._build_active_system_context(chat_id)
+        augmented_prompt = build_conversational_prompt(
+            user_prompt, recent_history, system_context=system_context
+        )
         await self.db.add_chat_message(chat_id, "user", f"[Photo attached: {photo_path.name}] {user_prompt}")
 
         try:
