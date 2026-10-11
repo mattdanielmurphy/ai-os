@@ -457,7 +457,7 @@ async def test_end_to_end_action_dispatcher():
         # Verify message was updated with struggle buttons
         dry_msg = gateway._dry_run_messages[msg_id]
         assert "🎯 *Correct!*" in dry_msg["text"]
-        assert dry_msg["keyboard"][0][0]["callback_data"] == "fsrs_rate:mcq1:4"
+        assert dry_msg["keyboard"][0][0]["callback_data"] == "fsrs_rate:mcq1:1"
 
         # Step 2: User rates struggle (e.g. Confident / Good = 3)
         rate_ok = await dispatcher.handle_callback_str("fsrs_rate:mcq1:3", chat_id=999, message_id=msg_id)
