@@ -904,6 +904,61 @@ async def test_morning_centering_breath_callbacks():
         await daemon.db.close()
 
 
+@pytest.mark.asyncio
+async def test_morning_nudge_replaces_previous_and_ack_clears_latest():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from services.assistant.run import AssistantDaemon
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cfg = AssistantConfig(
+            db_path=Path(tmpdir) / "test.db",
+            obsidian_vault_path=Path(tmpdir) / "vault",
+            dry_run=True,
+            telegram_chat_id=12345,
+        )
+        daemon = AssistantDaemon(config=cfg)
+        await daemon.db.connect()
+        now = datetime.now(timezone.utc).replace(hour=9, minute=0, second=0, microsecond=0)
+        trigger_id = f"trig_morning_{now.astimezone().strftime('%Y-%m-%d')}"
+        prior_id = 987654321
+        await daemon.db.record_outbound_signal(
+            message_id=prior_id, chat_id=12345, trigger_id=trigger_id,
+            sent_at=now - timedelta(minutes=20), timeout_at=now, status="AWAITING_INPUT",
+        )
+        daemon.gateway._dry_run_messages[prior_id] = {
+            "text": "⏰ Morning check-in nudge", "keyboard": [[{"text": "I’m up", "callback_data": "briefing:ack"}]]
+        }
+        await daemon.db.set_dynamic("morning_reminder_state", json.dumps({
+            "trigger_id": trigger_id, "active": True, "reminder_count": 1,
+            "last_sent_at": (now - timedelta(minutes=20)).isoformat(),
+            "next_attempt_at": (now - timedelta(minutes=1)).isoformat(),
+            "last_nudge_message_id": prior_id,
+        }))
+        daemon.evaluator.evaluate = AsyncMock(return_value=SimpleNamespace(allowed=True))
+
+        await daemon._process_morning_reminders(now)
+        reminder_state = json.loads(await daemon.db.get_dynamic("morning_reminder_state"))
+        latest_id = reminder_state["last_nudge_message_id"]
+        assert latest_id != prior_id
+        assert "newer morning nudge" in daemon.gateway._dry_run_messages[prior_id]["text"]
+        assert daemon.gateway._dry_run_messages[prior_id]["keyboard"] == []
+        signals = await daemon.db.get_awaiting_signals()
+        assert [s["message_id"] for s in signals if s["trigger_id"] == trigger_id] == [latest_id]
+        await daemon.dispatcher.handle_callback_str("briefing:ack", 12345, prior_id)
+        reminder_state = json.loads(await daemon.db.get_dynamic("morning_reminder_state"))
+        assert reminder_state["active"] is True
+        assert reminder_state["last_nudge_message_id"] == latest_id
+
+        await daemon.dispatcher.handle_callback_str("briefing:ack", 12345, latest_id)
+        latest_text = daemon.gateway._dry_run_messages[latest_id]["text"]
+        assert "Morning check-in nudge" not in latest_text
+        assert "You’re up" in latest_text
+        reminder_state = json.loads(await daemon.db.get_dynamic("morning_reminder_state"))
+        assert reminder_state["last_nudge_message_id"] is None
+        await daemon.db.close()
+
+
 
 # -----------------------------------------------------------------------------
 # Telegram Vertical Card & Formatter Tests
@@ -1696,4 +1751,3 @@ async def test_active_card_conversational_meta_comment_and_button_hierarchy(monk
         assert card_db_rated["reps"] == 1
 
         await db.close()
-

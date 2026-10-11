@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-10-11
+- **Telegram morning flow auto-advance and singleton nudges:** After the minimum review earns the C&H reward, due FSRS cards now continue automatically until exhausted. New reminders retire the prior nudge, and “I’m up” replaces its message with the active morning stage. Focused morning-flow and nudge tests pass; the full suite has one unrelated existing feedback-copy assertion failure.
+
 ## 2026-10-08
 - **Fix Telegram morning check-in breath callbacks:** Fixed callback parsing bug where `briefing:breath:<N>` was split on colon into `["briefing", "breath", "<N>"]`, causing `sub.startswith("breath:")` to evaluate to False and drop all breath button taps. Added count extraction from `parts[2]`, deactivated morning reminders upon centering completion, added fallback trigger lookup from `outbound_signals`, verified with full test suite (23/23 passing), and restarted `aios-assistant`. [[log]](agent-logs/2026-10-08_10-05_fix-telegram-morning-checkin-breath-callbacks.md)
 

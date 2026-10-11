@@ -45,6 +45,7 @@ Central task registry across all projects and active coding threads. Automatical
 
 ## ✅ Completed
 
+- [x] Automatically continue morning FSRS reviews after the minimum and keep only the latest reminder nudge visible [project:: proactive-assistant] [assignee:: agent] [due:: 2026-10-11]
 - [x] Implement Dynamic Codex Hook-Based Policy Engine (classifier, tool_guard, rollout/rollback, 30 tests) [project:: ai-os] [assignee:: agent] [due:: 2026-09-27]
 - [x] Add AI-OS Controls menu actions to reveal and hide the Perplexity/Gemini companion windows [project:: query-aios-controls] [assignee:: agent]
 - [x] Add forallx chapters 1–15 FSRS quizzes and repeat unanswered morning Telegram check-ins every 15 minutes [project:: proactive-assistant] [assignee:: agent] [due:: 2026-09-24]
