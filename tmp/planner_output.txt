@@ -1,62 +1,261 @@
-The smallest change is to keep the existing Perplexity planning gate, then make successful plan retrieval lead directly to implementation in the same task. The agent should pause for Matt only when a decision materially changes the requested outcome or architecture and cannot be resolved from his instructions, established project conventions, or a safe, reversible choice. This is an implementation plan, not a claim that the files or local working tree have been changed.
+## Architectural Strategy
 
-## Architectural strategy
+Change the morning flow from “minimum review → C&H reward → continue/finish choice” to “minimum review → C&H reward → automatic review of all remaining due cards → completion.” Separately, treat Telegram nudges as a **singleton** notification: replacing a nudge retires the previous one, and tapping “I’m up” retires the tapped nudge while resuming—not advancing—the saved morning stage.
 
-Keep planner dispatch and continuation separate from the new execution policy. The repository skill already requires a GitHub `origin`, invokes the single `query_aios.js --plan` command, waits on the original process or uses verified output recovery, and formats the result as `implementation_plan.md`. Add the default-to-implementation instruction immediately after that successful-result step, without changing those preceding rules. 
+Repository inspection is blocked in this session: I checked connector availability, and no GitHub connector was returned. Consequently, the plan below uses the supplied repository context; handler names, database fields, and test filenames are proposed contracts, not verified existing symbols. Connect GitHub through Settings → Connectors to enable source-level inspection. The orchestrator must perform the inspection described below before editing and map these contracts onto existing equivalents rather than introducing parallel machinery.
 
-Maintain 1:1 behavioral parity with the Antigravity workflow at `~/.gemini/config/global_workflows/_plan-with-ai-os.md`. That workflow is a **local path**, not a file I could inspect through the GitHub repository connector; the implementing agent must read it directly before editing and carry over only the corresponding continuation language. The repository’s skill-authoring policy identifies these two direct paths and requires skill synchronization after a source-skill edit. 
+### Preserve these existing semantics
 
-## State and interface contracts
+- Morning stages remain centering → gratitude → minimum review → C&H reward → remaining review → completion.
+- Only gratitude accepts free-text journal entries.
+- Cards retain answer-before-rating behavior, cached choices, and reveal-answer fallback.
+- The minimum remains configurable, with its existing default and counting rules unchanged.
+- No due cards still counts as a maintained day and earns the reward.
+- The reward remains separate, with the existing comic-image delivery and official-page fallback.
+- Context Gate, reminder scheduling, awake-time timeout, and acknowledgment-based reminder suppression remain unchanged.
+- “Automatically sends the next card” means after each accepted rating—not sending all cards at once or auto-answering them.
 
-No application data structure, persistent state, or new function is needed. This is an instruction-contract change:
+## 1. Required Inspection and Architecture Mapping
 
-- **Input:** Matt’s original task, the current project context, and the planner’s completed output.
-- **Successful output:** A retained `implementation_plan.md`, followed by implementation, appropriate verification, and a report of what changed—all in the same task.
-- **Decision gate:** Ask Matt a specific question only if a material ambiguity or consequential architectural choice remains after checking the request and known project preferences. Ordinary implementation details are agent decisions.
-- **Hard stops:** Preserve the existing missing/non-GitHub-`origin` stop and any existing dispatch, recovery, and fallback restrictions. Do not reinterpret “implement by default” as permission to skip a failed planning gate. 
+Before implementation, inspect `services/assistant/` and its tests to locate:
 
-Do not add a CLI flag, wrapper script, second planner call, or a new planner-result format. In particular, the skill’s current recovery instruction treats a completed output with its matching query-state checksum differently from an in-flight request; that distinction must remain intact. 
+1. Morning state creation, persistence, restoration, and completion.
+2. Telegram callback dispatch for centering, gratitude, review, reward, continue/finish, and “I’m up.”
+3. Shared card delivery, answer/reveal handling, FSRS rating, and due-card selection.
+4. Reminder scheduling, active-signal transfer, duplicate retirement, and watchdog cleanup.
+5. Database schema and migrations, especially flow IDs, message IDs, reward state, and callback idempotency.
+6. Existing tests for these behaviors, including manual and `/forallx` review isolation.
 
-## Execution flow
+Search by user-facing strings and callback payloads, not assumed filenames. Trace callers of completion and signal-retirement helpers before changing them.
+
+Use one existing morning progression path for initial review and post-reward review. Do not implement a second review engine or change shared manual-review behavior.
+
+## 2. Data Structures & State Management
+
+### Morning flow state
+
+Reuse existing persisted fields where possible. The required logical state is:
+
+| State | Contract |
+|---|---|
+| `flow_id` | Stable identifier for one morning sequence. |
+| `stage` | Existing morning stage, with an unambiguous distinction between minimum review and post-reward draining. |
+| `review_count` | Existing accepted-rating count; unchanged counting semantics. |
+| `reward_status` | Existing persisted reward-delivery status, sufficient to avoid ordinary duplicate delivery. |
+| `active_card_id` | Current unanswered/unrated card, if any. |
+| `active_prompt_message_id` | Canonical interactive stage/card prompt; never implicitly overwritten by a disposable nudge. |
+| `completed_at` | Existing terminal marker or equivalent. |
+
+Prefer reusing the existing post-threshold stage rather than adding another enum value. If necessary, introduce `review_remaining`; retain compatibility with persisted legacy “continue/finish” state.
+
+### Nudge state
+
+Persist, per chat and active morning flow:
+
+- `latest_nudge_message_id`
+- An existing signal identifier or monotonic `nudge_generation`
+- Acknowledged/reminders-disabled state
+- Association with the relevant `flow_id`
+
+Keep nudge identity distinct from the active card/stage prompt. If the current signal abstraction combines them, preserve that abstraction but add explicit roles so retiring a nudge cannot invalidate the active review callback.
+
+### Concurrency and restart rules
+
+- Serialize morning mutations per chat/flow using the existing dispatcher or lock.
+- Protect persisted transitions against duplicate callbacks using existing transactional/idempotency machinery.
+- On restart, restore the active card before selecting another.
+- Do not use an in-memory-only list of remaining cards.
+- No schema migration is required if existing state already expresses these contracts.
+
+## 3. API / Interface Contracts
+
+These signatures describe required responsibilities; adapt their names and types to the actual codebase.
 
 ```text
-Read the two direct skill/workflow paths.
-Check the active project and its GitHub origin.
-If the existing hard-stop condition applies: stop under the existing rule.
-Dispatch the existing single planner command.
-If it is running: wait on that process.
-If it completed and saved output: use the existing verified recovery path if needed.
-If planning fails: follow the existing recovery/fallback rules; do not invent a plan.
-
-Format the successful result as implementation_plan.md.
-Read the plan against Matt’s request and established project conventions.
-If a material, unresolved choice requires Matt: explain the options and ask.
-Otherwise: choose the smallest consistent approach, implement, verify,
-update required project records, and report results in this task.
+advance_morning_review(chat_id, flow_id) -> AdvanceResult
 ```
 
-An explicit *plan-only* request remains plan-only: the new default governs tasks that ask the agent to accomplish work, not requests that expressly prohibit implementation.
+Returns one of:
 
-## Failure and decision boundaries
+- `awaiting_current_card`
+- `card_sent`
+- `completed`
+- `delivery_failed`
 
-- **Do not pause for routine choices:** File organization within the existing pattern, naming, and reversible implementation details should be resolved by inspecting the project and applying Matt’s stated preference for reliable, simple, maintainable changes.
-- **Do pause for consequential choices:** Ask when two viable architectures have materially different compatibility, data-loss, security, cost, or operational consequences that the request and project conventions do not settle. State the concrete alternatives and the decision needed.
-- **Do not weaken dispatch:** Preserve the existing single-command planner path, in-flight waiting, checksum-verified recovery, GitHub-origin hard stop, and fallback eligibility. The skill’s fallback-model wording and other generated rules may not be identical; do not silently revise model policy as part of this small edit. 
-- **Do not absorb unrelated changes:** A dirty local tree does not prevent an isolated edit or verification, but it does prevent an auto-commit that would include unrelated pre-existing work. Inspect status and staged contents before any commit; if isolation cannot be established, leave this task uncommitted and report why.
+It verifies the flow, preserves any pending card, queries the existing due selector, and either sends one card or completes.
 
-## Implementation and verification
+```text
+ensure_morning_reward(chat_id, flow_id) -> RewardResult
+```
 
-1. **Inspect direct paths and tree state.** Read `skills/_plan-with-ai-os/SKILL.md` and `~/.gemini/config/global_workflows/_plan-with-ai-os.md`; check `git status --short`, the existing staged diff, and the project’s auto-commit instructions. Do not use a broad search in place of those direct reads. 
-2. **Edit `skills/_plan-with-ai-os/SKILL.md`.** Add a short post-plan step after the existing “Format Output” step: implement the generated plan by default in the same task; infer routine decisions from Matt’s instructions and project conventions; ask only at the defined material-decision gate; honor explicit plan-only requests. Leave dispatch, fallback, recovery, and hard-stop text unchanged. 
-3. **Edit the local co-located workflow.** Apply the same behavioral contract at its corresponding post-plan point, preserving its existing commands and safeguards. Compare the two files’ decision and continuation language for parity rather than copying one file wholesale.
-4. **Update required project context.** Record the new default in `AG_CONTEXT.md`, add a dated entry to `DEVELOPMENT_JOURNAL.md`, create the customary focused `agent-logs/` entry, and update `PROJECT_BOARD.md` task status if this work is tracked there. Keep those entries about this behavior change, not unrelated planner history. The repository context identifies these as the project’s knowledge and task-tracking surfaces. 
-5. **Sync and verify.** Run the required `scripts/sync_skills.py` locally, review its effects, and inspect the final diff. Check the instruction text against four scenarios: ordinary implementable request proceeds; material unresolved choice pauses; explicit plan-only request stops after the plan; missing GitHub origin or incomplete planner result retains its existing stop/recovery behavior. Check that no planner command, fallback threshold, or model rule changed. 
-6. **Apply auto-commit conditionally.** Only after verification, use the project’s auto-commit process if the intended files can be isolated from pre-existing staged or working-tree changes. Review the exact staged diff before committing; otherwise leave the changes uncommitted and identify the obstruction in the handoff.
+Uses the existing reward delivery/fallback path and persisted delivery guard. It must not re-award the reward after each subsequent rating.
 
-The plan is complete; no sections were cut off. No files were changed, no verification was run, and no commit was made—the prior response was an implementation plan only, as requested.
+```text
+replace_morning_nudge(chat_id, flow_id) -> NudgeResult
+```
 
-There is no missing continuation—the plan ended at step 6. It remains unimplemented; continuing it as prose would add scope rather than complete a truncated response.
+Retires the previous nudge, sends one replacement, and records its identity without changing the saved morning stage.
 
-7. **Check the final handoff.** Report whether the skill and workflow now both direct agents to implement after planning, which verification checks passed, which required logs and context were updated, and whether a commit was made. If implementation stopped at a material decision, state the exact choice Matt needs to make and what work remains.
+```text
+acknowledge_morning_nudge(chat_id, flow_id, message_id, signal_id)
+    -> AcknowledgmentResult
+```
 
-8. **Treat the change as complete only when behavior matches the contract.** A successful planner result should lead to implementation in the same task without a routine approval pause. An explicit plan-only request should remain plan-only. Planner failure, an in-flight request, and a missing GitHub `origin` should still follow their existing rules; none should be mistaken for permission to proceed without a valid plan.
+Validates callback ownership, acknowledges the reminder, retires its message, disables repeats as currently defined, and resumes the saved stage without marking any stage complete.
+
+```text
+retire_nudge(chat_id, message_id) -> RetirementResult
+```
+
+Attempts deletion first. If deletion fails, removes its inline keyboard and replaces its text with a short inactive marker. A retirement failure must be observable; it must not silently create another actionable reminder.
+
+Completion and rating helpers must retain their existing contracts for non-morning callers.
+
+## 4. Logic Flow & Algorithms
+
+### Review progression
+
+```text
+On entry to morning review:
+    restore existing active card, if present
+    otherwise evaluate existing minimum/no-due rules
+
+On accepted card rating:
+    validate callback belongs to current flow and active card
+    apply the FSRS update exactly once
+    update existing morning review count
+    clear/retire the completed card using current behavior
+
+    if minimum is now satisfied and reward has not been delivered:
+        run existing C&H reward delivery/fallback
+
+    if reward transition is satisfied under existing delivery semantics:
+        advance_morning_review()
+    otherwise:
+        retain recoverable current state
+```
+
+```text
+advance_morning_review():
+    reject stale/completed flow
+    if an active card is awaiting interaction:
+        preserve/resume it
+        return awaiting_current_card
+
+    select next card using existing morning due-card eligibility
+    if a due card exists:
+        reserve its identity
+        deliver it using existing answer-before-rating path
+        persist its active prompt
+        return card_sent
+
+    complete the morning flow exactly once
+    disable reminders and retire any remaining nudge
+    return completed
+```
+
+Query due cards after each rating rather than draining a snapshot. If the existing selector considers a previously rated card due again, preserve that scheduling behavior. Completion occurs when that selector returns no eligible due card—not merely when every initially due card has been shown once.
+
+Do not introduce delays, new card limits, or changes to minimum-count semantics.
+
+### Nudge replacement
+
+```text
+On a scheduled reminder:
+    apply existing schedule, Context Gate, and acknowledgment checks
+    serialize against callbacks and other reminder sends
+    retire previous tracked nudge
+    if it cannot be deleted or made inactive:
+        retain it and skip replacement; record failure
+    otherwise:
+        send one new nudge
+        persist its identity and flow association
+```
+
+A retired fallback message may remain as an inactive marker, but only the latest nudge may remain visible as an actionable reminder.
+
+### “I’m up”
+
+```text
+On callback:
+    acknowledge Telegram callback promptly
+    resolve and validate flow/signal/message identity
+    retire the tapped nudge
+
+    if callback is stale or flow is already complete:
+        do not mutate a newer flow
+        return
+
+    disable further nudges under existing acknowledgment semantics
+    clear matching nudge ownership only
+    resume saved centering/gratitude/review stage
+    preserve the current card and answer/reveal state
+```
+
+If existing acknowledgment resumes by editing the reminder itself, change that path: retire the reminder and restore/send the stage through the canonical morning-prompt mechanism instead.
+
+### Legacy continue/finish buttons
+
+- Stop generating continue/finish prompts.
+- A legacy `continue` callback routes to automatic progression.
+- A legacy `finish` callback must not prematurely complete a flow with due cards. Retire that obsolete choice prompt and resume progression.
+- Completed or obsolete flow callbacks remain harmless.
+- Preserve any independent cancellation command; do not reinterpret it as an obsolete finish button.
+
+## 5. Error Handling & Edge Cases
+
+- Duplicate ratings: no repeated FSRS updates, rewards, next-card sends, or completion.
+- Card-send failure: retain a recoverable pending-card state; do not count it as reviewed or complete the flow.
+- Reward failure: preserve existing failure/fallback semantics. Do not invent a new blocking policy; route into automatic progression where the old flow would have offered continue/finish.
+- Nudge deletion unavailable: remove controls and mark inactive. If both operations fail, skip replacement rather than accumulate reminders.
+- Nudge-send failure after retirement: leave no active nudge pointer; allow a later scheduled retry without changing the morning stage.
+- Stale acknowledgment: retire the stale message but never acknowledge, finish, or rewind a newer flow.
+- Reminder/acknowledgment race: serialize and recheck acknowledgment immediately before sending.
+- Restart after rating: resume persisted progression without reapplying the rating.
+- Crash during Telegram delivery: use existing outbound-delivery reconciliation if available. Do not claim exactly-once Telegram delivery from a database flag alone.
+- Day rollover: preserve existing flow ownership and eligibility rules; an old nudge must not attach to the new morning flow.
+- No due cards initially or after rating: reward and complete through the existing maintained-day path.
+- Missing generated options: preserve reveal-answer fallback and avoid synchronous model generation.
+
+## 6. Implementation Steps, Ordered by Execution
+
+Exact handler and test paths must come from inspection.
+
+1. `PROJECT_BOARD.md`  
+   Record the task as in progress, including automatic review draining and singleton-nudge acceptance criteria.
+
+2. Existing morning-flow tests  
+   Add failing regression tests for post-threshold auto-advance, no continue/finish prompt, reward-once behavior, and completion after due exhaustion.
+
+3. Existing reminder/Telegram callback tests  
+   Add failing tests for replacement retirement, “I’m up” cleanup, active-card preservation, stale callbacks, and reminder races.
+
+4. `services/assistant/db.py`, if inspection confirms it owns relevant persistence  
+   Reuse existing fields first. Add only missing nudge ownership or progression state; provide backward-compatible loading/migration where required.
+
+5. Actual morning-flow coordinator under `services/assistant/`  
+   Replace the continue/finish transition with the shared automatic progression helper. Preserve threshold and reward logic.
+
+6. Actual Telegram callback handler under `services/assistant/`  
+   Route accepted morning ratings into progression; implement legacy button compatibility and nudge acknowledgment cleanup. Leave manual/deck review routing unchanged.
+
+7. Actual reminder scheduler and message-retirement helper  
+   Enforce replacement-before-send, separate disposable nudge ownership from active prompt ownership, and serialize sends with acknowledgment.
+
+8. Existing assistant test suite  
+   Run targeted tests, then the complete assistant suite. Include restart restoration, configured positive timeout, default unlimited lifetime, gratitude-only journaling, reward fallback, and `/forallx` isolation.
+
+9. `AG_CONTEXT.md` and `DEVELOPMENT_JOURNAL.md`  
+   Replace the obsolete continue/finish description with automatic draining and record the nudge lifecycle decision.
+
+10. Runtime verification and `PROJECT_BOARD.md`  
+    Use the repository’s pre/postflight checks. Identify the actual assistant launchd service and restart it with `la restart <verified-service-name>`; do not guess its label. Verify with an isolated test chat before marking the task complete.
+
+### Acceptance criteria
+
+- The threshold rating delivers the reward and then the next due card without another user choice.
+- Every subsequent accepted rating sends exactly one next card or completes when none remain.
+- No new continue/finish prompt appears.
+- At most one actionable nudge exists; older nudges are deleted or visibly retired.
+- “I’m up” retires its nudge, stops repeats, and restores the exact active stage without resetting card interaction state.
+- Existing morning ordering, reward behavior, FSRS interaction, journaling boundaries, and non-morning reviews remain intact.

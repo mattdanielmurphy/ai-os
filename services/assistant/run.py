@@ -367,6 +367,18 @@ class AssistantDaemon:
 
         chat_id = self.config.telegram_chat_id or 0
         reminder_count = int(state.get("reminder_count", 0)) + 1
+        previous_nudge_id = state.get("last_nudge_message_id")
+        if previous_nudge_id:
+            await self.db.resolve_signal(int(previous_nudge_id), "RESPONDED")
+            try:
+                await self.gateway.edit_prompt(
+                    chat_id=chat_id,
+                    message_id=int(previous_nudge_id),
+                    text="✅ A newer morning nudge is available.",
+                    remove_keyboard=True,
+                )
+            except Exception as exc:
+                logger.warning("Could not retire previous morning nudge %s: %s", previous_nudge_id, exc)
         text = (
             "⏰ *Morning check-in nudge*\n\n"
             "Your morning grounding and check-in are still waiting. Reply with a quick note, "
@@ -397,6 +409,7 @@ class AssistantDaemon:
                     + timedelta(seconds=self.config.morning_reminder_interval_seconds)
                 ).isoformat(),
                 "reminder_count": reminder_count,
+                "last_nudge_message_id": message_id,
             }
         )
         await self.db.set_dynamic("morning_reminder_state", json.dumps(state))

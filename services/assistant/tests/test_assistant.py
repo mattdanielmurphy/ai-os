@@ -1379,23 +1379,7 @@ async def test_morning_review_multi_card_continuation_and_reward():
             assert "Cyanide & Happiness by Explosm" in photo_messages[0]["caption"]
             assert photo_messages[0]["url"] == fake_comic[0]
 
-            # Check: Because Card 2 is still due, prompt offers more review vs finish
-            choice_signals = [
-                s for s in await daemon.db.get_awaiting_signals()
-                if s["trigger_id"] == "trig_morning_manual"
-            ]
-            assert len(choice_signals) == 1
-            choice_msg = daemon.gateway._dry_run_messages[choice_signals[0]["message_id"]]
-            assert "Daily target met!" in choice_msg["text"]
-            assert choice_msg["keyboard"][0][0]["callback_data"] == "briefing:review_more"
-            assert choice_msg["keyboard"][0][1]["callback_data"] == "briefing:finish"
-
-            # 6. User chooses "Review more"
-            await daemon.dispatcher.handle_callback_str(
-                "briefing:review_more", 12345, choice_signals[0]["message_id"]
-            )
-
-            # Card 2 is dispatched
+            # Card 2 is dispatched automatically after the reward threshold.
             card2_signals = [
                 s for s in await daemon.db.get_awaiting_signals()
                 if s["trigger_id"].startswith("trig_fsrs_")
@@ -1426,7 +1410,7 @@ async def test_morning_review_multi_card_continuation_and_reward():
 
 
 @pytest.mark.asyncio
-async def test_morning_review_finish_choice():
+async def test_morning_review_automatically_continues_after_reward():
     from unittest.mock import patch
     from services.assistant.run import AssistantDaemon
 
@@ -1502,22 +1486,24 @@ async def test_morning_review_finish_choice():
             await daemon.db.set_dynamic(f"fsrs_revealed:{c_msg_id}", "true")
             await daemon.dispatcher.handle_callback_str(f"fsrs:{c_id}:3", 12345, c_msg_id)
 
-            choice_signals = [
+            card_b_signals = [
                 s for s in await daemon.db.get_awaiting_signals()
-                if s["trigger_id"] == "trig_morning_manual"
+                if s["trigger_id"].startswith("trig_fsrs_")
             ]
-            choice_id = choice_signals[0]["message_id"]
-
-            # User taps "Finish for today"
-            success = await daemon.dispatcher.handle_callback_str("briefing:finish", 12345, choice_id)
-            assert success is True
+            assert len(card_b_signals) == 1
+            card_b_prompt = daemon.gateway._dry_run_messages[card_b_signals[0]["message_id"]]
+            assert "Question B" in card_b_prompt["text"]
+            assert not any(
+                "Review more" in msg.get("text", "") or "Finish for today" in msg.get("text", "")
+                for msg in daemon.gateway._dry_run_messages.values()
+            )
 
             flow_state = await daemon.dispatcher._morning_flow_state("trig_morning_manual")
-            assert flow_state.get("stage") == "complete"
+            assert flow_state.get("stage") == "review"
             assert flow_state.get("reward_granted") is True
             assert flow_state.get("reviewed_cards_count") == 1
 
-            # Card B is still in database and due
+            # Card B remains due until the automatically offered card is rated.
             card_b = await daemon.db.get_card("card_B")
             assert card_b["reps"] == 0
 
@@ -1710,5 +1696,4 @@ async def test_active_card_conversational_meta_comment_and_button_hierarchy(monk
         assert card_db_rated["reps"] == 1
 
         await db.close()
-
 
