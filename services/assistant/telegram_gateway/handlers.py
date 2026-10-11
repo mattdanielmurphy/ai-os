@@ -487,8 +487,25 @@ class ActionDispatcher:
             elif sub == "ack":
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
-                    await self._set_morning_reminders_active(trigger_id, False)
                     reminder_raw = await self.db.get_dynamic("morning_reminder_state")
+                    if reminder_raw:
+                        try:
+                            reminder_state = json.loads(reminder_raw)
+                        except (TypeError, json.JSONDecodeError):
+                            reminder_state = {}
+                        if (
+                            reminder_state.get("trigger_id") == trigger_id
+                            and "last_nudge_message_id" in reminder_state
+                            and reminder_state.get("last_nudge_message_id") != message_id
+                        ):
+                            await self.gateway.edit_prompt(
+                                chat_id=chat_id,
+                                message_id=message_id,
+                                text="✅ This morning nudge has already been replaced or acknowledged.",
+                                remove_keyboard=True,
+                            )
+                            return True
+                    await self._set_morning_reminders_active(trigger_id, False)
                     if reminder_raw:
                         try:
                             reminder_state = json.loads(reminder_raw)
