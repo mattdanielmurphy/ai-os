@@ -1577,3 +1577,138 @@ async def test_query_model_agy_primary_with_codex_fallback(monkeypatch):
 
     await db.close()
 
+
+@pytest.mark.asyncio
+async def test_active_card_conversational_meta_comment_and_button_hierarchy(monkeypatch):
+    """
+    Verifies that:
+    1. A comment/question during active card review (containing words like 'hard', 'struggle', '1')
+       is NOT swallowed as an FSRS rating or pick, and does NOT trigger the morning reward prematurely.
+    2. Conversational model is called with active card and morning flow context.
+    3. Active signal remains AWAITING_INPUT and interactive buttons remain intact.
+    4. Button labels follow the clean, un-truncated 1/4 to 4/4 hierarchy.
+    """
+    from services.assistant.spaced_repetition.cards import format_feedback_prompt
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        vault.mkdir(parents=True)
+        (vault / "habits" / "definitions").mkdir(parents=True)
+        (vault / "habits" / "logs").mkdir(parents=True)
+        db_path = Path(tmpdir) / "test.db"
+
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+            morning_review_card_threshold=1,
+        )
+        db = AssistantDB(db_path)
+        await db.connect()
+        fsrs = FSRSEngine(cfg)
+        gateway = TelegramGateway(cfg)
+        habit_logger = HabitLogger(vault / "habits" / "logs")
+        dispatcher = ActionDispatcher(db, fsrs, habit_logger, gateway, config=cfg)
+
+        # 1. Verify button labels and hierarchy in cards module
+        sample_card = {
+            "card_id": "logic_01",
+            "prompt": "What is modus ponens?",
+            "answer": "If P then Q, P, therefore Q.",
+            "elaboration": "Rule of inference in propositional logic.",
+            "options": json.dumps(["Modus Ponens", "Modus Tollens", "Affirming Consequent", "Denying Antecedent"]),
+            "correct_index": 0,
+        }
+        feedback_text, feedback_kb = format_feedback_prompt(sample_card, chosen_idx=0)
+        assert "1/4 · Again" in feedback_kb[0][0]["text"]
+        assert "2/4 · Hard" in feedback_kb[0][1]["text"]
+        assert "3/4 · Good" in feedback_kb[1][0]["text"]
+        assert "4/4 · Easy" in feedback_kb[1][1]["text"]
+        assert "*Rate your recall (1/4 to 4/4):*" in feedback_text
+        assert "1/4 Again: Missed, blanked, or lucky guess" in feedback_text
+
+        # 2. Add card and start morning flow
+        now = datetime.now(timezone.utc)
+        await db.add_or_update_card(
+            card_id="logic_01",
+            deck_type="cold_storage",
+            prompt="What is modus ponens?",
+            answer="If P then Q, P, therefore Q.",
+            elaboration="Rule of inference in propositional logic.",
+            stability=1.0,
+            difficulty=2.0,
+            reps=0,
+            lapses=0,
+            state=0,
+            due_at=now,
+            options=sample_card["options"],
+            correct_index=0,
+        )
+
+        await dispatcher.cmd_morning(chat_id=12345)
+        signals = await db.get_awaiting_signals()
+        morning_msg_id = signals[0]["message_id"]
+
+        # Advance through centering & gratitude to review
+        await dispatcher.handle_callback_str("briefing:breath:3", chat_id=12345, message_id=morning_msg_id)
+        await dispatcher.handle_text_message("Grateful for crisp mornings", chat_id=12345, message_id=999)
+
+        # Trigger review card dispatch
+        active_signals = await db.get_awaiting_signals()
+        review_prompt_msg_id = active_signals[0]["message_id"]
+        await dispatcher.handle_callback_str("briefing:review", chat_id=12345, message_id=review_prompt_msg_id)
+
+        card_signals = [s for s in await db.get_awaiting_signals() if s["trigger_id"] == "trig_fsrs_logic_01"]
+        assert len(card_signals) == 1
+        card_msg_id = card_signals[0]["message_id"]
+
+        # Mock query model to capture conversational prompt
+        captured_prompt = None
+        async def mock_query_model(prompt, image_path=None, chat_id=None, status_msg_id=None):
+            nonlocal captured_prompt
+            captured_prompt = prompt
+            return "I hear your feedback on the buttons and the 1/4 to 4/4 scale! Modus ponens is the inference rule..."
+
+        monkeypatch.setattr(dispatcher, "_query_model", mock_query_model)
+
+        # 3. Simulate Matt sending a meta comment with words like 'hard', 'struggle', '1'
+        comment_text = (
+            "1. I need to be able to make any comment I want and have a smart agent read it with the context of the morning thing, "
+            "so I can ask questions about the content of the card(s) AND ALSO talk about this SYSTEM of cards on a meta level.\n"
+            "2. On those lines, the buttons are not good for several reasons: a) the button label font size is too big and they're almost always truncated. "
+            "B) the options are confusing on several accounts... it's not clear even just the basic hierarchy of, what's like a: 1/4 - 4/4 struggle type thing. "
+            "I see '[Red] Slipped my mind (... ' and '[Yellow] Almost had it (Hard)' And it's not clear to me what to choose at all."
+        )
+
+        res = await dispatcher.handle_text_message(comment_text, chat_id=12345, message_id=1001)
+        assert res is True
+
+        # Check: Card was NOT rated prematurely!
+        card_db = await db.get_card("logic_01")
+        assert card_db["reps"] == 0
+
+        # Check: Card signal is STILL AWAITING_INPUT
+        signals_after_comment = [s for s in await db.get_awaiting_signals() if s["trigger_id"] == "trig_fsrs_logic_01"]
+        assert len(signals_after_comment) == 1
+
+        # Check: Conversational assistant was invoked with full context of the active card & morning routine
+        assert captured_prompt is not None
+        assert "What is modus ponens?" in captured_prompt
+        assert "If P then Q, P, therefore Q." in captured_prompt
+        assert "Modus Ponens" in captured_prompt
+        assert "Active Morning Grounding & Briefing Flow" in captured_prompt
+        assert "Instructions for You as the AI Assistant" in captured_prompt
+        assert "Meta-System Inquiries" in captured_prompt
+
+        # Check: Now user answers option A -> gets feedback -> rates 3/4 Good
+        await dispatcher.handle_callback_str("fsrs_pick:logic_01:0", chat_id=12345, message_id=card_msg_id)
+        await dispatcher.handle_callback_str("fsrs_rate:logic_01:3", chat_id=12345, message_id=card_msg_id)
+
+        card_db_rated = await db.get_card("logic_01")
+        assert card_db_rated["reps"] == 1
+
+        await db.close()
+
+
