@@ -13,8 +13,8 @@ Run high-reasoning planning using the unified `query_aios.js` planner.
 
 ## Workflow Steps
 
-1. **Sanity Check**: Analyze the user's request against the current active project directory.
-2. **Pre-flight GitHub Check**: Verify that `origin` exists and targets GitHub (`https://github.com/...` or `git@github.com:...`). If it is missing or targets another host, STOP and ask the user whether to create or migrate a private GitHub repository before planning.
+1. **Classify the task**: Decide whether the requested work changes, investigates, or depends on a software project, repository, or other version-controlled deliverable. Clearly local, self-contained tasks (for example, configuring or troubleshooting a desktop app, device, or personal account) are not project work just because the active directory is a repository. Apply the normal direct-handling boundary; if planning is useful for local work, the planner may run without a GitHub remote. If a task includes required project work, use the project path.
+2. **Project pre-flight only**: For project work, verify that `origin` exists and targets GitHub (`https://github.com/...` or `git@github.com:...`). If it is missing or targets another host, STOP and ask the user whether to create or migrate a private GitHub repository before planning. Mixed tasks that include required project work retain this requirement.
 3. **Execute Unified Planner (Single-Step Prompt & Query)**:
    - Run `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` using `run_command` (with `WaitMsBeforeAsync: 500`). Antigravity will notify you when the task completes.
    - This single command automatically: inspects Git context, reads agent logs, resolves contextual Antigravity thread mappings (auto-resuming ongoing planner threads on turn 2+ or creating fresh threads on turn 1), generates `./tmp/planner_prompt.txt`, dispatches the query to Perplexity (Gemini Flash Thinking), and writes the completed plan to `./tmp/planner_output.txt`.
@@ -30,7 +30,7 @@ Run high-reasoning planning using the unified `query_aios.js` planner.
 
 6. **Implement by Default**: After a successful plan is available, continue the user's requested task by implementing the plan in the same task. Treat the plan as the execution guide, not as the final deliverable, unless the user explicitly asked for a plan only. Infer routine implementation choices from the request, Matt's known preferences, and established project conventions. Pause and ask Matt only when a material ambiguity or consequential architectural decision cannot be responsibly resolved from that context and choosing would risk an outcome he may regret. If a decision does require input, explain the specific choice and its consequences; continue any independent work that does not depend on the answer.
 
-   This continuation rule applies only after a successful planner result. It does not bypass the GitHub-origin requirement, planner dispatch, recovery, fallback, or failure rules above. A failed or incomplete planning request must follow those existing rules and must not be treated as permission to invent a plan and proceed.
+   This continuation rule applies only after a successful planner result. It does not bypass planner dispatch, recovery, fallback, or failure rules above. The GitHub-origin requirement applies to project work and mixed tasks that include required project work; clearly local tasks do not require a repository. A failed or incomplete planning request must follow those existing rules and must not be treated as permission to invent a plan and proceed.
 
 ---
 

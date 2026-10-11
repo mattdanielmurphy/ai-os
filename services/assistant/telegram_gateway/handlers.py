@@ -488,6 +488,17 @@ class ActionDispatcher:
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
                     await self._set_morning_reminders_active(trigger_id, False)
+                    reminder_raw = await self.db.get_dynamic("morning_reminder_state")
+                    if reminder_raw:
+                        try:
+                            reminder_state = json.loads(reminder_raw)
+                        except (TypeError, json.JSONDecodeError):
+                            reminder_state = {}
+                        if reminder_state.get("last_nudge_message_id") == message_id:
+                            reminder_state["last_nudge_message_id"] = None
+                            await self.db.set_dynamic(
+                                "morning_reminder_state", json.dumps(reminder_state)
+                            )
                     flow_state = await self._morning_flow_state(trigger_id)
                     stage = flow_state.get("stage", "centering")
                     reward_granted = bool(flow_state.get("reward_granted", False))
@@ -504,8 +515,8 @@ class ActionDispatcher:
                         if reward_granted:
                             remaining_due = await self.db.get_due_cards(datetime.now(timezone.utc))
                             if remaining_due:
-                                text = self._more_cards_prompt_text(len(remaining_due))
-                                keyboard = self._more_cards_keyboard(len(remaining_due))
+                                text = "🧠 *Your review is still in progress.* Continue with the active card above."
+                                keyboard = []
                             else:
                                 text = "✅ *All due cards completed!* Your morning review is complete."
                                 keyboard = []
@@ -719,30 +730,13 @@ class ActionDispatcher:
 
             if reward_granted:
                 if remaining_due:
-                    # Keep morning stage as review; offer explicit continue vs finish
+                    # Continue through due cards automatically after the reward threshold.
                     flow_state["stage"] = "review"
                     flow_state["due_cards_count"] = len(remaining_due)
                     await self.db.set_dynamic(
                         self._morning_flow_key(morning_trigger_id), json.dumps(flow_state)
                     )
-                    prompt_text = self._more_cards_prompt_text(len(remaining_due))
-                    prompt_keyboard = self._more_cards_keyboard(len(remaining_due))
-                    more_prompt_id = await self.gateway.send_prompt(
-                        chat_id, prompt_text, prompt_keyboard
-                    )
-                    if more_prompt_id:
-                        now_utc = datetime.now(timezone.utc)
-                        timeout_at = now_utc + timedelta(
-                            seconds=self.config.silence_timeout_seconds
-                        )
-                        await self.db.record_outbound_signal(
-                            message_id=more_prompt_id,
-                            chat_id=chat_id,
-                            trigger_id=morning_trigger_id,
-                            sent_at=now_utc,
-                            timeout_at=timeout_at,
-                            status="AWAITING_INPUT",
-                        )
+                    await self.cmd_quiz(chat_id, morning_trigger_id=morning_trigger_id)
                 else:
                     # No more cards due; complete the morning flow
                     flow_state["stage"] = "complete"
