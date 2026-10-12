@@ -1,261 +1,529 @@
-## Architectural Strategy
+## 1. Architectural Strategy
 
-Change the morning flow from “minimum review → C&H reward → continue/finish choice” to “minimum review → C&H reward → automatic review of all remaining due cards → completion.” Separately, treat Telegram nudges as a **singleton** notification: replacing a nudge retires the previous one, and tapping “I’m up” retires the tapped nudge while resuming—not advancing—the saved morning stage.
+Implement a global, AI-OS-owned Bun launcher that intercepts `bun dev` and `bun run dev`, runs the original command with the real Bun executable, detects its actual listening server, and registers `<project-name>.test` with puma-dev.
 
-Repository inspection is blocked in this session: I checked connector availability, and no GitHub connector was returned. Consequently, the plan below uses the supplied repository context; handler names, database fields, and test filenames are proposed contracts, not verified existing symbols. Connect GitHub through Settings → Connectors to enable source-level inspection. The orchestrator must perform the inspection described below before editing and map these contracts onto existing equivalents rather than introducing parallel machinery.
+Use a small, session-owned loopback relay between puma-dev and the project server:
 
-### Preserve these existing semantics
+```text
+Browser → puma-dev → stable session relay → detected project server
+                         ↑
+                  AI-OS Bun supervisor
+```
 
-- Morning stages remain centering → gratitude → minimum review → C&H reward → remaining review → completion.
-- Only gratitude accepts free-text journal entries.
-- Cards retain answer-before-rating behavior, cached choices, and reveal-answer fallback.
-- The minimum remains configurable, with its existing default and counting rules unchanged.
-- No due cards still counts as a maintained day and earns the reward.
-- The reward remains separate, with the existing comic-image delivery and official-page fallback.
-- Context Gate, reminder scheduling, awake-time timeout, and acknowledgment-based reminder suppression remain unchanged.
-- “Automatically sends the next card” means after each accepted rating—not sending all cards at once or auto-answering them.
+The **invariant** is that AI-OS adds domain routing without rewriting project scripts, replacing puma-dev, or silently taking ownership of existing mappings.
 
-## 1. Required Inspection and Architecture Mapping
+Puma-dev explicitly supports proxy files in `~/.puma-dev` containing a port or host-and-port, and supports WebSocket proxying. Use that interface rather than symlinking JavaScript projects as Rack applications.  Bun supports both `bun dev` and `bun run dev`, including script lifecycle hooks; launch the original command through real Bun so those semantics remain intact.
 
-Before implementation, inspect `services/assistant/` and its tests to locate:
+### Repository inspection boundary
 
-1. Morning state creation, persistence, restoration, and completion.
-2. Telegram callback dispatch for centering, gratitude, review, reward, continue/finish, and “I’m up.”
-3. Shared card delivery, answer/reveal handling, FSRS rating, and due-card selection.
-4. Reminder scheduling, active-signal transfer, duplicate retirement, and watchdog cleanup.
-5. Database schema and migrations, especially flow IDs, message IDs, reward state, and callback idempotency.
-6. Existing tests for these behaviors, including manual and `/forallx` review isolation.
+I checked the available connectors, but no GitHub connector was exposed in this session. Consequently, this plan uses the supplied repository context, not inspected private source files. Connect GitHub through the Connectors page for direct repository inspection. The orchestrator must verify existing launcher, installation, shell integration, and test conventions before choosing exact integration points.
 
-Search by user-facing strings and callback payloads, not assumed filenames. Trace callers of completion and signal-retirement helpers before changing them.
+This is an implementation plan only: no repository files, machine configuration, or representative project have been changed or tested.
 
-Use one existing morning progression path for initial review and post-reward review. Do not implement a second review engine or change shared manual-review behavior.
+### Concrete architectural decisions
+
+1. Install an executable shim named `bun` in an AI-OS-owned directory placed before the real Bun directory in managed `PATH`.
+2. Resolve and record the real Bun executable during installation. Never replace or rename the vendor executable.
+3. Have the shim invoke the TypeScript supervisor through the recorded absolute real-Bun path, avoiding recursive shim execution.
+4. Intercept only confirmed invocations of a package’s `dev` script. Forward other Bun commands unchanged.
+5. Run development processes with inherited terminal streams. Do not depend on reading or rewriting server output.
+6. Discover listeners belonging to the launched process tree using macOS process/listener inspection.
+7. Write puma-dev’s mapping to the relay’s port, not directly to the application’s potentially changing port.
+8. Keep the relay port fixed for the lifetime of a session; change its upstream when the application restarts or selects another port.
+9. Preserve all unmanaged puma-dev files and symlinks.
+10. Implement the launcher, supervisor, relay, configuration tooling, and tests with Bun. Shell is allowed for bootstrap integration; do not introduce Node, npm, pnpm, or Python into this feature.
+
+A global launcher is necessary because adding `predev` scripts would require per-project modifications and cannot supervise the entire development-server lifecycle. Bun does execute lifecycle hooks, but those are project-level behavior, not a global interception mechanism.
+
+### Scope of the guarantee
+
+After one-time global installation:
+
+- `bun dev` and `bun run dev` automatically participate in this convention.
+- New projects need no registration command.
+- Commands invoking an absolute vendor Bun path bypass the shim intentionally.
+- Shells, IDEs, and automation must inherit the managed `PATH`; installation must explicitly test these contexts rather than claiming universal coverage.
+- A project must actually start an identifiable local HTTP server. Arbitrary scripts, detached servers, and multi-server projects may require a declaration.
+
+Do not install a second DNS resolver or reverse proxy, replace existing puma-dev configuration, or automatically perform privileged setup.
 
 ## 2. Data Structures & State Management
 
-### Morning flow state
+### Project configuration
 
-Reuse existing persisted fields where possible. The required logical state is:
+Use this preferred declaration:
 
-| State | Contract |
-|---|---|
-| `flow_id` | Stable identifier for one morning sequence. |
-| `stage` | Existing morning stage, with an unambiguous distinction between minimum review and post-reward draining. |
-| `review_count` | Existing accepted-rating count; unchanged counting semantics. |
-| `reward_status` | Existing persisted reward-delivery status, sufficient to avoid ordinary duplicate delivery. |
-| `active_card_id` | Current unanswered/unrated card, if any. |
-| `active_prompt_message_id` | Canonical interactive stage/card prompt; never implicitly overwritten by a disposable nudge. |
-| `completed_at` | Existing terminal marker or equivalent. |
+```json
+{
+  "aios": {
+    "devDomain": {
+      "enabled": true,
+      "name": "daily-mini-crossword",
+      "port": 5173,
+      "protocol": "http"
+    }
+  }
+}
+```
 
-Prefer reusing the existing post-threshold stage rather than adding another enum value. If necessary, introduce `review_remaining`; retain compatibility with persisted legacy “continue/finish” state.
+Every field is optional. `port` is a selection hint for an existing server, not an instruction to force the application onto that port.
 
-### Nudge state
+Support:
 
-Persist, per chat and active morning flow:
+```json
+{ "aios": { "devDomain": false } }
+```
 
-- `latest_nudge_message_id`
-- An existing signal identifier or monotonic `nudge_generation`
-- Acknowledged/reminders-disabled state
-- Association with the relevant `flow_id`
+and an explicit `enabled: false`.
 
-Keep nudge identity distinct from the active card/stage prompt. If the current signal abstraction combines them, preserve that abstraction but add explicit roles so retiring a nudge cannot invalidate the active review callback.
+Configuration precedence, highest first:
 
-### Concurrency and restart rules
+1. Invocation environment:
+   - `AIOS_DEV_DOMAIN=off`
+   - `AIOS_DEV_DOMAIN=<name>` or `<name>.test`
+   - `AIOS_DEV_PORT=<integer>`
+2. Explicit `package.json` declaration.
+3. `.aios-dev.json` in the resolved package directory, using the same object shape as `devDomain`.
+4. User-local per-project override, keyed by canonical package-directory path.
+5. Automatic defaults.
 
-- Serialize morning mutations per chat/flow using the existing dispatcher or lock.
-- Protect persisted transitions against duplicate callbacks using existing transactional/idempotency machinery.
-- On restart, restore the active card before selecting another.
-- Do not use an in-memory-only list of remaining cards.
-- No schema migration is required if existing state already expresses these contracts.
+Resolve each field independently, but an explicit higher-priority disable always wins. Invalid explicit configuration disables automatic registration for that invocation with a clear warning; it must not silently fall back to another hostname.
+
+Do not read raw `.env` files. Passing the inherited environment to real Bun does not require inspecting or logging its values.
+
+### Naming
+
+Default name selection:
+
+1. Nonempty package `name`.
+2. Package-directory basename.
+
+Sanitize automatic names deterministically:
+
+- Unicode-normalize and lowercase.
+- Convert a scoped package such as `@matt/daily-mini-crossword` to `matt-daily-mini-crossword`.
+- Replace non-ASCII alphanumeric runs with `-`.
+- Trim leading and trailing hyphens.
+- Use `project-<short-path-hash>` if the result is empty.
+- Limit the DNS label to 63 characters; append a stable path hash when truncating.
+- Append `.test` only for display and requests, not for the puma-dev filename.
+
+Explicit names accept a single valid DNS label, optionally followed by `.test`. Reject paths, whitespace, wildcards, other suffixes, and nested subdomains in v1. Do not silently sanitize an explicit override.
+
+### Persistent and runtime state
+
+Use:
+
+```text
+~/.config/ai-os/dev-domains/config.json
+~/.local/state/ai-os/dev-domains/
+  registry.json
+  locks/
+  sessions/<session-id>.json
+```
+
+Keep these directories private to the user.
+
+Define:
+
+```text
+GlobalConfig
+  schemaVersion
+  realBunPath
+  enabled
+  projectOverrides
+  discoveryTimeoutMs = 60000
+
+ProjectConfig
+  enabled
+  name
+  port?
+  protocol = "http"
+
+SessionRecord
+  schemaVersion
+  sessionId
+  canonicalProjectRoot
+  domain
+  supervisorPid
+  supervisorStartIdentity
+  childPid
+  startedAt
+  relayAddress
+  upstream?
+  mappingPath
+  mappingFileIdentity
+  mappingContentHash
+  state
+  lastDiagnostic?
+
+Upstream
+  address
+  port
+  protocol
+  owningPid
+  processStartIdentity
+
+SessionState
+  starting | discovering | ready | degraded | stopping | stopped
+```
+
+Store no credentials or application response bodies.
+
+### Ownership and concurrency
+
+- Acquire an exclusive domain lock before publishing a mapping.
+- Use atomic lock-directory creation and atomic state-file replacement.
+- Validate PID plus process-start identity before declaring a session stale.
+- Create mappings exclusively; never overwrite an existing unmanaged entry.
+- Record mapping inode/file identity and exact content.
+- Remove a mapping only if its identity and content still match the session’s record.
+- If someone replaces or modifies the mapping, relinquish management and leave their version untouched.
+
+A second active invocation for the same domain must continue running its dev script but receive a routing-conflict warning. Do not hijack the first session.
 
 ## 3. API / Interface Contracts
 
-These signatures describe required responsibilities; adapt their names and types to the actual codebase.
+Use a modular TypeScript implementation with these responsibilities and signatures:
 
-```text
-advance_morning_review(chat_id, flow_id) -> AdvanceResult
-```
+| Interface | Contract |
+|---|---|
+| `classifyInvocation(argv, cwd): InvocationDecision` | Returns pass-through or intercepted dev-script execution; resolves Bun’s effective package directory. |
+| `resolveRealBun(config, shimPath): Promise<string>` | Returns a valid non-shim executable; rejects recursion and stale installation paths. |
+| `resolveProjectConfig(context): Promise<ResolvedProjectConfig>` | Applies precedence, validates declarations, and supplies diagnostic provenance. |
+| `deriveDomain(packageName, projectRoot, explicitName?): Domain` | Produces validated hostname and mapping basename. |
+| `acquireDomainLease(domain, session): Promise<LeaseResult>` | Distinguishes acquired, active conflict, stale-owned state, and unmanaged mapping. |
+| `spawnOriginalDev(realBun, argv, context): ChildHandle` | Preserves argv, cwd, environment, lifecycle hooks, stdin/stdout/stderr, and terminal behavior. |
+| `discoverProcessTree(rootPid): Promise<ProcessIdentity[]>` | Enumerates descendants without identifying processes by name alone. |
+| `discoverListeners(processes): Promise<ListenerCandidate[]>` | Collects TCP listeners with PID attribution and compatible loopback addresses. |
+| `selectUpstream(candidates, config): Promise<DiscoveryResult>` | Returns selected, waiting, ambiguous, or unsupported; never guesses between distinct HTTP servers. |
+| `startRelay(): Promise<RelayHandle>` | Binds an ephemeral loopback port and exposes `setUpstream`, `clearUpstream`, and `close`. |
+| `publishMapping(lease, relay): Promise<OwnedMapping>` | Publishes the puma-dev proxy file under exclusive ownership. |
+| `verifyRoute(domain, relay, upstream): Promise<RouteStatus>` | Separately checks application reachability and hostname routing. |
+| `cleanupSession(session): Promise<void>` | Idempotently releases only owned resources. |
 
-Returns one of:
+### Invocation parser requirements
 
-- `awaiting_current_card`
-- `card_sent`
-- `completed`
-- `delivery_failed`
+Support and test:
 
-It verifies the flow, preserves any pending card, queries the existing due selector, and either sends one card or completes.
+- `bun dev`
+- `bun run dev`
+- Script arguments and `--` forwarding.
+- Bun options before the script, including supported cwd selection.
+- Bun runtime flags without moving them or passing them to the wrong layer.
 
-```text
-ensure_morning_reward(chat_id, flow_id) -> RewardResult
-```
+Bun distinguishes runtime flags from script arguments by position, so the shim must preserve their placement.
 
-Uses the existing reward delivery/fallback path and persisted delivery guard. It must not re-award the reward after each subsequent rating.
+If a Bun option cannot be safely interpreted, pass through unchanged with a concise diagnostic for dev-like invocations. Do not build a parser that accidentally intercepts `bun test`, `bun install`, `bunx`, or a source file named `dev`.
 
-```text
-replace_morning_nudge(chat_id, flow_id) -> NudgeResult
-```
+Verify actual package resolution against the installed Bun version, including workspaces. Do not implement an approximate “nearest package.json” rule without compatibility tests.
 
-Retires the previous nudge, sends one replacement, and records its identity without changing the saved morning stage.
+### Relay contract
 
-```text
-acknowledge_morning_nudge(chat_id, flow_id, message_id, signal_id)
-    -> AcknowledgmentResult
-```
+Implement a transparent streaming TCP relay:
 
-Validates callback ownership, acknowledges the reminder, retires its message, disables repeats as currently defined, and resumes the saved stage without marking any stage complete.
+- Listen on `127.0.0.1` only.
+- Accept puma-dev connections and connect to the current selected upstream.
+- Preserve the byte stream; do not rewrite HTTP headers or buffer entire responses.
+- Support backpressure, half-close, connection errors, and streaming.
+- Close all active upstream connections when upstream identity changes.
+- Return a small HTTP 503 response when no upstream is available.
+- Default to plain HTTP upstreams.
+- For explicitly configured HTTPS upstreams, implement verified TLS or report unsupported; never silently disable certificate validation.
 
-```text
-retire_nudge(chat_id, message_id) -> RetirementResult
-```
-
-Attempts deletion first. If deletion fails, removes its inline keyboard and replaces its text with a short inactive marker. A retirement failure must be observable; it must not silently create another actionable reminder.
-
-Completion and rating helpers must retain their existing contracts for non-morning callers.
+Transparent forwarding preserves the host and upgrade requests rather than introducing a second HTTP application proxy. Puma-dev already supplies domain proxying and WebSocket support.
 
 ## 4. Logic Flow & Algorithms
 
-### Review progression
+### Global installation
 
 ```text
-On entry to morning review:
-    restore existing active card, if present
-    otherwise evaluate existing minimum/no-due rules
-
-On accepted card rating:
-    validate callback belongs to current flow and active card
-    apply the FSRS update exactly once
-    update existing morning review count
-    clear/retire the completed card using current behavior
-
-    if minimum is now satisfied and reward has not been delivered:
-        run existing C&H reward delivery/fallback
-
-    if reward transition is satisfied under existing delivery semantics:
-        advance_morning_review()
-    otherwise:
-        retain recoverable current state
+inspect existing AI-OS installation and shell-management conventions
+locate real Bun before activating shim
+validate Bun version and executable identity
+inspect puma-dev presence and existing routing setup
+write managed launcher configuration
+install shim in AI-OS-owned PATH directory
+integrate directory using existing managed PATH mechanism
+test fresh-shell resolution
+run doctor
 ```
+
+Keep installation reversible. Report missing DNS, certificate, or daemon setup without performing privileged changes automatically.
+
+### Intercepted development execution
 
 ```text
-advance_morning_review():
-    reject stale/completed flow
-    if an active card is awaiting interaction:
-        preserve/resume it
-        return awaiting_current_card
+classify original invocation
+if not a supported dev-script invocation:
+    exec real Bun with original arguments
 
-    select next card using existing morning due-card eligibility
-    if a due card exists:
-        reserve its identity
-        deliver it using existing answer-before-rating path
-        persist its active prompt
-        return card_sent
+resolve configuration and project identity
+if disabled:
+    exec real Bun unchanged
 
-    complete the morning flow exactly once
-    disable reminders and retire any remaining nudge
-    return completed
+create session record
+attempt domain lease
+if lease unavailable or routing setup fails:
+    warn
+    run real Bun normally without routing
+    preserve its exit status
+
+start relay
+publish owned puma-dev mapping to relay port
+spawn real Bun with original argv and inherited terminal streams
+
+while development process is alive:
+    periodically enumerate its process tree
+    inspect attributed TCP listeners
+    apply explicit port selector, if present
+    probe candidate listeners for HTTP compatibility
+    distinguish duplicate address bindings from distinct servers
+
+    if exactly one eligible endpoint:
+        update relay upstream when identity changes
+        verify hostname route
+        announce URL once ready
+
+    if none:
+        keep waiting; clear a dead upstream
+
+    if multiple:
+        keep relay unavailable
+        print one actionable ambiguity diagnostic
+
+on child exit or shutdown:
+    close relay
+    remove mapping only if still owned
+    release lock
+    remove active session state
+    propagate original child exit result
 ```
 
-Query due cards after each rating rather than draining a snapshot. If the existing selector considers a previously rated card due again, preserve that scheduling behavior. Completion occurs when that selector returns no eligible due card—not merely when every initially due card has been shown once.
+### Port detection
 
-Do not introduce delays, new card limits, or changes to minimum-count semantics.
+Poll every 250 ms during startup, backing off to 1 second after readiness.
 
-### Nudge replacement
+Use `/bin/ps` and `/usr/sbin/lsof` through absolute paths. Prefer lsof’s machine-readable field output; do not parse aligned human-readable columns.
 
-```text
-On a scheduled reminder:
-    apply existing schedule, Context Gate, and acknowledgment checks
-    serialize against callbacks and other reminder sends
-    retire previous tracked nudge
-    if it cannot be deleted or made inactive:
-        retain it and skip replacement; record failure
-    otherwise:
-        send one new nudge
-        persist its identity and flow association
-```
+Selection rules:
 
-A retired fallback message may remain as an inactive marker, but only the latest nudge may remain visible as an actionable reminder.
+1. Accept only listeners attributed to the launched process tree.
+2. Convert wildcard listeners to a reachable loopback address.
+3. Reject externally bound-only listeners.
+4. If an explicit port exists, filter by that port.
+5. Probe using the intended `<name>.test` Host header.
+6. Treat a syntactically valid HTTP response, including 4xx/5xx, as evidence of HTTP—not proof of application health.
+7. Collapse IPv4/IPv6 bindings for the same server where their identity is demonstrably equivalent.
+8. Select only when one distinct eligible server remains.
 
-### “I’m up”
+Never scan arbitrary localhost ports or adopt an unrelated process merely because it occupies a configured port.
 
-```text
-On callback:
-    acknowledge Telegram callback promptly
-    resolve and validate flow/signal/message identity
-    retire the tapped nudge
+At the 60-second discovery threshold, print a diagnostic and continue monitoring at the slower interval. Slow startup must not terminate the dev command.
 
-    if callback is stale or flow is already complete:
-        do not mutate a newer flow
-        return
+### Signals and terminal semantics
 
-    disable further nudges under existing acknowledgment semantics
-    clear matching nudge ownership only
-    resume saved centering/gratitude/review stage
-    preserve the current card and answer/reveal state
-```
+Treat this as a release-blocking compatibility area:
 
-If existing acknowledgment resumes by editing the reminder itself, change that path: retire the reminder and restore/send the stage through the canonical morning-prompt mechanism instead.
+- Keep the foreground terminal relationship intact.
+- Preserve interactive stdin and terminal-sized output.
+- Avoid blindly forwarding Ctrl-C if both supervisor and child already receive the terminal’s foreground-group signal.
+- Forward signals delivered only to the supervisor without double delivery.
+- Restore terminal state and clean up after interruption.
+- Match native Bun exit behavior, including signal termination.
 
-### Legacy continue/finish buttons
-
-- Stop generating continue/finish prompts.
-- A legacy `continue` callback routes to automatic progression.
-- A legacy `finish` callback must not prematurely complete a flow with due cards. Retire that obsolete choice prompt and resume progression.
-- Completed or obsolete flow callbacks remain harmless.
-- Preserve any independent cancellation command; do not reinterpret it as an obsolete finish button.
+Inspect the existing PTY/process utilities, but do not introduce a PTY unless tests show it is needed. An unnecessary PTY can change output, input, and job-control behavior.
 
 ## 5. Error Handling & Edge Cases
 
-- Duplicate ratings: no repeated FSRS updates, rewards, next-card sends, or completion.
-- Card-send failure: retain a recoverable pending-card state; do not count it as reviewed or complete the flow.
-- Reward failure: preserve existing failure/fallback semantics. Do not invent a new blocking policy; route into automatic progression where the old flow would have offered continue/finish.
-- Nudge deletion unavailable: remove controls and mark inactive. If both operations fail, skip replacement rather than accumulate reminders.
-- Nudge-send failure after retirement: leave no active nudge pointer; allow a later scheduled retry without changing the morning stage.
-- Stale acknowledgment: retire the stale message but never acknowledge, finish, or rewind a newer flow.
-- Reminder/acknowledgment race: serialize and recheck acknowledgment immediately before sending.
-- Restart after rating: resume persisted progression without reapplying the rating.
-- Crash during Telegram delivery: use existing outbound-delivery reconciliation if available. Do not claim exactly-once Telegram delivery from a database flag alone.
-- Day rollover: preserve existing flow ownership and eligibility rules; an old nudge must not attach to the new morning flow.
-- No due cards initially or after rating: reward and complete through the existing maintained-day path.
-- Missing generated options: preserve reveal-answer fallback and avoid synchronous model generation.
+| Situation | Required behavior |
+|---|---|
+| Puma-dev absent or unreachable | Run the dev command normally; report domain routing unavailable. |
+| Existing unmanaged file or symlink | Preserve it; require an explicit different name or manually managed migration. |
+| Concurrent same-domain session | Preserve the first session; second command continues without automatic routing. |
+| Sanitized-name collision | Report both project identities; require an override. Do not silently rename one. |
+| Port auto-increments because preferred port is occupied | Detect the actual attributed listener and route to it. |
+| Multiple HTTP servers | Require `port`; do not infer frontend versus API by lowest port. |
+| Non-web dev command | Continue normally; report that no HTTP listener was identified. |
+| Detached server | Do not adopt automatically. State the limitation and require a separately managed integration. |
+| Server restart or changed port | Update upstream while keeping the relay mapping stable. |
+| Host allowlist rejects `.test` | Diagnose the rejection; offer a framework-specific, narrow allowlist change. |
+| HMR uses an incorrect host or port | Diagnose and configure only the representative framework’s public HMR endpoint. |
+| HTTPS upstream with untrusted certificate | Require trust configuration; never use an insecure bypass by default. |
+| Supervisor killed abruptly | Next `doctor` or invocation reclaims only verifiably stale owned state. |
+| User changes mapping while running | Stop managing that mapping; preserve the user’s change. |
+| Corrupt ownership metadata | Fail closed for mapping modification; continue the original dev command. |
+| Bun upgrades move the executable | `doctor` identifies and repairs the recorded path through explicit installation tooling. |
 
-## 6. Implementation Steps, Ordered by Execution
+Do not use `allowedHosts: true`, disable origin protection globally, or inject framework-specific flags into all projects. Puma-dev’s WebSocket support does not remove application-level host/origin restrictions.
 
-Exact handler and test paths must come from inspection.
+The relay also avoids relying on immediate puma-dev remapping when a server port changes. Validate installed puma-dev behavior during integration tests; do not restart the shared daemon during every project launch.
 
-1. `PROJECT_BOARD.md`  
-   Record the task as in progress, including automatic review draining and singleton-nudge acceptance criteria.
+## 6. Implementation Steps
 
-2. Existing morning-flow tests  
-   Add failing regression tests for post-threshold auto-advance, no continue/finish prompt, reward-once behavior, and completion after due exhaustion.
+The following are proposed new paths. Adapt integration edits only after inspecting the actual repository.
 
-3. Existing reminder/Telegram callback tests  
-   Add failing tests for replacement retirement, “I’m up” cleanup, active-card preservation, stale callbacks, and reminder races.
+### Step 1 — Inspect and record the baseline
 
-4. `services/assistant/db.py`, if inspection confirms it owns relevant persistence  
-   Reuse existing fields first. Add only missing nudge ownership or progression state; provide backward-compatible loading/migration where required.
+Read, without exposing secrets:
 
-5. Actual morning-flow coordinator under `services/assistant/`  
-   Replace the continue/finish transition with the shared automatic progression helper. Preserve threshold and reward logic.
+- `package.json`
+- `AG_CONTEXT.md`
+- `PROJECT_BOARD.md`
+- Existing `bin/` launchers and installation scripts.
+- Managed shell/PATH setup.
+- Existing Bun-only rules and rule-generation sources.
+- Existing puma-dev integration, if any.
+- Existing process-supervision helpers.
 
-6. Actual Telegram callback handler under `services/assistant/`  
-   Route accepted morning ratings into progression; implement legacy button compatibility and nudge acknowledgment cleanup. Leave manual/deck review routing unchanged.
+Update [PROJECT_BOARD.md](/Users/matt/projects/ai-os/PROJECT_BOARD.md) with the feature and explicit acceptance checklist.
 
-7. Actual reminder scheduler and message-retirement helper  
-   Enforce replacement-before-send, separate disposable nudge ownership from active prompt ownership, and serialize sends with acknowledgment.
+### Step 2 — Create the configuration and identity modules
 
-8. Existing assistant test suite  
-   Run targeted tests, then the complete assistant suite. Include restart restoration, configured positive timeout, default unlimited lifetime, gratitude-only journaling, reward fallback, and `/forallx` isolation.
+Add:
 
-9. `AG_CONTEXT.md` and `DEVELOPMENT_JOURNAL.md`  
-   Replace the obsolete continue/finish description with automatic draining and record the nudge lifecycle decision.
+- `tools/dev-domains/src/types.ts`
+- `tools/dev-domains/src/config.ts`
+- `tools/dev-domains/src/domain.ts`
+- `tools/dev-domains/src/invocation.ts`
 
-10. Runtime verification and `PROJECT_BOARD.md`  
-    Use the repository’s pre/postflight checks. Identify the actual assistant launchd service and restart it with `la restart <verified-service-name>`; do not guess its label. Verify with an isolated test chat before marking the task complete.
+Implement schemas, precedence, package resolution, naming, validation, and argv preservation first.
 
-### Acceptance criteria
+### Step 3 — Implement ownership-safe state
 
-- The threshold rating delivers the reward and then the next due card without another user choice.
-- Every subsequent accepted rating sends exactly one next card or completes when none remain.
-- No new continue/finish prompt appears.
-- At most one actionable nudge exists; older nudges are deleted or visibly retired.
-- “I’m up” retires its nudge, stops repeats, and restores the exact active stage without resetting card interaction state.
-- Existing morning ordering, reward behavior, FSRS interaction, journaling boundaries, and non-morning reviews remain intact.
+Add:
+
+- `tools/dev-domains/src/state.ts`
+- `tools/dev-domains/src/lease.ts`
+- `tools/dev-domains/src/puma.ts`
+
+Implement locks, atomic records, exclusive mapping publication, file-identity checks, and stale-session recovery.
+
+No “adopt existing mapping” behavior in v1.
+
+### Step 4 — Implement discovery and relay
+
+Add:
+
+- `tools/dev-domains/src/processes.ts`
+- `tools/dev-domains/src/discovery.ts`
+- `tools/dev-domains/src/relay.ts`
+
+Test PID attribution, listener deduplication, ambiguity, port changes, streaming, WebSocket byte transport, and cleanup before global activation.
+
+### Step 5 — Implement supervision and commands
+
+Add:
+
+- `tools/dev-domains/src/supervisor.ts`
+- `tools/dev-domains/src/cli.ts`
+- `bin/bun`
+- `bin/aios-dev-domain`
+
+Expose:
+
+```text
+aios-dev-domain install
+aios-dev-domain uninstall
+aios-dev-domain doctor
+aios-dev-domain status
+aios-dev-domain check [project-path]
+aios-dev-domain cleanup
+```
+
+`check` is read-only and prints resolved configuration/provenance without dumping environment values. `cleanup` operates only on verified stale owned resources.
+
+### Step 6 — Integrate globally
+
+Modify the actual AI-OS installation/PATH mechanism discovered in Step 1.
+
+- Prepend the AI-OS shim directory.
+- Preserve access to recorded real Bun.
+- Do not replace all Bun commands with a heavyweight supervisor path.
+- Verify new login shells and relevant IDE/agent launch contexts.
+- Add Bun-driven test tasks to root `package.json` using existing naming conventions.
+- Do not introduce pnpm based on historical logs; the current request establishes Bun-only policy.
+
+### Step 7 — Add tests
+
+Create:
+
+```text
+tools/dev-domains/tests/
+  config.test.ts
+  domain.test.ts
+  invocation.test.ts
+  ownership.test.ts
+  discovery.test.ts
+  relay.test.ts
+  supervisor.test.ts
+  macos.integration.test.ts
+```
+
+Use `bun test` and small Bun HTTP fixtures.
+
+Required cases include:
+
+- Zero-config project.
+- Scoped package name and fallback folder name.
+- Explicit name, port, and opt-out.
+- Precedence and invalid configuration.
+- Unmanaged mapping preservation.
+- Concurrent launches and stale-state recovery.
+- Port conflict followed by automatic increment.
+- Multiple servers.
+- Restart onto another port.
+- Ctrl-C, normal exit, crash, and abrupt supervisor death.
+- Streaming HTTP and real WebSocket upgrade/echo.
+- Lifecycle hooks and argument preservation.
+- Pass-through behavior for non-dev commands.
+- Mapping replaced by the user during execution.
+
+### Step 8 — Verify a representative real project safely
+
+Use `daily-mini-crossword` if its actual location and startup safety are confirmed.
+
+1. Inspect package scripts and framework configuration.
+2. Confirm `dev` does not run migrations, publish assets, mutate production data, or start paid/external services.
+3. Check for an existing active instance and existing puma-dev mapping.
+4. Launch the unmodified command through the shim.
+5. Verify `http://daily-mini-crossword.test`.
+6. Verify HTTPS if puma-dev’s local certificate is already trusted; do not silently bypass trust.
+7. Confirm application content, browser asset loading, and an actual HMR update.
+8. Confirm attributed port detection.
+9. Stop the process and verify mapping/lease cleanup.
+10. Repeat with a occupied preferred port using safe fixtures or the project’s supported configuration.
+11. Verify explicit override and opt-out.
+
+If safe execution cannot be established, use Bun fixtures and report the real-project verification as blocked—not passed.
+
+### Step 9 — Document and persist the standard
+
+Add:
+
+- `docs/development/local-dev-domains.md`
+
+Update:
+
+- `AG_CONTEXT.md`: global convention, declaration, overrides, and ownership rules.
+- `DEVELOPMENT_JOURNAL.md`: architecture and verified results.
+- `PROJECT_BOARD.md`: completion and outstanding limitations.
+- Relevant `.rules/` source: Bun-only implementation and no automatic per-project setup.
+- Generated rules through the existing build workflow, not by editing generated copies.
+
+Run the repository’s existing pre/postflight checks. If existing daemon files are modified, apply the documented `la restart <service-name>` rule; the proposed per-invocation supervisor itself does not require a new background daemon.
+
+## Acceptance Criteria
+
+The implementation is complete only when:
+
+- A newly created eligible project becomes reachable at its derived `.test` hostname using only `bun dev`.
+- The standard works across projects, not just the representative application.
+- Explicit declarations and opt-outs behave deterministically.
+- Original Bun script execution, hooks, arguments, terminal interaction, and exit behavior are preserved.
+- Port discovery uses process ownership rather than guesses.
+- Restarted servers can change ports without recreating their puma-dev mapping.
+- Existing puma-dev mappings remain untouched.
+- Routing failures do not prevent the original development command from running.
+- HMR/WebSockets and safe real-project verification have documented results.
+- Installation and uninstall are reversible, and the implementation introduces no non-Bun JavaScript toolchain.
