@@ -1,9 +1,9 @@
 # ChatGPT & Codex macOS Orchestration Rules
 
-## 1. Default Planning Gate
-- Classify the request before checking Git state. Clearly local, self-contained tasks (such as configuring or troubleshooting a desktop app, device, or personal account) do not become project work merely because the active directory happens to be a repository. Apply the existing direct-handling boundary: plainly lightweight tasks may be handled directly; if a clearly local task warrants a plan, use `_plan-with-ai-os` without requiring a GitHub remote.
-- Treat work that changes, investigates, or depends on a software project, repository, or other version-controlled deliverable as project work. For project work, before non-trivial reasoning, delegation, or implementation, invoke the repository-owned `_plan-with-ai-os` skill and verify that `origin` is a GitHub remote before running `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` so Perplexity produces the plan. If project work has no GitHub `origin`, stop and ask Matt whether to create or migrate a private GitHub repository.
-- Mixed tasks that include required project work follow the project-work path; do not use a local-task classification to bypass project governance. After a successful plan, implement it in the same task by default; ask Matt only for a material unresolved ambiguity or consequential architectural choice that cannot be inferred from his known preferences and project conventions. Honor explicit plan-only requests, and retain all planner failure, recovery, and fallback rules. `/fast` explicitly bypasses this planning gate.
+## 1. Planning & Delegation Policy
+- Classify the request before checking Git state. Clearly local, self-contained tasks (such as configuring or troubleshooting a desktop app, device, or personal account) do not become project work merely because the active directory happens to be a repository.
+- **query_aios Invariant**: Stop using `query_aios` (and `_plan-with-ai-os`) unless Matt specifically and explicitly asks for it. Background query_aios services are currently stopped pending investigation of Gemini web reliability.
+- When implementation planning is needed for substantive non-trivial work, use `_plan-with-gemini`, `_plan-with-subagent`, or delegate directly to `agy` (`gemini-3.8-flash-medium`). `/fast` explicitly bypasses any multi-step planning and worker delegation.
 
 ## 2. Primary Operating Decision
 - **Daily Interface & Home**: ChatGPT on macOS is Matt's primary conversational surface, router, and front-end.
