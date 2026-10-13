@@ -144,26 +144,45 @@ const server = Bun.serve({
             return;
           }
 
-          const dgEndpoint = "wss://agent.deepgram.com/agent";
+          const dgEndpoint = "wss://agent.deepgram.com/v1/agent/converse";
+          const authToken = apiKey.startsWith("Token ") || apiKey.startsWith("Bearer ")
+            ? apiKey
+            : `Token ${apiKey.trim()}`;
+
           const dgWs = new WebSocket(dgEndpoint, {
             headers: {
-              Authorization: `Token ${apiKey}`
+              Authorization: authToken
             }
           });
 
           session.deepgramWs = dgWs;
+          let settingsSent = false;
+
+          const sendSettings = () => {
+            if (!settingsSent && dgWs.readyState === WebSocket.OPEN) {
+              settingsSent = true;
+              dgWs.send(JSON.stringify(settings));
+              ws.send(JSON.stringify({ type: "status", status: "settings_sent", settings }));
+            }
+          };
 
           dgWs.onopen = () => {
             ws.send(JSON.stringify({ type: "status", status: "deepgram_connected" }));
-            // Send settings to Deepgram
-            dgWs.send(JSON.stringify(settings));
-            ws.send(JSON.stringify({ type: "status", status: "settings_sent", settings }));
+            // Deepgram sends Welcome first, but in case it is delayed, fallback send after 400ms
+            setTimeout(sendSettings, 400);
           };
 
           dgWs.onmessage = (event) => {
             if (typeof event.data === "string") {
-              // Deepgram JSON metadata / transcripts / events
-              ws.send(JSON.stringify({ type: "deepgram_event", data: JSON.parse(event.data) }));
+              try {
+                const parsed = JSON.parse(event.data);
+                if (parsed.type === "Welcome") {
+                  sendSettings();
+                }
+                ws.send(JSON.stringify({ type: "deepgram_event", data: parsed }));
+              } catch {
+                ws.send(JSON.stringify({ type: "deepgram_event", raw: event.data }));
+              }
             } else {
               // Deepgram raw Linear16 PCM audio chunk from TTS -> forward binary to browser
               ws.send(event.data);
@@ -171,11 +190,24 @@ const server = Bun.serve({
           };
 
           dgWs.onerror = (err: any) => {
-            ws.send(JSON.stringify({ type: "error", error: "Deepgram connection error: " + (err.message || "Unknown error") }));
+            const errMsg = err.message || "Expected 101 status code (Handshake rejected)";
+            ws.send(JSON.stringify({
+              type: "error",
+              error: `Deepgram connection error: ${errMsg}. Check that your Deepgram API Key is valid and has Voice Agent access enabled.`
+            }));
           };
 
           dgWs.onclose = (event) => {
-            ws.send(JSON.stringify({ type: "status", status: "deepgram_closed", code: event.code, reason: event.reason }));
+            let reasonText = event.reason || "";
+            if (event.code === 1002 && !reasonText) {
+              reasonText = "Handshake rejected (often 401 Unauthorized - verify your Deepgram API key)";
+            }
+            ws.send(JSON.stringify({
+              type: "status",
+              status: "deepgram_closed",
+              code: event.code,
+              reason: reasonText
+            }));
             session.deepgramWs = null;
           };
         } else if (data.type === "disconnect_deepgram") {
