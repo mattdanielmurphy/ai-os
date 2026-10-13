@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morning Call Tester | Deepgram Voice Agent</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="title-group">
+        <h1>⏰ Morning Call Voice Tester</h1>
+        <p class="subtitle">Interactive testing platform for wake-up call personas, speaking speed, and turn pacing</p>
+      </div>
+      <div class="header-actions">
+        <span class="host-pill">morning-call.test:3344</span>
+      </div>
+    </header>
+
+    <main class="grid-layout">
+      <!-- Left Column: Controls & Presets -->
+      <section class="card config-panel">
+        <div class="card-header">
+          <h2>1. Persona & Voice Settings</h2>
+          <select id="presetSelect" class="preset-dropdown">
+            <option value="drill_sergeant">Gunnery Sgt. Hartman (Drill Sergeant)</option>
+            <option value="victorian_butler">Archibald (Victorian Butler)</option>
+            <option value="wall_street_boss">Rex Sterling (Wall St. Pit Boss)</option>
+            <option value="temporal_dispatcher">Handler 8 (Sci-Fi Temporal)</option>
+            <option value="custom">-- Custom Persona --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="personaDesc">Persona Dynamics</label>
+          <div id="personaDesc" class="persona-desc-box">Loading description...</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="speedSlider">
+              Speaking Speed (<span id="speedVal">1.25</span>x)
+              <span class="tooltip" title="Deepgram Flux TTS speed (0.5 to 1.5)">ℹ️</span>
+            </label>
+            <input type="range" id="speedSlider" min="0.8" max="1.5" step="0.05" value="1.25">
+            <span class="hint">Recommended for Drill Sgt: 1.25x – 1.35x</span>
+          </div>
+
+          <div class="form-group flex-1">
+            <label for="eotSlider">
+              Turn Responsiveness (<span id="eotVal">0.60</span>)
+              <span class="tooltip" title="End-Of-Turn threshold (lower = cuts in faster after pause)">ℹ️</span>
+            </label>
+            <input type="range" id="eotSlider" min="0.5" max="0.9" step="0.05" value="0.6">
+            <span class="hint">Lower = faster interruption & answer</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="voiceSelect">TTS Voice Model</label>
+            <input type="text" id="voiceSelect" value="flux-conor-en" placeholder="flux-conor-en">
+          </div>
+          <div class="form-group flex-1">
+            <label for="thinkSelect">LLM Model</label>
+            <input type="text" id="thinkSelect" value="gemini-3.1-flash-lite" placeholder="gemini-3.1-flash-lite">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="greetingInput">Opening Call Greeting</label>
+          <input type="text" id="greetingInput" class="text-input" value="HEY MAGGOT, GET UP YOU LAZY SON OF A BITCH!">
+        </div>
+
+        <div class="form-group">
+          <label for="promptInput">System Prompt (The Instructor's Brain)</label>
+          <textarea id="promptInput" rows="11" class="text-area"></textarea>
+        </div>
+      </section>
+
+      <!-- Right Column: Live Call Harness & Live Telemetry -->
+      <section class="card session-panel">
+        <div class="card-header">
+          <h2>2. Live Audio Call Tester</h2>
+          <div id="connectionBadge" class="badge status-idle">IDLE</div>
+        </div>
+
+        <div class="auth-bar">
+          <label for="apiKeyInput">Deepgram API Key:</label>
+          <input type="password" id="apiKeyInput" placeholder="Enter Deepgram Key (stored locally)" class="key-input">
+          <button id="saveKeyBtn" class="btn btn-secondary btn-sm">Save Key</button>
+        </div>
+
+        <div class="call-stage">
+          <div class="waveform-container">
+            <canvas id="waveformCanvas" width="480" height="110"></canvas>
+            <div id="callTimer" class="call-timer">00:00</div>
+          </div>
+
+          <div class="stage-controls">
+            <button id="startCallBtn" class="btn btn-primary btn-lg">
+              <span class="btn-icon">📞</span> Start Morning Call
+            </button>
+            <button id="endCallBtn" class="btn btn-danger btn-lg" disabled>
+              <span class="btn-icon">🛑</span> Hang Up
+            </button>
+          </div>
+        </div>
+
+        <div class="transcript-section">
+          <div class="section-subhead">
+            <h3>Live Conversation Log</h3>
+            <button id="clearLogBtn" class="btn btn-ghost btn-sm">Clear</button>
+          </div>
+          <div id="transcriptBox" class="transcript-box">
+            <div class="transcript-placeholder">Start a call to begin speaking with the agent...</div>
+          </div>
+        </div>
+
+        <div class="json-export-section">
+          <div class="section-subhead">
+            <h3>Export Deepgram Settings JSON</h3>
+            <button id="copyJsonBtn" class="btn btn-secondary btn-sm">Copy Settings JSON</button>
+          </div>
+          <pre id="jsonPreview" class="json-preview"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
