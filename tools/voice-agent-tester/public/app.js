@@ -9,25 +9,52 @@ let nextPlayTime = 0;
 let analyser = null;
 let animFrameId = null;
 
+// Audio and Speech State (for No-Spoiler Revealing)
+let pendingAgentUtterance = "";
+let activeAudioSourcesCount = 0;
+let agentAudioDoneTimer = null;
+
 const elements = {
   presetSelect: document.getElementById("presetSelect"),
   personaDesc: document.getElementById("personaDesc"),
+
+  // Paired Inputs
   speedSlider: document.getElementById("speedSlider"),
-  speedVal: document.getElementById("speedVal"),
+  speedNum: document.getElementById("speedNum"),
+  expressivitySlider: document.getElementById("expressivitySlider"),
+  expressivityNum: document.getElementById("expressivityNum"),
   eotSlider: document.getElementById("eotSlider"),
-  eotVal: document.getElementById("eotVal"),
+  eotNum: document.getElementById("eotNum"),
+  eagerEotSlider: document.getElementById("eagerEotSlider"),
+  eagerEotNum: document.getElementById("eagerEotNum"),
+  eotTimeoutSlider: document.getElementById("eotTimeoutSlider"),
+  eotTimeoutNum: document.getElementById("eotTimeoutNum"),
+  tempSlider: document.getElementById("tempSlider"),
+  tempNum: document.getElementById("tempNum"),
+
+  // Voice & Model
+  voicePresetSelect: document.getElementById("voicePresetSelect"),
   voiceSelect: document.getElementById("voiceSelect"),
+  thinkPresetSelect: document.getElementById("thinkPresetSelect"),
   thinkSelect: document.getElementById("thinkSelect"),
+
+  // Text inputs
   greetingInput: document.getElementById("greetingInput"),
   promptInput: document.getElementById("promptInput"),
   apiKeyInput: document.getElementById("apiKeyInput"),
   saveKeyBtn: document.getElementById("saveKeyBtn"),
+
+  // Stage & Status
   connectionBadge: document.getElementById("connectionBadge"),
+  speakingPill: document.getElementById("speakingPill"),
   startCallBtn: document.getElementById("startCallBtn"),
   endCallBtn: document.getElementById("endCallBtn"),
   callTimer: document.getElementById("callTimer"),
   transcriptBox: document.getElementById("transcriptBox"),
   clearLogBtn: document.getElementById("clearLogBtn"),
+  hideUntilSpokenCheckbox: document.getElementById("hideUntilSpokenCheckbox"),
+
+  // JSON Export
   jsonPreview: document.getElementById("jsonPreview"),
   copyJsonBtn: document.getElementById("copyJsonBtn"),
   canvas: document.getElementById("waveformCanvas")
@@ -81,22 +108,75 @@ function loadPreset(key) {
   if (!p) return;
 
   elements.personaDesc.textContent = p.description;
-  elements.speedSlider.value = p.speed || 1.25;
-  elements.speedVal.textContent = parseFloat(p.speed || 1.25).toFixed(2);
-  elements.eotSlider.value = p.eot_threshold || 0.6;
-  elements.eotVal.textContent = parseFloat(p.eot_threshold || 0.6).toFixed(2);
-  elements.voiceSelect.value = p.voice_model || "flux-conor-en";
-  elements.thinkSelect.value = p.think_model || "gemini-3.1-flash-lite";
+
+  // Sync inputs
+  setPairedValue(elements.speedSlider, elements.speedNum, p.speed !== undefined ? p.speed : 1.30);
+  setPairedValue(elements.expressivitySlider, elements.expressivityNum, p.expressivity !== undefined ? p.expressivity : 2);
+  setPairedValue(elements.eotSlider, elements.eotNum, p.eot_threshold !== undefined ? p.eot_threshold : 0.58);
+  setPairedValue(elements.eagerEotSlider, elements.eagerEotNum, p.eager_eot_threshold !== undefined ? p.eager_eot_threshold : 0.45);
+  setPairedValue(elements.eotTimeoutSlider, elements.eotTimeoutNum, p.eot_timeout_ms !== undefined ? p.eot_timeout_ms : 2500);
+  setPairedValue(elements.tempSlider, elements.tempNum, p.temperature !== undefined ? p.temperature : 0.70);
+
+  const voice = p.voice_model || "flux-conor-en";
+  elements.voiceSelect.value = voice;
+  syncDropdownToValue(elements.voicePresetSelect, voice);
+
+  const model = p.think_model || "gemini-3.1-flash-lite";
+  elements.thinkSelect.value = model;
+  syncDropdownToValue(elements.thinkPresetSelect, model);
+
   elements.greetingInput.value = p.greeting || "";
   elements.promptInput.value = p.prompt || "";
 
   updateJsonPreview();
 }
 
+function setPairedValue(slider, numInput, value) {
+  numInput.value = value;
+  slider.value = value;
+}
+
+function syncDropdownToValue(selectEl, value) {
+  let matched = false;
+  for (const opt of selectEl.options) {
+    if (opt.value === value) {
+      selectEl.value = value;
+      matched = true;
+      break;
+    }
+  }
+  if (!matched) {
+    selectEl.value = "custom";
+  }
+}
+
 function getSettingsObject() {
-  const speed = parseFloat(elements.speedSlider.value);
-  const eot = parseFloat(elements.eotSlider.value);
-  const eagerEot = Math.max(0.3, parseFloat((eot - 0.15).toFixed(2)));
+  const speed = parseFloat(elements.speedNum.value);
+  const expressivity = parseInt(elements.expressivityNum.value, 10);
+  const eot = parseFloat(elements.eotNum.value);
+  const eagerEot = parseFloat(elements.eagerEotNum.value);
+  const eotTimeout = parseInt(elements.eotTimeoutNum.value, 10);
+  const temp = parseFloat(elements.tempNum.value);
+
+  const speakProvider = {
+    type: "deepgram",
+    version: "v2",
+    model: elements.voiceSelect.value.trim() || "flux-conor-en",
+    speed: isNaN(speed) ? 1.3 : speed
+  };
+
+  if (!isNaN(expressivity)) {
+    speakProvider.expressivity = expressivity;
+  }
+
+  const thinkProvider = {
+    type: "google",
+    model: elements.thinkSelect.value.trim() || "gemini-3.1-flash-lite"
+  };
+
+  if (!isNaN(temp)) {
+    thinkProvider.temperature = temp;
+  }
 
   return {
     type: "Settings",
@@ -113,28 +193,20 @@ function getSettingsObject() {
     },
     agent: {
       speak: {
-        provider: {
-          type: "deepgram",
-          version: "v2",
-          model: elements.voiceSelect.value.trim() || "flux-conor-en",
-          speed: speed
-        }
+        provider: speakProvider
       },
       listen: {
         provider: {
           type: "deepgram",
           version: "v2",
           model: "flux-general-en",
-          eot_threshold: eot,
-          eager_eot_threshold: eagerEot,
-          eot_timeout_ms: 3000
+          eot_threshold: isNaN(eot) ? 0.58 : eot,
+          eager_eot_threshold: isNaN(eagerEot) ? 0.45 : eagerEot,
+          eot_timeout_ms: isNaN(eotTimeout) ? 2500 : eotTimeout
         }
       },
       think: {
-        provider: {
-          type: "google",
-          model: elements.thinkSelect.value.trim() || "gemini-3.1-flash-lite"
-        },
+        provider: thinkProvider,
         prompt: elements.promptInput.value
       },
       greeting: elements.greetingInput.value
@@ -147,6 +219,20 @@ function updateJsonPreview() {
   elements.jsonPreview.textContent = JSON.stringify(settings, null, 2);
 }
 
+function bindPairedInput(slider, numInput) {
+  slider.addEventListener("input", (e) => {
+    numInput.value = e.target.value;
+    updateJsonPreview();
+  });
+  numInput.addEventListener("input", (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+      slider.value = val;
+      updateJsonPreview();
+    }
+  });
+}
+
 function attachEventListeners() {
   elements.presetSelect.addEventListener("change", (e) => {
     if (e.target.value !== "custom") {
@@ -156,19 +242,40 @@ function attachEventListeners() {
     }
   });
 
-  elements.speedSlider.addEventListener("input", (e) => {
-    elements.speedVal.textContent = parseFloat(e.target.value).toFixed(2);
+  // Bind all paired sliders & inputs
+  bindPairedInput(elements.speedSlider, elements.speedNum);
+  bindPairedInput(elements.expressivitySlider, elements.expressivityNum);
+  bindPairedInput(elements.eotSlider, elements.eotNum);
+  bindPairedInput(elements.eagerEotSlider, elements.eagerEotNum);
+  bindPairedInput(elements.eotTimeoutSlider, elements.eotTimeoutNum);
+  bindPairedInput(elements.tempSlider, elements.tempNum);
+
+  // Voice Presets
+  elements.voicePresetSelect.addEventListener("change", (e) => {
+    if (e.target.value !== "custom") {
+      elements.voiceSelect.value = e.target.value;
+      updateJsonPreview();
+    }
+  });
+  elements.voiceSelect.addEventListener("input", (e) => {
+    syncDropdownToValue(elements.voicePresetSelect, e.target.value.trim());
     updateJsonPreview();
   });
 
-  elements.eotSlider.addEventListener("input", (e) => {
-    elements.eotVal.textContent = parseFloat(e.target.value).toFixed(2);
+  // LLM Presets
+  elements.thinkPresetSelect.addEventListener("change", (e) => {
+    if (e.target.value !== "custom") {
+      elements.thinkSelect.value = e.target.value;
+      updateJsonPreview();
+    }
+  });
+  elements.thinkSelect.addEventListener("input", (e) => {
+    syncDropdownToValue(elements.thinkPresetSelect, e.target.value.trim());
     updateJsonPreview();
   });
 
-  [elements.voiceSelect, elements.thinkSelect, elements.greetingInput, elements.promptInput].forEach((el) => {
-    el.addEventListener("input", updateJsonPreview);
-  });
+  elements.greetingInput.addEventListener("input", updateJsonPreview);
+  elements.promptInput.addEventListener("input", updateJsonPreview);
 
   elements.saveKeyBtn.addEventListener("click", () => {
     const key = elements.apiKeyInput.value.trim();
@@ -189,6 +296,7 @@ function attachEventListeners() {
 
   elements.clearLogBtn.addEventListener("click", () => {
     elements.transcriptBox.innerHTML = '<div class="transcript-placeholder">Conversation log cleared.</div>';
+    pendingAgentUtterance = "";
   });
 
   elements.startCallBtn.addEventListener("click", startCall);
@@ -214,10 +322,18 @@ function appendTranscript(sender, text) {
   elements.transcriptBox.scrollTop = elements.transcriptBox.scrollHeight;
 }
 
+function revealPendingAgentUtterance() {
+  if (pendingAgentUtterance && pendingAgentUtterance.trim().length > 0) {
+    appendTranscript("agent", pendingAgentUtterance.trim());
+    pendingAgentUtterance = "";
+  }
+}
+
 function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Media Capture Helper
 async function getAudioStream() {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     return await navigator.mediaDevices.getUserMedia({
@@ -274,6 +390,8 @@ async function startCall() {
   setBadge("CONNECTING", "status-connecting");
   elements.startCallBtn.disabled = true;
   elements.endCallBtn.disabled = false;
+  pendingAgentUtterance = "";
+  activeAudioSourcesCount = 0;
 
   try {
     // Setup AudioContext (48kHz sample rate)
@@ -351,23 +469,54 @@ function handleServerJson(msg) {
     } else if (msg.status === "settings_sent") {
       const greeting = elements.greetingInput.value.trim();
       if (greeting) {
-        appendTranscript("agent", greeting);
+        if (!elements.hideUntilSpokenCheckbox.checked) {
+          appendTranscript("agent", greeting);
+        } else {
+          pendingAgentUtterance = greeting;
+          elements.speakingPill.style.display = "block";
+        }
       }
     }
   } else if (msg.type === "deepgram_event") {
     const data = msg.data;
     if (data.type === "ConversationText") {
       if (data.role === "user") {
+        // User finished speaking, reveal any leftover agent utterance first
+        revealPendingAgentUtterance();
         appendTranscript("user", data.content);
         setBadge("AGENT THINKING", "status-connecting");
       } else if (data.role === "agent" || data.role === "assistant") {
-        appendTranscript("agent", data.content);
+        if (!elements.hideUntilSpokenCheckbox.checked) {
+          appendTranscript("agent", data.content);
+        } else {
+          // Buffer the agent utterance and reveal ONLY when playback completes
+          pendingAgentUtterance += (pendingAgentUtterance ? " " : "") + data.content;
+          elements.speakingPill.style.display = "block";
+        }
         setBadge("SPEAKING", "status-speaking");
       }
     } else if (data.type === "UserStartedSpeaking") {
+      // User started talking; if agent was speaking, reveal whatever was said so far
+      revealPendingAgentUtterance();
+      elements.speakingPill.style.display = "none";
       setBadge("LISTENING", "status-active");
     } else if (data.type === "AgentStartedSpeaking") {
+      elements.speakingPill.style.display = "block";
       setBadge("SPEAKING", "status-speaking");
+    } else if (data.type === "AgentAudioDone") {
+      // Deepgram finished sending audio frames; wait for audio playback queue to complete
+      if (audioCtx) {
+        const remainingDelayMs = Math.max(0, (nextPlayTime - audioCtx.currentTime) * 1000) + 120;
+        clearTimeout(agentAudioDoneTimer);
+        agentAudioDoneTimer = setTimeout(() => {
+          elements.speakingPill.style.display = "none";
+          revealPendingAgentUtterance();
+          setBadge("IN CALL", "status-active");
+        }, remainingDelayMs);
+      } else {
+        revealPendingAgentUtterance();
+        elements.speakingPill.style.display = "none";
+      }
     } else if (data.type === "EndOfTurn") {
       setBadge("AGENT THINKING", "status-connecting");
     }
@@ -396,6 +545,18 @@ function playPcmChunk(arrayBuffer, sampleRate = 24000) {
   const startTime = Math.max(audioCtx.currentTime, nextPlayTime);
   source.start(startTime);
   nextPlayTime = startTime + audioBuffer.duration;
+
+  activeAudioSourcesCount++;
+  elements.speakingPill.style.display = "block";
+
+  source.onended = () => {
+    activeAudioSourcesCount = Math.max(0, activeAudioSourcesCount - 1);
+    // When last scheduled buffer ends playback, reveal dialogue if no more audio queued
+    if (activeAudioSourcesCount === 0 && (audioCtx.currentTime >= nextPlayTime - 0.08)) {
+      elements.speakingPill.style.display = "none";
+      revealPendingAgentUtterance();
+    }
+  };
 }
 
 function floatTo16BitPCM(float32Array) {
@@ -421,6 +582,10 @@ function startTimer() {
 function endCall() {
   clearInterval(timerInterval);
   timerInterval = null;
+  clearTimeout(agentAudioDoneTimer);
+
+  // Reveal any leftover pending text so transcript is complete
+  revealPendingAgentUtterance();
 
   if (activeWs) {
     if (activeWs.readyState === WebSocket.OPEN) {
@@ -452,6 +617,7 @@ function endCall() {
 
   elements.startCallBtn.disabled = false;
   elements.endCallBtn.disabled = true;
+  elements.speakingPill.style.display = "none";
   setBadge("IDLE", "status-idle");
   elements.callTimer.textContent = "00:00";
 
@@ -470,11 +636,11 @@ function startWaveformAnimation() {
     animFrameId = requestAnimationFrame(draw);
     analyser.getByteTimeDomainData(dataArray);
 
-    ctx.fillStyle = "#161b22";
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.lineWidth = 2;
-    ctx.strokeStyle = "#58a6ff";
+    ctx.strokeStyle = "#0969da";
     ctx.beginPath();
 
     const sliceWidth = (canvas.width * 1.0) / bufferLength;
