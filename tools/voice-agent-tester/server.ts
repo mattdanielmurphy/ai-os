@@ -37,19 +37,19 @@ export function buildDeepgramSettings(config: {
     model: config.voice_model || "flux-conor-en"
   };
 
+  const rawSpeed = typeof config.speed === "number" ? config.speed : 1.0;
+  const minSpeed = isFlux ? 0.5 : 0.7;
+  const clampedSpeed = Math.round(Math.min(1.5, Math.max(minSpeed, rawSpeed)) * 20) / 20;
+
   if (isFlux) {
     speakProvider.version = "v2";
-    if (typeof config.speed === "number") {
-      speakProvider.speed = config.speed;
-    }
+    speakProvider.speed = clampedSpeed;
     if (typeof config.expressivity === "number") {
-      speakProvider.expressivity = config.expressivity;
+      speakProvider.expressivity = Math.min(2, Math.max(-2, Math.round(config.expressivity)));
     }
   } else {
     // Aura / Aura-2
-    if (typeof config.speed === "number") {
-      speakProvider.speed = config.speed;
-    }
+    speakProvider.speed = clampedSpeed;
   }
 
   const thinkProvider: Record<string, any> = {
@@ -278,11 +278,22 @@ const server = Bun.serve({
         } else if (data.type === "update_speak") {
           // Mid-call TTS update
           if (session.deepgramWs && session.deepgramWs.readyState === WebSocket.OPEN) {
+            const speak = { ...(data.speak || {}) };
+            if (speak.provider) {
+              const isFlux = (speak.provider.model || "").startsWith("flux-");
+              const minSpeed = isFlux ? 0.5 : 0.7;
+              if (typeof speak.provider.speed === "number") {
+                speak.provider.speed = Math.round(Math.min(1.5, Math.max(minSpeed, speak.provider.speed)) * 20) / 20;
+              }
+              if (isFlux && typeof speak.provider.expressivity === "number") {
+                speak.provider.expressivity = Math.min(2, Math.max(-2, Math.round(speak.provider.expressivity)));
+              }
+            }
             session.deepgramWs.send(JSON.stringify({
               type: "UpdateSpeak",
-              speak: data.speak
+              speak: speak
             }));
-            ws.send(JSON.stringify({ type: "status", status: "update_sent", updateType: "UpdateSpeak", speak: data.speak }));
+            ws.send(JSON.stringify({ type: "status", status: "update_sent", updateType: "UpdateSpeak", speak: speak }));
           }
         } else if (data.type === "update_listen") {
           // Mid-call STT / EOT update

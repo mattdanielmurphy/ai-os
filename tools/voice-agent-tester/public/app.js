@@ -444,14 +444,18 @@ function getSettingsObject() {
     model: voice
   };
 
+  const rawSpeed = parseFloat(elements.speedNum.value);
+  const minSpeed = isFlux ? 0.5 : 0.7;
+  const clampedSpeed = isNaN(rawSpeed) ? 1.0 : Math.round(Math.min(1.5, Math.max(minSpeed, rawSpeed)) * 20) / 20;
+
   if (isFlux) {
     speakProvider.version = "v2";
-    speakProvider.speed = isNaN(speed) ? 1.3 : speed;
+    speakProvider.speed = clampedSpeed;
     if (!isNaN(expressivity)) {
-      speakProvider.expressivity = expressivity;
+      speakProvider.expressivity = Math.min(2, Math.max(-2, Math.round(expressivity)));
     }
   } else {
-    speakProvider.speed = isNaN(speed) ? 1.0 : speed;
+    speakProvider.speed = clampedSpeed;
   }
 
   const thinkProvider = {
