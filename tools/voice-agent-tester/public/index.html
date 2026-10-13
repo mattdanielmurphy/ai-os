@@ -21,6 +21,7 @@
         <p class="subtitle">Interactive testing platform for wake-up call personas, speaking speed, and turn pacing</p>
       </div>
       <div class="header-actions">
+        <div id="midCallNotice" class="midcall-pill" style="display: none;">⚡ Updated mid-call</div>
         <a href="http://localhost:3344" class="host-pill" title="Open on localhost for secure microphone access">localhost:3344</a>
       </div>
     </header>
@@ -86,11 +87,11 @@
           </div>
         </div>
 
-        <!-- Param Row 3: Silence Timeout & LLM Temperature -->
+        <!-- Param Row 3: Deepgram Silence Timeout & LLM Temperature -->
         <div class="form-row">
           <div class="form-group flex-1">
             <div class="label-with-input">
-              <label for="eotTimeoutSlider">Silence Max Timeout (ms)</label>
+              <label for="eotTimeoutSlider">Deepgram STT Timeout (ms)</label>
               <input type="number" id="eotTimeoutNum" class="num-input" step="100" value="2500">
             </div>
             <input type="range" id="eotTimeoutSlider" min="500" max="10000" step="100" value="2500">
@@ -107,44 +108,40 @@
           </div>
         </div>
 
+        <!-- Param Row 4: Silence Re-Engagement Threshold -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <div class="label-with-input">
+              <label for="silenceThresholdSlider">Silence Re-Engagement (sec)</label>
+              <input type="number" id="silenceThresholdNum" class="num-input" min="1" max="60" step="1" value="5">
+            </div>
+            <input type="range" id="silenceThresholdSlider" min="2" max="60" step="1" value="5">
+            <span class="hint">Agent re-engages if ignored for this long (auto-extends during tasks)</span>
+          </div>
+
+          <div class="form-group flex-1 checkbox-group-container">
+            <label class="spoiler-toggle" title="Treats dead air like a real person standing there being ignored">
+              <input type="checkbox" id="silenceReengageCheckbox" checked>
+              <span><strong>Auto Re-Engage on Silence</strong></span>
+            </label>
+            <span class="hint">Re-engages if user randomly stops speaking</span>
+          </div>
+        </div>
+
         <!-- Voice Selection -->
         <div class="form-row">
           <div class="form-group flex-1">
-            <label for="voicePresetSelect">TTS Voice Preset & Catalog</label>
-            <select id="voicePresetSelect" class="text-input">
-              <optgroup label="Deepgram Flux (v2 - Expressive, Real-Time Conversational)">
-                <option value="flux-conor-en" selected>Conor (British, Male - Deep, Mature, Military)</option>
-                <option value="flux-cliff-en">Cliff (US, Male - Mature, Deep, Raspy)</option>
-                <option value="flux-kit-en">Kit (British, Male - Energetic, Fast, Crisp)</option>
-                <option value="flux-cole-en">Cole (US, Male - Energetic, Clear)</option>
-                <option value="flux-alexis-en">Alexis (US, Female - Crisp, Calm, Formal)</option>
-                <option value="flux-brooke-en">Brooke (US, Female - Fast, Confident, Sharp)</option>
-                <option value="flux-hannah-en">Hannah (US, Female - Confident, Youthful)</option>
-                <option value="flux-sienna-en">Sienna (US, Female - Warm, Professional)</option>
-                <option value="flux-haley-en">Haley (US, Female - Natural, Conversational)</option>
-                <option value="flux-colin-en">Colin (British, Male - Conversational)</option>
-                <option value="flux-leo-en">Leo (US, Male - Energetic)</option>
-                <option value="flux-stella-en">Stella (US, Female - Youthful)</option>
-              </optgroup>
-              <optgroup label="Deepgram Aura-2 (v1/v2 - Natural Conversational)">
-                <option value="aura-2-thalia-en">Aura-2 Thalia (US, Female - Crisp)</option>
-                <option value="aura-2-orion-en">Aura-2 Orion (US, Male - Authoritative, Deep)</option>
-                <option value="aura-2-luna-en">Aura-2 Luna (US, Female - Conversational)</option>
-                <option value="aura-2-zeus-en">Aura-2 Zeus (US, Male - Commanding)</option>
-                <option value="aura-2-asteria-en">Aura-2 Asteria (US, Female - Confident)</option>
-              </optgroup>
-              <optgroup label="Deepgram Aura Classic">
-                <option value="aura-zeus-en">Aura Zeus (Male - Commanding, Booming)</option>
-                <option value="aura-orion-en">Aura Orion (Male - Deep, Authoritative)</option>
-                <option value="aura-asteria-en">Aura Asteria (Female - Confident, Sharp)</option>
-                <option value="aura-orpheus-en">Aura Orpheus (Male - Smooth, Articulate)</option>
-                <option value="aura-arcas-en">Aura Arcas (Male - Professional)</option>
-                <option value="aura-angus-en">Aura Angus (Irish, Male - Casual)</option>
-                <option value="aura-athena-en">Aura Athena (Female - Authoritative)</option>
-                <option value="aura-hera-en">Aura Hera (Female - Mature)</option>
-              </optgroup>
-              <option value="custom">-- Custom Voice Name --</option>
-            </select>
+            <div class="label-with-input">
+              <label for="voicePresetSelect">TTS Voice Catalog (Full Multi-Lingual)</label>
+              <input type="text" id="voiceSearchInput" class="num-input" style="width: 130px; text-align: left; font-family: inherit; font-size: 0.75rem;" placeholder="🔍 Filter voice...">
+            </div>
+            <div class="voice-picker-row">
+              <select id="voicePresetSelect" class="text-input" style="flex: 1;">
+                <option value="flux-conor-en" selected>Loading full voice catalog...</option>
+              </select>
+              <button id="starVoiceBtn" type="button" class="btn btn-star" title="Star/unstar voice as favourite">☆</button>
+            </div>
+            <div id="voiceMetaBox" class="voice-meta-box">Flux Conor (British, Male)</div>
             <input type="text" id="voiceSelect" class="text-input" value="flux-conor-en" placeholder="Or type any custom voice handle">
           </div>
 
@@ -187,6 +184,7 @@
         <div class="call-stage">
           <div class="waveform-container">
             <canvas id="waveformCanvas" width="480" height="110"></canvas>
+            <div id="silencePill" class="silence-pill" style="display: none;">⏱️ 5s silence</div>
             <div id="callTimer" class="call-timer">00:00</div>
             <div id="speakingPill" class="speaking-pill" style="display: none;">Agent speaking... 🔊</div>
           </div>
@@ -206,7 +204,7 @@
             <div class="subhead-left">
               <h3>Live Conversation Log</h3>
               <label class="spoiler-toggle" title="Hides agent text in transcript until the audio finishes speaking">
-                <input type="checkbox" id="hideUntilSpokenCheckbox" checked>
+                <input type="checkbox" id="hideUntilSpokenCheckbox">
                 <span>Hide text until fully spoken (No spoilers)</span>
               </label>
             </div>
