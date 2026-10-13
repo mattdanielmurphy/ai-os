@@ -6,44 +6,8 @@ import crypto from 'crypto';
 import os from 'os';
 import { execFileSync, execSync } from 'child_process';
 
-const PPLX_MODEL_MAP = {
-    'grok': 'grok46medium',
-    'grok-thinking': 'grok46medium',
-    'grok_thinking': 'grok46medium',
-    'grok-2': 'grok46medium',
-    'grok46medium': 'grok46medium',
-    'sonnet': 'claude50sonnetthinking',
-    'sonar': 'turbo',
-    'turbo': 'turbo',
-    'kimi': 'kimik3thinking',
-    'k3': 'kimik3thinking',
-    'kimik3thinking': 'kimik3thinking',
-    'gpt': 'gpt6_sol_thinking',
-    'gpt6': 'gpt6_sol_thinking',
-    'gpt-6-sol': 'gpt6_sol_thinking',
-    'gpt5': 'gpt6_sol_thinking',
-    'gpt-5.6-sol': 'gpt6_sol_thinking',
-    'sol': 'gpt6_sol_thinking',
-    'gpt6_sol_thinking': 'gpt6_sol_thinking',
-    'terra': 'gpt56_terra_thinking',
-    'gpt56_terra_thinking': 'gpt56_terra_thinking',
-    'gemini': 'gemini38flashthinking',
-    'gemini-3.8': 'gemini38flashthinking',
-    'gemini-3.7': 'gemini37flashthinking',
-    'gemini-3.6': 'gemini36flashthinking',
-    'flash-thinking': 'gemini38flashthinking',
-    'gemini38flashthinking': 'gemini38flashthinking',
-    'gemini37flashthinking': 'gemini37flashthinking',
-    'gemini36flashthinking': 'gemini36flashthinking',
-    'glm': 'glm_5_2',
-    'glm-5': 'glm_5_2',
-    'glm5': 'glm_5_2',
-    'glm_5_2': 'glm_5_2',
-    'auto': 'auto',
-};
-
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.tiff', '.heic']);
-const MAX_PROMPT_CHARS = 35000; // Perplexity character limit is ~40k; 35k ensures safe ceiling including formatting
+const MAX_PROMPT_CHARS = 100000; // Safe prompt ceiling for Gemini web UI
 
 function isImageFile(filePath) {
     if (!filePath) return false;
@@ -615,7 +579,7 @@ function recoverSavedOutput(outputPath) {
 
 async function main() {
     const args = process.argv.slice(2);
-    let provider = 'perplexity';
+    let provider = 'gemini';
     let rawModel = null;
     let message = '';
     let inputFile = null;
@@ -636,7 +600,7 @@ async function main() {
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg === '--provider' || arg === '-p') {
-            provider = (args[++i] || 'perplexity').toLowerCase();
+            provider = (args[++i] || 'gemini').toLowerCase();
         } else if (arg === '--model' || arg === '-m') {
             rawModel = (args[++i] || 'gpt').toLowerCase();
         } else if (arg === '--plan' || arg === '--planner') {
@@ -714,7 +678,11 @@ async function main() {
     });
 
     const baseProvider = (provider || '').split(':')[0].toLowerCase();
-    const effectiveRawModel = rawModel || (baseProvider === 'perplexity' ? 'gpt' : (baseProvider === 'gemini' ? 'gemini' : null));
+    if (baseProvider === 'perplexity') {
+        console.error('[query_aios] Error: Perplexity is no longer supported as an endpoint (Perplexity Pro subscription ended). Only "gemini" is supported.');
+        process.exit(1);
+    }
+    const effectiveRawModel = rawModel || 'gemini';
     const THINKING_MODELS = [
         'grok', 'grok-thinking', 'grok_thinking', 'grok-2', 'grok46medium',
         'sonnet', 'claude50sonnetthinking',

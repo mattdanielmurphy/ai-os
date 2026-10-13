@@ -388,8 +388,14 @@ function loadSettingsFromStorage() {
       elements.personaDesc.textContent = "Custom user-configured persona.";
     }
 
-    if (s.speed !== undefined) setPairedValue(elements.speedSlider, elements.speedNum, s.speed);
-    if (s.expressivity !== undefined) setPairedValue(elements.expressivitySlider, elements.expressivityNum, s.expressivity);
+    if (s.speed !== undefined) {
+      const validSpeed = Math.round(Math.min(1.5, Math.max(0.5, s.speed)) * 20) / 20;
+      setPairedValue(elements.speedSlider, elements.speedNum, validSpeed);
+    }
+    if (s.expressivity !== undefined) {
+      const validExpressivity = Math.min(2, Math.max(-2, Math.round(s.expressivity)));
+      setPairedValue(elements.expressivitySlider, elements.expressivityNum, validExpressivity);
+    }
     const validEot = Math.min(1.0, Math.max(0.5, s.eot !== undefined ? s.eot : 0.58));
     setPairedValue(elements.eotSlider, elements.eotNum, validEot);
     const validEager = Math.min(validEot, Math.max(0.3, Math.min(0.9, s.eagerEot !== undefined ? s.eagerEot : 0.45)));

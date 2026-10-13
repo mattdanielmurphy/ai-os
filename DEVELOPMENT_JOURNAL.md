@@ -1,6 +1,7 @@
 # Development Journal
 
 ## 2026-10-13
+- **Morning Call Voice Agent Deepgram Parameter Bounds & Error Isolation:** Isolated out-of-bounds parameter crashes in `tools/voice-agent-tester` where TTS `speed > 1.50` triggered `SPEAK_REQUEST_FAILED` -> `FAILED_TO_SPEAK`, and STT `eot_threshold < 0.50` triggered `INVALID_SETTINGS`. Added strict server- and client-side clamping for speed (`0.50`–`1.50`), EOT (`0.50`–`1.00`), and Eager EOT (`0.30`–`0.90`), surfaced upstream errors in the UI, and sanitized `localStorage` hydration. [[log]](agent-logs/2026-10-13_11-45_morning_call_tester_parameter_limits.md)
 - **Morning Call Voice Agent Tester Audio & Control Fixes:** Isolated and fixed silent audio output in `tools/voice-agent-tester` caused by unresumed `AudioContext`, microphone loopback acoustic barge-in cancellation, premature `settings_sent` UI status, and ungated mic streaming before Deepgram's `SettingsApplied` event. Added 138-voice multi-lingual catalog with starred favorites pinning, live mid-call parameter dispatch (`UpdateSpeak`/`UpdateListen`/`UpdateThink`), and smart silence re-engagement watchdog with task-duration auto-extension. [[log]](agent-logs/2026-10-13_11-35_morning_call_tester_audio_fix.md)
 
 ## 2026-10-12
