@@ -390,8 +390,10 @@ function loadSettingsFromStorage() {
 
     if (s.speed !== undefined) setPairedValue(elements.speedSlider, elements.speedNum, s.speed);
     if (s.expressivity !== undefined) setPairedValue(elements.expressivitySlider, elements.expressivityNum, s.expressivity);
-    if (s.eot !== undefined) setPairedValue(elements.eotSlider, elements.eotNum, s.eot);
-    if (s.eagerEot !== undefined) setPairedValue(elements.eagerEotSlider, elements.eagerEotNum, s.eagerEot);
+    const validEot = Math.min(1.0, Math.max(0.5, s.eot !== undefined ? s.eot : 0.58));
+    setPairedValue(elements.eotSlider, elements.eotNum, validEot);
+    const validEager = Math.min(validEot, Math.max(0.3, Math.min(0.9, s.eagerEot !== undefined ? s.eagerEot : 0.45)));
+    setPairedValue(elements.eagerEotSlider, elements.eagerEotNum, validEager);
     if (s.eotTimeout !== undefined) setPairedValue(elements.eotTimeoutSlider, elements.eotTimeoutNum, s.eotTimeout);
     if (s.temp !== undefined) setPairedValue(elements.tempSlider, elements.tempNum, s.temp);
 
@@ -479,14 +481,20 @@ function getSettingsObject() {
         provider: speakProvider
       },
       listen: {
-        provider: {
-          type: "deepgram",
-          version: "v2",
-          model: "flux-general-en",
-          eot_threshold: isNaN(eot) ? 0.58 : eot,
-          eager_eot_threshold: isNaN(eagerEot) ? 0.45 : eagerEot,
-          eot_timeout_ms: isNaN(eotTimeout) ? 2500 : eotTimeout
-        }
+        provider: (() => {
+          const rawEot = isNaN(eot) ? 0.58 : eot;
+          const validEot = Math.min(1.0, Math.max(0.5, rawEot));
+          const rawEager = isNaN(eagerEot) ? 0.45 : eagerEot;
+          const validEager = Math.min(validEot, Math.max(0.3, Math.min(0.9, rawEager)));
+          return {
+            type: "deepgram",
+            version: "v2",
+            model: "flux-general-en",
+            eot_threshold: validEot,
+            eager_eot_threshold: validEager,
+            eot_timeout_ms: isNaN(eotTimeout) ? 2500 : eotTimeout
+          };
+        })()
       },
       think: {
         provider: thinkProvider,
@@ -1043,10 +1051,23 @@ function handleServerJson(msg) {
       }
     } else if (msg.status === "update_sent") {
       showMidCallNotice(`✓ ${msg.updateType} acknowledged`);
+    } else if (msg.status === "deepgram_closed") {
+      console.warn("[Deepgram Closed]", msg);
+      if (msg.code !== 1000 || msg.reason) {
+        appendTranscript("agent", `⚠️ Deepgram disconnected: ${msg.reason || `Code ${msg.code}`}`);
+      }
+      endCall();
     }
   } else if (msg.type === "deepgram_event") {
     const data = msg.data;
-    if (data.type === "SettingsApplied") {
+    if (data.type === "Error") {
+      console.error("[Deepgram Error]", data);
+      const errText = data.description || data.message || "Deepgram rejected settings";
+      appendTranscript("agent", `⚠️ Deepgram Error: ${errText}`);
+      alert(`Deepgram Error: ${errText}`);
+      endCall();
+      return;
+    } else if (data.type === "SettingsApplied") {
       setBadge("IN CALL", "status-active");
     } else if (data.type === "ConversationText") {
       if (data.role === "user") {

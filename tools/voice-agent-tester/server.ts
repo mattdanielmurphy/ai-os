@@ -79,14 +79,20 @@ export function buildDeepgramSettings(config: {
         provider: speakProvider
       },
       listen: {
-        provider: {
-          type: "deepgram",
-          version: "v2",
-          model: config.listen_model || "flux-general-en",
-          eot_threshold: typeof config.eot_threshold === "number" ? config.eot_threshold : 0.6,
-          eager_eot_threshold: typeof config.eager_eot_threshold === "number" ? config.eager_eot_threshold : 0.45,
-          eot_timeout_ms: config.eot_timeout_ms || 3000
-        }
+        provider: (() => {
+          const rawEot = typeof config.eot_threshold === "number" ? config.eot_threshold : 0.58;
+          const clampedEot = Math.min(1.0, Math.max(0.5, rawEot));
+          const rawEager = typeof config.eager_eot_threshold === "number" ? config.eager_eot_threshold : 0.45;
+          const clampedEager = Math.min(clampedEot, Math.max(0.3, Math.min(0.9, rawEager)));
+          return {
+            type: "deepgram",
+            version: "v2",
+            model: config.listen_model || "flux-general-en",
+            eot_threshold: clampedEot,
+            eager_eot_threshold: clampedEager,
+            eot_timeout_ms: config.eot_timeout_ms || 2500
+          };
+        })()
       },
       think: {
         provider: thinkProvider,
@@ -281,11 +287,18 @@ const server = Bun.serve({
         } else if (data.type === "update_listen") {
           // Mid-call STT / EOT update
           if (session.deepgramWs && session.deepgramWs.readyState === WebSocket.OPEN) {
+            const listen = { ...(data.listen || {}) };
+            if (listen.provider) {
+              const rawEot = typeof listen.provider.eot_threshold === "number" ? listen.provider.eot_threshold : 0.58;
+              listen.provider.eot_threshold = Math.min(1.0, Math.max(0.5, rawEot));
+              const rawEager = typeof listen.provider.eager_eot_threshold === "number" ? listen.provider.eager_eot_threshold : 0.45;
+              listen.provider.eager_eot_threshold = Math.min(listen.provider.eot_threshold, Math.max(0.3, Math.min(0.9, rawEager)));
+            }
             session.deepgramWs.send(JSON.stringify({
               type: "UpdateListen",
-              listen: data.listen
+              listen: listen
             }));
-            ws.send(JSON.stringify({ type: "status", status: "update_sent", updateType: "UpdateListen", listen: data.listen }));
+            ws.send(JSON.stringify({ type: "status", status: "update_sent", updateType: "UpdateListen", listen: listen }));
           }
         } else if (data.type === "update_think") {
           // Mid-call LLM / Prompt update
