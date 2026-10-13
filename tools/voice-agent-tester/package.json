@@ -1,0 +1,12 @@
+{
+  "name": "voice-agent-tester",
+  "version": "1.0.0",
+  "description": "Interactive test platform for Deepgram Voice Agent morning wake-up call prompts and pacing",
+  "main": "server.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch server.ts"
+  },
+  "dependencies": {}
+}
