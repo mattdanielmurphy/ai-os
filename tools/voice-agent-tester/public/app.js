@@ -51,6 +51,13 @@ async function init() {
     console.error("Failed to load presets:", err);
   }
 
+  // Check Secure Context for Microphone (navigator.mediaDevices)
+  const isSecure = window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  const notice = document.getElementById("secureContextNotice");
+  if (!isSecure && notice) {
+    notice.style.display = "flex";
+  }
+
   attachEventListeners();
   updateJsonPreview();
 }
@@ -211,12 +218,56 @@ function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+async function getAudioStream() {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        sampleRate: 48000,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+  }
+
+  const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+  if (legacyGetUserMedia) {
+    return new Promise((resolve, reject) => {
+      legacyGetUserMedia.call(navigator, { audio: true }, resolve, reject);
+    });
+  }
+
+  throw new Error("SECURE_CONTEXT_REQUIRED");
+}
+
 // Live Audio Call Handling
 async function startCall() {
   const apiKey = elements.apiKeyInput.value.trim() || localStorage.getItem("deepgram_api_key");
   if (!apiKey) {
     alert("Please enter a Deepgram API Key before starting a call.");
     elements.apiKeyInput.focus();
+    return;
+  }
+
+  // Pre-check for secure context / getUserMedia support
+  const hasGetUserMedia = !!(
+    (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ||
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia
+  );
+
+  if (!hasGetUserMedia) {
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (!isLocalhost) {
+      if (confirm("Browser security blocks microphone access on http://*.test domains. Switch to http://localhost:3344 now to enable your mic?")) {
+        window.location.href = `http://localhost:${window.location.port || 3344}`;
+        return;
+      }
+    } else {
+      alert("Microphone access is unavailable or blocked in your browser settings.");
+    }
     return;
   }
 
@@ -230,15 +281,7 @@ async function startCall() {
     nextPlayTime = audioCtx.currentTime;
 
     // Mic input
-    micStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        sampleRate: 48000,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
+    micStream = await getAudioStream();
 
     const micSource = audioCtx.createMediaStreamSource(micStream);
     analyser = audioCtx.createAnalyser();
