@@ -1,9 +1,9 @@
 # ChatGPT & Codex macOS Orchestration Rules
 
-## 1. Default Planning Gate
-- Classify the request before checking Git state. Clearly local, self-contained tasks (such as configuring or troubleshooting a desktop app, device, or personal account) do not become project work merely because the active directory happens to be a repository. Apply the existing direct-handling boundary: plainly lightweight tasks may be handled directly; if a clearly local task warrants a plan, use `_plan-with-ai-os` without requiring a GitHub remote.
-- Treat work that changes, investigates, or depends on a software project, repository, or other version-controlled deliverable as project work. For project work, before non-trivial reasoning, delegation, or implementation, invoke the repository-owned `_plan-with-ai-os` skill and verify that `origin` is a GitHub remote before running `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` so Perplexity produces the plan. If project work has no GitHub `origin`, stop and ask Matt whether to create or migrate a private GitHub repository.
-- Mixed tasks that include required project work follow the project-work path; do not use a local-task classification to bypass project governance. After a successful plan, implement it in the same task by default; ask Matt only for a material unresolved ambiguity or consequential architectural choice that cannot be inferred from his known preferences and project conventions. Honor explicit plan-only requests, and retain all planner failure, recovery, and fallback rules. `/fast` explicitly bypasses this planning gate.
+## 1. Planning & Delegation Policy
+- Classify the request before checking Git state. Clearly local, self-contained tasks (such as configuring or troubleshooting a desktop app, device, or personal account) do not become project work merely because the active directory happens to be a repository.
+- **query_aios Invariant**: Stop using `query_aios` (and `_plan-with-ai-os`) unless Matt specifically and explicitly asks for it. Background query_aios services are currently stopped pending investigation of Gemini web reliability.
+- When implementation planning is needed for substantive non-trivial work, use `_plan-with-gemini`, `_plan-with-subagent`, or delegate directly to `agy` (`gemini-3.8-flash-medium`). `/fast` explicitly bypasses any multi-step planning and worker delegation.
 
 ## 2. Primary Operating Decision
 - **Daily Interface & Home**: ChatGPT on macOS is Matt's primary conversational surface, router, and front-end.
@@ -73,16 +73,11 @@ For each routed task, make routing visible in the response or task record:
 - Prefer the active YouTube tab's native browser transcript export. If unavailable, use the transcript already exposed in the active page context, then open/fetch YouTube captions with an available fallback.
 - If no transcript can be retrieved, say so and ask whether the user wants to continue with the limited context available.
 
-## Strict Planner / Workflow Immediate Dispatch
-- **Rule**: When the user's prompt includes a planner workflow directive (e.g. `/_plan-with-ai-os` or `@planner`), the orchestrator MUST NOT perform ad-hoc grep/file searches or exploratory investigation on its own.
-- **Workflow**: Immediately run the single planner command via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`) with `WaitMsBeforeAsync: 500`. This is a **unified single-step command** that automatically: inspects Git context, reads agent logs, generates `./tmp/planner_prompt.txt`, dispatches to Perplexity (Gemini 3.7 Flash Thinking), and writes the completed plan to `./tmp/planner_output.txt`. There is NO separate `generate_prompt.py` step — do NOT run any such script.
-- **Strict Perplexity Dispatch & Fallback Policy**: When `/_plan-with-ai-os` is invoked, the orchestrator MUST ONLY dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"`). Defaults to Gemini 3.7 Flash Thinking on Perplexity. Never use Gemini 3.1 Pro for planning for any reason. Fall back to `agy` ONLY if Perplexity quota is 0, or if Matt specifically requests it; and when falling back to `agy`, ALWAYS use `Gemini 3.8 Flash (High)` for planning, NEVER 3.1 Pro.
-- **Plan-to-Implementation Default**: After a successful `_plan-with-ai-os` result, agents MUST implement the plan as part of the same task by default. Treat the plan as an execution guide unless Matt explicitly asks for a plan only. Resolve ordinary implementation choices from his request, known preferences, and project conventions; pause for Matt only when a material ambiguity or consequential architectural choice remains that he could reasonably regret the agent deciding. Preserve all planner dispatch, GitHub-origin, recovery, fallback, and failure hard stops; a failed or incomplete planning request is not permission to invent a plan and continue.
-- **Rule:** If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the main orchestrator MUST escalate planning and root cause analysis to `node ~/projects/ai-os/scripts/query_aios.js --provider perplexity --model gemini` (ai-os Gemini Flash Thinking) by default, with `Gemini 3.8 Flash (High)` as a fallback (via `agymcp:agy` only if primary quota is 0). Do NOT use 3.1 Pro.
-- **AI-OS Companion Server & Recovery Protocol**:
-  1. `query_aios.js` talks directly to the AI-OS companion app server on `http://127.0.0.1:3031`.
-  2. If `query_aios.js` reports that AI-OS is not running, the companion app must be opened/running: `cd ~/projects/ai-os/apps/gemini-companion && bun tauri dev`.
-  3. NEVER attempt to connect to legacy Proxima ports (19222/19241). Proxima is completely retired in favor of AI-OS.
+## Strict Planner / Workflow Immediate Dispatch & query_aios Policy
+- **query_aios Invariant**: Stop using `query_aios` unless Matt specifically and explicitly asks for it. Background `query_aios` companion services are stopped until further investigation with Gemini web. Perplexity has been removed altogether as an endpoint.
+- **Explicit User Request Workflow**: When Matt explicitly asks to run `query_aios` or `_plan-with-ai-os`, dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` with provider gemini) with `WaitMsBeforeAsync: 500`. Do NOT perform ad-hoc file exploration or run `generate_prompt.py`.
+- **Escalation Policy**: If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the orchestrator MUST escalate root cause analysis directly to `Gemini 3.8 Flash (High)` via `agymcp:agy`. Do NOT call `query_aios.js` automatically.
+- **AI-OS Companion Server**: Talks to `http://127.0.0.1:3031` when started manually via `la start aios-server`.
 
 ## Transparent Model Escalation & Zero Silent Fallback Policy
 - **Strict Prohibition on Deceptive Self-Execution**: When a user explicitly requests model escalation (e.g., `/_plan-with-gemini`, `/_plan-with-ai-os`, `@planner`, `agymcp:agy`), or when a system rule triggers an escalation:

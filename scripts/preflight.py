@@ -138,23 +138,18 @@ def step_quota():
     return "ag-quota: UNAVAILABLE (live check failed; no recent cache)"
 
 def summarize_planner_ping(data):
-    if "PPLX=true" not in data:
-        return "AI-OS Planner (:3031): OK"
-    if "AUTH=true" not in data:
-        return "AI-OS Planner (:3031): ONLINE (Perplexity sign-in required)"
-    return "AI-OS Planner (:3031): OK (Perplexity Connected)"
+    return "AI-OS Companion (:3031): ONLINE"
 
 
 def step_aios_planner():
-    """Verify AI-OS companion app and Perplexity bridge are alive on port 3031."""
+    """Verify AI-OS companion app status on port 3031."""
     try:
-        req = urllib.request.Request("http://127.0.0.1:3031/api/debug/ping")
+        req = urllib.request.Request("http://127.0.0.1:3031/api/health")
         with urllib.request.urlopen(req, timeout=0.8) as resp:
-            data = resp.read().decode("utf-8")
-            return summarize_planner_ping(data)
+            return "AI-OS Companion (:3031): ONLINE"
     except Exception:
         pass
-    return "AI-OS Planner (:3031): OFFLINE (launch agent: aios-server)"
+    return "AI-OS Companion (:3031): STOPPED (query_aios on-demand only)"
 
 def get_project_board_summary():
     board_path = os.path.expanduser("~/projects/ai-os/PROJECT_BOARD.md")
