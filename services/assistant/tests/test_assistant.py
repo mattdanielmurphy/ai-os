@@ -1668,7 +1668,7 @@ async def test_active_card_conversational_meta_comment_and_button_hierarchy(monk
         assert "3/4 · Good" in feedback_kb[1][0]["text"]
         assert "4/4 · Easy" in feedback_kb[1][1]["text"]
         assert "*Rate your recall (1/4 to 4/4):*" in feedback_text
-        assert "1/4 Again: Missed, blanked, or lucky guess" in feedback_text
+        assert "*1/4 Again:* Missed, blanked, or lucky guess" in feedback_text
 
         # 2. Add card and start morning flow
         now = datetime.now(timezone.utc)
