@@ -8,13 +8,20 @@
 </head>
 <body>
   <div class="app-container">
+    <div id="secureContextNotice" class="notice-banner" style="display: none;">
+      <div>
+        <strong>⚠️ Microphone Blocked:</strong> Browsers require a Secure Context (<a href="http://localhost:3344">http://localhost:3344</a> or HTTPS) to access your microphone. On non-localhost HTTP domains, <code>navigator.mediaDevices</code> is disabled.
+      </div>
+      <a href="http://localhost:3344" class="btn btn-secondary btn-sm">Switch to localhost:3344</a>
+    </div>
+
     <header class="app-header">
       <div class="title-group">
         <h1>⏰ Morning Call Voice Tester</h1>
         <p class="subtitle">Interactive testing platform for wake-up call personas, speaking speed, and turn pacing</p>
       </div>
       <div class="header-actions">
-        <span class="host-pill">morning-call.test:3344</span>
+        <a href="http://localhost:3344" class="host-pill" title="Open on localhost for secure microphone access">localhost:3344</a>
       </div>
     </header>
 
