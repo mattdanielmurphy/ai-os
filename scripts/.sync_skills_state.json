@@ -1818,7 +1818,7 @@
     "sha256": "79bb9547b6a7a302d3e6fff86c861f1b27f71f160c1225955469c3c11a5a19e1"
   },
   "_plan-with-ai-os/SKILL.md": {
-    "sha256": "9f0f1da57be54d0a81be778b9032b62bf4ba0c31992c7dc6672ef0928cc90964"
+    "sha256": "c8faa2f999ae3701ec751b7058f97a469c31294a79b51cf465f414ccda041d0d"
   },
   "rule/SKILL.md": {
     "sha256": "b3cec0b47096e2788160c19312cbec4344f1ece175957615711bd62157cde43f"
@@ -1914,6 +1914,6 @@
     "sha256": "f858f3523f0e63c15cc7d530774cbe7e0b0d3c89d69767afc4e33ab8158509a3"
   },
   "_plan-with-ai-os/workflow.md": {
-    "sha256": "f20667465e7f288146ff6ac67b67e0a765c17ec4bdf8881512e4d6cad3d32c28"
+    "sha256": "f85b3966daa287979524f3dfbb63dd8b4ead91682bd1b41280cf3425a26c796f"
   }
 }

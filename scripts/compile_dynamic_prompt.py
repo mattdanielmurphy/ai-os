@@ -57,19 +57,13 @@ def apply_rule_filters(content: str, config: dict) -> str:
     content = re.sub(r"<!--\s*/?RULE:[A-Z0-9_]+\s*-->\n?", "", content)
 
     # Dynamic settings interpolation
-    high_reasoning_setting = settings.get("high_reasoning_model_default", {}).get("value", "grok")
-    if high_reasoning_setting == "grok":
-        engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity --model grok` (ai-os Grok Thinking) by default, with `Gemini 3.8 Flash (High)` as a fallback"
-    elif high_reasoning_setting == "perplexity":
-        engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity` (ai-os Perplexity) by default, with `Gemini 3.8 Flash (High)` as a fallback"
-    elif high_reasoning_setting == "flash_high":
+    high_reasoning_setting = settings.get("high_reasoning_model_default", {}).get("value", "flash_high")
+    if high_reasoning_setting == "flash_high":
         engine_str = "`Gemini 3.8 Flash (High)` via `agymcp`"
-    elif high_reasoning_setting == "sonnet":
-        engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity --model sonnet` (ai-os Sonnet Thinking)"
     elif high_reasoning_setting in ["gemini", "gemini_flash", "flash"]:
-        engine_str = "`node ~/projects/ai-os/scripts/query_aios.js --provider perplexity --model gemini` (ai-os Gemini Flash Thinking) by default, with `Gemini 3.8 Flash (High)` as a fallback"
+        engine_str = "`Gemini 3.8 Flash (High)` via `agymcp`"
     else:
-        engine_str = str(high_reasoning_setting)
+        engine_str = "`Gemini 3.8 Flash (High)` via `agymcp`"
 
     content = content.replace("{HIGH_REASONING_ENGINE}", engine_str)
 

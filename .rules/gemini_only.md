@@ -22,7 +22,7 @@
 
 <!-- RULE:HIGH_REASONING_ESCALATION -->
 ## High-Reasoning Escalation for Recurring/Stuck Bugs
-- **Rule:** If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the main orchestrator MUST escalate planning and root cause analysis to {HIGH_REASONING_ENGINE} (via `agymcp:agy` only if primary quota is 0). Do NOT use 3.1 Pro.
+- **Rule:** If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the main orchestrator MUST escalate planning and root cause analysis to {HIGH_REASONING_ENGINE}. Do NOT use 3.1 Pro.
 <!-- /RULE:HIGH_REASONING_ESCALATION -->
 
 <!-- RULE:THREAD_ARTIFACT -->
@@ -66,11 +66,8 @@ When running under Gemini/Antigravity without Hermes' active daemon, you MUST em
 <!-- /RULE:HERMES_EMULATION -->
 
 <!-- RULE:AIOS_GUARDRAILS -->
-## ai-os & Perplexity Integration Guardrails
-- **Automated File Context Ingestion**: `query_aios.js` automatically detects any file path mentions (absolute, relative, or URL-encoded) in prompt text, extracts them, and inlines their full contents directly into the prompt payload (or attaches if oversized). Agents do NOT need manual boilerplate to read or embed single/short files—simply pass the prompt with the file paths.
-- **Codebase & Large Repositories Context Policy**:
-  - **Single / Short Files & Notes**: Automatically inlined by `query_aios.js` into prompt text.
-  - **Multi-File Codebases**: Push changes to GitHub and instruct the planner to inspect the repository via the authenticated GitHub connector.
-- **Screenshots & Visual Assets**: Upload quota is 50/week on a rolling window. If remaining upload quota is > 25 and the user provides a visual artifact/screenshot for layout critique, debugging, or planning, the orchestrator MUST pass the image via `--files` directly to the planner. If quota is <= 25 or the visual content is easily describable, the orchestrator MUST act as the vision provider and describe it textually in the prompt instead of uploading.
-- **Async Recovery on Timeout**: If the planning query times out, do NOT abandon the query. Immediately run `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 600` to retrieve the finished output.
+## ai-os Integration Guardrails
+- **query_aios Invariant**: Stop using `query_aios` unless Matt specifically and explicitly asks for it. Background query_aios services are stopped. Perplexity endpoint is removed.
+- **Automated File Context Ingestion**: When `query_aios.js` is explicitly invoked, it automatically detects file path mentions in prompt text and inlines their contents directly into the prompt payload.
+- **Async Recovery on Timeout**: If an explicit planning query times out, run `node ~/projects/ai-os/scripts/query_aios.js --recover --output ./tmp/planner_output.txt --timeout 600` to retrieve the finished output.
 <!-- /RULE:AIOS_GUARDRAILS -->
