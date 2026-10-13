@@ -744,7 +744,7 @@ async function main() {
     }
 
     if (!message && !recoverMode) {
-        console.error('Usage: node query_aios.js "<prompt>" [--plan "<request>"] [--provider perplexity|gemini] [--model sonnet|sonar|gemini|gpt|grok|kimi|glm] [--thread <id>] [--new-thread] [--no-resume] [--screenshot <path>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--ui]');
+        console.error('Usage: node query_aios.js "<prompt>" [--plan "<request>"] [--provider gemini] [--model <model>] [--thread <id>] [--new-thread] [--no-resume] [--screenshot <path>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--ui]');
         process.exit(1);
     }
 
@@ -760,17 +760,8 @@ async function main() {
         console.error(`[query_aios] 📎 Confirmed attachment: ${resolvedPath} (${stat.size} bytes)`);
     }
 
-    let resolvedModel = null;
-    if (baseProvider === 'perplexity') {
-        const requestedModel = (effectiveRawModel || 'gpt').toLowerCase();
-        resolvedModel = PPLX_MODEL_MAP[requestedModel] || requestedModel;
-    } else {
-        resolvedModel = rawModel || null;
-    }
-
-    const modelDisplay = baseProvider === 'perplexity' && resolvedModel === 'gpt6_sol_thinking'
-        ? 'GPT-6 Sol Thinking'
-        : (rawModel || (baseProvider === 'perplexity' ? 'gemini' : 'default'));
+    const resolvedModel = rawModel || null;
+    const modelDisplay = rawModel || 'default';
     const startTime = Date.now();
     writeQueryState(outputPath, {
         status: 'pending',
@@ -784,58 +775,25 @@ async function main() {
 
     let wakeResult = await wakeAios(baseUrl, baseProvider);
     if (!wakeResult) {
-        console.error(`[query_aios] 🔄 AI-OS server at ${baseUrl} is not responding. Starting its launch agent...`);
-        const waitForServer = async (label, timeoutMs) => {
-            console.error(`[query_aios] Waiting up to ${Math.round(timeoutMs / 1000)}s for AI-OS ${label}...`);
-            const deadline = Date.now() + timeoutMs;
-            while (Date.now() < deadline) {
-                await new Promise(r => setTimeout(r, 750));
-                wakeResult = await wakeAios(baseUrl, baseProvider);
-                if (wakeResult) return true;
-            }
-            return false;
-        };
-
-        // Enable the service first, then either kickstart its existing job or
-        // bootstrap its plist when it was fully unloaded after a manual quit.
-        ensureAiosLaunchAgent();
-        if (!await waitForServer('startup', 90000)) {
-            console.error(`[query_aios] AI-OS did not become ready after startup; restarting it once.`);
-            ensureAiosLaunchAgent();
-            if (!await waitForServer('restart', 90000)) {
-                try {
-                    const service = `gui/${process.getuid()}/com.matt.agent.aios-server`;
-                    const output = execFileSync('launchctl', ['print', service], { encoding: 'utf8', timeout: 10000 });
-                    if (output.trim()) console.error(`[query_aios] Launch agent status:\n${output.trim()}`);
-                } catch (e) {}
-            }
-        }
-        if (wakeResult) console.error(`[query_aios] ✅ AI-OS server is online and awoken.`);
-    } else {
-        const winKey = baseProvider === 'gemini' ? 'gemini_window' : 'perplexity_window';
-        if (wakeResult[winKey]) {
-            console.error(`[query_aios] ⚡ AI-OS companion webview (${baseProvider}) is awake and ready.`);
-        }
+        console.error(`\n[query_aios] ERROR: AI-OS server is unreachable (${baseUrl}). Background query_aios service is currently stopped.`);
+        console.error(`To start the companion server manually when testing: la start aios-server\n`);
+        process.exit(1);
     }
 
-    if (!wakeResult) {
-        console.error(`\n[query_aios] ERROR: AI-OS server is unreachable (http://127.0.0.1:3031).`);
-        console.error(`Launch-agent diagnostics: launchctl print gui/${process.getuid()}/com.matt.agent.aios-server; la logs aios-server -n 100\n`);
-        process.exit(1);
+    if (wakeResult.gemini_window) {
+        console.error(`[query_aios] ⚡ AI-OS companion webview (gemini) is awake and ready.`);
     }
 
     try {
         if (uiOnly) {
-            const endpoint = baseProvider === 'perplexity' ? `${baseUrl}/api/perplexity/prompt` : `${baseUrl}/api/gemini/prompt`;
-            console.error(`[query_aios] Dispatching UI prompt to ${provider} window...`);
+            const endpoint = `${baseUrl}/api/gemini/prompt`;
+            console.error(`[query_aios] Dispatching UI prompt to gemini window...`);
             await sendAiosRequest(endpoint, { prompt: message, model: resolvedModel, session_id: sessionId }, timeoutSec);
-            console.error(`[query_aios] Prompt successfully dispatched to ${provider} webview.`);
+            console.error(`[query_aios] Prompt successfully dispatched to gemini webview.`);
             process.exit(0);
         }
 
-        const endpoint = baseProvider === 'gemini'
-            ? `${baseUrl}/api/gemini/query`
-            : `${baseUrl}/api/perplexity/query`;
+        const endpoint = `${baseUrl}/api/gemini/query`;
 
         const data = await sendAiosRequest(endpoint, {
             prompt: message,
@@ -899,15 +857,7 @@ async function main() {
         console.log('================================================================================');
         console.log('🎉 [AI-OS QUERY COMPLETE — FINAL OUTPUT RECEIVED]');
         console.log(`Provider: ${provider}`);
-        console.log(`Requested model: ${modelDisplay}`);
-        if (baseProvider === 'perplexity') {
-            console.log('Actual model: unverified (Perplexity did not return model provenance to AI-OS)');
-            if (resolvedModel !== 'turbo') {
-                console.log('⚠️ Perplexity may fall back to Sonar when the requested model is unavailable; AI-OS cannot confirm which model produced this response.');
-            }
-        } else {
-            console.log(`Model: ${modelDisplay}`);
-        }
+        console.log(`Model: ${modelDisplay}`);
         console.log(`AI-OS session ID: ${sessionId}`);
         console.log(`Elapsed time: ${elapsed}s`);
         console.log(`Character count: ${chars}`);
