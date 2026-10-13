@@ -1,4 +1,6 @@
 let presets = {};
+let allVoices = [];
+let favouriteVoiceIds = [];
 let activeWs = null;
 let audioCtx = null;
 let micStream = null;
@@ -9,10 +11,22 @@ let nextPlayTime = 0;
 let analyser = null;
 let animFrameId = null;
 
-// Audio and Speech State (for No-Spoiler Revealing)
+// Audio and Speech State
 let pendingAgentUtterance = "";
 let activeAudioSourcesCount = 0;
 let agentAudioDoneTimer = null;
+let lastAgentUtterance = "";
+let lastUserUtterance = "";
+
+// Silence Re-engagement State
+let silenceTimeoutId = null;
+let silenceCountdownInterval = null;
+let silenceRemainingSec = 0;
+let isMidCallUpdateDebounceTimer = null;
+let isAudioPlaying = false;
+
+const STORAGE_KEY = "voice_agent_tester_settings_v2";
+const FAVOURITES_KEY = "voice_agent_tester_favourite_voices";
 
 const elements = {
   presetSelect: document.getElementById("presetSelect"),
@@ -32,8 +46,17 @@ const elements = {
   tempSlider: document.getElementById("tempSlider"),
   tempNum: document.getElementById("tempNum"),
 
+  // Silence Re-engagement Controls
+  silenceThresholdSlider: document.getElementById("silenceThresholdSlider"),
+  silenceThresholdNum: document.getElementById("silenceThresholdNum"),
+  silenceReengageCheckbox: document.getElementById("silenceReengageCheckbox"),
+  silencePill: document.getElementById("silencePill"),
+
   // Voice & Model
+  voiceSearchInput: document.getElementById("voiceSearchInput"),
   voicePresetSelect: document.getElementById("voicePresetSelect"),
+  starVoiceBtn: document.getElementById("starVoiceBtn"),
+  voiceMetaBox: document.getElementById("voiceMetaBox"),
   voiceSelect: document.getElementById("voiceSelect"),
   thinkPresetSelect: document.getElementById("thinkPresetSelect"),
   thinkSelect: document.getElementById("thinkSelect"),
@@ -45,6 +68,7 @@ const elements = {
   saveKeyBtn: document.getElementById("saveKeyBtn"),
 
   // Stage & Status
+  midCallNotice: document.getElementById("midCallNotice"),
   connectionBadge: document.getElementById("connectionBadge"),
   speakingPill: document.getElementById("speakingPill"),
   startCallBtn: document.getElementById("startCallBtn"),
@@ -60,22 +84,41 @@ const elements = {
   canvas: document.getElementById("waveformCanvas")
 };
 
-// Initialize
+// ==========================================
+// 1. Initialization & Voice Catalog Loading
+// ==========================================
 async function init() {
-  // Load saved API Key
-  const savedKey = localStorage.getItem("deepgram_api_key");
-  if (savedKey) {
-    elements.apiKeyInput.value = savedKey;
+  loadFavourites();
+
+  // Load Presets & Voice Catalog concurrently
+  try {
+    const [presetsRes, voicesRes] = await Promise.all([
+      fetch("/api/presets").catch(() => null),
+      fetch("/api/voices").catch(() => null)
+    ]);
+
+    if (presetsRes && presetsRes.ok) {
+      presets = await presetsRes.json();
+      populatePresets();
+    }
+
+    if (voicesRes && voicesRes.ok) {
+      allVoices = await voicesRes.json();
+    } else {
+      allVoices = getFallbackVoices();
+    }
+  } catch (err) {
+    console.error("Initialization fetch error:", err);
+    allVoices = getFallbackVoices();
   }
 
-  // Load Presets
-  try {
-    const res = await fetch("/api/presets");
-    presets = await res.json();
-    populatePresets();
+  // Populate voice dropdown with favorites pinned to top
+  renderVoiceOptions();
+
+  // Restore all settings from browser storage (Requirement 1)
+  const hadStoredSettings = loadSettingsFromStorage();
+  if (!hadStoredSettings) {
     loadPreset("drill_sergeant");
-  } catch (err) {
-    console.error("Failed to load presets:", err);
   }
 
   // Check Secure Context for Microphone (navigator.mediaDevices)
@@ -86,7 +129,152 @@ async function init() {
   }
 
   attachEventListeners();
+  updateVoiceMetadataBox();
   updateJsonPreview();
+}
+
+// Load starred favourite voices from localStorage
+function loadFavourites() {
+  try {
+    const stored = localStorage.getItem(FAVOURITES_KEY);
+    if (stored) {
+      favouriteVoiceIds = JSON.parse(stored);
+    } else {
+      // Sensible defaults including Miles (specifically requested by user) and Conor
+      favouriteVoiceIds = ["flux-miles-en", "flux-conor-en", "flux-kit-en"];
+      localStorage.setItem(FAVOURITES_KEY, JSON.stringify(favouriteVoiceIds));
+    }
+  } catch {
+    favouriteVoiceIds = ["flux-miles-en", "flux-conor-en", "flux-kit-en"];
+  }
+}
+
+function saveFavourites() {
+  try {
+    localStorage.setItem(FAVOURITES_KEY, JSON.stringify(favouriteVoiceIds));
+  } catch (e) {
+    console.error("Failed to save favourites:", e);
+  }
+}
+
+function toggleFavouriteCurrentVoice() {
+  const currentVoiceId = elements.voiceSelect.value.trim();
+  if (!currentVoiceId) return;
+
+  const idx = favouriteVoiceIds.indexOf(currentVoiceId);
+  if (idx >= 0) {
+    favouriteVoiceIds.splice(idx, 1);
+  } else {
+    favouriteVoiceIds.unshift(currentVoiceId);
+  }
+
+  saveFavourites();
+  renderVoiceOptions(elements.voiceSearchInput.value.trim());
+  updateStarButtonState();
+  showMidCallNotice(idx >= 0 ? `Unstarred ${currentVoiceId}` : `⭐ Starred ${currentVoiceId} as favourite!`);
+}
+
+function updateStarButtonState() {
+  const currentVoiceId = elements.voiceSelect.value.trim();
+  const isFav = favouriteVoiceIds.includes(currentVoiceId);
+  if (isFav) {
+    elements.starVoiceBtn.textContent = "⭐";
+    elements.starVoiceBtn.classList.add("starred");
+    elements.starVoiceBtn.title = "Unstar favourite voice";
+  } else {
+    elements.starVoiceBtn.textContent = "☆";
+    elements.starVoiceBtn.classList.remove("starred");
+    elements.starVoiceBtn.title = "Star as favourite (pins to top)";
+  }
+}
+
+// Render the voice catalog dropdown with favorites pinned to top
+function renderVoiceOptions(filterText = "") {
+  const select = elements.voicePresetSelect;
+  const currentValue = elements.voiceSelect.value || "flux-conor-en";
+  select.innerHTML = "";
+
+  const query = filterText.toLowerCase().trim();
+
+  // Filter voices if search query present
+  const matches = (v) => {
+    if (!query) return true;
+    return (
+      v.name.toLowerCase().includes(query) ||
+      v.id.toLowerCase().includes(query) ||
+      (v.accent && v.accent.toLowerCase().includes(query)) ||
+      (v.langName && v.langName.toLowerCase().includes(query)) ||
+      (v.traits && v.traits.toLowerCase().includes(query)) ||
+      (v.family && v.family.toLowerCase().includes(query))
+    );
+  };
+
+  // 1. Favourites Group (Pinned to Top)
+  const favVoices = allVoices.filter((v) => favouriteVoiceIds.includes(v.id) && matches(v));
+  if (favVoices.length > 0) {
+    const favGroup = document.createElement("optgroup");
+    favGroup.label = "⭐ Favourites (Pinned to Top)";
+    favVoices.forEach((v) => {
+      const opt = document.createElement("option");
+      opt.value = v.id;
+      opt.textContent = `⭐ ${v.name} (${v.family}, ${v.accent || v.langName}, ${v.gender})`;
+      favGroup.appendChild(opt);
+    });
+    select.appendChild(favGroup);
+  }
+
+  // 2. Standard Groups
+  const categories = [
+    { label: "Deepgram Flux (v2 - Expressive, English)", filter: (v) => v.family === "Flux" },
+    { label: "Deepgram Aura-2 (English - en)", filter: (v) => v.family === "Aura-2" && v.language === "en" },
+    { label: "Deepgram Aura-2 (Spanish - es)", filter: (v) => v.family === "Aura-2" && v.language === "es" },
+    { label: "Deepgram Aura-2 (French - fr)", filter: (v) => v.family === "Aura-2" && v.language === "fr" },
+    { label: "Deepgram Aura-2 (German - de)", filter: (v) => v.family === "Aura-2" && v.language === "de" },
+    { label: "Deepgram Aura-2 (Italian - it)", filter: (v) => v.family === "Aura-2" && v.language === "it" },
+    { label: "Deepgram Aura-2 (Dutch - nl)", filter: (v) => v.family === "Aura-2" && v.language === "nl" },
+    { label: "Deepgram Aura-2 (Japanese - ja)", filter: (v) => v.family === "Aura-2" && v.language === "ja" },
+    { label: "Deepgram Aura 1 (Classic English)", filter: (v) => v.family === "Aura 1" }
+  ];
+
+  categories.forEach((cat) => {
+    const groupVoices = allVoices.filter((v) => cat.filter(v) && matches(v));
+    if (groupVoices.length > 0) {
+      const groupEl = document.createElement("optgroup");
+      groupEl.label = cat.label;
+      groupVoices.forEach((v) => {
+        const opt = document.createElement("option");
+        opt.value = v.id;
+        opt.textContent = `${v.name} (${v.accent || v.langName}, ${v.gender})${v.featured ? " ✨" : ""}`;
+        groupEl.appendChild(opt);
+      });
+      select.appendChild(groupEl);
+    }
+  });
+
+  const customOpt = document.createElement("option");
+  customOpt.value = "custom";
+  customOpt.textContent = "-- Custom Voice Handle --";
+  select.appendChild(customOpt);
+
+  syncDropdownToValue(select, currentValue);
+  updateStarButtonState();
+}
+
+function updateVoiceMetadataBox() {
+  const currentId = elements.voiceSelect.value.trim();
+  const voice = allVoices.find((v) => v.id === currentId);
+  if (voice) {
+    const featBadge = voice.featured ? '<span class="voice-meta-tag featured">Featured</span>' : "";
+    const langBadge = `<span class="voice-meta-tag lang">${voice.langName || voice.language}</span>`;
+    const famBadge = `<span class="voice-meta-tag">${voice.family}</span>`;
+    elements.voiceMetaBox.innerHTML = `
+      ${featBadge}${famBadge}${langBadge}
+      <strong>${voice.name}</strong> (${voice.accent || ""}, ${voice.gender}, ${voice.age || "Adult"})
+      — <em>${voice.traits || "Conversational speech"}</em>
+    `;
+  } else {
+    elements.voiceMetaBox.textContent = `Custom voice identifier: ${currentId || "(none)"}`;
+  }
 }
 
 function populatePresets() {
@@ -128,7 +316,10 @@ function loadPreset(key) {
   elements.greetingInput.value = p.greeting || "";
   elements.promptInput.value = p.prompt || "";
 
+  updateStarButtonState();
+  updateVoiceMetadataBox();
   updateJsonPreview();
+  saveSettingsToStorage();
 }
 
 function setPairedValue(slider, numInput, value) {
@@ -150,6 +341,92 @@ function syncDropdownToValue(selectEl, value) {
   }
 }
 
+// ==========================================
+// 2. Settings Persistence (Requirement 1)
+// ==========================================
+function saveSettingsToStorage() {
+  try {
+    const settingsState = {
+      preset: elements.presetSelect.value,
+      speed: parseFloat(elements.speedNum.value),
+      expressivity: parseInt(elements.expressivityNum.value, 10),
+      eot: parseFloat(elements.eotNum.value),
+      eagerEot: parseFloat(elements.eagerEotNum.value),
+      eotTimeout: parseInt(elements.eotTimeoutNum.value, 10),
+      temp: parseFloat(elements.tempNum.value),
+      silenceThreshold: parseInt(elements.silenceThresholdNum.value, 10) || 5,
+      silenceReengage: elements.silenceReengageCheckbox.checked,
+      voice: elements.voiceSelect.value.trim(),
+      think: elements.thinkSelect.value.trim(),
+      greeting: elements.greetingInput.value,
+      prompt: elements.promptInput.value,
+      hideUntilSpoken: elements.hideUntilSpokenCheckbox.checked,
+      apiKey: elements.apiKeyInput.value.trim()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settingsState));
+  } catch (err) {
+    console.error("Failed to save settings to localStorage:", err);
+  }
+}
+
+function loadSettingsFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      // Legacy API key migration
+      const legacyKey = localStorage.getItem("deepgram_api_key");
+      if (legacyKey) elements.apiKeyInput.value = legacyKey;
+      return false;
+    }
+
+    const s = JSON.parse(raw);
+    if (s.preset && presets[s.preset]) {
+      elements.presetSelect.value = s.preset;
+      elements.personaDesc.textContent = presets[s.preset].description;
+    } else if (s.preset === "custom") {
+      elements.presetSelect.value = "custom";
+      elements.personaDesc.textContent = "Custom user-configured persona.";
+    }
+
+    if (s.speed !== undefined) setPairedValue(elements.speedSlider, elements.speedNum, s.speed);
+    if (s.expressivity !== undefined) setPairedValue(elements.expressivitySlider, elements.expressivityNum, s.expressivity);
+    if (s.eot !== undefined) setPairedValue(elements.eotSlider, elements.eotNum, s.eot);
+    if (s.eagerEot !== undefined) setPairedValue(elements.eagerEotSlider, elements.eagerEotNum, s.eagerEot);
+    if (s.eotTimeout !== undefined) setPairedValue(elements.eotTimeoutSlider, elements.eotTimeoutNum, s.eotTimeout);
+    if (s.temp !== undefined) setPairedValue(elements.tempSlider, elements.tempNum, s.temp);
+
+    if (s.silenceThreshold !== undefined) {
+      setPairedValue(elements.silenceThresholdSlider, elements.silenceThresholdNum, s.silenceThreshold);
+    }
+    if (s.silenceReengage !== undefined) {
+      elements.silenceReengageCheckbox.checked = s.silenceReengage;
+    }
+
+    if (s.voice) {
+      elements.voiceSelect.value = s.voice;
+      syncDropdownToValue(elements.voicePresetSelect, s.voice);
+    }
+
+    if (s.think) {
+      elements.thinkSelect.value = s.think;
+      syncDropdownToValue(elements.thinkPresetSelect, s.think);
+    }
+
+    if (s.greeting !== undefined) elements.greetingInput.value = s.greeting;
+    if (s.prompt !== undefined) elements.promptInput.value = s.prompt;
+    if (s.hideUntilSpoken !== undefined) elements.hideUntilSpokenCheckbox.checked = s.hideUntilSpoken;
+    if (s.apiKey) elements.apiKeyInput.value = s.apiKey;
+
+    updateStarButtonState();
+    updateVoiceMetadataBox();
+    return true;
+  } catch (err) {
+    console.error("Failed to load settings from storage:", err);
+    return false;
+  }
+}
+
+// Build settings object for Deepgram protocol
 function getSettingsObject() {
   const speed = parseFloat(elements.speedNum.value);
   const expressivity = parseInt(elements.expressivityNum.value, 10);
@@ -157,16 +434,22 @@ function getSettingsObject() {
   const eagerEot = parseFloat(elements.eagerEotNum.value);
   const eotTimeout = parseInt(elements.eotTimeoutNum.value, 10);
   const temp = parseFloat(elements.tempNum.value);
+  const voice = elements.voiceSelect.value.trim() || "flux-conor-en";
+  const isFlux = voice.startsWith("flux-");
 
   const speakProvider = {
     type: "deepgram",
-    version: "v2",
-    model: elements.voiceSelect.value.trim() || "flux-conor-en",
-    speed: isNaN(speed) ? 1.3 : speed
+    model: voice
   };
 
-  if (!isNaN(expressivity)) {
-    speakProvider.expressivity = expressivity;
+  if (isFlux) {
+    speakProvider.version = "v2";
+    speakProvider.speed = isNaN(speed) ? 1.3 : speed;
+    if (!isNaN(expressivity)) {
+      speakProvider.expressivity = expressivity;
+    }
+  } else {
+    speakProvider.speed = isNaN(speed) ? 1.0 : speed;
   }
 
   const thinkProvider = {
@@ -219,68 +502,326 @@ function updateJsonPreview() {
   elements.jsonPreview.textContent = JSON.stringify(settings, null, 2);
 }
 
-function bindPairedInput(slider, numInput) {
+// ==========================================
+// 3. Real-Time Mid-Call Updates (Requirement 2)
+// ==========================================
+function isCallActive() {
+  return activeWs && activeWs.readyState === WebSocket.OPEN;
+}
+
+function showMidCallNotice(text) {
+  if (!elements.midCallNotice) return;
+  elements.midCallNotice.textContent = text;
+  elements.midCallNotice.style.display = "inline-flex";
+  // Reset animation
+  elements.midCallNotice.style.animation = "none";
+  elements.midCallNotice.offsetHeight; // trigger reflow
+  elements.midCallNotice.style.animation = "fadeInOut 3.2s forwards";
+}
+
+function scheduleMidCallUpdate(type, label = "") {
+  if (!isCallActive()) return;
+
+  clearTimeout(isMidCallUpdateDebounceTimer);
+  isMidCallUpdateDebounceTimer = setTimeout(() => {
+    dispatchMidCallUpdate(type, label);
+  }, 120);
+}
+
+function dispatchMidCallUpdate(type, label = "") {
+  if (!isCallActive()) return;
+
+  const currentSettings = getSettingsObject();
+
+  if (type === "speak" || type === "all") {
+    activeWs.send(JSON.stringify({
+      type: "update_speak",
+      speak: currentSettings.agent.speak
+    }));
+  }
+
+  if (type === "listen" || type === "all") {
+    activeWs.send(JSON.stringify({
+      type: "update_listen",
+      listen: currentSettings.agent.listen
+    }));
+  }
+
+  if (type === "think" || type === "all") {
+    activeWs.send(JSON.stringify({
+      type: "update_think",
+      think: currentSettings.agent.think
+    }));
+  }
+
+  showMidCallNotice(`⚡ Applied ${label || type} mid-call!`);
+}
+
+// ==========================================
+// 4. Smart Silence Re-Engagement Watchdog (Requirement 3)
+// ==========================================
+function clearSilenceWatchdog() {
+  clearTimeout(silenceTimeoutId);
+  clearInterval(silenceCountdownInterval);
+  silenceTimeoutId = null;
+  silenceCountdownInterval = null;
+  elements.silencePill.style.display = "none";
+  elements.silencePill.classList.remove("task-active");
+}
+
+// Detect if last turns constitute an assigned task that the user agreed to do
+function detectAssignedTask(agentUtterance, userUtterance) {
+  if (!agentUtterance || !userUtterance) return { isTask: false, durationSec: 5 };
+
+  const agentLower = agentUtterance.toLowerCase();
+  const userLower = userUtterance.toLowerCase();
+
+  // Task imperative cues from agent
+  const taskActionKeywords = [
+    "pushup", "push-up", "jumping jack", "squat", "water", "drink", "mirror",
+    "wash", "brush", "bed", "get out of bed", "stand up", "walk", "stretch",
+    "shoes", "touch", "count", "do this", "task", "run", "grab", "bring", "check",
+    "exercise", "breathe", "breath", "minute", "seconds"
+  ];
+
+  // User agreement / acknowledgment cues
+  const userAgreementKeywords = [
+    "ok", "okay", "i will", "i'm going", "im going", "i am going", "doing that",
+    "doing it", "on it", "alright", "give me a sec", "give me a minute",
+    "give me 30", "working on it", "starting now", "wait a minute", "hold on",
+    "one sec", "one minute", "let me do"
+  ];
+
+  const agentGaveTask = taskActionKeywords.some((k) => agentLower.includes(k));
+  const userAgreed = userAgreementKeywords.some((k) => userLower.includes(k));
+
+  if (agentGaveTask && userAgreed) {
+    // Attempt duration extraction from user or agent dialogue
+    const textCombined = `${agentLower} ${userLower}`;
+    let estimatedSec = 50; // default estimated duration for tasks
+
+    if (textCombined.includes("2 minute") || textCombined.includes("two minute")) {
+      estimatedSec = 120;
+    } else if (textCombined.includes("minute") || textCombined.includes("60 sec")) {
+      estimatedSec = 60;
+    } else if (textCombined.includes("30 sec") || textCombined.includes("thirty sec")) {
+      estimatedSec = 30;
+    } else if (textCombined.includes("45 sec")) {
+      estimatedSec = 45;
+    } else if (textCombined.includes("10 push") || textCombined.includes("ten push")) {
+      estimatedSec = 35;
+    } else if (textCombined.includes("20 push") || textCombined.includes("twenty push")) {
+      estimatedSec = 50;
+    }
+
+    return { isTask: true, durationSec: estimatedSec };
+  }
+
+  return { isTask: false, durationSec: 5 };
+}
+
+function startSilenceWatchdog() {
+  clearSilenceWatchdog();
+
+  // Check if feature is enabled and call is actively underway
+  if (!elements.silenceReengageCheckbox.checked || !isCallActive()) return;
+
+  const taskEvaluation = detectAssignedTask(lastAgentUtterance, lastUserUtterance);
+  let timeoutSec;
+
+  if (taskEvaluation.isTask) {
+    timeoutSec = taskEvaluation.durationSec;
+    elements.silencePill.classList.add("task-active");
+    elements.silencePill.textContent = `⏳ Task active: ~${timeoutSec}s estimated before check-in`;
+  } else {
+    timeoutSec = parseInt(elements.silenceThresholdNum.value, 10) || 5;
+    elements.silencePill.classList.remove("task-active");
+    elements.silencePill.textContent = `⏱️ User silent: ${timeoutSec}s threshold`;
+  }
+
+  elements.silencePill.style.display = "block";
+  silenceRemainingSec = timeoutSec;
+
+  silenceCountdownInterval = setInterval(() => {
+    silenceRemainingSec = Math.max(0, silenceRemainingSec - 1);
+    if (taskEvaluation.isTask) {
+      elements.silencePill.textContent = `⏳ Task in progress (${silenceRemainingSec}s remaining)...`;
+    } else {
+      elements.silencePill.textContent = `⏱️ Silence: ${silenceRemainingSec}s before re-engage`;
+    }
+  }, 1000);
+
+  silenceTimeoutId = setTimeout(() => {
+    triggerSilenceReengagement(taskEvaluation.isTask, timeoutSec);
+  }, timeoutSec * 1000);
+}
+
+function triggerSilenceReengagement(wasTask, durationSec) {
+  clearSilenceWatchdog();
+  if (!isCallActive()) return;
+
+  let promptInstruction = "";
+  if (wasTask) {
+    promptInstruction = `[System Event: ${durationSec} seconds have elapsed since the user committed to doing the task ("${lastUserUtterance.replace(/"/g, "'")}"). In character, check in on whether they have finished the task and demand a status report immediately!]`;
+  } else {
+    promptInstruction = `[System Event: The user has been completely silent and has not responded for ${durationSec} seconds after you said: "${lastAgentUtterance.replace(/"/g, "'")}". As a real person being blatantly ignored, demand immediately in character that they answer you!]`;
+  }
+
+  // Inject prompt directly to Deepgram Voice Agent via WebSocket
+  activeWs.send(JSON.stringify({
+    type: "inject_user_message",
+    content: promptInstruction
+  }));
+
+  // Append subtle status badge in transcript
+  const badge = document.createElement("div");
+  badge.className = "transcript-system-event";
+  badge.textContent = `⏱️ Silence threshold reached (${durationSec}s) — prompting agent to re-engage`;
+  elements.transcriptBox.appendChild(badge);
+  elements.transcriptBox.scrollTop = elements.transcriptBox.scrollHeight;
+}
+
+// ==========================================
+// 5. Input Binding & Event Listeners
+// ==========================================
+function bindPairedInput(slider, numInput, onUpdate) {
   slider.addEventListener("input", (e) => {
     numInput.value = e.target.value;
     updateJsonPreview();
+    saveSettingsToStorage();
+    if (onUpdate) onUpdate();
   });
   numInput.addEventListener("input", (e) => {
     const val = parseFloat(e.target.value);
     if (!isNaN(val)) {
       slider.value = val;
       updateJsonPreview();
+      saveSettingsToStorage();
+      if (onUpdate) onUpdate();
     }
   });
 }
 
 function attachEventListeners() {
+  // Preset Dropdown
   elements.presetSelect.addEventListener("change", (e) => {
     if (e.target.value !== "custom") {
       loadPreset(e.target.value);
     } else {
       elements.personaDesc.textContent = "Custom user-configured persona.";
     }
+    saveSettingsToStorage();
+    scheduleMidCallUpdate("all", "Preset persona");
   });
 
-  // Bind all paired sliders & inputs
-  bindPairedInput(elements.speedSlider, elements.speedNum);
-  bindPairedInput(elements.expressivitySlider, elements.expressivityNum);
-  bindPairedInput(elements.eotSlider, elements.eotNum);
-  bindPairedInput(elements.eagerEotSlider, elements.eagerEotNum);
-  bindPairedInput(elements.eotTimeoutSlider, elements.eotTimeoutNum);
-  bindPairedInput(elements.tempSlider, elements.tempNum);
+  // Sliders with real-time mid-call dispatch
+  bindPairedInput(elements.speedSlider, elements.speedNum, () => {
+    scheduleMidCallUpdate("speak", `Speed ${elements.speedNum.value}x`);
+  });
 
-  // Voice Presets
+  bindPairedInput(elements.expressivitySlider, elements.expressivityNum, () => {
+    scheduleMidCallUpdate("speak", `Expressivity ${elements.expressivityNum.value}`);
+  });
+
+  bindPairedInput(elements.eotSlider, elements.eotNum, () => {
+    scheduleMidCallUpdate("listen", `EOT ${elements.eotNum.value}`);
+  });
+
+  bindPairedInput(elements.eagerEotSlider, elements.eagerEotNum, () => {
+    scheduleMidCallUpdate("listen", `Eager EOT ${elements.eagerEotNum.value}`);
+  });
+
+  bindPairedInput(elements.eotTimeoutSlider, elements.eotTimeoutNum, () => {
+    scheduleMidCallUpdate("listen", `Timeout ${elements.eotTimeoutNum.value}ms`);
+  });
+
+  bindPairedInput(elements.tempSlider, elements.tempNum, () => {
+    scheduleMidCallUpdate("think", `Temp ${elements.tempNum.value}`);
+  });
+
+  bindPairedInput(elements.silenceThresholdSlider, elements.silenceThresholdNum, () => {
+    saveSettingsToStorage();
+    if (isCallActive() && !isAudioPlaying) {
+      startSilenceWatchdog();
+    }
+  });
+
+  elements.silenceReengageCheckbox.addEventListener("change", () => {
+    saveSettingsToStorage();
+    if (isCallActive()) {
+      if (elements.silenceReengageCheckbox.checked && !isAudioPlaying) {
+        startSilenceWatchdog();
+      } else {
+        clearSilenceWatchdog();
+      }
+    }
+  });
+
+  // Voice Catalog Filter & Search
+  elements.voiceSearchInput.addEventListener("input", (e) => {
+    renderVoiceOptions(e.target.value);
+  });
+
+  // Star / Favourite Button
+  elements.starVoiceBtn.addEventListener("click", toggleFavouriteCurrentVoice);
+
+  // Voice Presets Dropdown
   elements.voicePresetSelect.addEventListener("change", (e) => {
     if (e.target.value !== "custom") {
       elements.voiceSelect.value = e.target.value;
+      updateStarButtonState();
+      updateVoiceMetadataBox();
       updateJsonPreview();
+      saveSettingsToStorage();
+      scheduleMidCallUpdate("speak", `Voice ${e.target.value}`);
     }
   });
+
   elements.voiceSelect.addEventListener("input", (e) => {
     syncDropdownToValue(elements.voicePresetSelect, e.target.value.trim());
+    updateStarButtonState();
+    updateVoiceMetadataBox();
     updateJsonPreview();
+    saveSettingsToStorage();
+    scheduleMidCallUpdate("speak", `Voice ${e.target.value.trim()}`);
   });
 
-  // LLM Presets
+  // LLM Model Dropdown
   elements.thinkPresetSelect.addEventListener("change", (e) => {
     if (e.target.value !== "custom") {
       elements.thinkSelect.value = e.target.value;
       updateJsonPreview();
+      saveSettingsToStorage();
+      scheduleMidCallUpdate("think", `Model ${e.target.value}`);
     }
   });
+
   elements.thinkSelect.addEventListener("input", (e) => {
     syncDropdownToValue(elements.thinkPresetSelect, e.target.value.trim());
     updateJsonPreview();
+    saveSettingsToStorage();
+    scheduleMidCallUpdate("think", `Model ${e.target.value.trim()}`);
   });
 
-  elements.greetingInput.addEventListener("input", updateJsonPreview);
-  elements.promptInput.addEventListener("input", updateJsonPreview);
+  elements.greetingInput.addEventListener("input", () => {
+    updateJsonPreview();
+    saveSettingsToStorage();
+  });
+
+  elements.promptInput.addEventListener("input", () => {
+    updateJsonPreview();
+    saveSettingsToStorage();
+    scheduleMidCallUpdate("think", "Prompt update");
+  });
+
+  elements.hideUntilSpokenCheckbox.addEventListener("change", saveSettingsToStorage);
+
+  elements.apiKeyInput.addEventListener("input", saveSettingsToStorage);
 
   elements.saveKeyBtn.addEventListener("click", () => {
     const key = elements.apiKeyInput.value.trim();
     if (key) {
-      localStorage.setItem("deepgram_api_key", key);
+      saveSettingsToStorage();
       alert("Deepgram API Key saved to local browser storage!");
     }
   });
@@ -309,6 +850,11 @@ function setBadge(text, className) {
 }
 
 function appendTranscript(sender, text) {
+  // Filter out internal silence trigger prompts from user dialogue bubbles
+  if (sender === "user" && text.startsWith("[System Event:")) {
+    return;
+  }
+
   const placeholder = elements.transcriptBox.querySelector(".transcript-placeholder");
   if (placeholder) placeholder.remove();
 
@@ -325,6 +871,7 @@ function appendTranscript(sender, text) {
 function revealPendingAgentUtterance() {
   if (pendingAgentUtterance && pendingAgentUtterance.trim().length > 0) {
     appendTranscript("agent", pendingAgentUtterance.trim());
+    lastAgentUtterance = pendingAgentUtterance.trim();
     pendingAgentUtterance = "";
   }
 }
@@ -357,7 +904,9 @@ async function getAudioStream() {
   throw new Error("SECURE_CONTEXT_REQUIRED");
 }
 
-// Live Audio Call Handling
+// ==========================================
+// 6. Live Audio Call Handling
+// ==========================================
 async function startCall() {
   const apiKey = elements.apiKeyInput.value.trim() || localStorage.getItem("deepgram_api_key");
   if (!apiKey) {
@@ -392,10 +941,15 @@ async function startCall() {
   elements.endCallBtn.disabled = false;
   pendingAgentUtterance = "";
   activeAudioSourcesCount = 0;
+  isAudioPlaying = false;
+  clearSilenceWatchdog();
 
   try {
     // Setup AudioContext (48kHz sample rate)
     audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    if (audioCtx.state === "suspended") {
+      await audioCtx.resume();
+    }
     nextPlayTime = audioCtx.currentTime;
 
     // Mic input
@@ -409,7 +963,13 @@ async function startCall() {
     // Setup ScriptProcessor to capture PCM Linear16
     scriptProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
     micSource.connect(scriptProcessor);
-    scriptProcessor.connect(audioCtx.destination); // Required for scriptProcessor to fire in Chrome
+
+    // Route mic through a zero-gain mute node to destination so Chrome keeps
+    // onaudioprocess running WITHOUT feedback loop / speaker blast / self-interruption!
+    const muteGain = audioCtx.createGain();
+    muteGain.gain.value = 0;
+    scriptProcessor.connect(muteGain);
+    muteGain.connect(audioCtx.destination);
 
     // Connect to local proxy WebSocket
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -465,60 +1025,90 @@ async function startCall() {
 function handleServerJson(msg) {
   if (msg.type === "status") {
     if (msg.status === "deepgram_connected") {
-      setBadge("IN CALL", "status-active");
+      setBadge("CONNECTING", "status-connecting");
     } else if (msg.status === "settings_sent") {
+      const greeting = elements.greetingInput.value.trim();
+      if (greeting) {
+        lastAgentUtterance = greeting;
+      }
+    } else if (msg.status === "settings_applied") {
+      setBadge("IN CALL", "status-active");
       const greeting = elements.greetingInput.value.trim();
       if (greeting) {
         if (!elements.hideUntilSpokenCheckbox.checked) {
           appendTranscript("agent", greeting);
         } else {
           pendingAgentUtterance = greeting;
-          elements.speakingPill.style.display = "block";
         }
       }
+    } else if (msg.status === "update_sent") {
+      showMidCallNotice(`✓ ${msg.updateType} acknowledged`);
     }
   } else if (msg.type === "deepgram_event") {
     const data = msg.data;
-    if (data.type === "ConversationText") {
+    if (data.type === "SettingsApplied") {
+      setBadge("IN CALL", "status-active");
+    } else if (data.type === "ConversationText") {
       if (data.role === "user") {
         // User finished speaking, reveal any leftover agent utterance first
         revealPendingAgentUtterance();
+        lastUserUtterance = data.content;
+        clearSilenceWatchdog();
         appendTranscript("user", data.content);
         setBadge("AGENT THINKING", "status-connecting");
       } else if (data.role === "agent" || data.role === "assistant") {
+        clearSilenceWatchdog();
+        isAudioPlaying = true;
         if (!elements.hideUntilSpokenCheckbox.checked) {
           appendTranscript("agent", data.content);
+          lastAgentUtterance = data.content;
         } else {
           // Buffer the agent utterance and reveal ONLY when playback completes
           pendingAgentUtterance += (pendingAgentUtterance ? " " : "") + data.content;
-          elements.speakingPill.style.display = "block";
         }
         setBadge("SPEAKING", "status-speaking");
       }
     } else if (data.type === "UserStartedSpeaking") {
-      // User started talking; if agent was speaking, reveal whatever was said so far
+      // User started talking; silence broken
+      clearSilenceWatchdog();
       revealPendingAgentUtterance();
       elements.speakingPill.style.display = "none";
       setBadge("LISTENING", "status-active");
     } else if (data.type === "AgentStartedSpeaking") {
+      clearSilenceWatchdog();
+      isAudioPlaying = true;
       elements.speakingPill.style.display = "block";
       setBadge("SPEAKING", "status-speaking");
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
     } else if (data.type === "AgentAudioDone") {
       // Deepgram finished sending audio frames; wait for audio playback queue to complete
       if (audioCtx) {
         const remainingDelayMs = Math.max(0, (nextPlayTime - audioCtx.currentTime) * 1000) + 120;
         clearTimeout(agentAudioDoneTimer);
         agentAudioDoneTimer = setTimeout(() => {
+          isAudioPlaying = false;
           elements.speakingPill.style.display = "none";
           revealPendingAgentUtterance();
           setBadge("IN CALL", "status-active");
+          // Agent is finished speaking, start the silence watchdog!
+          startSilenceWatchdog();
         }, remainingDelayMs);
       } else {
+        isAudioPlaying = false;
         revealPendingAgentUtterance();
         elements.speakingPill.style.display = "none";
+        startSilenceWatchdog();
       }
     } else if (data.type === "EndOfTurn") {
       setBadge("AGENT THINKING", "status-connecting");
+    } else if (data.type === "SpeakUpdated") {
+      showMidCallNotice("✓ Voice & speed updated live!");
+    } else if (data.type === "ListenUpdated") {
+      showMidCallNotice("✓ Turn thresholds updated live!");
+    } else if (data.type === "ThinkUpdated") {
+      showMidCallNotice("✓ Persona brain updated live!");
     }
   } else if (msg.type === "error") {
     alert(msg.error);
@@ -526,27 +1116,56 @@ function handleServerJson(msg) {
   }
 }
 
-function playPcmChunk(arrayBuffer, sampleRate = 24000) {
+async function playPcmChunk(chunk, sampleRate = 24000) {
   if (!audioCtx) return;
 
-  const int16 = new Int16Array(arrayBuffer);
-  const float32 = new Float32Array(int16.length);
-  for (let i = 0; i < int16.length; i++) {
+  if (audioCtx.state === "suspended") {
+    try {
+      await audioCtx.resume();
+    } catch (e) {
+      console.warn("Could not resume AudioContext:", e);
+    }
+  }
+
+  let arrayBuffer;
+  if (chunk instanceof Blob) {
+    arrayBuffer = await chunk.arrayBuffer();
+  } else if (chunk instanceof ArrayBuffer) {
+    arrayBuffer = chunk;
+  } else if (chunk && chunk.buffer instanceof ArrayBuffer) {
+    arrayBuffer = chunk.buffer;
+  } else {
+    console.warn("Unexpected chunk type:", chunk);
+    return;
+  }
+
+  if (!arrayBuffer || arrayBuffer.byteLength < 2) return;
+
+  // Multiple of 2 bytes required for 16-bit PCM
+  const sampleCount = Math.floor(arrayBuffer.byteLength / 2);
+  const int16 = new Int16Array(arrayBuffer, 0, sampleCount);
+  const float32 = new Float32Array(sampleCount);
+  for (let i = 0; i < sampleCount; i++) {
     float32[i] = int16[i] / 32768.0;
   }
 
-  const audioBuffer = audioCtx.createBuffer(1, float32.length, sampleRate);
+  const audioBuffer = audioCtx.createBuffer(1, sampleCount, sampleRate);
   audioBuffer.getChannelData(0).set(float32);
 
   const source = audioCtx.createBufferSource();
   source.buffer = audioBuffer;
   source.connect(audioCtx.destination);
 
-  const startTime = Math.max(audioCtx.currentTime, nextPlayTime);
+  const now = audioCtx.currentTime;
+  let startTime = nextPlayTime;
+  if (startTime < now || startTime > now + 1.0) {
+    startTime = now + 0.02; // Small 20ms lookahead to avoid glitching
+  }
   source.start(startTime);
   nextPlayTime = startTime + audioBuffer.duration;
 
   activeAudioSourcesCount++;
+  isAudioPlaying = true;
   elements.speakingPill.style.display = "block";
 
   source.onended = () => {
@@ -555,6 +1174,7 @@ function playPcmChunk(arrayBuffer, sampleRate = 24000) {
     if (activeAudioSourcesCount === 0 && (audioCtx.currentTime >= nextPlayTime - 0.08)) {
       elements.speakingPill.style.display = "none";
       revealPendingAgentUtterance();
+      isAudioPlaying = false;
     }
   };
 }
@@ -583,6 +1203,8 @@ function endCall() {
   clearInterval(timerInterval);
   timerInterval = null;
   clearTimeout(agentAudioDoneTimer);
+  clearSilenceWatchdog();
+  isAudioPlaying = false;
 
   // Reveal any leftover pending text so transcript is complete
   revealPendingAgentUtterance();
@@ -663,6 +1285,18 @@ function startWaveformAnimation() {
   }
 
   draw();
+}
+
+// Fallback catalog in case /api/voices is unreachable
+function getFallbackVoices() {
+  return [
+    { id: "flux-miles-en", name: "Miles", family: "Flux", language: "en", langName: "English", accent: "American", gender: "Male", age: "Adult", traits: "Clear, calm, professional, confident", featured: true },
+    { id: "flux-conor-en", name: "Conor", family: "Flux", language: "en", langName: "English", accent: "British", gender: "Male", age: "Mature", traits: "Confident, deep, military-ready", featured: false },
+    { id: "flux-kit-en", name: "Kit", family: "Flux", language: "en", langName: "English", accent: "British", gender: "Male", age: "Young Adult", traits: "Friendly, energetic, crisp", featured: true },
+    { id: "flux-hannah-en", name: "Hannah", family: "Flux", language: "en", langName: "English", accent: "American", gender: "Female", age: "Young", traits: "Clear, confident, pleasant", featured: true },
+    { id: "aura-2-thalia-en", name: "Thalia", family: "Aura-2", language: "en", langName: "English", accent: "American", gender: "Female", age: "Adult", traits: "Clear, confident, energetic", featured: true },
+    { id: "aura-2-nestor-es", name: "Nestor", family: "Aura-2", language: "es", langName: "Spanish", accent: "Peninsular", gender: "Male", age: "Adult", traits: "Calm, professional", featured: true }
+  ];
 }
 
 window.addEventListener("DOMContentLoaded", init);

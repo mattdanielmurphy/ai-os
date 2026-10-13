@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-10-13
+- **Morning Call Voice Agent Tester Audio & Control Fixes:** Isolated and fixed silent audio output in `tools/voice-agent-tester` caused by unresumed `AudioContext`, microphone loopback acoustic barge-in cancellation, premature `settings_sent` UI status, and ungated mic streaming before Deepgram's `SettingsApplied` event. Added 138-voice multi-lingual catalog with starred favorites pinning, live mid-call parameter dispatch (`UpdateSpeak`/`UpdateListen`/`UpdateThink`), and smart silence re-engagement watchdog with task-duration auto-extension. [[log]](agent-logs/2026-10-13_11-35_morning_call_tester_audio_fix.md)
+
 ## 2026-10-12
 - **Telegram conversational card meta-context & 1/4-4/4 rating hierarchy:** Redesigned FSRS review buttons with compact, un-truncated `1/4 · Again`, `2/4 · Hard`, `3/4 · Good`, `4/4 · Easy` labels and a clear hierarchy legend in the prompt body. Prevented conversational comments from being swallowed as FSRS ratings by requiring strict rating tokens, dynamically injected active flashcard (question, answer, options, elaboration) and morning flow state into conversational prompt context, kept active prompts answerable during conversation, verified 25/25 passing tests, and reloaded `aios-assistant`. [[log]](agent-logs/2026-10-12_18-20_conversational-card-meta-context-and-rating-hierarchy.md)
 
