@@ -1,5 +1,8 @@
 # Development Journal
 
+## 2026-10-12
+- **Telegram conversational card meta-context & 1/4-4/4 rating hierarchy:** Redesigned FSRS review buttons with compact, un-truncated `1/4 · Again`, `2/4 · Hard`, `3/4 · Good`, `4/4 · Easy` labels and a clear hierarchy legend in the prompt body. Prevented conversational comments from being swallowed as FSRS ratings by requiring strict rating tokens, dynamically injected active flashcard (question, answer, options, elaboration) and morning flow state into conversational prompt context, kept active prompts answerable during conversation, verified 25/25 passing tests, and reloaded `aios-assistant`. [[log]](agent-logs/2026-10-12_18-20_conversational-card-meta-context-and-rating-hierarchy.md)
+
 ## 2026-10-11
 - **Telegram morning flow auto-advance and singleton nudges:** After the minimum review earns the C&H reward, due FSRS cards now continue automatically until exhausted. New reminders retire the prior nudge, and “I’m up” replaces its message with the active morning stage. Focused morning-flow and nudge tests pass; the full suite has one unrelated existing feedback-copy assertion failure.
 
