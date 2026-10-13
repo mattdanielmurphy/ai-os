@@ -14,9 +14,11 @@ const sessions = new Map<any, ClientSession>();
 
 export function buildDeepgramSettings(config: {
   speed?: number;
+  expressivity?: number;
   eot_threshold?: number;
   eager_eot_threshold?: number;
   eot_timeout_ms?: number;
+  temperature?: number;
   voice_model?: string;
   listen_model?: string;
   think_model?: string;
@@ -25,6 +27,26 @@ export function buildDeepgramSettings(config: {
   sample_rate_in?: number;
   sample_rate_out?: number;
 }) {
+  const speakProvider: Record<string, any> = {
+    type: "deepgram",
+    version: "v2",
+    model: config.voice_model || "flux-conor-en",
+    speed: typeof config.speed === "number" ? config.speed : 1.25
+  };
+
+  if (typeof config.expressivity === "number") {
+    speakProvider.expressivity = config.expressivity;
+  }
+
+  const thinkProvider: Record<string, any> = {
+    type: "google",
+    model: config.think_model || "gemini-3.1-flash-lite"
+  };
+
+  if (typeof config.temperature === "number") {
+    thinkProvider.temperature = config.temperature;
+  }
+
   return {
     type: "Settings",
     audio: {
@@ -40,12 +62,7 @@ export function buildDeepgramSettings(config: {
     },
     agent: {
       speak: {
-        provider: {
-          type: "deepgram",
-          version: "v2",
-          model: config.voice_model || "flux-conor-en",
-          speed: typeof config.speed === "number" ? config.speed : 1.25
-        }
+        provider: speakProvider
       },
       listen: {
         provider: {
@@ -58,10 +75,7 @@ export function buildDeepgramSettings(config: {
         }
       },
       think: {
-        provider: {
-          type: "google",
-          model: config.think_model || "gemini-3.1-flash-lite"
-        },
+        provider: thinkProvider,
         prompt: config.prompt || ""
       },
       greeting: config.greeting || "GET OUT OF BED RIGHT NOW!"
