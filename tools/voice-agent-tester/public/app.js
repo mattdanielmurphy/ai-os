@@ -13,6 +13,7 @@ let animFrameId = null;
 
 // Audio and Speech State
 let pendingAgentUtterance = "";
+let activeAudioSources = [];
 let activeAudioSourcesCount = 0;
 let agentAudioDoneTimer = null;
 let lastAgentUtterance = "";
@@ -958,8 +959,7 @@ async function startCall() {
   elements.startCallBtn.disabled = true;
   elements.endCallBtn.disabled = false;
   pendingAgentUtterance = "";
-  activeAudioSourcesCount = 0;
-  isAudioPlaying = false;
+  stopAllAgentAudio();
   clearSilenceWatchdog();
 
   try {
@@ -1100,7 +1100,8 @@ function handleServerJson(msg) {
         setBadge("SPEAKING", "status-speaking");
       }
     } else if (data.type === "UserStartedSpeaking") {
-      // User started talking; silence broken
+      // User started talking; silence broken & agent immediately stopped
+      stopAllAgentAudio();
       clearSilenceWatchdog();
       revealPendingAgentUtterance();
       elements.speakingPill.style.display = "none";
@@ -1147,6 +1148,22 @@ function handleServerJson(msg) {
   }
 }
 
+function stopAllAgentAudio() {
+  for (const s of activeAudioSources) {
+    try {
+      s.stop();
+      s.disconnect();
+    } catch {}
+  }
+  activeAudioSources = [];
+  if (audioCtx) {
+    nextPlayTime = audioCtx.currentTime;
+  }
+  activeAudioSourcesCount = 0;
+  isAudioPlaying = false;
+  elements.speakingPill.style.display = "none";
+}
+
 async function playPcmChunk(chunk, sampleRate = 24000) {
   if (!audioCtx) return;
 
@@ -1189,20 +1206,23 @@ async function playPcmChunk(chunk, sampleRate = 24000) {
 
   const now = audioCtx.currentTime;
   let startTime = nextPlayTime;
-  if (startTime < now || startTime > now + 1.0) {
-    startTime = now + 0.02; // Small 20ms lookahead to avoid glitching
+  // If queue ran dry or this is the start of a turn, start immediately with 20ms buffer
+  if (startTime < now) {
+    startTime = now + 0.02;
   }
   source.start(startTime);
   nextPlayTime = startTime + audioBuffer.duration;
 
+  activeAudioSources.push(source);
   activeAudioSourcesCount++;
   isAudioPlaying = true;
   elements.speakingPill.style.display = "block";
 
   source.onended = () => {
+    activeAudioSources = activeAudioSources.filter((s) => s !== source);
     activeAudioSourcesCount = Math.max(0, activeAudioSourcesCount - 1);
     // When last scheduled buffer ends playback, reveal dialogue if no more audio queued
-    if (activeAudioSourcesCount === 0 && (audioCtx.currentTime >= nextPlayTime - 0.08)) {
+    if (activeAudioSourcesCount === 0 && (audioCtx && audioCtx.currentTime >= nextPlayTime - 0.08)) {
       elements.speakingPill.style.display = "none";
       revealPendingAgentUtterance();
       isAudioPlaying = false;
@@ -1235,6 +1255,7 @@ function endCall() {
   timerInterval = null;
   clearTimeout(agentAudioDoneTimer);
   clearSilenceWatchdog();
+  stopAllAgentAudio();
   isAudioPlaying = false;
 
   // Reveal any leftover pending text so transcript is complete
