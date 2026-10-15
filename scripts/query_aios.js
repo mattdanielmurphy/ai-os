@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
@@ -744,7 +744,7 @@ async function main() {
     }
 
     if (!message && !recoverMode) {
-        console.error('Usage: node query_aios.js "<prompt>" [--plan "<request>"] [--provider gemini] [--model <model>] [--thread <id>] [--new-thread] [--no-resume] [--screenshot <path>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--ui]');
+        console.error('Usage: query_aios.js "<prompt>" [--plan "<request>"] [--provider gemini] [--model <model>] [--thread <id>] [--new-thread] [--no-resume] [--screenshot <path>] [--input <file>] [--output <file>] [--timeout <sec>] [--recover] [--ui]');
         process.exit(1);
     }
 
