@@ -67,6 +67,18 @@
   - **Strict Span-Only Styling Invariant**: For conversation artifacts and custom markdown layouts, agents MUST use `<span>` tags exclusively (with `display: block;`, `white-space: pre-wrap;`, and inline CSS) for all layout and styling containers. NEVER use `<div>`, `<p>`, or other block HTML tags. Use `<br>` or `<br><br>` tags within `<span>` to preserve line breaks and paragraph spacing without breaking out of the inline span container.
   - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
 
+# Universal Response Formatting & Progressive Disclosure Protocol
+- **Universal Cross-Platform Standard**: Across ALL platforms (Claude, Gemini, Hermes, Codex, etc.), whenever the chat/thread UI supports native HTML disclosure elements, agents MUST format responses using this progressive disclosure protocol.
+- **Ultra-Concise Scannable Core**: Agents MUST keep the top-level chat narrative ultra-concise (~150-200 words), spread out with generous whitespace, clean bullet points, and zero dense walls of text.
+- **In-Thread Progressive Disclosure (`<details><summary>`)**:
+  - Use native HTML `<details>` and `<summary>` tags for folding secondary details, technical logs, rationale, or multi-step execution context.
+  - **Zero Manual Triangles**: NEVER insert manual triangles, arrows, or pointer emojis (`▶`, `▼`, `►`, `▸`, `▶︎`) inside `<summary>`. The browser UI already renders an interactive disclosure triangle that dynamically reflects the folded/expanded state. Adding manual triangles creates redundant and confusing double-triangles (`▶ ▶` or `▼ ▶`).
+  - **Full-Sentence Body Summaries**: Do NOT treat `<summary>` as a terse 3-word title-case headline. Write full, conversational sentences as the fold header conveying the essential meaning/takeaway. The user should be able to understand the entire message and narrative just by skimming the folded sentences down the page, expanding only if they choose to see the details.
+  - **Visual Anchor Emojis**: Lead each fold header sentence with a meaningful emoji anchor (e.g. 🎓, 🎙️, 🎻, 🍽️, 🤖, ⚡, 🛠️) to visually categorize the topic at a glance.
+  - **Whitespace & `<br>` Spacing Invariant**: Chat markdown renderers ignore inline CSS margins on `<details>`. Agents MUST place explicit `<br>` tags between consecutive `<details>` blocks, as well as at the top and bottom of the response, to preserve generous visual gaps and avoid tight clumps.
+  - **Max-Width Constraint**: Wrap response blocks in `<span style="display: block; max-width: 65rem;">...</span>` so text lines maintain optimal readability without stretching across wide viewports.
+- **Thread.md Deprecation**: `thread.md` generation is permanently discontinued. Agents MUST NEVER generate, reference, or link to `thread.md`.
+
 ## Strict Planner / Workflow Immediate Dispatch & query_aios Policy
 - **query_aios Invariant**: Stop using `query_aios` unless Matt specifically and explicitly asks for it. Background `query_aios` companion services are stopped until further investigation with Gemini web. Perplexity has been removed altogether as an endpoint.
 - **Explicit User Request Workflow**: When Matt explicitly asks to run `query_aios` or `_plan-with-ai-os`, dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` with provider gemini) with `WaitMsBeforeAsync: 500`. Do NOT perform ad-hoc file exploration or run `generate_prompt.py`.
