@@ -1749,3 +1749,158 @@ async def test_active_card_conversational_meta_comment_and_button_hierarchy(monk
         assert card_db_rated["reps"] == 1
 
         await db.close()
+
+
+# -----------------------------------------------------------------------------
+# Daily Signal Briefing & Deck Diversification Tests
+# -----------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_daily_news_service(tmp_path):
+    from services.assistant.briefing.news import DailyNewsService
+    from services.assistant.storage.db import AssistantDB
+
+    db = AssistantDB(tmp_path / "news_test.db")
+    await db.connect()
+
+    svc = DailyNewsService(db)
+    brief = await svc.get_or_create_daily_brief()
+
+    # Verify key sections are present
+    assert "Daily Signal" in brief
+    assert "AI & Applied Engineering" in brief
+    assert "Drumming & Rhythm Focus" in brief
+    assert "Cello & Strings" in brief
+    assert "Piano & Music Theory" in brief
+    assert "End of briefing" in brief
+
+    # Verify cached in database
+    today_key = f"daily_brief:{datetime.now().strftime('%Y-%m-%d')}"
+    cached = await db.get_dynamic(today_key)
+    assert cached == brief
+
+    # Modify cached value to ensure retrieval comes from cache
+    await db.set_dynamic(today_key, "MOCK_CACHED_SIGNAL")
+    retrieved = await svc.get_or_create_daily_brief()
+    assert retrieved == "MOCK_CACHED_SIGNAL"
+
+    # Verify force_refresh bypasses cache
+    refreshed = await svc.get_or_create_daily_brief(force_refresh=True)
+    assert refreshed != "MOCK_CACHED_SIGNAL"
+    assert "Daily Signal" in refreshed
+
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_anti_duplicate_comic():
+    from services.assistant.briefing.comic import fetch_daily_cyanide_and_happiness_comic
+
+    mock_details_calls = []
+
+    def mock_fetch_details(url):
+        mock_details_calls.append(url)
+        if "latest" in url:
+            return {
+                "image_url": "https://static.explosm.net/latest.png",
+                "page_url": "https://explosm.net/comics/end",
+                "slug": "end",
+                "random_slug": "rob-dischargepapers",
+            }
+        else:
+            return {
+                "image_url": "https://static.explosm.net/random.png",
+                "page_url": "https://explosm.net/comics/rob-dischargepapers",
+                "slug": "rob-dischargepapers",
+                "random_slug": "another-one",
+            }
+
+    with patch("services.assistant.briefing.comic._fetch_comic_details", side_effect=mock_fetch_details):
+        # Case 1: First time seeing "end" -> returns latest
+        img, page = await fetch_daily_cyanide_and_happiness_comic(seen_slugs=set())
+        assert page == "https://explosm.net/comics/end"
+
+        # Case 2: "end" already seen yesterday -> follows random_slug!
+        img2, page2 = await fetch_daily_cyanide_and_happiness_comic(seen_slugs={"end"})
+        assert page2 == "https://explosm.net/comics/rob-dischargepapers"
+        assert img2 == "https://static.explosm.net/random.png"
+
+
+@pytest.mark.asyncio
+async def test_cmd_news_and_callbacks(tmp_path):
+    from services.assistant.telegram_gateway.bot import TelegramGateway
+    from services.assistant.telegram_gateway.handlers import ActionDispatcher
+
+    db = AssistantDB(tmp_path / "news_cmd.db")
+    await db.connect()
+    cfg = AssistantConfig(obsidian_vault_path=tmp_path / "vault")
+    gw = TelegramGateway(cfg)
+    disp = ActionDispatcher(db, gw, cfg)
+
+    # Test cmd_news
+    res = await disp.cmd_news(12345)
+    assert res is True
+    assert len(gw._dry_run_messages) == 1
+    sent_msg = list(gw._dry_run_messages.values())[0]
+    assert "Daily Signal" in sent_msg["text"]
+    assert any(btn["text"] == "🔄 Refresh Brief" for row in sent_msg["keyboard"] for btn in row)
+
+    # Test callback briefing:news:refresh
+    cb_res = await disp.handle_callback_str("briefing:news:refresh", 12345, 1)
+    assert cb_res is True
+
+    # Test callback cmd:news
+    cb_res2 = await disp.handle_callback_str("cmd:news", 12345, 2)
+    assert cb_res2 is True
+
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_cmd_quiz_deck_diversification(tmp_path):
+    from services.assistant.telegram_gateway.bot import TelegramGateway
+    from services.assistant.telegram_gateway.handlers import ActionDispatcher
+    from services.assistant.spaced_repetition.engine import FSRSEngine
+
+    db = AssistantDB(tmp_path / "quiz_test.db")
+    await db.connect()
+    cfg = AssistantConfig(obsidian_vault_path=tmp_path / "vault")
+    gw = TelegramGateway(cfg)
+    disp = ActionDispatcher(db, gw, cfg)
+    engine = FSRSEngine(cfg)
+
+    # Add cards from 3 different decks
+    c1 = engine.create_new_card("Logic prompt", "Logic ans", "Elab", card_id="forallx_01")
+    c2 = engine.create_new_card("Drum prompt", "Drum ans", "Elab", card_id="drums_01")
+    c3 = engine.create_new_card("Music prompt", "Music ans", "Elab", card_id="music_01")
+
+    now = datetime.now(timezone.utc) - timedelta(hours=1)
+    for c in (c1, c2, c3):
+        await db.add_or_update_card(
+            card_id=c["card_id"],
+            deck_type=c["deck_type"],
+            prompt=c["prompt"],
+            answer=c["answer"],
+            elaboration=c["elaboration"],
+            stability=c["stability"],
+            difficulty=c["difficulty"],
+            reps=c["reps"],
+            lapses=c["lapses"],
+            state=c["state"],
+            last_review=c["last_review"],
+            due_at=now,
+        )
+
+    # Set last reviewed deck to 'forallx'
+    await db.set_dynamic("last_reviewed_deck_prefix", "forallx")
+
+    # cmd_quiz without prefix should avoid 'forallx' and pick another deck (drums or music)
+    await disp.cmd_quiz(12345)
+    last_deck = await db.get_dynamic("last_reviewed_deck_prefix")
+    assert last_deck != "forallx"
+    assert last_deck in ("drums", "music")
+
+    # cmd_quiz with explicit prefix should strictly pick that deck
+    await disp.cmd_quiz(12345, card_id_prefix="forallx_")
+    assert await db.get_dynamic("last_active_card_id:12345") == "forallx_01"
+
+    await db.close()
