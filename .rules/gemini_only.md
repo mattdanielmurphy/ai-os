@@ -33,6 +33,7 @@
   - Use native HTML `<details>` and `<summary>` tags for folding secondary details, supporting logs, or multi-step execution context.
   - **Zero Manual Triangles**: NEVER insert manual triangles, arrows, or pointer emojis (`▶`, `▼`, `►`, `▸`, `▶︎`) inside `<summary>`. The browser UI already renders an interactive disclosure triangle that dynamically reflects the folded/expanded state. Adding manual triangles creates redundant and confusing double-triangles (`▶ ▶` or `▼ ▶`).
   - **Full-Sentence Body Summaries**: Do NOT treat `<summary>` as a terse 3-word title-case headline. Write full, conversational sentences as the fold header conveying the essential meaning/takeaway. The user should be able to understand the full high-level narrative just by skimming the folded sentences down the page, expanding only if they choose to see the details.
+  - **Whitespace & `<br>` Spacing Invariant**: Chat markdown renderers ignore inline CSS margins on `<details>`. Agents MUST place explicit `<br>` tags between consecutive `<details>` blocks, as well as at the top and bottom of the response, to preserve generous visual gaps and avoid tight clumps.
 <!-- /RULE:PROGRESSIVE_DISCLOSURE -->
 
 <!-- RULE:SUBAGENT_CLEANUP -->
