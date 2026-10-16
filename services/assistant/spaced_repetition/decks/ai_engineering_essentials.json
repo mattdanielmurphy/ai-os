@@ -1,0 +1,57 @@
+{
+  "deck_id": "ai",
+  "deck_type": "cold_storage",
+  "title": "AI Engineering: Architectures, KV Cache & Inference",
+  "source": "Modern LLM Systems & Transformer Mechanics",
+  "scope": "Attention complexity, KV cache scaling, quantization, and decoding optimizations",
+  "cards": [
+    {
+      "card_id": "ai_arch_01",
+      "prompt": "Why does Grouped-Query Attention (GQA) reduce memory bandwidth compared to standard Multi-Head Attention (MHA)?",
+      "options": ["Multiple query heads share a single key/value head pair, shrinking the KV cache footprint", "It compresses embedding vectors down to 1-bit representations", "It eliminates softmax computation by using linear approximations", "It restricts attention to only the 10 nearest neighboring tokens"],
+      "correct_index": 0,
+      "answer": "Multiple query heads share each Key and Value head pair, slashing KV cache memory traffic during autoregressive generation.",
+      "elaboration": "Standard MHA keeps separate K and V for every Q head; GQA (used in Llama 3 and Mistral) achieves near-MHA quality at MQA speed."
+    },
+    {
+      "card_id": "ai_infer_01",
+      "prompt": "How does the memory requirement of the KV cache scale during autoregressive LLM decoding?",
+      "options": ["Linearly with batch size, sequence length, number of layers, and KV head dimensions", "Quadratically with sequence length (O(N²))", "It remains constant regardless of context length", "Logarithmically with model parameter count"],
+      "correct_index": 0,
+      "answer": "Linearly: 2 * 2 * n_layers * n_kv_heads * d_head * seq_len * batch_size bytes (for 16-bit precision).",
+      "elaboration": "While the attention matrix compute is O(N²), the stored KV tensors grow strictly linearly with the number of generated tokens."
+    },
+    {
+      "card_id": "ai_quant_01",
+      "prompt": "What is the primary advantage of FlashAttention over standard PyTorch attention implementations?",
+      "options": ["It fuses softmax and matrix multiplies into SRAM tiles to avoid slow HBM round-trips", "It approximates attention using low-rank singular value decomposition", "It prunes 50% of the attention weights dynamically", "It replaces float16 weights with ternary {-1, 0, 1} weights"],
+      "correct_index": 0,
+      "answer": "IO-awareness: it tiles computation to keep intermediate attention matrices in fast GPU on-chip SRAM rather than writing to high-bandwidth memory (HBM).",
+      "elaboration": "Tri Dao's FlashAttention achieves 2–4x speedup not by doing fewer arithmetic operations, but by optimizing memory access bottlenecks."
+    },
+    {
+      "card_id": "ai_arch_02",
+      "prompt": "In RoPE (Rotary Position Embedding), how is relative positional information injected into query and key representations?",
+      "options": ["By rotating 2D slices of the Q and K vectors in the complex plane by an angle proportional to token position", "By adding a learned absolute embedding vector to the token inputs at layer 0", "By masking future token attention weights with an upper-triangular matrix", "By computing dot-product distance against an explicit sinusoidal table"],
+      "correct_index": 0,
+      "answer": "By multiplying paired dimensions of Q and K by rotation matrices whose angles scale with position index.",
+      "elaboration": "Because the inner product of two rotated vectors depends strictly on their difference (m - n), RoPE naturally encodes relative distance."
+    },
+    {
+      "card_id": "ai_tune_01",
+      "prompt": "In LoRA (Low-Rank Adaptation), how are updated weights W_new computed relative to the frozen base model weights W_0?",
+      "options": ["W_new = W_0 + (alpha / r) * (B * A), where B and A are low-rank matrices", "W_new = W_0 * (A + B)", "W_new = SVD(W_0) + rank_offset", "W_new = Quantize(W_0) + Residual(A)"],
+      "correct_index": 0,
+      "answer": "W_new = W_0 + (alpha / r) * (B @ A), with rank r << d.",
+      "elaboration": "Only low-rank matrices A and B are trained; at inference time, they can be merged directly into W_0 with zero latency overhead."
+    },
+    {
+      "card_id": "ai_infer_02",
+      "prompt": "What is Speculative Decoding in LLM serving?",
+      "options": ["A small draft model generates candidate tokens in parallel, which are verified in a single forward pass by the large target model", "Sampling multiple completions and voting on the best one via an external reward model", "Predicting user prompts before they are typed using recurrent heuristics", "Decoding tokens in reverse order from end to start"],
+      "correct_index": 0,
+      "answer": "A fast draft model drafts K tokens cheaply; the large model evaluates all K tokens in a single parallel verification pass.",
+      "elaboration": "Since memory bandwidth limits LLM decoding, verifying K tokens in one forward pass costs almost the same time as generating one token."
+    }
+  ]
+}

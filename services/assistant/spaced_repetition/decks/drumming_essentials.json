@@ -1,0 +1,73 @@
+{
+  "deck_id": "drums",
+  "deck_type": "baby_facts",
+  "title": "Drumming: Rudiments, Mechanics & Rhythm Theory",
+  "source": "PAS International Drum Rudiments & Percussion Pedagogy",
+  "scope": "Rudiments, stick technique, polyrhythms, and coordination",
+  "cards": [
+    {
+      "card_id": "drums_rud_01",
+      "prompt": "What is the sticking pattern for an inward (or delayed) paradiddle?",
+      "options": ["R L L R L R R L", "R L R R L R L L", "R L R L L R L R", "R R L R L L R L"],
+      "correct_index": 0,
+      "answer": "R L L R - L R R L (Inward Paradiddle).",
+      "elaboration": "Unlike the standard single paradiddle (R L R R), the inward inversion places the double stroke immediately after the initial lead tap."
+    },
+    {
+      "card_id": "drums_rud_02",
+      "prompt": "In Moeller technique, what is the core mechanical motion of the 'whip' stroke?",
+      "options": ["Leading from the elbow/forearm with the wrist following like a whip", "Locking the wrist and driving solely from the shoulder", "Squeezing tightly between thumb and index fulcrum", "Using exclusively pinky-finger rebound"],
+      "correct_index": 0,
+      "answer": "Leading with the forearm and elbow, allowing the wrist and stick to whip downward effortlessly.",
+      "elaboration": "Sanford Moeller modeled this on military drummers; relaxed arm whip generates high volume with minimal muscular fatigue."
+    },
+    {
+      "card_id": "drums_rud_03",
+      "prompt": "What distinguishes a Flam Accent from a Flam Tap?",
+      "options": ["Flam Accent is grouped in triplets (lR-L-R); Flam Tap is grouped in duplets (lR-R)", "Flam Accent uses double strokes; Flam Tap uses only single strokes", "Flam Accent is played only on the snare rim", "Flam Tap alternates hands while Flam Accent never alternates"],
+      "correct_index": 0,
+      "answer": "Flam Accents are 3-note groupings (lR-L-R rL-R-L); Flam Taps are 2-note double groupings (lR-R rL-L).",
+      "elaboration": "Mastering both gives you the building blocks for fluent syncopated fills across compound and simple meters."
+    },
+    {
+      "card_id": "drums_poly_01",
+      "prompt": "What rhythmic mnemonic accurately represents a 3 against 2 polyrhythm (3 over 2)?",
+      "options": ["'Not dif-fi-cult' (Together - Right - Left - Right)", "‘Pass the god-damned butter’", "‘What would Jesus do’", "‘Pea-nut but-ter jel-ly’"],
+      "correct_index": 0,
+      "answer": "'Not dif-fi-cult' (Beat 1 together, beat 2 of triplet, beat 2 of duplet).",
+      "elaboration": "In numbers: 1, 2-and, 3; the duplet hits on 1 and the midpoint between beats 2 and 3 of the triplet."
+    },
+    {
+      "card_id": "drums_poly_02",
+      "prompt": "What is a 'linear' drum groove?",
+      "options": ["A groove where no two limbs (hands or feet) strike simultaneously", "A groove played in strict straight 4/4 without syncopation", "A groove where the hi-hat never stops playing 16th notes", "A continuous roll from the snare to the lowest floor tom"],
+      "correct_index": 0,
+      "answer": "A groove where no two limbs hit at the exact same instant.",
+      "elaboration": "Pioneered by drummers like David Garibaldi and Steve Gadd, linear patterns produce crisp, articulate funk textures."
+    },
+    {
+      "card_id": "drums_rud_04",
+      "prompt": "What is the primary difference between an American, German, and French timpani/drum grip?",
+      "options": ["Palm angle relative to the drum head (French palms face each other, German palms flat down, American ~45°)", "The distance between the thumb and index finger only", "Whether the stick is held with the right hand or left hand", "Whether traditional grip is used on the weak hand"],
+      "correct_index": 0,
+      "answer": "Palm angle: French is thumbs-up (90° vertical), German is palms flat (0° horizontal), American is halfway (~45°).",
+      "elaboration": "French grip favors rapid finger control; German grip maximizes wrist power; American blends both for drum set versatility."
+    },
+    {
+      "card_id": "drums_groove_01",
+      "prompt": "In half-time shuffle grooves (like Bernard Purdie or Jeff Porcaro's Rosanna shuffle), where do ghost notes typically sit?",
+      "options": ["On the unaccented inner partials of the underlying triplet grid", "Directly on quarter-note downbeats 1, 2, 3, 4", "Only on beats 2 and 4 directly behind the backbeat", "Exclusively on the offbeat eighth notes"],
+      "correct_index": 0,
+      "answer": "On the inner partials of the triplet grid, tucked softly between the main pulse notes.",
+      "elaboration": "The Purdie shuffle relies on delicate snare ghost notes occupying the middle partial of the triplet for its buoyant pocket."
+    },
+    {
+      "card_id": "drums_rud_05",
+      "prompt": "How is a Drag (or Ruff) technically executed in standard percussion notation?",
+      "options": ["Two grace notes played by the same hand rapidly preceding an accented primary note", "A single grace note played open before the downbeat", "A four-stroke single roll played over the barline", "A continuous press roll terminated with a rimshot"],
+      "correct_index": 0,
+      "answer": "Two soft grace notes (usually doubled by one hand) immediately leading into the primary accented note (llR or rrL).",
+      "elaboration": "The drag provides rhythmic snap and weight to classical orchestral pieces, march cadences, and funk ghost-note patterns."
+    }
+  ]
+}
