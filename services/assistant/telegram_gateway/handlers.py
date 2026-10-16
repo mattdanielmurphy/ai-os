@@ -584,19 +584,28 @@ class ActionDispatcher:
                         remove_keyboard=not keyboard,
                     )
                     for stale_prompt in stale_prompts:
+                        deleted = False
                         try:
-                            await self.gateway.edit_prompt(
+                            deleted = await self.gateway.delete_message(
                                 chat_id=stale_prompt["chat_id"],
                                 message_id=stale_prompt["message_id"],
-                                text="✅ The morning flow moved to another check-in message. Continue from the active morning prompt.",
-                                remove_keyboard=True,
                             )
-                        except Exception as exc:
-                            logger.warning(
-                                "Could not retire stale morning prompt %s: %s",
-                                stale_prompt["message_id"],
-                                exc,
-                            )
+                        except Exception:
+                            pass
+                        if not deleted:
+                            try:
+                                await self.gateway.edit_prompt(
+                                    chat_id=stale_prompt["chat_id"],
+                                    message_id=stale_prompt["message_id"],
+                                    text="✅ The morning flow moved to another check-in message. Continue from the active morning prompt.",
+                                    remove_keyboard=True,
+                                )
+                            except Exception as exc:
+                                logger.warning(
+                                    "Could not retire stale morning prompt %s: %s",
+                                    stale_prompt["message_id"],
+                                    exc,
+                                )
                     return True
                 await self.gateway.edit_prompt(
                     chat_id=chat_id,

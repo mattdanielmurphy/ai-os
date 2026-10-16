@@ -370,15 +370,25 @@ class AssistantDaemon:
         previous_nudge_id = state.get("last_nudge_message_id")
         if previous_nudge_id:
             await self.db.resolve_signal(int(previous_nudge_id), "RESPONDED")
+            deleted = False
             try:
-                await self.gateway.edit_prompt(
+                deleted = await self.gateway.delete_message(
                     chat_id=chat_id,
                     message_id=int(previous_nudge_id),
-                    text="✅ A newer morning nudge is available.",
-                    remove_keyboard=True,
                 )
             except Exception as exc:
-                logger.warning("Could not retire previous morning nudge %s: %s", previous_nudge_id, exc)
+                logger.debug("Could not delete previous morning nudge %s: %s", previous_nudge_id, exc)
+
+            if not deleted:
+                try:
+                    await self.gateway.edit_prompt(
+                        chat_id=chat_id,
+                        message_id=int(previous_nudge_id),
+                        text="✅ A newer morning nudge is available.",
+                        remove_keyboard=True,
+                    )
+                except Exception as exc:
+                    logger.warning("Could not retire previous morning nudge %s: %s", previous_nudge_id, exc)
         text = (
             "⏰ *Morning check-in nudge*\n\n"
             "Your morning grounding and check-in are still waiting. Reply with a quick note, "

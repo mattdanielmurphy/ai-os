@@ -940,9 +940,7 @@ async def test_morning_nudge_replaces_previous_and_ack_clears_latest():
         await daemon._process_morning_reminders(now)
         reminder_state = json.loads(await daemon.db.get_dynamic("morning_reminder_state"))
         latest_id = reminder_state["last_nudge_message_id"]
-        assert latest_id != prior_id
-        assert "newer morning nudge" in daemon.gateway._dry_run_messages[prior_id]["text"]
-        assert daemon.gateway._dry_run_messages[prior_id]["keyboard"] == []
+        assert prior_id not in daemon.gateway._dry_run_messages
         signals = await daemon.db.get_awaiting_signals()
         assert [s["message_id"] for s in signals if s["trigger_id"] == trigger_id] == [latest_id]
         await daemon.dispatcher.handle_callback_str("briefing:ack", 12345, prior_id)
