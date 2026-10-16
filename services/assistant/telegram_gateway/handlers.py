@@ -1162,10 +1162,14 @@ class ActionDispatcher:
             "👋 *AI-OS Executive Assistant*\n\n"
             "I manage your morning briefings, spaced repetition reviews, habit tracking, and proactive check-ins.\n\n"
             "*Available Commands:*\n"
+            "• `/news` or `/brief` — View your curated daily signal (AI, drumming, cello & music theory)\n"
             "• `/morning` — Trigger your daily morning grounding and briefing\n"
             "• `/gratitude <thought>` — Log a gratitude entry directly into your vault\n"
             "• `/quiz` or `/review` — Start an immediate spaced repetition quiz\n"
-            "• `/forallx` — Quiz on *forallx*, chapters 1–15, scheduled with FSRS\n"
+            "• `/drums` — Quiz on drumming rudiments, polyrhythms, and pocket\n"
+            "• `/music` — Quiz on music theory, piano, and cello\n"
+            "• `/ai` — Quiz on AI engineering, KV cache, and architecture\n"
+            "• `/forallx` — Quiz on *forallx* logic, chapters 1–15, scheduled with FSRS\n"
             "• `/status` — View active triggers, due cards, and gate status\n"
             "• `/habits` — View today's habit check-ins\n"
             "• `/reset` or `/clear` — Reset conversation context and memory\n"
@@ -1175,17 +1179,40 @@ class ActionDispatcher:
         )
         keyboard = [
             [
-                {"text": "🌅 Morning Briefing", "callback_data": "cmd:morning"},
+                {"text": "📰 Daily Brief", "callback_data": "cmd:news"},
+                {"text": "🌅 Morning Flow", "callback_data": "cmd:morning"},
+            ],
+            [
                 {"text": "📚 Quiz Me", "callback_data": "cmd:quiz"},
+                {"text": "🥁 Drums", "callback_data": "cmd:drums"},
             ],
             [
-                {"text": "∀x Logic Quiz", "callback_data": "cmd:forallx"},
+                {"text": "🎻 Music Theory", "callback_data": "cmd:music"},
+                {"text": "🤖 AI Quiz", "callback_data": "cmd:ai"},
             ],
             [
+                {"text": "∀x Logic", "callback_data": "cmd:forallx"},
                 {"text": "📊 Status", "callback_data": "cmd:status"},
             ]
         ]
         await self.gateway.send_message(chat_id, help_text, keyboard_rows=keyboard)
+        return True
+
+    async def cmd_news(self, chat_id: int, force_refresh: bool = False) -> bool:
+        """Fetches and delivers the daily ad-free, personalized news and tips briefing."""
+        from ..briefing.news import DailyNewsService
+        news_svc = DailyNewsService(self.db)
+        briefing = await news_svc.get_or_create_daily_brief(force_refresh=force_refresh)
+        keyboard = [
+            [
+                {"text": "🔄 Refresh Brief", "callback_data": "briefing:news:refresh"},
+                {"text": "🧠 Review Cards", "callback_data": "cmd:quiz"},
+            ],
+            [
+                {"text": "🌅 Morning Flow", "callback_data": "cmd:morning"},
+            ]
+        ]
+        await self.gateway.send_message(chat_id, briefing, keyboard_rows=keyboard)
         return True
 
     async def cmd_morning(self, chat_id: int) -> bool:
@@ -1399,13 +1426,33 @@ class ActionDispatcher:
                 morning_prompt_message_id,
             )
             return True
-        card = due_cards[0] if due_cards else await self.db.get_any_card(card_id_prefix=card_id_prefix)
+        if card_id_prefix:
+            card = due_cards[0] if due_cards else await self.db.get_any_card(card_id_prefix=card_id_prefix)
+        else:
+            if due_cards:
+                last_deck = await self.db.get_dynamic("last_reviewed_deck_prefix")
+                cards_by_deck: Dict[str, List[Dict[str, Any]]] = {}
+                for c in due_cards:
+                    deck_p = c["card_id"].split("_")[0]
+                    cards_by_deck.setdefault(deck_p, []).append(c)
+
+                available_decks = list(cards_by_deck.keys())
+                candidate_deck = available_decks[0]
+                if len(available_decks) > 1 and last_deck in available_decks:
+                    other_decks = [d for d in available_decks if d != last_deck]
+                    candidate_deck = other_decks[0]
+
+                card = cards_by_deck[candidate_deck][0]
+                await self.db.set_dynamic("last_reviewed_deck_prefix", candidate_deck)
+            else:
+                card = await self.db.get_any_card()
 
         if not card:
             if card_id_prefix:
+                deck_name = card_id_prefix.rstrip("_")
                 await self.gateway.send_message(
                     chat_id,
-                    "ℹ️ The *forallx* chapter 1–15 deck has not been imported yet.",
+                    f"ℹ️ The *{deck_name}* deck has not been imported or has no cards yet.",
                 )
                 return False
             await self.gateway.send_message(
@@ -1419,9 +1466,10 @@ class ActionDispatcher:
             if due_at.tzinfo is None:
                 due_at = due_at.replace(tzinfo=timezone.utc)
             next_local = due_at.astimezone().strftime("%a, %b %-d at %-I:%M %p")
+            deck_name = card_id_prefix.rstrip("_")
             await self.gateway.send_message(
                 chat_id,
-                f"📚 Your next *forallx* review is due {next_local}. I’ll keep it on the FSRS schedule; use `/forallx` again then.",
+                f"📚 Your next *{deck_name}* review is due {next_local}. I’ll keep it on the FSRS schedule.",
             )
             return True
 
