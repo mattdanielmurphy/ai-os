@@ -484,6 +484,9 @@ class ActionDispatcher:
                     remove_keyboard=True,
                 )
                 return True
+            elif sub == "news":
+                force = len(parts) >= 3 and parts[2] == "refresh"
+                return await self.cmd_news(chat_id, force_refresh=force)
             elif sub == "ack":
                 trigger_id = await self._morning_trigger_for_message(message_id)
                 if trigger_id:
@@ -627,6 +630,14 @@ class ActionDispatcher:
                 return await self.cmd_status(chat_id)
             elif cmd_name == "morning":
                 return await self.cmd_morning(chat_id)
+            elif cmd_name == "news":
+                return await self.cmd_news(chat_id)
+            elif cmd_name == "drums":
+                return await self.cmd_quiz(chat_id, card_id_prefix="drums_")
+            elif cmd_name == "music":
+                return await self.cmd_quiz(chat_id, card_id_prefix="music_")
+            elif cmd_name == "ai":
+                return await self.cmd_quiz(chat_id, card_id_prefix="ai_")
             elif cmd_name == "engine":
                 return await self.cmd_engine("", chat_id)
 
@@ -2049,10 +2060,18 @@ class ActionDispatcher:
         # 2. Check for natural command keywords
         if lower_text in ("status", "info"):
             return await self.cmd_status(chat_id)
+        elif lower_text in ("news", "brief", "daily brief", "show news", "rundown", "the rundown"):
+            return await self.cmd_news(chat_id)
         elif lower_text in ("quiz", "review", "test"):
             return await self.cmd_quiz(chat_id)
-        elif lower_text in ("forallx", "logic quiz", "quiz forallx"):
+        elif lower_text in ("forallx", "logic quiz", "quiz forallx", "logic"):
             return await self.cmd_quiz(chat_id, card_id_prefix="forallx_")
+        elif lower_text in ("drums", "drumming", "drum quiz"):
+            return await self.cmd_quiz(chat_id, card_id_prefix="drums_")
+        elif lower_text in ("music", "theory", "piano", "cello", "music quiz"):
+            return await self.cmd_quiz(chat_id, card_id_prefix="music_")
+        elif lower_text in ("ai", "ai quiz", "ml quiz"):
+            return await self.cmd_quiz(chat_id, card_id_prefix="ai_")
         elif lower_text in ("habits", "habit"):
             return await self.cmd_habits(chat_id)
         elif lower_text in ("morning", "briefing", "good morning"):
@@ -2322,9 +2341,37 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
         chat_id = update.effective_chat.id if update.effective_chat else 0
         await dispatcher.cmd_status(chat_id)
 
+    async def telegram_news_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        force = bool(context.args and context.args[0] in ("refresh", "reload", "new"))
+        await dispatcher.cmd_news(chat_id, force_refresh=force)
+
     async def telegram_quiz_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id if update.effective_chat else 0
-        await dispatcher.cmd_quiz(chat_id)
+        prefix = None
+        if context.args:
+            arg = context.args[0].lower()
+            if arg in ("drums", "drumming"):
+                prefix = "drums_"
+            elif arg in ("music", "theory", "piano", "cello"):
+                prefix = "music_"
+            elif arg in ("ai", "ml"):
+                prefix = "ai_"
+            elif arg in ("logic", "forallx"):
+                prefix = "forallx_"
+        await dispatcher.cmd_quiz(chat_id, card_id_prefix=prefix)
+
+    async def telegram_drums_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await dispatcher.cmd_quiz(chat_id, card_id_prefix="drums_")
+
+    async def telegram_music_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await dispatcher.cmd_quiz(chat_id, card_id_prefix="music_")
+
+    async def telegram_ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        await dispatcher.cmd_quiz(chat_id, card_id_prefix="ai_")
 
     async def telegram_forallx_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = update.effective_chat.id if update.effective_chat else 0
@@ -2466,7 +2513,11 @@ def register_handlers(dispatcher: ActionDispatcher, gateway: TelegramGateway) ->
     gateway.add_handler(CommandHandler(["morning", "briefing"], telegram_morning_handler))
     gateway.add_handler(CommandHandler(["gratitude", "thankful"], telegram_gratitude_handler))
     gateway.add_handler(CommandHandler(["status", "info"], telegram_status_handler))
+    gateway.add_handler(CommandHandler(["news", "brief", "rundown"], telegram_news_handler))
     gateway.add_handler(CommandHandler(["quiz", "review"], telegram_quiz_handler))
+    gateway.add_handler(CommandHandler(["drums", "drumming"], telegram_drums_handler))
+    gateway.add_handler(CommandHandler(["music", "theory", "piano", "cello"], telegram_music_handler))
+    gateway.add_handler(CommandHandler(["ai", "ml"], telegram_ai_handler))
     gateway.add_handler(CommandHandler("forallx", telegram_forallx_handler))
     gateway.add_handler(CommandHandler(["habits", "habit"], telegram_habits_handler))
     gateway.add_handler(CommandHandler(["reset", "clear", "new"], telegram_reset_handler))
