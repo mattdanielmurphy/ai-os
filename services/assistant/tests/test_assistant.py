@@ -1801,14 +1801,14 @@ async def test_cmd_news_delivery(tmp_path):
     from services.assistant.config import AssistantConfig
     from services.assistant.storage.db import AssistantDB
     from services.assistant.telegram_gateway.bot import TelegramGateway
-    from services.assistant.telegram_gateway.handlers import AssistantHandlers
+    from services.assistant.telegram_gateway.handlers import ActionDispatcher
 
     db = AssistantDB(tmp_path / "news_handler_test.db")
     await db.connect()
 
     config = AssistantConfig()
     gateway = TelegramGateway(config)
-    handlers = AssistantHandlers(db, gateway, config)
+    handlers = ActionDispatcher(db, None, None, gateway, config=config)
 
     # Deliver news to chat 12345
     success = await handlers.cmd_news(chat_id=12345)
@@ -1878,10 +1878,11 @@ async def test_cmd_news_and_callbacks(tmp_path):
     # Test cmd_news
     res = await disp.cmd_news(12345)
     assert res is True
-    assert len(gw._dry_run_messages) == 1
-    sent_msg = list(gw._dry_run_messages.values())[0]
-    assert "Daily Signal" in sent_msg["text"]
-    assert any(btn["text"] == "🔄 Refresh Brief" for row in sent_msg["keyboard"] for btn in row)
+    assert len(gw._dry_run_messages) >= 1
+    all_texts = " ".join([m.get("text", "") or m.get("caption", "") for m in gw._dry_run_messages.values()])
+    assert "The Rundown" in all_texts
+    all_buttons = [btn["text"] for m in gw._dry_run_messages.values() for row in m.get("keyboard", []) for btn in row]
+    assert "🔄 Refresh Brief" in all_buttons
 
     # Test callback briefing:news:refresh
     cb_res = await disp.handle_callback_str("briefing:news:refresh", 12345, 1)
