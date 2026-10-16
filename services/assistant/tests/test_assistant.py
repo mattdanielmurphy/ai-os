@@ -1793,6 +1793,7 @@ async def test_daily_news_service(tmp_path):
 
 @pytest.mark.asyncio
 async def test_anti_duplicate_comic():
+    from unittest.mock import patch
     from services.assistant.briefing.comic import fetch_daily_cyanide_and_happiness_comic
 
     mock_details_calls = []
@@ -1829,12 +1830,14 @@ async def test_anti_duplicate_comic():
 async def test_cmd_news_and_callbacks(tmp_path):
     from services.assistant.telegram_gateway.bot import TelegramGateway
     from services.assistant.telegram_gateway.handlers import ActionDispatcher
+    from services.assistant.spaced_repetition.engine import FSRSEngine
+    from services.assistant.habit_bridge.logger import HabitLogger
 
     db = AssistantDB(tmp_path / "news_cmd.db")
     await db.connect()
     cfg = AssistantConfig(obsidian_vault_path=tmp_path / "vault")
     gw = TelegramGateway(cfg)
-    disp = ActionDispatcher(db, gw, cfg)
+    disp = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(tmp_path / "vault"), gw, config=cfg)
 
     # Test cmd_news
     res = await disp.cmd_news(12345)
@@ -1860,13 +1863,14 @@ async def test_cmd_quiz_deck_diversification(tmp_path):
     from services.assistant.telegram_gateway.bot import TelegramGateway
     from services.assistant.telegram_gateway.handlers import ActionDispatcher
     from services.assistant.spaced_repetition.engine import FSRSEngine
+    from services.assistant.habit_bridge.logger import HabitLogger
 
     db = AssistantDB(tmp_path / "quiz_test.db")
     await db.connect()
     cfg = AssistantConfig(obsidian_vault_path=tmp_path / "vault")
     gw = TelegramGateway(cfg)
-    disp = ActionDispatcher(db, gw, cfg)
     engine = FSRSEngine(cfg)
+    disp = ActionDispatcher(db, engine, HabitLogger(tmp_path / "vault"), gw, config=cfg)
 
     # Add cards from 3 different decks
     c1 = engine.create_new_card("Logic prompt", "Logic ans", "Elab", card_id="forallx_01")
