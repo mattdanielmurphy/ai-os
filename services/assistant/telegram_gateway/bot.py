@@ -524,14 +524,22 @@ class TelegramGateway:
         photo_url: str,
         caption: Optional[str] = None,
     ) -> Optional[int]:
-        """Ask Telegram to fetch and send an image hosted by an allowed comic CDN."""
         parsed_url = urlsplit(photo_url)
-        if (
-            parsed_url.scheme != "https"
-            or parsed_url.hostname not in {"static.explosm.net", "files.explosm.net"}
-        ):
+        allowed_hosts = {
+            "static.explosm.net",
+            "files.explosm.net",
+            "media.beehiiv.com",
+            "beehiiv.com",
+            "images.unsplash.com",
+        }
+        is_allowed = (
+            parsed_url.scheme == "https"
+            and parsed_url.hostname
+            and (parsed_url.hostname in allowed_hosts or parsed_url.hostname.endswith(".beehiiv.com"))
+        )
+        if not is_allowed:
             logger.warning(
-                "send_photo_url rejected a URL outside allowed comic hosts: %s",
+                "send_photo_url rejected a URL outside allowed image hosts: %s",
                 photo_url,
             )
             return None

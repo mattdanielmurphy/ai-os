@@ -1210,10 +1210,10 @@ class ActionDispatcher:
         return True
 
     async def cmd_news(self, chat_id: int, force_refresh: bool = False) -> bool:
-        """Fetches and delivers the daily ad-free, personalized news and tips briefing."""
+        """Fetches and delivers the daily ad-free, visual Rundown briefing."""
         from ..briefing.news import DailyNewsService
         news_svc = DailyNewsService(self.db)
-        briefing = await news_svc.get_or_create_daily_brief(force_refresh=force_refresh)
+        brief = await news_svc.get_or_create_daily_brief(force_refresh=force_refresh)
         keyboard = [
             [
                 {"text": "🔄 Refresh Brief", "callback_data": "briefing:news:refresh"},
@@ -1223,7 +1223,30 @@ class ActionDispatcher:
                 {"text": "🌅 Morning Flow", "callback_data": "cmd:morning"},
             ]
         ]
-        await self.gateway.send_message(chat_id, briefing, keyboard_rows=keyboard)
+
+        hero_img = brief.get("hero_image_path") or brief.get("hero_image_url")
+        lead_caption = brief.get("lead_caption")
+        digest_text = brief.get("digest_text")
+
+        photo_sent = False
+        if hero_img and lead_caption:
+            try:
+                if isinstance(hero_img, str) and not hero_img.startswith("http") and Path(hero_img).exists():
+                    photo_sent = bool(await self.gateway.send_photo(chat_id, hero_img, caption=lead_caption))
+                elif isinstance(hero_img, str) and hero_img.startswith("http"):
+                    photo_sent = bool(await self.gateway.send_photo_url(chat_id, hero_img, caption=lead_caption))
+            except Exception as e:
+                logger.warning(f"Failed to deliver briefing hero photo: {e}")
+                photo_sent = False
+
+        if photo_sent and digest_text:
+            await self.gateway.send_message(chat_id, digest_text, keyboard_rows=keyboard)
+        else:
+            fallback_text = brief.get("combined_text") or (
+                f"{lead_caption}\n\n{digest_text}" if lead_caption else str(brief)
+            )
+            await self.gateway.send_message(chat_id, fallback_text, keyboard_rows=keyboard)
+
         return True
 
     async def cmd_morning(self, chat_id: int) -> bool:

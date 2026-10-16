@@ -1752,7 +1752,8 @@ async def test_active_card_conversational_meta_comment_and_button_hierarchy(monk
 
 
 # -----------------------------------------------------------------------------
-# Daily Signal Briefing & Deck Diversification Tests
+# -----------------------------------------------------------------------------
+# Daily Rundown Briefing & Deck Diversification Tests
 # -----------------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_daily_news_service(tmp_path):
@@ -1762,31 +1763,37 @@ async def test_daily_news_service(tmp_path):
     db = AssistantDB(tmp_path / "news_test.db")
     await db.connect()
 
-    svc = DailyNewsService(db)
+    svc = DailyNewsService(db, cache_dir=tmp_path / "cache")
     brief = await svc.get_or_create_daily_brief()
 
-    # Verify key sections are present
-    assert "Daily Signal" in brief
-    assert "AI & Applied Engineering" in brief
-    assert "Drumming & Rhythm Focus" in brief
-    assert "Cello & Strings" in brief
-    assert "Piano & Music Theory" in brief
+    # Verify Rundown structure is present
+    assert "The Rundown" in brief
+    assert "The details" in brief
+    assert "Trending AI Tools" in brief
+    assert "Pro Tip" in brief
     assert "End of briefing" in brief
 
+    # Verify 100% ad elimination
+    brief_str = str(brief)
+    assert "TOGETHER WITH" not in brief_str.upper()
+    assert "PRESENTED BY" not in brief_str.upper()
+    assert "HUBSPOT" not in brief_str.upper()
+    assert "GARTNER" not in brief_str.upper()
+
     # Verify cached in database
-    today_key = f"daily_brief:{datetime.now().strftime('%Y-%m-%d')}"
-    cached = await db.get_dynamic(today_key)
-    assert cached == brief
+    today_key = f"daily_brief_v2:{datetime.now().strftime('%Y-%m-%d')}"
+    cached_json = await db.get_dynamic(today_key)
+    assert cached_json is not None
 
     # Modify cached value to ensure retrieval comes from cache
-    await db.set_dynamic(today_key, "MOCK_CACHED_SIGNAL")
+    await db.set_dynamic(today_key, json.dumps({"combined_text": "MOCK_CACHED_RUNDOWN"}))
     retrieved = await svc.get_or_create_daily_brief()
-    assert retrieved == "MOCK_CACHED_SIGNAL"
+    assert "MOCK_CACHED_RUNDOWN" in retrieved
 
     # Verify force_refresh bypasses cache
     refreshed = await svc.get_or_create_daily_brief(force_refresh=True)
-    assert refreshed != "MOCK_CACHED_SIGNAL"
-    assert "Daily Signal" in refreshed
+    assert "MOCK_CACHED_RUNDOWN" not in refreshed
+    assert "The Rundown" in refreshed
 
     await db.close()
 
