@@ -1,0 +1,73 @@
+{
+  "deck_id": "music",
+  "deck_type": "baby_facts",
+  "title": "Music Theory, Piano & Cello",
+  "source": "Standard Harmony & Orchestral String Performance Pedagogy",
+  "scope": "Cello clefs & technique, chord substitutions, voice leading, and keyboard harmony",
+  "cards": [
+    {
+      "card_id": "music_cello_01",
+      "prompt": "What are the four open strings of a standard acoustic cello, tuned from lowest pitch to highest?",
+      "options": ["C2 – G2 – D3 – A3", "E1 – A1 – D2 – G2", "G2 – D3 – A3 – E4", "C3 – G3 – D4 – A4"],
+      "correct_index": 0,
+      "answer": "C2 – G2 – D3 – A3 (tuned in descending/ascending perfect fifths).",
+      "elaboration": "The cello shares identical pitch classes with the viola, but sounding exactly one octave lower."
+    },
+    {
+      "card_id": "music_cello_02",
+      "prompt": "In cello orchestral and solo literature, which clef is most commonly used for high passages bridging between Bass and Treble clef?",
+      "options": ["Tenor Clef (C-clef on the 4th line)", "Alto Clef (C-clef on the 3rd line)", "Baritone Clef (F-clef on the 3rd line)", "Mezzo-Soprano Clef"],
+      "correct_index": 0,
+      "answer": "Tenor Clef (where Middle C sits on the fourth line from the bottom).",
+      "elaboration": "Tenor clef avoids excessive ledger lines above the bass staff before shifting up into thumb position and treble clef."
+    },
+    {
+      "card_id": "music_theory_01",
+      "prompt": "What chord acts as a tritone substitution for a standard G7 dominant chord resolving to C major?",
+      "options": ["D♭7", "F♯7", "B♭7", "E7"],
+      "correct_index": 0,
+      "answer": "D♭7 (a half step above the target tonic C).",
+      "elaboration": "G7 and D♭7 share the exact same tritone interval (B and F); the chromatic bass motion D♭ → C provides smooth voice leading."
+    },
+    {
+      "card_id": "music_piano_01",
+      "prompt": "In jazz and classical keyboard voice leading, what is a 'rootless' voicings advantage on piano?",
+      "options": ["It frees the left hand from playing roots (left to the bassist) to state color tones (3rd, 7th, 9th, 13th)", "It ensures the piano only plays unisons with the vocal melody", "It eliminates the need to use sustain pedals", "It shifts the harmonic center down by a perfect fifth"],
+      "correct_index": 0,
+      "answer": "Leaving the root to the bass player frees both hands to voice essential guide tones (3rds and 7ths) and upper tensions.",
+      "elaboration": "Pioneered by Bill Evans, rootless 'A' and 'B' voicings prevent muddiness in the lower keyboard register."
+    },
+    {
+      "card_id": "music_cello_03",
+      "prompt": "What cello bowing technique involves bouncing the bow lightly on the string using natural elasticity?",
+      "options": ["Spiccato", "Sul Ponticello", "Col Legno Tratto", "Martelé"],
+      "correct_index": 0,
+      "answer": "Spiccato (controlled bouncing bow).",
+      "elaboration": "Spiccato relies on momentum and the bow's sweet spot; Sautillé is a related faster stroke driven purely by string bounce."
+    },
+    {
+      "card_id": "music_theory_02",
+      "prompt": "What is 'modal interchange' (or borrowed chord harmony)?",
+      "options": ["Borrowing chords from the parallel minor/major mode (e.g. using iv or ♭VI in a major key)", "Switching the time signature from 4/4 to 3/4 mid-phrase", "Transposing a whole piece up by a whole step", "Tuning an instrument to an alternate temperament"],
+      "correct_index": 0,
+      "answer": "Borrowing chords from the parallel mode (such as borrowing Fm or A♭ major in the key of C major).",
+      "elaboration": "The minor iv chord (Fm in C major) adds poignant emotional gravity before resolving to the major tonic I."
+    },
+    {
+      "card_id": "music_theory_03",
+      "prompt": "What interval separates the roots of chords in a standard Neo-Riemannian 'P' (Parallel) transformation?",
+      "options": ["Zero (same root, changes mode between major and minor by shifting the third by a half step)", "A perfect fifth", "A minor third", "A tritone"],
+      "correct_index": 0,
+      "answer": "Same root: Parallel transformation changes C major (C-E-G) to C minor (C-E♭-G).",
+      "elaboration": "Neo-Riemannian theory models harmonic motion as voice-leading parsimony on the Tonnetz rather than traditional Roman numeral functions."
+    },
+    {
+      "card_id": "music_cello_04",
+      "prompt": "When a cellist plays 'Sul Tasto', where is the bow positioned relative to the fingerboard and bridge?",
+      "options": ["Over the fingerboard, producing a soft, airy, flute-like timbre", "Directly against the wooden bridge, producing a harsh, glassy tone", "Beneath the strings behind the tailpiece", "Exactly midway between the bridge and fingerboard"],
+      "correct_index": 0,
+      "answer": "Over the fingerboard (flautando / soft and breathy).",
+      "elaboration": "Sul tasto suppresses upper harmonics; its opposite, Sul ponticello (near the bridge), accentuates biting high overtones."
+    }
+  ]
+}
