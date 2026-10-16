@@ -64,6 +64,21 @@ def main():
         write_result(result_path, "no_changes")
         sys.exit(0)
 
+    # 2.5 Secret Audit Gate: Hard block if staged diff contains secrets or .env additions
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from sanitize_thread import SecretAuditHook
+        is_clean, errors = SecretAuditHook.audit_git_diff()
+        if not is_clean:
+            print(f"\n[FATAL] Staged secret gate triggered! Commit aborted.", file=sys.stderr)
+            for err in errors:
+                print(f"  - {err}", file=sys.stderr)
+            run_cmd(["git", "reset"], check=False)
+            write_result(result_path, "secret_leak_blocked", error="; ".join(errors))
+            sys.exit(1)
+    except Exception as e:
+        print(f"Warning: Failed to execute secret audit hook: {e}", file=sys.stderr)
+
     # 3. Get the cached diff (cap characters to prevent context blowout)
     diff, _ = run_cmd(["git", "diff", "--cached"])
     if len(diff) > 8000:
