@@ -1094,8 +1094,20 @@ class ActionDispatcher:
         threshold: int = 1,
     ) -> bool:
         reward_text = self._morning_reward_text(review_skipped=review_skipped, threshold=threshold)
+        seen_slugs = set()
         try:
-            image_url, page_url = await fetch_daily_cyanide_and_happiness_comic()
+            seen_raw = await self.db.get_dynamic("seen_comic_slugs")
+            if seen_raw:
+                seen_slugs = set(json.loads(seen_raw))
+        except Exception as e:
+            logger.debug(f"Could not load seen_comic_slugs: {e}")
+
+        try:
+            image_url, page_url = await fetch_daily_cyanide_and_happiness_comic(seen_slugs=seen_slugs)
+            slug = page_url.rstrip("/").split("/")[-1]
+            if slug:
+                seen_slugs.add(slug)
+                await self.db.set_dynamic("seen_comic_slugs", json.dumps(list(seen_slugs)[-30:]))
             caption = (
                 f"{reward_text}\n\n"
                 f"[Cyanide & Happiness by Explosm]({page_url})"

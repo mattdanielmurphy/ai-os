@@ -34,6 +34,20 @@ class TelegramGateway:
             try:
                 self.app = ApplicationBuilder().token(self.config.telegram_bot_token).build()
                 await self.app.initialize()
+                try:
+                    from telegram import BotCommand
+                    commands = [
+                        BotCommand("news", "📰 Daily Signal (AI & Music Brief)"),
+                        BotCommand("quiz", "🧠 Spaced Repetition Review"),
+                        BotCommand("morning", "🌅 Morning Grounding Flow"),
+                        BotCommand("habits", "📊 Today's Habits"),
+                        BotCommand("status", "ℹ️ System Status"),
+                        BotCommand("help", "❓ Help & Command List"),
+                    ]
+                    await self.app.bot.set_my_commands(commands)
+                    logger.info("Configured Telegram bot menu commands successfully.")
+                except Exception as ce:
+                    logger.warning(f"Could not configure bot menu commands: {ce}")
                 logger.info("Telegram Gateway initialized with live bot token.")
             except Exception as e:
                 logger.error(f"Failed to initialize Telegram application: {e}")
@@ -274,6 +288,27 @@ class TelegramGateway:
             return True
         except Exception as e:
             logger.warning(f"Failed to remove Telegram prompt keyboard {message_id}: {e}")
+            return False
+
+    async def delete_message(self, chat_id: int, message_id: int) -> bool:
+        """
+        Deletes a previously sent message from Telegram.
+        """
+        if not self.config.is_telegram_ready() or not self.app:
+            if message_id in self._dry_run_messages:
+                self._dry_run_messages[message_id]["deleted"] = True
+                # Keep in dry_run_messages with deleted marker or remove
+                del self._dry_run_messages[message_id]
+                logger.info(f"[DRY-RUN] Deleted Message (id={message_id}) in chat {chat_id}")
+                return True
+            return False
+
+        try:
+            await self.app.bot.delete_message(chat_id=chat_id, message_id=message_id)
+            logger.info(f"Deleted Telegram message (msg_id={message_id})")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to delete Telegram message {message_id}: {e}")
             return False
 
     async def edit_message(
