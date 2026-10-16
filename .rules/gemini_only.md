@@ -25,13 +25,15 @@
 - **Rule:** If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the main orchestrator MUST escalate planning and root cause analysis to {HIGH_REASONING_ENGINE}. Do NOT use 3.1 Pro.
 <!-- /RULE:HIGH_REASONING_ESCALATION -->
 
-<!-- RULE:THREAD_ARTIFACT -->
-## Mandatory Response Artifact Protocol
-- **Thread Artifact (`thread.md`)**: The conversation's log watcher automatically populates `<appDataDir>/brain/<conversation-id>/thread.md` in the background with the conversation thread.
-- **Agent Workflow**:
-  1. Respond as you normally would in the chat interface. You NO LONGER need to run the `gen_conversation_md.py` script.
-  2. In your response to the user, ensure you include a reference link to the thread artifact: `[thread.md](file://<appDataDir>/brain/<conversation-id>/thread.md)` (substituting the correct path). This allows the user to click the artifact for easier highlighting and commenting on specific passages.
-<!-- /RULE:THREAD_ARTIFACT -->
+<!-- RULE:PROGRESSIVE_DISCLOSURE -->
+## Progressive Disclosure & Response Formatting Protocol
+- **Thread.md Deprecation**: `thread.md` generation is permanently discontinued. Agents MUST NEVER generate, reference, or link to `thread.md`.
+- **Ultra-Concise Scannable Core**: Agents MUST keep the top-level chat response concise (~150-200 words), spread out with generous whitespace, clean bullet points, and zero walls of text.
+- **In-Thread Progressive Disclosure (`<details><summary>`)**:
+  - Use native HTML `<details>` and `<summary>` tags for folding secondary details, supporting logs, or multi-step execution context.
+  - **Zero Manual Triangles**: NEVER insert manual triangles, arrows, or pointer emojis (`▶`, `▼`, `►`, `▸`, `▶︎`) inside `<summary>`. The browser UI already renders an interactive disclosure triangle that dynamically reflects the folded/expanded state. Adding manual triangles creates redundant and confusing double-triangles (`▶ ▶` or `▼ ▶`).
+  - **Full-Sentence Body Summaries**: Do NOT treat `<summary>` as a terse 3-word title-case headline. Write full, conversational sentences as the fold header conveying the essential meaning/takeaway. The user should be able to understand the full high-level narrative just by skimming the folded sentences down the page, expanding only if they choose to see the details.
+<!-- /RULE:PROGRESSIVE_DISCLOSURE -->
 
 <!-- RULE:SUBAGENT_CLEANUP -->
 ## Subagent Concurrency & Immediate Cleanup Rule
