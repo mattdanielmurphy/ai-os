@@ -1793,7 +1793,36 @@ async def test_daily_news_service(tmp_path):
     # Verify force_refresh bypasses cache
     refreshed = await svc.get_or_create_daily_brief(force_refresh=True)
     assert "MOCK_CACHED_RUNDOWN" not in refreshed
-    assert "The Rundown" in refreshed
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_cmd_news_delivery(tmp_path):
+    from services.assistant.config import AssistantConfig
+    from services.assistant.storage.db import AssistantDB
+    from services.assistant.telegram_gateway.bot import TelegramGateway
+    from services.assistant.telegram_gateway.handlers import AssistantHandlers
+
+    db = AssistantDB(tmp_path / "news_handler_test.db")
+    await db.connect()
+
+    config = AssistantConfig()
+    gateway = TelegramGateway(config)
+    handlers = AssistantHandlers(db, gateway, config)
+
+    # Deliver news to chat 12345
+    success = await handlers.cmd_news(chat_id=12345)
+    assert success is True
+
+    # In dry-run mode, gateway captures sent messages
+    messages = gateway._dry_run_messages
+    assert len(messages) >= 1
+
+    # Check that messages contain Rundown content
+    all_texts = " ".join([m.get("text", "") or m.get("caption", "") for m in messages.values()])
+    assert "The Rundown" in all_texts
+    assert "Trending AI Tools" in all_texts
+    assert "Pro Tip" in all_texts
 
     await db.close()
 
