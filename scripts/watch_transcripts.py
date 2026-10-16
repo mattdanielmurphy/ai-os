@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""watch_transcripts.py — Watch conversation transcripts and auto-render markdown.
+"""watch_transcripts.py — Watch conversation transcripts and trigger updates.
 
-Runs as a daemon that polls transcript.jsonl files for changes and
-re-runs gen_conversation_md.py to keep thread.md up to date.
-
-Fixes vs. original:
-- Pre-seeds last_mtimes on startup to avoid re-rendering all conversations.
-- Uses file size + mtime to detect changes (catches appends that don't change mtime).
-- Debounces rapid writes with a 1s cooldown per conversation.
+Runs as a daemon that polls transcript.jsonl files for changes,
+updates discussions HTML, and triggers auto-commits.
 """
 
 import sys
@@ -31,7 +26,6 @@ except ImportError:
     run_batch_synthesis_check = None
 
 BRAIN_DIR = Path.home() / ".gemini" / "antigravity" / "brain"
-GEN_SCRIPT = Path("/Users/matt/projects/ai-os/scripts/gen_conversation_md.py")
 
 # Per-conversation cooldown to debounce rapid writes (seconds)
 COOLDOWN = 0.05
@@ -139,25 +133,10 @@ def get_active_convs(brain_dir: Path, max_age_secs: int = 1800, force_rescan: bo
 
 
 def render(conv_id: str, brain_dir: Path) -> bool:
-    """Run gen_conversation_md.generate in-process."""
-    import importlib
-    import postflight_lib
-    import gen_conversation_md
-    importlib.reload(postflight_lib)
-    importlib.reload(gen_conversation_md)
-    app_data_dir = brain_dir.parent
-    
-    # 1. Render Markdown thread
-    try:
-        gen_conversation_md.generate(conv_id, "Conversation", app_data_dir)
-    except Exception as e:
-        log_msg(f"gen_conversation_md failed for {conv_id}: {e}")
-        return False
-        
-    # 2. Render Discussions.html (main threads only)
+    """Render Discussions.html (main threads only). thread.md generation is deprecated."""
+    # Render Discussions.html (main threads only)
     if conv_id not in _cached_sub_map:
         try:
-            # Import inside to prevent circular issues if any
             from discussions_html import build_document, parse_exchanges
             transcript = brain_dir / conv_id / ".system_generated" / "logs" / "transcript_full.jsonl"
             if not transcript.exists() or transcript.stat().st_size == 0:

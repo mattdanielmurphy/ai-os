@@ -37,12 +37,7 @@ def main():
     metrics = compute_thread_metrics(conv_id=conv_id, agent=args.agent)
     metrics_table = format_metrics_table(metrics, conv_id=conv_id)
 
-    thread_link = ""
-    if conv_id:
-        thread_md_path = f"/Users/matt/.gemini/antigravity/brain/{conv_id}/thread.md"
-        thread_link = f"\n\n\nCurrent Thread: [thread.md](file://{thread_md_path})\n"
-
-    final_output = thread_link + metrics_table
+    final_output = metrics_table
     if content:
         from link_formatter import enrich_file_links
         final_output = enrich_file_links(content + final_output)
@@ -51,19 +46,6 @@ def main():
         final_output = enrich_file_links(final_output)
 
     print(final_output)
-
-    # Trigger background generation
-    if conv_id:
-        try:
-            from pathlib import Path
-            app_data_dir = Path.home() / ".gemini/antigravity"
-            from gen_conversation_md import generate
-            import io
-            import contextlib
-            with contextlib.redirect_stdout(io.StringIO()):
-                generate(conv_id, "Conversation", app_data_dir=app_data_dir)
-        except Exception:
-            pass
 
 if __name__ == "__main__":
     main()
