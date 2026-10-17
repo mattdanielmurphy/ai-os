@@ -1298,7 +1298,46 @@ class ActionDispatcher:
         )
         await self.gateway.send_message(chat_id, reply)
         today_trigger = f"trig_morning_{datetime.now().astimezone().strftime('%Y-%m-%d')}"
-        await self._finish_morning_checkin(today_trigger)
+        stage = await self._morning_flow_stage(today_trigger)
+        if stage == "gratitude":
+            due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
+            await self._set_morning_flow_stage(
+                today_trigger,
+                "review",
+                len(due_cards),
+                threshold=self.morning_review_card_threshold,
+            )
+            previous_signals = [
+                signal
+                for signal in await self.db.get_awaiting_signals()
+                if signal["trigger_id"] == today_trigger
+            ]
+            for signal in previous_signals:
+                await self.gateway.remove_prompt_keyboard(chat_id, signal["message_id"])
+                await self.db.resolve_signal(signal["message_id"], "RESPONDED")
+
+            next_prompt_id = await self.gateway.send_prompt(
+                chat_id,
+                self._review_step_text(
+                    len(due_cards), threshold=self.morning_review_card_threshold
+                ),
+                self._morning_review_keyboard(
+                    len(due_cards), threshold=self.morning_review_card_threshold
+                ),
+            )
+            if next_prompt_id:
+                sent_at = datetime.now(timezone.utc)
+                await self.db.record_outbound_signal(
+                    message_id=next_prompt_id,
+                    chat_id=chat_id,
+                    trigger_id=today_trigger,
+                    sent_at=sent_at,
+                    timeout_at=sent_at
+                    + timedelta(seconds=self.config.silence_timeout_seconds),
+                    status="AWAITING_INPUT",
+                )
+        else:
+            await self._finish_morning_checkin(today_trigger)
         return True
 
     async def cmd_status(self, chat_id: int) -> bool:
@@ -1667,22 +1706,29 @@ class ActionDispatcher:
         model: Optional[str] = None,
         status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
-        """Queries agy CLI non-interactively using free Antigravity quota with gemini-3.8-flash-low and progressive updates."""
+        """Queries agy CLI non-interactively using free Antigravity quota with fast conversational instruction and progressive updates."""
         try:
-            full_prompt = prompt
             if image_path and image_path.exists():
                 full_prompt = (
+                    f"IMPORTANT: You are a fast mobile conversational assistant on Telegram. "
                     f"Please view and inspect the local image file at `{image_path.resolve()}` "
-                    f"using your file reading tools, and respond to the following:\n\n{prompt}"
+                    f"using your file reading tools, and respond concisely to the following:\n\n{prompt}"
                 )
+            else:
+                conversational_instruction = (
+                    "IMPORTANT: You are a fast mobile conversational assistant on Telegram. "
+                    "Provide a concise, direct, helpful response in text. "
+                    "Do NOT call any tools, execute terminal commands, inspect files, or start tasks.\n\n"
+                )
+                full_prompt = conversational_instruction + prompt
 
-            target_model = model or getattr(self.config, "agy_model", "gemini-3.8-flash-low")
+            target_model = model or getattr(self.config, "agy_model", "gemini-3.8-flash-high")
             cmd = [
                 "agy",
                 "-p", full_prompt,
                 "--model", target_model,
                 "--dangerously-skip-permissions",
-                "--print-timeout", "120s",
+                "--print-timeout", "20s",
             ]
 
             proc = await asyncio.create_subprocess_exec(
@@ -1694,6 +1740,7 @@ class ActionDispatcher:
             )
 
             output_lines = []
+            stderr_lines = []
             last_edit_time = 0.0
             last_status_text = ""
 
@@ -1708,6 +1755,15 @@ class ActionDispatcher:
                     except Exception as err:
                         logger.debug(f"Failed to edit status message in Telegram: {err}")
 
+            async def _drain_stderr():
+                while True:
+                    line_bytes = await proc.stderr.readline()
+                    if not line_bytes:
+                        break
+                    stderr_lines.append(line_bytes.decode("utf-8", errors="replace"))
+
+            stderr_task = asyncio.create_task(_drain_stderr())
+
             try:
                 while True:
                     line_bytes = await proc.stdout.readline()
@@ -1720,20 +1776,30 @@ class ActionDispatcher:
                         tag = stripped[1:stripped.index("]")]
                         await _update_status(f"⚙️ <i>Running {tag}...</i>")
 
-                await asyncio.wait_for(proc.wait(), timeout=130.0)
+                await asyncio.wait_for(proc.wait(), timeout=25.0)
+                await asyncio.wait_for(stderr_task, timeout=2.0)
                 if proc.returncode != 0:
-                    logger.warning(f"Agy exited with non-zero code {proc.returncode}")
+                    err_msg = "".join(stderr_lines).strip()[:300]
+                    logger.warning(f"Agy exited with non-zero code {proc.returncode}: {err_msg}")
                     return None
                 output = "".join(output_lines).strip()
                 res = clean_agy_output(output)
                 if not res:
-                    logger.warning(f"Agy returned empty or unparseable output. Raw: {output[:300]}")
+                    err_msg = "".join(stderr_lines).strip()[:300]
+                    logger.warning(f"Agy returned empty or unparseable output. Raw stdout: {output[:300]} | Stderr: {err_msg}")
                     return None
                 return res
             except asyncio.TimeoutError:
-                proc.kill()
-                logger.warning("Agy query timed out after 130s")
+                try:
+                    proc.kill()
+                    await proc.wait()
+                except Exception:
+                    pass
+                logger.warning("Agy query timed out after 25s")
                 return None
+            finally:
+                if not stderr_task.done():
+                    stderr_task.cancel()
         except Exception as e:
             logger.error(f"Error querying agy: {e}")
             return None
@@ -1771,7 +1837,7 @@ class ActionDispatcher:
                 stderr=asyncio.subprocess.PIPE,
             )
             try:
-                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=180.0)
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=35.0)
                 if proc.returncode != 0:
                     logger.warning("Direct Codex query failed (exit %s): %s", proc.returncode, stderr.decode("utf-8", errors="replace")[:300])
                     return None
@@ -1783,7 +1849,7 @@ class ActionDispatcher:
             except asyncio.TimeoutError:
                 proc.kill()
                 await proc.wait()
-                logger.warning("Direct Codex query timed out after 180s")
+                logger.warning("Direct Codex query timed out after 35s")
                 return None
             except asyncio.CancelledError:
                 if proc.returncode is None:
@@ -1805,6 +1871,10 @@ class ActionDispatcher:
 
         falling back seamlessly to ChatGPT / Codex CLI if quota is exhausted or agy fails.
         """
+        if getattr(self.config, "dry_run", False):
+            return "Dry-run response from AI assistant."
+
+        # Tier 1: Fast Agy (Gemini 3.8 Flash High)
         try:
             logger.info("Attempting primary query via agy (gemini-3.8-flash-high)...")
             res = await self._query_agy(
@@ -1828,9 +1898,41 @@ class ActionDispatcher:
             except Exception:
                 pass
 
-        return await self._query_codex(
-            prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
-        )
+        # Tier 2: Direct Codex CLI
+        try:
+            logger.info("Attempting secondary query via direct Codex...")
+            res = await self._query_codex(
+                prompt, image_path=image_path, chat_id=chat_id, status_msg_id=status_msg_id
+            )
+            if res and res.strip():
+                return res
+            logger.warning("Codex query returned empty or failed, attempting secondary model fallback...")
+        except Exception as e:
+            logger.warning(f"Codex query exception ({e}), attempting secondary model fallback...")
+
+        # Tier 3: Retry Agy with gemini-3.6-flash-low if flash-high failed
+        try:
+            if chat_id and status_msg_id:
+                try:
+                    await self.gateway.edit_message(
+                        chat_id, status_msg_id, "🔄 <i>Falling back to Gemini Flash...</i>"
+                    )
+                except Exception:
+                    pass
+            logger.info("Attempting tertiary query via agy (gemini-3.6-flash-low)...")
+            res = await self._query_agy(
+                prompt,
+                image_path=image_path,
+                chat_id=chat_id,
+                model="gemini-3.6-flash-low",
+                status_msg_id=status_msg_id,
+            )
+            if res and res.strip():
+                return res
+        except Exception as e:
+            logger.warning(f"Secondary agy fallback exception: {e}")
+
+        return None
 
     async def _dispatch_agy_coding(self, prompt: str, chat_id: int) -> bool:
         """Dispatches an advanced coding task to agy via subagent.py."""
@@ -1921,7 +2023,9 @@ class ActionDispatcher:
         if not clean_text:
             return False
 
-        lower_text = clean_text.lower()
+        # Normalize curly quotes and apostrophes for robust pattern matching
+        normalized_text = clean_text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+        lower_text = normalized_text.lower()
 
         # 1. Check if user is replying to an active prompt awaiting response
         signals = await self.db.get_awaiting_signals()
@@ -1994,13 +2098,25 @@ class ActionDispatcher:
                 stage = await self._morning_flow_stage(trigger_id)
                 if stage == "gratitude":
                     # Check if the user is asking a question or making a meta comment rather than journaling gratitude
+                    is_explicit_gratitude = bool(
+                        re.search(r"\b(grateful|gratitude|thankful)\b", lower_text)
+                    )
                     is_question_or_meta = (
-                        "?" in clean_text
-                        or re.match(
-                            r"^(why|how|what|where|who|when|can you|could you|is there|explain|tell me|meta|card|system)\b",
-                            lower_text,
+                        not is_explicit_gratitude
+                        and (
+                            "?" in clean_text
+                            or re.match(
+                                r"^(why|how|what|where|who|when|can you|could you|is there|explain|tell me|meta|help|status)\b",
+                                lower_text,
+                            )
+                            or (
+                                len(clean_text.split()) > 10
+                                and any(
+                                    w in lower_text
+                                    for w in ("flashcard", "system", "button", "fsrs", "logic card")
+                                )
+                            )
                         )
-                        or (len(clean_text.split()) > 15 and any(w in lower_text for w in ("card", "system", "button", "fsrs", "logic", "morning", "review")))
                     )
                     if not is_question_or_meta:
                         log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
@@ -2099,8 +2215,8 @@ class ActionDispatcher:
             return await self.cmd_habits(chat_id)
         elif lower_text in ("morning", "briefing", "good morning"):
             return await self.cmd_morning(chat_id)
-        elif re.match(r"^(gratitude:\s*|grateful for\s*|i am grateful for\s*|i'm grateful for\s*)", lower_text):
-            thought = re.sub(r"^(gratitude:\s*|grateful for\s*|i am grateful for\s*|i'm grateful for\s*)", "", clean_text, flags=re.IGNORECASE).strip()
+        elif re.match(r"^(gratitude:\s*|grateful for\s*|i['’]?m grateful for\s*|i am grateful for\s*|thankful for\s*|i['’]?m thankful for\s*|i am thankful for\s*)", lower_text):
+            thought = re.sub(r"^(gratitude:\s*|grateful for\s*|i['’]?m grateful for\s*|i am grateful for\s*|thankful for\s*|i['’]?m thankful for\s*|i am thankful for\s*)", "", clean_text, flags=re.IGNORECASE).strip()
             return await self.cmd_gratitude(thought, chat_id)
         elif lower_text in ("help", "start"):
             return await self.cmd_help(chat_id)
@@ -2161,10 +2277,29 @@ class ActionDispatcher:
                 status_msg_id=status_msg_id,
             )
 
-        fail_msg = (
-            "⚠️ <i>Unable to get a response from the AI assistant right now.</i>\n\n"
-            "Please check network/credentials and try again."
-        )
+        # Fallback safeguard: Check if message expressed gratitude
+        if re.search(r"\b(grateful|gratitude|thankful)\b", lower_text):
+            log_path = record_gratitude(self.config.obsidian_vault_path, clean_text)
+            fail_msg = (
+                f"🌱 <i>Recorded your gratitude to Obsidian:</i>\n\n"
+                f"_{clean_text}_\n\n"
+                f"Logged to `{log_path.name}` in your Obsidian vault."
+            )
+            today_trigger = f"trig_morning_{datetime.now().astimezone().strftime('%Y-%m-%d')}"
+            stage = await self._morning_flow_stage(today_trigger)
+            if stage == "gratitude":
+                due_cards = await self.db.get_due_cards(datetime.now(timezone.utc))
+                await self._set_morning_flow_stage(
+                    today_trigger,
+                    "review",
+                    len(due_cards),
+                    threshold=self.morning_review_card_threshold,
+                )
+        else:
+            fail_msg = (
+                "⚠️ <i>Unable to reach AI services right now (Agy and ChatGPT timed out).</i>\n\n"
+                "Your message has been saved to chat history. Please try again shortly."
+            )
         if status_msg_id:
             await self.gateway.edit_message(chat_id, status_msg_id, fail_msg)
         else:
