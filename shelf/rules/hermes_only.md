@@ -1,3 +1,5 @@
+<!-- Shelved 2026-10-17 from .rules/hermes_only.md. Not compiled. -->
+
 ## Hermes Agent Specific Rules
 
 ## Mandatory Post-Flight Response Protocol

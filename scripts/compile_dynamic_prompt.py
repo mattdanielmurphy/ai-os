@@ -126,8 +126,7 @@ def compile_minimal_codex_prompt() -> str:
 
 ## 3. macOS Orchestration & Delegation
 - ChatGPT/Codex on macOS is Matt's daily conversational surface and dispatcher.
-- For substantive engineering tasks requiring sustained multi-step planning or autonomous coding, prefer delegating to Antigravity (`agymcp:agy`) when quota is healthy.
-- Keep casual queries, factual Q&A, and quick rewrites direct in Codex. Keep task handoffs to `agy` thin and verbatim.
+- Handle work directly in Codex. (agy/Antigravity delegation was shelved 2026-10-17; see shelf/rules/.)
 """
 
 def extract_markdown_sections(text: str) -> dict:

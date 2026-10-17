@@ -19,15 +19,6 @@
 9. **Always Test Code Changes:** Agents MUST run a relevant test or verification after every code change; never decide to skip testing. Prefer the existing focused automated tests. When no applicable test exists, run the code or a minimal smoke/integration check and inspect its output. If the preferred check is unavailable or fails, try another meaningful verification path and report the results and any remaining uncertainty.
 10. **Puma-dev Local Dev Domains (`.test`):** For web applications and local development servers, prefer human-readable `.test` domains powered by `puma-dev` instead of memorizing random or ephemeral ports (e.g. `crossword.test`). Map projects by adding their port or proxy configuration into `~/.puma-dev/<app-name>` (e.g. `echo "3000" > ~/.puma-dev/<app-name>`). Never rely on arbitrary unmapped ports when a readable `.test` local domain can be established.
 
-## Agy CLI Permission Preference
-- Whenever invoking the local `agy` CLI, always include `--dangerously-skip-permissions` so tool requests are approved without an interactive prompt. This applies to CLI invocations only; use the agy MCP interface when available and follow its own arguments.
-
-## Agy Full-Permission Invariant
-- Every Agy invocation, including all `agymcp` MCP tools, runs with full execution access: unsandboxed, write-enabled, and with permission prompts auto-approved. Agents MUST NOT send `allow_write=false`, request sandboxing, or use a permission-gated mode as a precaution.
-- The bridge must treat restrictive caller flags as compatibility inputs, not as permission reductions; `mode="execute"` must never fail solely because a caller omitted `allow_write`.
-- `agymcp` is a required user-wide Codex MCP server, never an optional best-effort integration. Its `~/.codex/config.toml` entry must set `required = true`, allow a 30-second startup, and default all bridge tools to automatic approval. After changing MCP configuration, restart the Codex desktop MCP runtime before starting or resuming a task; a missing task catalog is a bootstrap failure, not grounds for silently switching to the CLI.
-- This invariant does not override platform-enforced destructive-action protections or the secret-isolation rules above.
-
 ## Path Migration Guardrail
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:
@@ -42,7 +33,7 @@
 # Proactive System Directive & Knowledge Persistence
 - **Rule**: When Matt establishes a permanent workflow preference, tool routing rule, or operational invariant (e.g. "always do X from now on" or "agents must know this in every thread"):
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
-  - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md`, `CLAUDE.md`, and `HERMES.md` across every future session.
+  - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md` and `CLAUDE.md` across every future session.
 
 # Music Recommendations & Apple Music Links
 - When Matt asks for music recommendations, present every resolved recommendation as a direct, clickable native Apple Music URL. Resolve links deterministically through the `music-cross-linker` iTunes Search/Lookup flow, never by hand-constructing Apple Music search links or guessing catalog IDs. Explicitly flag any recommendation without an exact Apple Music Canada catalog match rather than substituting a different release.
@@ -59,7 +50,7 @@
   - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
 
 # Universal Response Formatting & Progressive Disclosure Protocol
-- **Universal Cross-Platform Standard**: Across ALL platforms (Claude, Gemini, Hermes, Codex, etc.), whenever the chat/thread UI supports native HTML disclosure elements, agents MUST format responses using this progressive disclosure protocol.
+- **Universal Cross-Platform Standard**: Across ALL platforms (Claude, Gemini, Codex, etc.), whenever the chat/thread UI supports native HTML disclosure elements, agents MUST format responses using this progressive disclosure protocol.
 - **Ultra-Concise Scannable Core**: Agents MUST keep the top-level chat narrative ultra-concise (~150-200 words), spread out with generous whitespace, clean bullet points, and zero dense walls of text.
 - **In-Thread Progressive Disclosure (`<details><summary>`)**:
   - Use native HTML `<details>` and `<summary>` tags for folding secondary details, technical logs, rationale, or multi-step execution context.
@@ -73,28 +64,6 @@
   - **Max-Width Constraint**: Wrap response blocks in `<span style="display: block; max-width: 65rem;">...</span>` so text lines maintain optimal readability without stretching across wide viewports.
 - **Thread.md Deprecation**: `thread.md` generation is permanently discontinued. Agents MUST NEVER generate, reference, or link to `thread.md`.
 
-
-<!-- RULE:STRICT_PLANNER_DISPATCH -->
-## Strict Planner / Workflow Immediate Dispatch & query_aios Policy
-- **query_aios Invariant**: Stop using `query_aios` unless Matt specifically and explicitly asks for it. Background `query_aios` companion services are stopped until further investigation with Gemini web. Perplexity has been removed altogether as an endpoint.
-- **Explicit User Request Workflow**: When Matt explicitly asks to run `query_aios` or `_plan-with-ai-os`, dispatch via `run_command` (using `node ~/projects/ai-os/scripts/query_aios.js --plan "<request>"` with provider gemini) with `WaitMsBeforeAsync: 500`. Do NOT perform ad-hoc file exploration or run `generate_prompt.py`.
-- **Escalation Policy**: If a bug or feature implementation fails or remains unfixed after 2 consecutive turns using `flash_lite` or default subagents, the orchestrator MUST escalate root cause analysis directly to `Gemini 3.8 Flash (High)` via `agymcp:agy`. Do NOT call `query_aios.js` automatically.
-- **AI-OS Companion Server**: Talks to `http://127.0.0.1:3031` when started manually via `la start aios-server`.
-<!-- /RULE:STRICT_PLANNER_DISPATCH -->
-
-<!-- RULE:TRANSPARENT_ESCALATION -->
-## Transparent Model Escalation & Zero Silent Fallback Policy
-- **Strict Prohibition on Deceptive Self-Execution**: When a user explicitly requests model escalation (e.g., `/_plan-with-gemini`, `/_plan-with-ai-os`, `@planner`, `agymcp:agy`), or when a system rule triggers an escalation:
-  - The orchestrator MUST NEVER silently absorb an escalation/delegation failure and generate the deliverable itself while pretending or implying the requested model handled it.
-  - **Hard Stop on Planner Failure**: When a planner dispatch (e.g. `query_aios.js --plan`) fails or errors out, the orchestrator is **STRICTLY FORBIDDEN** from attempting to investigate, debug, code, or proceed with the underlying task on its own.
-- If the escalation or delegation tool call fails (e.g., tool error, tmux spawn error, quota exhausted, connection timeout):
-    1. **Immediate Failure Disclosure**: The orchestrator MUST immediately inform the user of the exact failure and raw error message.
-    2. **State Current Active Model**: Transparently state what model the orchestrator is running on.
-    3. **Clear Options**: Offer concrete next steps: retry with corrected parameters, switch to a designated fallback engine (e.g. Perplexity Gemini Flash Thinking or agymcp Gemini Flash High), or ask for explicit confirmation before generating the deliverable with the orchestrator model.
-    4. **Wait For User Direction**: The orchestrator MUST STOP and wait for the user to provide direction or alternative plan text rather than taking autonomous action.
-- **Gemini Result Label:** When Gemini directly produces the user-facing result through a successful delegated or planner run, append a compact `Gemini` label to that result. Do not label direct responses, other backends, routing status, or failed/fallback attempts.
-<!-- /RULE:TRANSPARENT_ESCALATION -->
-
 # Custom Skills Naming & Authoring Invariant
 - **Rule**: When creating, authoring, or refactoring personal/custom skills for Matt in `~/projects/ai-os/skills/` or environment skill directories:
   - **Leading Underscore Namespace (`_`)**: ALL user-authored/custom skills MUST begin with a leading underscore (`_`) prefix so they sort to the very top of alphabetical listings, IDE pickers, and autocomplete popovers.
@@ -103,7 +72,7 @@
   - **Direct Skill/Workflow Resolution**: When referencing or inspecting any named workflow or skill (e.g. `_plan-with-ai-os`), agents MUST NEVER perform broad filesystem searches or grep sweeps. Agents MUST check the direct paths:
     1. `~/.gemini/config/global_workflows/<name>.md`
     2. `~/projects/ai-os/skills/<name>/SKILL.md` (or `~/.gemini/config/skills/<name>/SKILL.md`)
-  - **Auto-Sync Invariant**: After creating or updating any skill under `~/projects/ai-os/skills/`, agents MUST immediately execute `python3 /Users/matt/projects/ai-os/scripts/sync_skills.py` to propagate changes across all local agent runtimes (`~/.hermes`, `~/.gemini`, `~/.claude`, `~/.agents`).
+  - **Auto-Sync Invariant**: After creating or updating any skill under `~/projects/ai-os/skills/`, agents MUST immediately execute `python3 /Users/matt/projects/ai-os/scripts/sync_skills.py` to propagate changes across all local agent runtimes (`~/.gemini`, `~/.claude`, `~/.agents`).
 
 # Zero-Tolerance Secret Isolation & Invariant
 - **Strict .env & Secret File Invariant**:
@@ -124,9 +93,9 @@
 # Search-to-Memory & Autonomous Learning Invariant
 - **Search Friction as Memory Signal**: Whenever an agent is required to perform exploratory search (e.g. `grep_search`, directory sweeps, config discovery, or web lookups) to resolve an unknown path, hidden setting, architectural dependency, or debugging quirk:
   - The agent MUST NOT discard the discovery upon completing the task.
-  - The discovery MUST be immediately persisted to the active memory engine (`~/.hermes/memories/MEMORY.md`, Mem0, or project `AG_CONTEXT.md`) so future sessions bypass exploratory search.
+  - The discovery MUST be immediately persisted to the active memory engine (Mem0 or project `AG_CONTEXT.md`) so future sessions bypass exploratory search.
 - **Pre-Flight Context Hydration**: Before executing non-trivial architectural, debugging, or workflow tasks, agents must proactively recall relevant context and past lessons rather than operating cold or re-deriving known solutions.
-- **Battle-Tested Memory Architecture**: AI-OS memory and self-learning MUST use established, third-party / production memory backends (e.g. Mem0, Hermes FTS5/SQLite engine) rather than ad-hoc homebrew memory scripts.
+- **Battle-Tested Memory Architecture**: AI-OS memory and self-learning MUST use established, third-party / production memory backends (e.g. Mem0) rather than ad-hoc homebrew memory scripts.
 
 # Personal Knowledge Base & LLM Wiki Invariant
 - **Location**: Matt's personal notes vault and LLM Wiki is located at `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`.

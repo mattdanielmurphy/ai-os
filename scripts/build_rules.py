@@ -71,10 +71,7 @@ def main():
     gemini_content = compile_prompt(role="orchestrator", platform="antigravity", stub=False)
     write_file(GEMINI_TARGET, gemini_content)
 
-    # Build HERMES.md
-    hermes_content = compile_prompt(role="orchestrator", platform="hermes", stub=False)
-    write_file(HERMES_TARGET_PROJECT, hermes_content)
-    write_file(HERMES_TARGET_GLOBAL, hermes_content)
+    # HERMES.md is no longer built: Hermes was shelved 2026-10-17 (see shelf/rules/hermes_only.md).
 
     # Build Codex global instructions from the same shared rule sources.
     # Codex now uses minimal instructions backed by dynamic runtime hooks.
