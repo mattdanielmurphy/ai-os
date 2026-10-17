@@ -1,4 +1,5 @@
 import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import FrozenSet, Optional
@@ -12,6 +13,26 @@ try:
     load_dotenv(Path.cwd() / ".env")
 except ImportError:
     pass
+
+
+def _detect_codex_command() -> str:
+    env_path = os.getenv("CODEX_CLI_PATH")
+    if env_path and os.path.exists(env_path):
+        return env_path
+
+    candidates = [
+        "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex",
+        os.path.expanduser("~/.local/bin/codex"),
+        "/Applications/ChatGPT.app/Contents/Resources/codex",
+    ]
+    which_codex = shutil.which("codex")
+    if which_codex:
+        candidates.insert(0, which_codex)
+
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return candidates[0]
 
 
 @dataclass
@@ -67,11 +88,7 @@ class AssistantConfig:
     )
 
     # Direct Codex transport. Telegram deliberately does not route through Hermes.
-    codex_command: str = field(
-        default_factory=lambda: os.getenv(
-            "CODEX_CLI_PATH", "/Applications/ChatGPT.app/Contents/Resources/codex"
-        )
-    )
+    codex_command: str = field(default_factory=_detect_codex_command)
 
     # Context Gate & Silence Dynamics
     event_routine_buffer_minutes: int = 45  # Delay after class/event ends before contacting
