@@ -10,3 +10,5 @@ tmp/
 .env.*
 **/__pycache__/
 *.pyc
+private/
+_to_delete/
