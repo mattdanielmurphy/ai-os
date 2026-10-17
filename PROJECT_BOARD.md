@@ -33,7 +33,7 @@ Central task registry across all projects and active coding threads. Automatical
 - [ ] Thread-size awareness: nudge + `/handoff` skill that writes docs/handoffs/ files [project:: ai-os] [assignee:: agent]
 - [ ] Review fell-through-the-cracks ideas (docs/ideas, parking-lot, best-ideas, VISION) → revive / shelve / drop list [project:: ai-os] [assignee:: agent]
 - [ ] Set up Claude.app projects list (clarify: Chat sidebar Projects vs Code folders) [project:: ai-os] [assignee:: user]
-- [ ] Fix Claude CLI default model (settings point at unavailable deepseek-v4-flash) [project:: ai-os] [assignee:: agent]
+- [ ] Decide on Claude CLI routing: ~/.claude/settings.json sends the CLI through a proxy on localhost:8082 with model deepseek-v4-flash (used by the delegate-deepseek skill), and it fails when that proxy is down [project:: ai-os] [assignee:: user]
 - [ ] Decide whether Mem0 memory (Qdrant in ~/.hermes) stays, given the move off Hermes [project:: ai-os-memory] [assignee:: user]
 
 ---
