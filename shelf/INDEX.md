@@ -15,3 +15,9 @@ To bring something back, follow its "Revive" note below.
 Notes
 - Claude-specific compiled rules (`claude_only.md`: per-turn preflight/postflight/auto_commit, `handover.py`) were also shelved; Claude now reads the lean `~/.claude/CLAUDE.md`.
 - Each `shelf/rules/<file>.md` holds the exact sections removed from `.rules/<file>.md`.
+
+## Git history scrub (2026-10-17)
+Personal identifiers (phone, student IDs, ASN, BC PEN, DOB, CCID) were replaced with `[REDACTED-…]` across all history and force-pushed. Every commit hash changed.
+The pre-scrub `.git` is at `~/.Trash/ai-os-pre-scrub-2026-10-17/old.git` (still contains the PII; gone once Trash is emptied). It is the only copy of these local-only branches, dropped from the new clone:
+`agy-mcp/job-5b9db406c2c64d67`, `agy-mcp/job-bf22ed13c9b94653`, `agy-mcp/job_1786255018_92ee67d1f728`, `agy-mcp/job_1786255217_556103ba1234`, `agy-mcp/job_1786264321_4309dcaad738`, `agy-mcp/job_1786264963_5697699b24a5`, `agy-mcp/job_1786265406_7c8803be59fc`, `agy-mcp/job_1786951443_4d3cc173683c`, `archive/custom-tauri`, `archive/macos-app`, `old`, plus 2 stashes from agy jobs.
+The worktrees under `.agy-mcp/worktrees/` and `~/.codex/worktrees/*/ai-os` pointed at the old `.git` and no longer work.
