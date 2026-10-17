@@ -3,7 +3,8 @@
 export AI_OS_HOME="/Users/matt/projects/ai-os"
 
 echo "[ai-os] Enforcing absolute context guardrails in ~/"
-ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md
+# Disabled 2026-10-17: Claude now uses lean ~/.claude/CLAUDE.md
+# ln -sf "$AI_OS_HOME/CLAUDE.md" ~/CLAUDE.md
 ln -sf "$AI_OS_HOME/docs/MEMORY.md" ~/MEMORY.md
 export ZDOTDIR="$AI_OS_HOME"
 ln -sfn "$AI_OS_HOME/docs/memory" ~/memory
