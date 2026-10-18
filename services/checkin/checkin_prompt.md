@@ -44,7 +44,8 @@ It records the habit ladder and the flashcard reviews, and prints each card's ve
   `{vault}/habits/logs/{date}.md` under a `## Morning check-in` heading (create the file if needed, append if
   it exists).
 
-**7. Reward.** End with: "Today's comic: {comic_url}"
+**7. Reward.** {comic_step} Then end with: "Today's comic: {comic_url}" (small, in case the image doesn't
+show).
 
 If he stops partway, that's fine: when he comes back, carry on from where he left off. If he never reaches
 step 4, nothing gets recorded, which the habit ladder treats as a missed day.

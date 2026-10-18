@@ -285,3 +285,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - 2026-10-18: context-alert 0.2.3 — Fresh thread opens claude://code/new?q=<handoff prompt>, so the new thread has the prompt typed in (press Enter). /fresh prints the same link.
 - 2026-10-18: context-alert 0.2.4 — size nudge moved from 150k/200k to 250k/400k (toasts 250k/400k/550k) and reworded to "hand off at the next stopping point": a warm thread re-reads at the cache price, while a handoff costs full-price ramp-up plus a minute.
 - 2026-10-18: context-alert 0.3.0 — band has two buttons, "Handoff by this agent" (/_handoff) and "Handoff by Haiku" (renamed /fresh → /haiku-handoff, old name kept), with a dim one-line hint on which to use; the primary button flips to Haiku when the cache is cold.
+- 2026-10-18: Morning check-in: prepare now downloads the C&H comic image (data/comic-<date>.png) and the thread shows it with SendUserFile at step 7; the link stays as a fallback.

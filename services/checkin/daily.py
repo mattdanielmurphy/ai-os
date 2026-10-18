@@ -4,7 +4,7 @@
 The scheduled task `morning-checkin` (Claude desktop) reads Google Calendar (a Claude tool) and calls this script:
 
   daily.py prepare --date D [--events F]
-      Plan today (habit ladder), pick and shuffle today's due cards, find a fresh Cyanide & Happiness comic,
+      Plan today (habit ladder), pick and shuffle today's due cards, find a fresh Cyanide & Happiness comic (and download its image),
       start today's check-in thread (Sonnet, Remote Control CLI in tmux) seeded from checkin_prompt.md.
       Prints JSON: {"thread_url": ..., "plan": ..., "cards": ...}
   daily.py send --date D [--force]
@@ -134,11 +134,25 @@ def comic_url(data_dir, day):
     if det["slug"] in seen and det.get("random_slug"):
         det = _fetch_comic_details(f"{EXPLOSM_BASE_URL}/comics/{det['random_slug']}")
     seen_p.write_text(json.dumps((seen + [det["slug"]])[-30:]))
-    _save_day(data_dir, day, comic_url=det["page_url"])
+    _save_day(data_dir, day, comic_url=det["page_url"], comic_image_url=det["image_url"])
     return det["page_url"]
 
 
-def thread_seed(plan, events, cards, comic, day, data_dir=ladder.DATA_DIR, cards_db=CARDS_DB):
+def comic_image(data_dir, day):
+    """Download today's comic image next to the day's data so the thread can show it; None if unavailable."""
+    _, days = _days(data_dir)
+    src = days.get(day, {}).get("comic_image_url")
+    if not src:
+        return None
+    out = Path(data_dir) / f"comic-{day}{Path(src.split('?')[0]).suffix or '.png'}"
+    if not out.exists():
+        req = Request(src, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://explosm.net"})
+        with urlopen(req, timeout=20) as resp:
+            out.write_bytes(resp.read(10_000_000))
+    return out
+
+
+def thread_seed(plan, events, cards, comic, day, data_dir=ladder.DATA_DIR, cards_db=CARDS_DB, comic_image=None):
     text = (HERE / "checkin_prompt.md").read_text().split("\n---\n", 1)[1].strip()
     d = date.fromisoformat(day)
     doses = plan["doses"]
@@ -183,6 +197,9 @@ def thread_seed(plan, events, cards, comic, day, data_dir=ladder.DATA_DIR, cards
         "here": HERE,
         "vault": VAULT,
         "comic_url": comic or "https://explosm.net/comics/latest",
+        "comic_step": (f'Show him the comic image: send `{comic_image}` with the SendUserFile tool '
+                       f'(display "render", caption "Today\'s comic"). If that tool isn\'t available, skip '
+                       f'this.' if comic_image else ""),
         "date": day,
     }
     for k, v in fields.items():
@@ -244,8 +261,14 @@ def prepare(a):
     except Exception as e:  # the latest-comic link is better than none
         out["comic_error"] = f"{type(e).__name__}: {e}"
         comic = None
+    try:
+        image = comic_image(a.data_dir, a.date)
+    except Exception as e:  # the thread falls back to the link
+        out["comic_image_error"] = f"{type(e).__name__}: {e}"
+        image = None
 
-    out["thread_url"] = start_thread(thread_seed(plan, events, cards, comic, a.date, a.data_dir, a.cards_db), a.date, a.data_dir)
+    seed = thread_seed(plan, events, cards, comic, a.date, a.data_dir, a.cards_db, image)
+    out["thread_url"] = start_thread(seed, a.date, a.data_dir)
     print(json.dumps(out, indent=2))
 
 

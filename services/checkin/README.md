@@ -5,7 +5,7 @@ Matt's phone, that asks each step with AskUserQuestion buttons (they render in t
 
 Order in the thread (seed prompt: `checkin_prompt.md`, model Sonnet):
 breaths → gratitude (free text) → flashcards (buttons, then ✅/❌ and the answer) → record → day ahead →
-dictated reflection ending in one light plan → comic link.
+dictated reflection ending in one light plan → comic image (SendUserFile) plus its link.
 
 The Artifact page that came before is shelved (2026-10-17, see `shelf/INDEX.md`); `template.html` and `build.py`
 stay here for a possible later page (breathing animation, audio).
@@ -23,7 +23,7 @@ stay here for a possible later page (breathing animation, audio).
 - Claude scheduled task `morning-checkin` (7:45 daily, `~/.claude/scheduled-tasks/morning-checkin/SKILL.md`). It only
   does what needs Claude tools (read Google Calendar), then runs `daily.py prepare` and `daily.py send`.
 - `prepare` plans today, takes today's dose of due flashcards from the FSRS deck (`~/.hermes/assistant.db`) and
-  shuffles their options, picks a fresh C&H comic link, and starts the thread. `send` iMessages the thread link
+  shuffles their options, picks a fresh C&H comic and downloads its image to `data/comic-<date>.png`, and starts the thread. `send` iMessages the thread link
   (`claude://code/session_…`) via Photon, once per day.
 - The thread records itself: `daily.py finish --breaths N --gratitude N --answer CARD_ID=INDEX …` grades the cards,
   applies them to the deck (right = Good, wrong = Again; idempotent) and writes breaths/gratitude/cards to the

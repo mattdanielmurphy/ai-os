@@ -22,6 +22,15 @@ class DailyTest(unittest.TestCase):
         self.assertEqual((wrong["correct"], wrong["rating"]), (False, 1))
         self.assertEqual(daily.grade([c], {}), [])
 
+    def test_seed_shows_comic_image_when_downloaded(self):
+        with_img = daily.thread_seed(PLAN, [], [], "https://explosm.net/comics/x", "2026-10-18",
+                                     comic_image="/data/comic-2026-10-18.png")
+        self.assertIn("SendUserFile", with_img)
+        self.assertIn("/data/comic-2026-10-18.png", with_img)
+        without = daily.thread_seed(PLAN, [], [], "https://explosm.net/comics/x", "2026-10-18")
+        self.assertNotIn("SendUserFile", without)
+        self.assertIn("Today's comic: https://explosm.net/comics/x", without)
+
     def test_questions_batch_by_four(self):
         cards = [daily.shuffle_card({**CARD, "card_id": f"c{i}"}, "d") for i in range(5)]
         batches = daily.card_questions(cards)
