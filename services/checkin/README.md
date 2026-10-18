@@ -13,7 +13,15 @@ Claude-native replacement for the Telegram morning flow. Order each morning:
 - `data/` (gitignored): `history.jsonl` and `state.json`.
 - Tests: `python3 -m unittest test_ladder` from this folder.
 
-## Not built yet
-The daily job that runs these in order: read yesterday's page results (ArtifactData `checkins/<date>`) →
-`ladder.py record` → start the Sonnet thread → `build.py --thread-url` → publish → iMessage the link.
-Cards and the comic are still fixtures (`cards.json`, `comic.png`).
+## Daily job
+- Claude scheduled task `morning-checkin` (7:45 daily, `~/.claude/scheduled-tasks/morning-checkin/SKILL.md`). It only does
+  what needs Claude tools: read `checkins/<yesterday>` from the page's db, read Google Calendar, publish the Artifact.
+- `daily.py prepare` does the rest: `ladder.py record` for yesterday (gratitude=1 if non-empty, cards=reviewed or the
+  planned dose if none were due), applies the page's card ratings to the FSRS deck (`~/.hermes/assistant.db`,
+  idempotent), plans today, picks real due cards and a fresh C&H comic, starts the Sonnet reflection thread and builds
+  the page. `daily.py send` iMessages the page link via Photon, once per day.
+- Why not launchd: the page db, Artifact publishing and Google Calendar are only reachable as Claude tools.
+- The reflection thread is a `claude --remote-control --model sonnet` CLI session in tmux (`checkin-reflection`),
+  because unattended scheduled runs can't start or Remote-Control-link desktop sessions. Each run replaces
+  yesterday's. Its link (`claude://code/session_…`) is behind the page's last button.
+- Per-day bookkeeping (due count, comic, thread link, sent time) is in `data/days.json`.

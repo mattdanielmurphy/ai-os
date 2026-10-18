@@ -29,6 +29,6 @@ How the conversation goes:
    (dictation runs about 130 words a minute, round up, minimum 1):
    `python3 ~/projects/ai-os/services/checkin/ladder.py record --date {date} reflection=<minutes>`
 5. Save a short summary (3–5 bullets, his words where possible, nothing clinical) to today's
-   Obsidian habit log `habits/logs/{date}.md` under a `## Morning reflection` heading.
+   Obsidian habit log `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/habits/logs/{date}.md` under a `## Morning reflection` heading.
 
 Style: plain markdown, short lines, no headings in chat, no inline widgets. Keep the whole thing brief.

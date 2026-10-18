@@ -275,3 +275,6 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-10-13
 - **Morning Voice Call Tester & Deepgram Persona Bench:** Built interactive testing platform in `tools/voice-agent-tester` (mapped to `morning-call.test:3344`) with browser Web Audio mic/speaker streaming and live Deepgram Voice Agent proxy. Configured `agent.speak.provider.speed` (1.25x-1.35x), `eot_threshold` (0.60), and `eager_eot_threshold` (0.45) for fast turn-taking; designed upgraded deadpan Gunnery Sgt. Hartman, Victorian Butler Archibald, Wall Street Pit Boss Rex, and Sci-Fi Temporal Handler prompts. [[log]](agent-logs/2026-10-13_10-46_morning_call_tester.md)
+
+## 2026-10-17
+- **Daily Claude morning check-in job:** `services/checkin/daily.py` + Claude scheduled task `morning-checkin` (7:45). Records yesterday's page results into the habit ladder and FSRS deck, builds the page with real due cards and the day's C&H comic, starts a Sonnet Remote Control reflection thread in tmux, publishes the Artifact and iMessages the link via Photon.
