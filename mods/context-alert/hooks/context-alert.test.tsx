@@ -23,7 +23,7 @@ const answered = {
   answer: 'done', durationMs: 1000, isAborted: false, turnId: 't1', reason: 'answer' as const,
 }
 
-test('band stays hidden under 150k and appears above it', async ($, on) => {
+test('band stays hidden under 250k and appears above it', async ($, on) => {
   mock.clock(on)
   on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box /> })
@@ -33,9 +33,9 @@ test('band stays hidden under 150k and appears above it', async ($, on) => {
     expect(await ui.find({ type: 'Text', text: /Current context size/ })).toBeUndefined()
     await ui.unmount()
 
-    await $.session.measure(measure(212_000))
+    await $.session.measure(measure(262_000))
     ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
-    expect((await ui.find({ type: 'Text', text: /Current context size/ }))?.text).toMatch(/212k \/ 1000k/)
+    expect((await ui.find({ type: 'Text', text: /Current context size/ }))?.text).toMatch(/262k \/ 1000k/)
     expect(await ui.find({ key: 'handoff' })).toBeDefined()
     await ui.unmount()
   }

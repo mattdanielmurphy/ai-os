@@ -6,9 +6,12 @@ import type { PromptMedia, PromptSubmitAttachment } from 'claude-code'
 import type { Cache, Fill, Handoff } from '../types'
 
 // Band shows from WARN; turns red from ALERT. Toasts once per threshold crossed.
-const WARN = 150_000
-const ALERT = 200_000
-const TOAST_AT = [150_000, 200_000, 250_000, 300_000]
+// Set high on purpose: a warm thread re-reads its context at the cache price (a tenth), while a
+// new thread pays full price to re-read files plus a minute of ramp-up. Hand off at a stopping
+// point, not mid-task; the nudge only needs to land before a long thread gets slow and sloppy.
+const WARN = 250_000
+const ALERT = 400_000
+const TOAST_AT = [250_000, 400_000, 550_000]
 
 // Cache line: only worth showing when a reload would cost something.
 const CACHE_MIN_TOKENS = 30_000
@@ -145,7 +148,7 @@ export const register: Register = on => {
       const crossed = TOAST_AT.filter(t => tokens >= t).pop() ?? 0
       const shown = await read($, lastToast)
       if (crossed > shown) {
-        $.ui.toast(`Context is ${k(tokens)} tokens. Time for /_handoff?`)
+        $.ui.toast(`Context is ${k(tokens)} tokens. At your next stopping point, consider /_handoff.`)
       }
       if (crossed !== shown) await update($, lastToast, () => crossed)
     }
@@ -217,7 +220,7 @@ export const register: Register = on => {
           <Box>
             <Text bold color={isAlert ? 'error' : 'warning'}>
               ⚠ Current context size: {k(current.tokens)} / {k(current.window)} (
-              {isAlert ? 'hand off now' : 'getting long'}){' '}
+              {isAlert ? 'hand off at the next stopping point' : 'getting long'}){' '}
             </Text>
             <Button
               key="handoff"
