@@ -201,7 +201,8 @@ def start_thread(seed, day, data_dir, timeout=90):
                "Bash(apple-reminders add:*)"]
     cmd = " ".join(shlex.quote(x) for x in [
         "/opt/homebrew/bin/claude", "--remote-control", f"Morning check-in {day}", "--model", "sonnet",
-        "--permission-mode", "acceptEdits", "--add-dir", str(VAULT), "--allowedTools", *allowed,
+        # Bypass: Matt answers this thread from his phone; per-command prompts broke the flow (2026-10-17).
+        "--permission-mode", "bypassPermissions", "--add-dir", str(VAULT), "--allowedTools", *allowed,
     ]) + f' -- "$(cat {shlex.quote(str(seed_file))})"'
     subprocess.run(["tmux", "new-session", "-d", "-s", TMUX, "-x", "220", "-y", "60", "-c", str(ROOT), cmd], check=True)
     end = time.time() + timeout
