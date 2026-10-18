@@ -110,7 +110,7 @@ def project_root(cwd):
     return Path.home() / "projects" / "ai-os"
 
 
-def write(path, sid, open_app):
+def write(path, sid, open_app, then=""):
     result = export(path)
     if not result:
         sys.exit("Transcript has no conversation to hand off")
@@ -138,6 +138,8 @@ def write(path, sid, open_app):
     while dest.exists():
         dest, n = out_dir / f"{name}_{n}.md", n + 1
     paste = f"Read {dest} and continue."
+    if then:
+        paste += f" Then: {then}"
     dest.write_text(f"{brief}\n\nPaste into a new thread: \"{paste}\"\n", encoding="utf-8")
 
     if open_app:
@@ -151,9 +153,10 @@ def main():
     ap.add_argument("action", choices=["status", "write"])
     ap.add_argument("session_id")
     ap.add_argument("--open", action="store_true", help="copy the paste prompt, open a new thread")
+    ap.add_argument("--then", default="", help="the message to send after the handoff is read")
     a = ap.parse_args()
     path = find_transcript(a.session_id)
-    out = status(path) if a.action == "status" else write(path, a.session_id, a.open)
+    out = status(path) if a.action == "status" else write(path, a.session_id, a.open, a.then.strip())
     print(json.dumps(out))
 
 

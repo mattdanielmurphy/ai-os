@@ -20,6 +20,7 @@ const cache = atom({ plugin: 'context-alert', key: 'cache' } as const, null)
 const now = atom({ plugin: 'context-alert', key: 'now' } as const, 0)
 const handoff = atom({ plugin: 'context-alert', key: 'handoff' } as const, null)
 const sendAnywayUntil = atom({ plugin: 'context-alert', key: 'sendAnywayUntil' } as const, 0)
+const held = atom({ plugin: 'context-alert', key: 'held' } as const, '')
 
 export const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -42,13 +43,17 @@ const script = ($: EngineInterface) => `${$.plugin.root}/../../scripts/cold_hand
 const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> => {
   await update($, handoff, () => ({ status: 'writing', text: 'Writing handoff with Haiku (about a minute)…' }))
   const sid = await $.session.id()
-  const argv = ['python3', script($), 'write', sid, ...(open ? ['--open'] : [])]
+  // Carry the message the person meant to send: the one held, else the draft in the box.
+  const draft = (await $.prompt.read()).text.trim()
+  const carry = (await read($, held)) || (draft.startsWith('/') ? '' : draft)
+  const argv = ['python3', script($), 'write', sid, ...(open ? ['--open'] : []), ...(carry ? ['--then', carry] : [])]
   let result: Handoff
   try {
     const run = await $.process.run(argv, { timeoutMs: 600_000 })
     if (run.exitCode === 0) {
       const { prompt } = JSON.parse(run.stdout) as { path: string; prompt: string }
       result = { status: 'done', text: open ? `New thread opened; paste prompt copied: ${prompt}` : prompt }
+      await update($, held, () => '')
     } else {
       result = { status: 'error', text: (run.stderr || run.stdout).trim().slice(0, 300) }
     }
@@ -121,12 +126,13 @@ export const register: Register = on => {
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
 
     await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
+    await update($, held, () => e.text)
     await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => undefined)
     return {
       drop:
         `Held: this thread's cache expired ${ago(-left)} ago, so this message would re-send ` +
         `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /fresh to ` +
-        `hand off to a new thread cheaply.`,
+        `hand off to a new thread cheaply (this message goes with it).`,
     }
   })
 

@@ -15,6 +15,8 @@ declare module 'claude-code' {
       now: number
       handoff: Handoff | null
       sendAnywayUntil: number
+      /** The message held in a cold thread, carried into the /fresh handoff. */
+      held: string
     }
   }
 }

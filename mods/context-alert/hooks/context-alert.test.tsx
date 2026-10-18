@@ -102,3 +102,29 @@ test('a message sent into a cold thread is held once, then goes through', async 
   expect((await $.prompt.submit(phone('cold'))).drop).toBeUndefined()
   expect(entered).toEqual(['warm', 'cold'])
 })
+
+test('/fresh after a held message carries that message into the new thread', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  const runs: (readonly string[])[] = []
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.fill', () => ({ isFilled: true }))
+  on('prompt.read', () => ({ value: { text: '/fresh', cursor: 6 } }))
+  on('session.id', () => ({ value: 's1' }))
+  on('command.run', () => ({ text: '' }))
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  on('process.run', (_$, e) => {
+    runs.push(e.argv)
+    const stdout = JSON.stringify({ path: '/h.md', prompt: 'Read /h.md and continue. Then: fix the bug' })
+    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
+  })
+  await $.session.measure(measure(180_000))
+  await $.turn.complete(answered)
+  await clock.advance(2 * 60 * MIN)
+
+  expect((await $.prompt.submit(phone('fix the bug'))).drop).toMatch(/goes with it/)
+  const out = await $.command.run({ command: 'fresh', args: '', origin: { kind: 'bridge' } })
+  const write = runs.find(a => a.includes('write'))
+  expect(write?.slice(-2)).toEqual(['--then', 'fix the bug'])
+  expect(JSON.stringify(out)).toMatch(/Then: fix the bug/)
+})
