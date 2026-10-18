@@ -128,3 +128,17 @@ test('/fresh after a held message carries that message into the new thread', asy
   expect(write?.slice(-2)).toEqual(['--then', 'fix the bug'])
   expect(JSON.stringify(out)).toMatch(/Then: fix the bug/)
 })
+
+test('a held message names attachments it could not save', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.fill', () => ({ isFilled: true }))
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  await $.session.measure(measure(180_000))
+  await $.turn.complete(answered)
+  await clock.advance(2 * 60 * MIN)
+
+  const out = await $.prompt.submit({ ...phone('look at this'), attachments: [{ type: 'image', filename: 'shot.png' }] })
+  expect(out.drop).toMatch(/1 attachment\(s\) can't be carried over/)
+})

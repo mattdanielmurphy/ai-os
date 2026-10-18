@@ -1,6 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
+import type { PromptMedia, PromptSubmitAttachment } from 'claude-code'
+
 import type { Cache, Fill, Handoff } from '../types'
 
 // Band shows from WARN; turns red from ALERT. Toasts once per threshold crossed.
@@ -37,7 +39,53 @@ export const cacheLeft = (c: Cache | null, at: number, tokens: number) => {
   return c.lastAt + c.ttlMs - at
 }
 
-const script = ($: EngineInterface) => `${$.plugin.root}/../../scripts/cold_handoff.py`
+// The app runs an installed copy from ~/.claude/plugins/cache, so point at the repo itself.
+const AIOS = '/Users/matt/projects/ai-os'
+const script = (_$: EngineInterface) => `${AIOS}/scripts/cold_handoff.py`
+const HELD_DIR = `${AIOS}/tmp/held`
+
+const EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'application/pdf': 'pdf' }
+
+/**
+ * Saves a held message's images and files to disk, so the new thread can open them.
+ * Reading their bytes is answered only to a managed settings install; otherwise each
+ * comes back by name as one to re-attach.
+ */
+export const saveAttachments = async (
+  $: EngineInterface, items: readonly PromptSubmitAttachment[], at: number,
+): Promise<{ saved: string[]; missed: string[] }> => {
+  const saved: string[] = []
+  const missed: string[] = []
+  for (const [i, item] of items.entries()) {
+    const name = item.filename ?? `${item.type} ${i + 1}`
+    let b64 = ''
+    let mediaType = item.mediaType ?? ''
+    let offset: number | undefined = 0
+    while (item.id !== undefined && offset !== undefined) {
+      const part: PromptMedia = await $.prompt.media({ id: item.id, offset }).catch(() => ({ deny: 'failed' }))
+      if (part.base64 === undefined) { b64 = ''; break }
+      b64 += part.base64
+      mediaType = part.mediaType
+      offset = part.next
+    }
+    if (!b64) { missed.push(name); continue }
+    const ext = EXT[mediaType] ?? mediaType.split('/')[1] ?? 'bin'
+    const out = `${HELD_DIR}/${at}-${i + 1}.${ext}`
+    await $.process.run(['mkdir', '-p', HELD_DIR])
+    const run = await $.process.run(['base64', '-D', '-o', out], { stdin: b64 })
+    if (run.exitCode === 0) saved.push(out)
+    else missed.push(name)
+  }
+  return { saved, missed }
+}
+
+/** The held message as the new thread should read it: the text, then what came with it. */
+export const withFiles = (text: string, files: { saved: string[]; missed: string[] }) => {
+  const lines = [text]
+  if (files.saved.length) lines.push(`(Attached in the old thread, saved here: ${files.saved.join(', ')})`)
+  if (files.missed.length) lines.push(`(Not carried over, ask me to re-attach: ${files.missed.join(', ')})`)
+  return lines.join('\n\n')
+}
 
 /** Writes a handoff from the transcript file with Haiku; the thread itself is never re-sent. */
 const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> => {
@@ -126,13 +174,17 @@ export const register: Register = on => {
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
 
     await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
-    await update($, held, () => e.text)
+    const files = await saveAttachments($, e.attachments ?? [], at)
+    await update($, held, () => withFiles(e.text, files))
+    const extra = files.missed.length
+      ? ` ${files.missed.length} attachment(s) can't be carried over; re-attach them there.`
+      : ''
     await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => undefined)
     return {
       drop:
         `Held: this thread's cache expired ${ago(-left)} ago, so this message would re-send ` +
         `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /fresh to ` +
-        `hand off to a new thread cheaply (this message goes with it).`,
+        `hand off to a new thread cheaply (this message goes with it).` + extra,
     }
   })
 
