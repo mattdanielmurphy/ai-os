@@ -1,0 +1,417 @@
+<title>Morning Check-In</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column, one step on screen at a time, a five-segment progress strip on top. Dawn sky palette. */
+:root {
+  --bg: #eef2f6;
+  --surface: #ffffff;
+  --ink: #1d2a3a;
+  --muted: #5d6b7c;
+  --line: #d6dee8;
+  --accent: #d9822b;
+  --accent-ink: #ffffff;
+  --sky: #9fb8d4;
+  --good: #2f7d5b;
+  --bad: #b3443c;
+  --good-bg: #e3f2ea;
+  --bad-bg: #f8e4e2;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121a24; --surface: #1b2531; --ink: #e8eef5; --muted: #9aa9ba; --line: #2c3a4a;
+  --accent: #f0a050; --accent-ink: #1b1308; --sky: #4a6584; --good: #6cc59c; --bad: #ec8a80;
+  --good-bg: #173226; --bad-bg: #3a1f1d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121a24; --surface: #1b2531; --ink: #e8eef5; --muted: #9aa9ba; --line: #2c3a4a;
+  --accent: #f0a050; --accent-ink: #1b1308; --sky: #4a6584; --good: #6cc59c; --bad: #ec8a80;
+  --good-bg: #173226; --bad-bg: #3a1f1d; color-scheme: dark; }
+
+body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); }
+.wrap { max-width: 34rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; display: grid; gap: 20px; }
+header { display: grid; gap: 4px; }
+.eyebrow { font: 500 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(28px, 7vw, 38px)/1.05 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 700 24px/1.15 var(--display); margin: 0; text-wrap: balance; }
+.progress { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.seg { display: grid; gap: 6px; font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: .04em; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.seg::before { content: ""; height: 4px; border-radius: 2px; background: var(--line); }
+.seg.done::before { background: var(--sky); }
+.seg.on::before { background: var(--accent); }
+.seg.on { color: var(--ink); }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 20px; display: grid; gap: 16px; }
+.step p { margin: 0; }
+.lede { color: var(--muted); }
+button { font: inherit; }
+.btn { font: 600 16px/1 var(--display); border-radius: 10px; padding: 14px 18px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 48px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:focus-visible, .seg:focus-visible, .opt:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.row .btn { flex: 1 1 8rem; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.ladder { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.extra { display: grid; gap: 8px; }
+.extra label { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+.extra input[type=checkbox] { width: 22px; height: 22px; }
+
+/* Breathe */
+.breath { display: grid; place-items: center; padding-block: 8px; }
+.orb { width: 9rem; height: 9rem; max-width: 100%; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--accent), var(--sky) 75%); transform: scale(.55); opacity: .9; }
+.orb.in { transition: transform 4s ease-in-out; transform: scale(1); }
+.orb.out { transition: transform 6s ease-in-out; transform: scale(.55); }
+.cue { font: 600 20px/1.2 var(--display); text-align: center; min-height: 1.3em; }
+.count { font: 500 13px/1 var(--mono); color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+
+textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; resize: vertical; }
+
+/* Day */
+.event { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; padding-block: 10px; border-top: 1px solid var(--line); }
+.event:first-of-type { border-top: 0; }
+.when { font: 500 13px/1.3 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.what { font-weight: 600; min-width: 0; }
+
+/* Recall */
+.cardmeta { display: flex; justify-content: space-between; gap: 8px; }
+.prompt { font: 600 20px/1.35 var(--body); }
+.opts { display: grid; gap: 8px; }
+.opt { text-align: left; font: 16px/1.4 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+.opt.right { background: var(--good-bg); border-color: var(--good); }
+.opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+.opt:disabled { cursor: default; }
+.reveal { display: grid; gap: 8px; border-left: 3px solid var(--sky); padding-left: 12px; }
+.verdict { font: 600 15px/1.2 var(--display); }
+.verdict.ok { color: var(--good); } .verdict.no { color: var(--bad); }
+.rates { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rate { font: 600 14px/1.1 var(--display); padding: 12px 4px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; display: grid; gap: 4px; }
+.rate small { font: 500 10px/1 var(--mono); color: var(--muted); letter-spacing: .04em; }
+.rate.chosen { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); opacity: 1; }
+.rate.chosen small { color: var(--accent-ink); }
+.rate.dim { opacity: .4; }
+.tally { font: 500 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Reward */
+.comic { width: 100%; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+.src { font: 500 13px/1.3 var(--mono); color: var(--muted); }
+.src a { color: inherit; }
+.status { font: 500 12px/1.3 var(--mono); color: var(--muted); text-align: center; }
+.summary { display: grid; gap: 6px; font-size: 16px; }
+.summary b { font-family: var(--display); }
+@media (prefers-reduced-motion: reduce) { .orb.in, .orb.out { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow" id="dateline"></span>
+    <h1>Good morning, Matt</h1>
+  </header>
+  <p class="ladder" id="ladder" hidden></p>
+  <nav class="progress" id="progress" aria-label="Check-in steps"></nav>
+
+  <section class="step" id="s-breathe">
+    <h2 id="btitle">Three slow breaths</h2>
+    <p class="lede">Unclench your jaw. Drop your shoulders. Follow the circle: in for four, out for six.</p>
+    <div class="breath"><div class="orb" id="orb"></div></div>
+    <div class="cue" id="cue">Tap start when you're ready</div>
+    <div class="count" id="bcount">0 of 3 breaths</div>
+    <div class="row">
+      <button class="btn" id="bstart" type="button">Start breathing</button>
+      <button class="btn primary" id="bnext" type="button">Next</button>
+    </div>
+  </section>
+
+  <section class="step" id="s-grateful" hidden>
+    <h2 id="gtitle">One thing you're grateful for</h2>
+    <p class="lede">Small counts. A warm drink, a good song, a text from a friend.</p>
+    <label for="grat" class="eyebrow">This goes into today's Obsidian log</label>
+    <textarea id="grat" placeholder="I'm grateful for…"></textarea>
+    <div class="row">
+      <button class="btn" id="gback" type="button">Back</button>
+      <button class="btn primary" id="gnext" type="button" disabled>Save and continue</button>
+    </div>
+  </section>
+
+  <section class="step" id="s-extra" hidden>
+    <h2>New habits</h2>
+    <div id="extras"></div>
+    <div class="row">
+      <button class="btn" id="xback" type="button">Back</button>
+      <button class="btn primary" id="xnext" type="button">Continue</button>
+    </div>
+  </section>
+
+  <section class="step" id="s-day" hidden>
+    <h2>Your day ahead</h2>
+    <div id="events"></div>
+    <div class="row">
+      <button class="btn" id="dback" type="button">Back</button>
+      <button class="btn primary" id="dnext" type="button">Start review</button>
+    </div>
+  </section>
+
+  <section class="step" id="s-recall" hidden>
+    <div class="cardmeta"><span class="eyebrow" id="deck"></span><span class="tally" id="tally"></span></div>
+    <button class="btn primary" id="tocomic" type="button" hidden>Done reviewing · claim my comic</button>
+    <div class="prompt" id="prompt"></div>
+    <div class="opts" id="opts"></div>
+    <div class="reveal" id="reveal" hidden>
+      <div class="verdict" id="verdict"></div>
+      <p id="answer"></p>
+      <p class="lede" id="elab"></p>
+      <span class="eyebrow">How well did you know it?</span>
+      <div class="rates" id="rates"></div>
+    </div>
+    <p class="lede" id="nextnote" hidden></p>
+  </section>
+
+  <section class="step" id="s-reward" hidden>
+    <h2>Earned it</h2>
+    <img class="comic" id="comic" alt="Today's Cyanide and Happiness comic">
+    <span class="src">Cyanide &amp; Happiness · <a id="comiclink" target="_blank" rel="noopener">explosm.net</a></span>
+    <div class="summary" id="summary"></div>
+    <p class="lede">Page done. Everything above is saved.</p>
+    <a class="btn primary" id="reflect" hidden>Now reflect with Claude</a>
+    <button class="btn" id="moreCards" type="button" hidden>Review more cards</button>
+  </section>
+
+  <div class="status" id="status" aria-live="polite"></div>
+</div>
+
+<script>
+const DATA = __DATA__;
+const PLAN = DATA.plan || { doses: { breaths: 3, cards: 3, gratitude: 1 }, steps: [], changes: [] };
+const BREATHS = PLAN.doses.breaths || 3;
+const EXTRAS = (PLAN.steps || []).filter(x => !["breaths", "gratitude", "cards", "reflection"].includes(x.habit));
+const STEPS = [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["day","Day"],["recall","Recall"],["reward","Reward"]];
+const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
+const TARGET = PLAN.doses.cards || 3; // after this many cards the comic button becomes the main call to action
+const $ = id => document.getElementById(id);
+
+let state = { date: DATA.date, step: "breathe", reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], finishedAt: null };
+const stepIndex = k => STEPS.findIndex(([s]) => s === k);
+let cardIdx = 0, picked = null, rating = false, touched = false;
+const BUILD = "v5";
+document.addEventListener("click", () => { touched = true; }, { capture: true });
+const order = DATA.cards.map(c => {
+  const idx = c.options.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return idx;
+});
+
+$("dateline").textContent = DATA.dateline + " · " + BUILD;
+const WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+$("btitle").textContent = (WORDS[BREATHS] || BREATHS) + (BREATHS === 1 ? " slow breath" : " slow breaths");
+$("bcount").textContent = `0 of ${BREATHS}`;
+if (PLAN.doses.gratitude > 1) $("gtitle").textContent = `${WORDS[PLAN.doses.gratitude]} things you're grateful for`;
+if (PLAN.changes && PLAN.changes.length) { $("ladder").textContent = PLAN.changes.join(" "); $("ladder").hidden = false; }
+if (DATA.threadUrl) { $("reflect").href = DATA.threadUrl; $("reflect").hidden = false; }
+
+function go(step) {
+  state.step = step;
+  state.reached = Math.max(state.reached || 0, stepIndex(step));
+  STEPS.forEach(([k]) => { $("s-" + k).hidden = k !== step; });
+  renderProgress();
+  if (step === "recall") renderCard();
+  if (step === "reward") renderReward();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function renderProgress() {
+  const cur = stepIndex(state.step);
+  const reach = Math.max(state.reached || 0, state.reviews.length ? stepIndex("reward") : 0);
+  $("progress").replaceChildren(...STEPS.map(([k, label], i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "seg" + (i === cur ? " on" : i <= reach ? " done" : "");
+    b.textContent = label; b.disabled = i > reach;
+    b.setAttribute("aria-current", i === cur ? "step" : "false");
+    b.onclick = () => { if (i <= reach) go(k); };
+    return b;
+  }));
+}
+
+/* Breathing */
+let breathing = false;
+$("bstart").onclick = () => {
+  if (breathing) return;
+  breathing = true; $("bstart").disabled = true;
+  const orb = $("orb"), cue = $("cue");
+  const cycle = n => {
+    if (n >= BREATHS) { cue.textContent = "Nice. You're here."; breathing = false; $("bstart").disabled = false; $("bstart").textContent = "Go again"; save(); return; }
+    orb.className = "orb in"; cue.textContent = "Breathe in…";
+    setTimeout(() => {
+      orb.className = "orb out"; cue.textContent = "…and out";
+      setTimeout(() => { state.breaths = Math.max(state.breaths, n + 1); $("bcount").textContent = `${state.breaths} of ${BREATHS}`; cycle(n + 1); }, 6000);
+    }, 4000);
+  };
+  cycle(0);
+};
+$("bnext").onclick = () => go("grateful");
+/* Newly unlocked steps from the habit ladder */
+$("extras").replaceChildren(...EXTRAS.map(x => {
+  const box = document.createElement("div"); box.className = "extra";
+  const l = document.createElement("label");
+  const c = document.createElement("input"); c.type = "checkbox"; c.id = "x-" + x.habit;
+  c.onchange = () => { state.extras[x.habit] = c.checked ? x.dose : 0; save(); };
+  l.append(c, document.createTextNode(`${x.label} · ${x.dose} ${x.dose === 1 ? x.unit.replace(/s$/, "") : x.unit}`));
+  box.append(l);
+  if (x.habit === "intention") {
+    const t = document.createElement("textarea"); t.id = "x-intention-text"; t.placeholder = "Today I want to…";
+    t.oninput = () => { state.intention = t.value.trim(); c.checked = !!state.intention; state.extras.intention = c.checked ? 1 : 0; };
+    t.onblur = () => save();
+    box.append(t);
+  }
+  return box;
+}));
+$("xback").onclick = () => go("grateful");
+$("xnext").onclick = () => go("day");
+
+/* Gratitude */
+$("grat").addEventListener("input", e => { $("gnext").disabled = !e.target.value.trim(); try { localStorage.setItem("grat-" + DATA.date, e.target.value); } catch {} });
+try { const d = localStorage.getItem("grat-" + DATA.date); if (d) { $("grat").value = d; $("gnext").disabled = !d.trim(); } } catch {}
+$("gback").onclick = () => go("breathe");
+$("gnext").onclick = async () => { state.gratitude = $("grat").value.trim(); go(EXTRAS.length ? "extra" : "day"); await save(); };
+
+/* Day */
+$("events").replaceChildren(...(DATA.events.length ? DATA.events : [{ when: "—", what: "Nothing on the calendar. Open day." }]).map(ev => {
+  const d = document.createElement("div"); d.className = "event";
+  const w = document.createElement("span"); w.className = "when"; w.textContent = ev.when;
+  const t = document.createElement("span"); t.className = "what"; t.textContent = ev.what;
+  d.append(w, t); return d;
+}));
+$("dback").onclick = () => go(EXTRAS.length ? "extra" : "grateful");
+$("dnext").onclick = () => go("recall");
+
+/* Recall */
+function nextUnreviewed(from) {
+  const done = new Set(state.reviews.map(r => r.card_id));
+  for (let i = from; i < DATA.cards.length; i++) if (!done.has(DATA.cards[i].card_id)) return i;
+  return DATA.cards.length;
+}
+function renderCard() {
+  cardIdx = nextUnreviewed(cardIdx);
+  const c = DATA.cards[cardIdx];
+  if (!c) { go("reward"); return; }
+  picked = null;
+  $("deck").textContent = "forall x · " + c.card_id.replace(/^forallx_ch0?(\d+)_q0?(\d+)$/, "ch. $1, q$2");
+  $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
+  $("prompt").textContent = c.prompt;
+  $("reveal").hidden = true; $("nextnote").hidden = true;
+  $("tocomic").hidden = state.reviews.length === 0;
+  $("tocomic").textContent = state.reviews.length >= TARGET ? `${state.reviews.length} done · claim my comic (or keep going below)` : "Done reviewing · claim my comic";
+  $("opts").replaceChildren(...order[cardIdx].map(oi => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "opt"; b.textContent = c.options[oi]; b.dataset.oi = oi;
+    b.onclick = () => pick(oi);
+    return b;
+  }));
+}
+function pick(oi) {
+  if (picked !== null) return;
+  const c = DATA.cards[cardIdx]; picked = oi;
+  const ok = oi === c.correct_index;
+  [...$("opts").children].forEach(b => {
+    b.disabled = true;
+    const i = +b.dataset.oi;
+    if (i === c.correct_index) b.classList.add("right");
+    else if (i === oi) b.classList.add("wrong");
+  });
+  $("verdict").textContent = ok ? "Correct" : "Not quite";
+  $("verdict").className = "verdict " + (ok ? "ok" : "no");
+  $("answer").textContent = c.answer;
+  $("elab").textContent = c.elaboration;
+  const suggest = ok ? 3 : 1;
+  $("rates").replaceChildren(...RATES.map(([v, label]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "rate" + (v === suggest ? " suggest" : "");
+    b.innerHTML = `${label}<small>${v === suggest ? "tip" : "&nbsp;"}</small>`;
+    b.onclick = () => rate(v, ok, b);
+    return b;
+  }));
+  $("reveal").hidden = false;
+  $("reveal").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+async function rate(v, ok, btn) {
+  const c = DATA.cards[cardIdx];
+  if (!c || rating) return;
+  rating = true;
+  state.reviews = state.reviews.filter(r => r.card_id !== c.card_id);
+  state.reviews.push({ card_id: c.card_id, rating: v, correct: ok, at: new Date().toISOString() });
+  [...$("rates").children].forEach(b => { b.disabled = true; b.classList.toggle("dim", b !== btn); });
+  btn.classList.add("chosen");
+  btn.querySelector("small").textContent = "saved";
+  cardIdx++;
+  $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
+  const finished = nextUnreviewed(cardIdx) >= DATA.cards.length;
+  $("nextnote").textContent = finished ? "Saved. Opening your comic…" : "Saved. Next card…";
+  $("nextnote").hidden = false;
+  renderProgress();
+  save();
+  setTimeout(() => {
+    rating = false;
+    if (finished) go("reward");
+    else { renderCard(); $("s-recall").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  }, 900);
+}
+$("tocomic").onclick = () => go("reward");
+$("moreCards").onclick = () => go("recall");
+
+/* Reward */
+async function renderReward() {
+  $("comic").src = DATA.comic.src;
+  $("comiclink").href = DATA.comic.page;
+  const right = state.reviews.filter(r => r.correct).length;
+  const lines = [
+    ["Breaths", `${state.breaths} of ${BREATHS}`],
+    ["Grateful for", state.gratitude || "skipped"],
+    ["Cards", state.reviews.length ? `${right} of ${state.reviews.length} correct` : "none today"],
+  ];
+  $("moreCards").hidden = cardIdx >= DATA.cards.length;
+  $("summary").replaceChildren(...lines.map(([k, v]) => { const p = document.createElement("p"); const b = document.createElement("b"); b.textContent = k + ": "; p.append(b, document.createTextNode(v)); return p; }));
+  if (!state.finishedAt) { state.finishedAt = new Date().toISOString(); await save(); }
+}
+
+/* Saving to the shared store Claude reads */
+let dbRef = null, saving = Promise.resolve();
+function save() {
+  saving = saving.then(async () => {
+    if (!dbRef) { $("status").textContent = "Not saved here. Tell Claude your answers in the thread."; return; }
+    try { await dbRef.set({ ...state, reviews: state.reviews }); $("status").textContent = "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
+    catch (e) { $("status").textContent = "Couldn't save (" + (e && e.code || "error") + "). Tell Claude in the thread."; }
+  });
+  return saving;
+}
+(async () => {
+  const db = await window.claude?.use?.("db");
+  if (!db) return;
+  dbRef = db.doc("checkins/" + DATA.date);
+  try {
+    const snap = await dbRef.get();
+    if (snap.exists) {
+      const d = snap.data();
+      const savedReviews = Array.isArray(d.reviews) ? d.reviews : [];
+      const local = state.reviews.filter(r => !savedReviews.some(s => s.card_id === r.card_id));
+      state = { ...state, ...d, step: touched ? state.step : d.step, reviews: [...savedReviews, ...local],
+        gratitude: state.gratitude || d.gratitude || "", breaths: Math.max(state.breaths, d.breaths || 0) };
+      const doneIds = new Set(state.reviews.map(r => r.card_id));
+      if (!touched) { cardIdx = DATA.cards.findIndex(c => !doneIds.has(c.card_id));
+      if (cardIdx < 0) cardIdx = DATA.cards.length; }
+      const saved = Math.max(stepIndex(state.step), state.reached || 0,
+        state.finishedAt ? stepIndex("reward") : state.reviews.length ? stepIndex("recall") : state.gratitude ? stepIndex("day") : 0);
+      state.reached = saved;
+      state.extras = d.extras || {};
+      for (const [h, v] of Object.entries(state.extras)) { const c = $("x-" + h); if (c) c.checked = v > 0; }
+      if (d.intention && $("x-intention-text")) $("x-intention-text").value = d.intention;
+      if (state.gratitude && !$("grat").value) { $("grat").value = state.gratitude; $("gnext").disabled = false; }
+      $("bcount").textContent = `${state.breaths} of ${BREATHS}`;
+      if (!touched) go(STEPS[saved][0]);
+      else if (state.step === "recall" && picked === null) renderCard();
+      else renderProgress();
+      $("status").textContent = "Picked up where you left off";
+    }
+  } catch {}
+})();
+
+renderProgress();
+</script>
