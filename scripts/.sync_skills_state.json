@@ -2,9 +2,6 @@
   "test-driven-development/SKILL.md": {
     "sha256": "39361054f58ecc8de9cac0f1364aee94e795a446030bb57595f7b7ca0c1ffbbe"
   },
-  "hermes-desktop-plugins/SKILL.md": {
-    "sha256": "7c48ace0a0eae6088804287bbaa5c8a47473809b09004da236ee9354d0bdccb8"
-  },
   "comfyui/scripts/fetch_logs.py": {
     "sha256": "3bc3b537a72f3a825001e9c91486e7a5acc58fa6d955ff737d8505907933cdfc"
   },
@@ -38,9 +35,6 @@
   "productivity/powerpoint/scripts/office/schemas/ISO-IEC29500-4_2016/dml-lockedCanvas.xsd": {
     "sha256": "5cb76dabd8b97d1e9308a1700b90c20139be4d50792d21a7f09789f5cccd6026"
   },
-  "agy/references/session_resume_token_caching.md": {
-    "sha256": "91a57167676c12299766dcf38a3a613422f547ffdde32902a16e3ece61d3d336"
-  },
   "baoyu-infographic/references/layouts/funnel.md": {
     "sha256": "e505f04f334d8da00607972b19b23f9a2e24b6c2cff8cdb8fbe6baa0698c7286"
   },
@@ -60,7 +54,7 @@
     "sha256": "251491e38320301caa0e2c29c4d7c73f910f598c8a00f924eb7e58a70cc7f2e8"
   },
   "ai-os-auto-commit/SKILL.md": {
-    "sha256": "c6d96f961a5e66954d81c3310afb46542822f2f4b22c6de1f9d63acae23f5725"
+    "sha256": "dfca930832a60a4355aa678d1ce133a941a271a4a9262779fbe2b0ee2730c65c"
   },
   "software-development/inspecting-hermes-desktop-dom/SKILL.md": {
     "sha256": "a78a5f8d277a1d6d39fccd5ecf1e76ce519a1ace831f06078dfcc91cb54a3399"
@@ -78,7 +72,7 @@
     "sha256": "a30f3ec6105d5b23bc5ec28e8e2809e9ceed49f1fd816570d5b5656d0aa65819"
   },
   "software-development/ai-os-rule-management/SKILL.md": {
-    "sha256": "1bf80900ba7b896693d91003780e280f1b6303348f3b6093ea0119678c1ea5aa"
+    "sha256": "7aac27a316afcc13e9def62e3ce1fba1a01bbf0a888697f754749d3cd4b7e550"
   },
   "baoyu-infographic/references/structured-content-template.md": {
     "sha256": "d979b8d4fb37746fbf404d5737ec76e5837f066b97f6bd45c9b9b9478bee0877"
@@ -106,9 +100,6 @@
   },
   "productivity/powerpoint/scripts/office/schemas/ecma/fourth-edition/opc-coreProperties.xsd": {
     "sha256": "451958454e8588dfc7cd945981ada142ca06ff3307937f5700df059c2b307fa8"
-  },
-  "hermes-agent/references/providers-and-models.md": {
-    "sha256": "04886ceed8007762736261cb6c3217437a43ecbd7d31b2a502ad88e6f1b129b0"
   },
   "creative/touchdesigner-mcp/scripts/setup.sh": {
     "sha256": "173ef326c534751b38677e698f93a4baa76f9ae07bb0d26bec4beba565db45f7"
@@ -341,17 +332,11 @@
   "audiocraft/SKILL.md": {
     "sha256": "eebe52632e3312a55a352d766828e7153b2ee23e2e67c0e4e874474e5c52198c"
   },
-  "agy/SKILL.md": {
-    "sha256": "064e7f9597f8b813902e8a26dfb5fe56733ca9ff4c11e276369083405cf9af56"
-  },
   "serving-llms-vllm/references/quantization.md": {
     "sha256": "5fb30ea9e8fbec4a7f3047f37d10c0900d10cd2df66555818ffd425a3b29b270"
   },
   "comfyui/workflows/wan_video_t2v.json": {
     "sha256": "29425bee0ffbb2d558de19ca787d23b76f91257f663098041a81931fe623441b"
-  },
-  "hermes-database-internals/references/antigravity-app-ingestion.md": {
-    "sha256": "befa1d5fe08bb50f2ba8c0354854e00b88efedd6d77478d9dec3074a545c0983"
   },
   "custom-skills/docx/scripts/office/schemas/microsoft/wml-cex-2018.xsd": {
     "sha256": "fddc2b880cabb9005aebbc7e783e53c19fec1c03df7d0e2f2076a33a0fdfd081"
@@ -385,9 +370,6 @@
   },
   "custom-skills/popular-web-designs/templates/kraken.md": {
     "sha256": "4c318649813d7293829bda3e26536a33f625546ce6ed530b5af50c7897b91a6c"
-  },
-  "hermes-agent/SKILL.md": {
-    "sha256": "02724b6acd39770189e024bdf38990ea87382d1e125fb323188fd551a8d0db44"
   },
   "productivity/powerpoint/SKILL.md": {
     "sha256": "6a6c4ef12b188c2e3b0679643f533af29e30c2e767d0435f05ed300efc5910af"
@@ -424,9 +406,6 @@
   },
   "requesting-code-review/SKILL.md": {
     "sha256": "1126afb626b38f5b398afac61de1c2c5551913d020f7c745e5468a78f143bcfd"
-  },
-  "hermes-agent/references/troubleshooting.md": {
-    "sha256": "b6f9d71ef2b028102c8c891769bdbf870abcb2ee0c058383a4088760920cd935"
   },
   "p5js/scripts/export-frames.js": {
     "sha256": "b1de46c977c9edfcc71fc045422f78722f12744c4f8b3d80e0fa6b2681a1dd05"
@@ -641,9 +620,6 @@
   "evaluating-llms-harness/SKILL.md": {
     "sha256": "d6f1d357a6561cfe42b7230b8bb449f720212038f180e74a33f9a22c67a963ff"
   },
-  "hermes-agent/references/themes.md": {
-    "sha256": "f5a8269a7312173f0caa6736156a3f76d32e56b4e15511e84dc2e902f48e8157"
-  },
   "design-md/templates/starter.md": {
     "sha256": "587571ab914ebe6c228d786aeb3b531d88b5b53dcffd5295333d609275a0b2d4"
   },
@@ -686,29 +662,14 @@
   "productivity/powerpoint/scripts/office/schemas/ecma/fourth-edition/opc-contentTypes.xsd": {
     "sha256": "9e0b7209fc69ab11987900404540969976000c5ebe4d4f58c43dc3842886bf3a"
   },
-  "agy/references/argument-ordering-pitfall.md": {
-    "sha256": "462c59b8b7bceef07013144dccc488f6640e4fa8194d906ea42f937448d92d65"
-  },
   "ascii-video/references/scenes.md": {
     "sha256": "6c9a0293a5be961269f5d02e5b6dc83d4960a10511dfd777bc1033d416ecf093"
-  },
-  "agy/references/litellm-routing.md": {
-    "sha256": "852f7a55e140b0383f20f9de784c4c527d2c52040d5402bfb59e79ae21bdaf93"
   },
   "heartmula/SKILL.md": {
     "sha256": "d6f8322ba9ab47564ff73dc0ee8d8158d78cea4de557e5b0abe5c6921a12fa57"
   },
-  "hermes-gateway-api/SKILL.md": {
-    "sha256": "75581962053afa6c1a70bacb9330110f7a460c95cf6911e1a7ae57b2bac5b91d"
-  },
   "baoyu-infographic/references/styles/corporate-memphis.md": {
     "sha256": "156e6e27009fdc3305e97ef242cb1a45fac65a054f73cd62718ce99bf5171ebf"
-  },
-  "hermes-to-agy/SKILL.md": {
-    "sha256": "fa5513ce599a1e0ba0f65c7b13c20073a2aaab151c4724d0edd9167fe1842c43"
-  },
-  "hermes-database-internals/references/gemini-archive-ingestion.md": {
-    "sha256": "40d97c89f23eb4ca6eb2a478da4f2d7b1576dc7d31ac6099b8aec3185ee89997"
   },
   "custom-skills/docx/scripts/office/schemas/ISO-IEC29500-4_2016/shared-customXmlDataProperties.xsd": {
     "sha256": "0ef4bb354ff44b923564c4ddbdda5987919d220225129ec94614a618ceafc281"
@@ -782,9 +743,6 @@
   "hammerspoon-webview/references/qwerty-midi-session-2026-07-25.md": {
     "sha256": "0f41e519677d53d6746792c645ec40110ae05e1ad8326e404e759872bd064a46"
   },
-  "hermes-agent/references/delegate-task-concurrency-diagnosis.md": {
-    "sha256": "41019dd37c0c048b002d3639fe01455513b5c9aba142a21ff9c3bd4c7718a77b"
-  },
   "productivity/powerpoint/scripts/office/schemas/ISO-IEC29500-4_2016/shared-math.xsd": {
     "sha256": "3213ef1631606250f5010b42cad7ef716f7c59426367798e33c374c0ec391d3a"
   },
@@ -799,9 +757,6 @@
   },
   "custom-skills/popular-web-designs/templates/zapier.md": {
     "sha256": "9aac8e73a4a471fecb2d252afead66c82436e7525e7f9d1e6bbe64e375c65160"
-  },
-  "hermes-agent/references/background-systems.md": {
-    "sha256": "70099ca64774cc7e70a33330d180f862cf19a02c0f936dc4c50d51c6d0b73556"
   },
   "comfyui/references/official-cli.md": {
     "sha256": "9d62db1d40af7a4639ede8b9ac599c4e180451342570b08b125d656f4b68e1bc"
@@ -820,9 +775,6 @@
   },
   "mlops/models/segment-anything/SKILL.md": {
     "sha256": "86440d99e8ec3bd7f0a92640d62bf307915ec2a7154e45dd55a214d58ee6966d"
-  },
-  "hermes-database-internals/SKILL.md": {
-    "sha256": "db171284292361123ee244b6522e865802013733fb8a6c752c3b7b59f1e18cae"
   },
   "productivity/powerpoint/scripts/pptx_render.py": {
     "sha256": "49ebe77fa453b5fb21e0a39c0601187399c26f60a399726744277ee098f06dd7"
@@ -911,9 +863,6 @@
   "custom-skills/docx/scripts/office/schemas/ISO-IEC29500-4_2016/shared-bibliography.xsd": {
     "sha256": "0b364451dc36a48dd6dae0f3b6ada05fd9b71e5208211f8ee5537d7e51a587e2"
   },
-  "hermes-agent/references/configuration.md": {
-    "sha256": "d18d4781266563ebdb6602df3b89af760c027ca54281e7714572802969f90331"
-  },
   "creative/touchdesigner-mcp/references/troubleshooting.md": {
     "sha256": "c01460dd47d2a59ebf6d221d717b7563df1f823ac9b8e574787fe39e12e4e876"
   },
@@ -991,9 +940,6 @@
   },
   "mlops/models/segment-anything/references/troubleshooting.md": {
     "sha256": "cbab544d97ddc3813b4f74c805086579e7bd51547ccf9830dd44fa5936b07b4e"
-  },
-  "delegate-deepseek/SKILL.md": {
-    "sha256": "6c6c768e1eed64cd77ae4526bfe7c311a05341bbe2b2f04d210e34e866afbdaa"
   },
   "productivity/powerpoint/scripts/office/schemas/ecma/fourth-edition/opc-digSig.xsd": {
     "sha256": "6de111e11403f7cd49027400755bae0ea1cabef2815f09bd40a24f0017613b24"
@@ -1094,9 +1040,6 @@
   "creative/sketch/SKILL.md": {
     "sha256": "c9472691dbd91b31710d9ace3d05a81a5cedcf524a1707f8b3e410b27ed0a243"
   },
-  "agy-extreme-delegation/SKILL.md": {
-    "sha256": "7feeb827d44cddcfb2d101c7d21fb6b72c2ef5867ac3a48cacf6682445208453"
-  },
   "baoyu-infographic/references/styles/retro-pop-grid.md": {
     "sha256": "d59faa1639c15a6624c51746d9725de50a40c448dbbeba8faf6eb00ac3468023"
   },
@@ -1121,9 +1064,6 @@
   "p5js/references/typography.md": {
     "sha256": "d26c532a850750c6d6e64ddaa0465a499bfd44023465a6a19d8909637266654c"
   },
-  "hermes-desktop-plugins/templates/plugin.js": {
-    "sha256": "a63c8f879756854b45373f5d6b1ae0a7fefcdd4a5af840be8a60d83b64724744"
-  },
   ".curator_backups/2026-08-08T02-05-48Z/manifest.json": {
     "sha256": "77934a3199a456525a97346bddc4b0d7310e4dbd2dc8b3bd347e5c5315389020"
   },
@@ -1138,9 +1078,6 @@
   },
   "notion/references/block-types.md": {
     "sha256": "530379beca84804b53fe71834628f8d80ca14a6763dcbf53ff654a246fe67a78"
-  },
-  "hermes-agent/references/native-mcp.md": {
-    "sha256": "46406b679c0c2dca6aa0a3285a167951e39696203806793991ad2c3a3f7ced1b"
   },
   "productivity/pdf/scripts/pdf_make_form.py": {
     "sha256": "a194791f2d6504da9e629976620ac227a18a6ea14784d428c4cf4f57fafd6c3d"
@@ -1259,9 +1196,6 @@
   "baoyu-infographic/references/layouts/binary-comparison.md": {
     "sha256": "6740c77e89b4cd120e2da9c96feb447fb707e40ef42ee1774794337c8079c8ee"
   },
-  "hermes-agent/references/webhooks.md": {
-    "sha256": "3adbad4773b26614a391b11480ada2842cf0b5824073c3214b982455bddd309a"
-  },
   "baoyu-infographic/references/styles/storybook-watercolor.md": {
     "sha256": "d7067bc69f56f3fad42e3f2671c86317c36962f38fd69a181f9d606d6fd54f88"
   },
@@ -1273,9 +1207,6 @@
   },
   "p5js/references/troubleshooting.md": {
     "sha256": "89812ad4fa9f08bde59ee1050107c723bd1b9046a81f8dd0aad94d4a9d8b215f"
-  },
-  "hermes-agent-skill-authoring/SKILL.md": {
-    "sha256": "a86bc27ef9b047a1cb51cd9cf6dda86ed2354b38c24a23bc0377882b4fb57a6a"
   },
   "dogfood/references/issue-taxonomy.md": {
     "sha256": "b90546fab5b59494ebea35b957ccc1d98bab8eaeaaa3529a142b15ea96df2b31"
@@ -1291,9 +1222,6 @@
   },
   ".curator_backups/2026-08-15T02-13-28Z/skills.tar.gz": {
     "sha256": "3ee989a5a0cddf8728812ecef2cebda8dc4d0e70a55640adac3be26c6b53c0bd"
-  },
-  "hermes-agent/references/cli-reference.md": {
-    "sha256": "339563a94249b8422ffc1eb165ba43af0297bd24d67aa4023a95a77e24d0973c"
   },
   "p5js/references/interaction.md": {
     "sha256": "2951d6e9df71c467fe9ac8401c771a0b93b7c648dd4723108743f339d3c82aa3"
@@ -1403,9 +1331,6 @@
   "comfyui/scripts/comfyui_setup.sh": {
     "sha256": "9284df8240cc5c626bb02d865ace02fd49ccdd35e9583ed34de8f9e417f5e74d"
   },
-  "hermes-agent/references/windows-quirks.md": {
-    "sha256": "4179c308aa5ee9e131e6cc8bf2b643795ffb358624169d47f07410350b6cd075"
-  },
   "mlops/evaluation/DESCRIPTION.md": {
     "sha256": "5e682e8f8f791d3378e34540395603a98b2803db76c80b86482e60a843cc33f8"
   },
@@ -1433,14 +1358,8 @@
   "productivity/powerpoint/scripts/pptx_edit.py": {
     "sha256": "feb5b09546f9f7fb5dfb4c9b2596b3acbaff9c021faf1985c42f618be0476f3f"
   },
-  "hermes-gateway-api/references/studio-gateway-connection.md": {
-    "sha256": "ed89bc08690ed0ea2dfdb3ec0a05088ac6f45a84ae7809d81fc7b5782403e57a"
-  },
   "custom-skills/popular-web-designs/templates/mintlify.md": {
     "sha256": "2a1e56e99fbe94835f90240f03e60292b14811bd5712dde696f3622a6aa5bec4"
-  },
-  "hermes-gateway-api/references/websocket-jsonrpc-protocol.md": {
-    "sha256": "372d0dcd02e1df9462d5ef6db833765a61b8bef25c3aae50e6bccdc94707f068"
   },
   "custom-skills/popular-web-designs/templates/hashicorp.md": {
     "sha256": "fc14c7103c6dcd7cb649b92042a5a7fb8b9327d3d35fee665e84f7806a851089"
@@ -1472,9 +1391,6 @@
   "creative/touchdesigner-mcp/references/network-patterns.md": {
     "sha256": "fd519867cc2ed9b2de8fd07fcb928b55547f39fa4767bc5d33c3a300b7a17236"
   },
-  "hermes-agent/references/slash-commands.md": {
-    "sha256": "d309199e7fad1f4a892ecdb9c3130403c88a2f1c013556e29a6d46044cef66ee"
-  },
   "productivity/powerpoint/scripts/add_slide.py": {
     "sha256": "04233ba3932c6b8611677347891616456e243cc09b7f9769408b8c83d9acfe64"
   },
@@ -1498,9 +1414,6 @@
   },
   "maps/scripts/maps_client.py": {
     "sha256": "94960e451d549766070c999f4979bd69ea956381b40c4d5b05bfa6c0501e7ffb"
-  },
-  "hermes-agent/templates/skin.yaml": {
-    "sha256": "bc8fddd7e5373b074c1c7dd423bb59d6e04769977e8a18354e3a6b3983209994"
   },
   "custom-skills/popular-web-designs/templates/airbnb.md": {
     "sha256": "4d6277a1e6432047f25cc7b7443d7eac7a9bde5b483c609cf7bb7f5c9abab70b"
@@ -1526,9 +1439,6 @@
   "baoyu-infographic/references/analysis-framework.md": {
     "sha256": "666d5682334ffde15bbd095a19d0720aa877b0f8c411cafbb60889f3f16fe71a"
   },
-  "hermes-agent/templates/plugin.js": {
-    "sha256": "a63c8f879756854b45373f5d6b1ae0a7fefcdd4a5af840be8a60d83b64724744"
-  },
   "macos-keyboard-shortcuts/SKILL.md": {
     "sha256": "5a7f325b48e0c6293cea9e202b5d7b52bda68be13d777e04fc62f1e33b78a68f"
   },
@@ -1553,9 +1463,6 @@
   "manim-video/references/decorations.md": {
     "sha256": "dfd7bd79a57a0b1860aae5a5d6d282b1b517445457db4d4493519d77c0f568de"
   },
-  "hermes-agent/references/desktop-plugins.md": {
-    "sha256": "cf484b65423f4e23241dfb55c4c54d0c277d62a41da119c02d1fc63d025b0f67"
-  },
   "productivity/powerpoint/tests/test_powerpoint_skill.py": {
     "sha256": "da3262b8daa31ba2425845a8ce74adc033c89b8d2cf7b99f95a107f7e96b27f1"
   },
@@ -1574,17 +1481,11 @@
   "custom-skills/docx/scripts/office/schemas/ISO-IEC29500-4_2016/dml-wordprocessingDrawing.xsd": {
     "sha256": "bdad416b096b61d37b71603b2c949484f9070c830bdaeba93bf35e15c8900614"
   },
-  "hermes-agent/templates/clock.mjs": {
-    "sha256": "44ec25d560e16c7815a633039a783ddbba2d8e8cf1659560c0cd1cddec83f89d"
-  },
   "productivity/pdf/scripts/pdf_form_layout.py": {
     "sha256": "f654e386a8b1e5a26a1530b16d36177310dd48c6cb589ec6cf3dc1898a8ccdf9"
   },
   "custom-skills/docx/scripts/comment.py": {
     "sha256": "37d116e5f56bb142b208c6c6a4bbcf960495abf470ddb7c6675ccfac864ba3d7"
-  },
-  "agy/references/deepseek-openrouter-reasoning.md": {
-    "sha256": "5bd4930a59b0167dff848c5dcbfef029ba55ceb5505aadddb85674136134d08b"
   },
   "github-issues/templates/feature-request.md": {
     "sha256": "43962f5a398b4badeeb94280299ba4511940ad0e32afcfce5f2a6e1afd21c7a8"
@@ -1601,9 +1502,6 @@
   "arxiv/SKILL.md": {
     "sha256": "2a6073a1ad08823dbdf26be64440b54155298db38fdee52c7b0a5d1cd0cfb05d"
   },
-  "hermes-agent/references/portal-auth-for-third-party-apps.md": {
-    "sha256": "ca9e357ae5be6e10b677f4de3fd7a09d1efc423fe157dcda5b5a2ce7d39dee2a"
-  },
   "comfyui/workflows/sdxl_txt2img.json": {
     "sha256": "5266fa4f35fb9a0fa485e8d7700a23ba4917f1a91c0abe17c1b4f6beb68a8e1f"
   },
@@ -1618,9 +1516,6 @@
   },
   "custom-skills/docx/scripts/office/schemas/ecma/fourth-edition/opc-relationships.xsd": {
     "sha256": "f565adfef5a502044abc3a9153e157edc25af78304d335994afb958874b15e26"
-  },
-  "hermes-agent/references/security-privacy.md": {
-    "sha256": "f27913f7775915d8065b2dea782197907ff90cf37f07b865135c7f61aee98e83"
   },
   "p5js/scripts/render.sh": {
     "sha256": "10a5e45d1a9d3dc867fbd7cea3b744f8d335ec03bf85a77d3a1852f315adf9e2"
@@ -1661,9 +1556,6 @@
   "custom-skills/docx/scripts/office/schemas/ISO-IEC29500-4_2016/shared-math.xsd": {
     "sha256": "3213ef1631606250f5010b42cad7ef716f7c59426367798e33c374c0ec391d3a"
   },
-  "agy/references/deepseek-openrouter-quirks.md": {
-    "sha256": "e1a09f449efbbb382a1a21e41af806d0f49e373821cbc01465e85cb20acd09ee"
-  },
   "baoyu-infographic/references/styles/craft-handmade.md": {
     "sha256": "91740549239ab391d18532c83317a137c68cb11ab33ea154130db68a791288c0"
   },
@@ -1682,17 +1574,11 @@
   "p5js/references/core-api.md": {
     "sha256": "8b1278b31bd4e003cb093da1858e4d0753eb304540c8f4e8e567c682222753e7"
   },
-  "agy/references/agy-proxy-implementation.md": {
-    "sha256": "8360813969ab7b3a5f75741e9deb0c90d416158a3b3fb5f47f6193453b0b0d4e"
-  },
   "google-workspace/scripts/gws_bridge.py": {
     "sha256": "a7ccbac610f504c3b42c7f7282e86dd6d726d3fb0dcd92ef14dea45be83efd9e"
   },
   "llama-cpp/references/troubleshooting.md": {
     "sha256": "a83f9df40a6db7857b4b3ce3a982da7e939680ee89079170d4d258392804e09c"
-  },
-  "hermes-agent/references/tui-widgets.md": {
-    "sha256": "20e21aabb757a9d3c7d895db8f05a3782fe8b28feef3768ac5550c8860b4a3db"
   },
   "research/polymarket/scripts/polymarket.py": {
     "sha256": "7873e054539a8c782a671dd84686e1ee763e29fe20245c1d10798b767d76980f"
@@ -1705,9 +1591,6 @@
   },
   "weights-and-biases/references/artifacts.md": {
     "sha256": "3e4c2ebe70b310e74fdadb5e08af9822eba5b585ef6ad1e66012016b8fc6d461"
-  },
-  "hermes-agent/references/contributor-guide.md": {
-    "sha256": "b390e72785c25b8e227490a053a85acf87af4ecb76c3190c691645f967a7589c"
   },
   "custom-skills/popular-web-designs/templates/uber.md": {
     "sha256": "68291d1291680183e2786965d076053f66e4fd68efb47cdb4ba48256ecf2b2b6"
@@ -1727,9 +1610,6 @@
   "ascii-video/SKILL.md": {
     "sha256": "1d4f84e0eacc0d8adfaee62e0f2ab947dd79302ebbf55d5cd07d94a92c92cb95"
   },
-  "hermes-agent/references/project-context-files.md": {
-    "sha256": "20b51406102e6498f62ed837978e5c67ebd91a917b985de7bbddfaaf23c1f593"
-  },
   "productivity/xlsx/scripts/csv_to_xlsx.py": {
     "sha256": "c92331ed358a8ba762a67b408c594d4c12f19f571087a3605203fb68d8c8ca70"
   },
@@ -1747,9 +1627,6 @@
   },
   "fast/SKILL.md": {
     "sha256": "ace2120f456e0f212ac7abc691ff3a11ff370b2efe282af5043b1da130c36b05"
-  },
-  "hermes-agent/references/petdex.md": {
-    "sha256": "2254eabf40c360efb54e4df482f3b84820b54a15e6954c4a7e9e7fee4eb90f77"
   },
   "baoyu-infographic/references/layouts/jigsaw.md": {
     "sha256": "1b5566cdf0981677bf79437a6c5877749a7ecc22fcf1cccc1bee864c9d865e75"
@@ -1811,20 +1688,8 @@
   ".curator_backups/2026-08-22T02-52-44Z/manifest.json": {
     "sha256": "5d19cb828d1235db92f892f4b3c4771f446b90654e72852a50f9daa0609c3eb4"
   },
-  "_plan-with-subagent/SKILL.md": {
-    "sha256": "c9deee8a8d32e331735c01576c07c080f6b74ab388f8b42d6e9992be53877ad7"
-  },
-  "_plan-with-gemini/SKILL.md": {
-    "sha256": "79bb9547b6a7a302d3e6fff86c861f1b27f71f160c1225955469c3c11a5a19e1"
-  },
-  "_plan-with-ai-os/SKILL.md": {
-    "sha256": "c8faa2f999ae3701ec751b7058f97a469c31294a79b51cf465f414ccda041d0d"
-  },
   "rule/SKILL.md": {
     "sha256": "b3cec0b47096e2788160c19312cbec4344f1ece175957615711bd62157cde43f"
-  },
-  "_manage-memory/SKILL.md": {
-    "sha256": "586112a5995d41f2cf61144d1cd4d2283322d702813bee040e78cc25e01ab17e"
   },
   ".curator_backups/2026-08-29T07-05-59Z/skills.tar.gz": {
     "sha256": "b290a7a6db862da6e5e4f131c3eb44059d23cd834e753b699b446e190ccf348f"
@@ -1913,7 +1778,7 @@
   "custom-skills/substantive-engineering-verification/SKILL.md": {
     "sha256": "f858f3523f0e63c15cc7d530774cbe7e0b0d3c89d69767afc4e33ab8158509a3"
   },
-  "_plan-with-ai-os/workflow.md": {
-    "sha256": "f85b3966daa287979524f3dfbb63dd8b4ead91682bd1b41280cf3425a26c796f"
+  "_handoff/SKILL.md": {
+    "sha256": "d674b6a319aca59a576f77a4927ebd02c5ae7d9e23161e9ce3b826dfb377aada"
   }
 }

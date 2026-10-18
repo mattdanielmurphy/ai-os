@@ -26,3 +26,13 @@
     4. **Wait For User Direction**: The orchestrator MUST STOP and wait for the user to provide direction or alternative plan text rather than taking autonomous action.
 - **Gemini Result Label:** When Gemini directly produces the user-facing result through a successful delegated or planner run, append a compact `Gemini` label to that result. Do not label direct responses, other backends, routing status, or failed/fallback attempts.
 
+
+
+<!-- Shelved 2026-10-17: replaced by "Memory & Recall (QMD)" -->
+# Search-to-Memory & Autonomous Learning Invariant
+- **Search Friction as Memory Signal**: Whenever an agent is required to perform exploratory search (e.g. `grep_search`, directory sweeps, config discovery, or web lookups) to resolve an unknown path, hidden setting, architectural dependency, or debugging quirk:
+  - The agent MUST NOT discard the discovery upon completing the task.
+  - The discovery MUST be immediately persisted to the active memory engine (Mem0 or project `AG_CONTEXT.md`) so future sessions bypass exploratory search.
+- **Pre-Flight Context Hydration**: Before executing non-trivial architectural, debugging, or workflow tasks, agents must proactively recall relevant context and past lessons rather than operating cold or re-deriving known solutions.
+- **Battle-Tested Memory Architecture**: AI-OS memory and self-learning MUST use established, third-party / production memory backends (e.g. Mem0) rather than ad-hoc homebrew memory scripts.
+

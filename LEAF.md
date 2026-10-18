@@ -90,12 +90,10 @@
 - **Rule**: Agents MUST NEVER trust internal memory or guess model names, model identifiers, version tags, or API engine strings (e.g. TTS voice models, LLM checkpoint names, provider engine strings).
 - **Mandatory Pre-Verification**: Before writing, configuring, or hardcoding any model identifier, engine string, or voice name into code, presets, or configurations, agents MUST actively verify the exact string against authoritative documentation, official API endpoints, or official provider playgrounds. Never extrapolate or fabricate model versions or name schemes (e.g. guessing model names without verifying).
 
-# Search-to-Memory & Autonomous Learning Invariant
-- **Search Friction as Memory Signal**: Whenever an agent is required to perform exploratory search (e.g. `grep_search`, directory sweeps, config discovery, or web lookups) to resolve an unknown path, hidden setting, architectural dependency, or debugging quirk:
-  - The agent MUST NOT discard the discovery upon completing the task.
-  - The discovery MUST be immediately persisted to the active memory engine (Mem0 or project `AG_CONTEXT.md`) so future sessions bypass exploratory search.
-- **Pre-Flight Context Hydration**: Before executing non-trivial architectural, debugging, or workflow tasks, agents must proactively recall relevant context and past lessons rather than operating cold or re-deriving known solutions.
-- **Battle-Tested Memory Architecture**: AI-OS memory and self-learning MUST use established, third-party / production memory backends (e.g. Mem0) rather than ad-hoc homebrew memory scripts.
+# Memory & Recall (QMD)
+- **One search over everything**: Matt's Obsidian vault and all past threads (Gemini, Antigravity, Claude Code) are indexed locally by QMD. Search it before saying something isn't known: the `qmd` MCP tools (`query` for meaning-based search, `get` to open a hit), or `qmd search "<words>"` / `qmd query "<question>"` in a shell.
+- **Automatic**: A Claude Code hook adds up to 4 related past notes/threads to each prompt, and another keeps the index current (exports Claude transcripts to `private/claude-threads/`). Treat those pointers as hints; open one only if it's relevant.
+- **Where durable facts go**: preferences and lessons go in Claude's built-in memory; curated knowledge goes in the Obsidian vault; project facts go in the project's `AG_CONTEXT.md`. Anything written to those is picked up by QMD on the next refresh.
 
 # Personal Knowledge Base & LLM Wiki Invariant
 - **Location**: Matt's personal notes vault and LLM Wiki is located at `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`.

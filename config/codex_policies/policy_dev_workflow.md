@@ -14,13 +14,6 @@
 - **Surfacing Requirement**: Agents MUST surface the project board with a standard local Markdown link: `[PROJECT_BOARD.md](/Users/matt/projects/ai-os/PROJECT_BOARD.md)`. Do not append editor- or file-manager-specific launcher URLs; the built-in editor handles local file links.
 - **Task Schema**: Always format tasks as `- [ ] <description> [project:: <id>] [assignee:: user|agent] [due:: YYYY-MM-DD]`.
 
-# Search-to-Memory & Autonomous Learning Invariant
-- **Search Friction as Memory Signal**: Whenever an agent is required to perform exploratory search (e.g. `grep_search`, directory sweeps, config discovery, or web lookups) to resolve an unknown path, hidden setting, architectural dependency, or debugging quirk:
-  - The agent MUST NOT discard the discovery upon completing the task.
-  - The discovery MUST be immediately persisted to the active memory engine (Mem0 or project `AG_CONTEXT.md`) so future sessions bypass exploratory search.
-- **Pre-Flight Context Hydration**: Before executing non-trivial architectural, debugging, or workflow tasks, agents must proactively recall relevant context and past lessons rather than operating cold or re-deriving known solutions.
-- **Battle-Tested Memory Architecture**: AI-OS memory and self-learning MUST use established, third-party / production memory backends (e.g. Mem0) rather than ad-hoc homebrew memory scripts.
-
 # Personal Knowledge Base & LLM Wiki Invariant
 - **Location**: Matt's personal notes vault and LLM Wiki is located at `/Users/matt/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/`.
 - **Architecture**: Organized per the Karpathy LLM Wiki pattern:

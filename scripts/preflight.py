@@ -276,6 +276,7 @@ def step_hammerspoon_errors():
 
 def get_memory_data(project_name="ai-os", in_progress=None):
     """Fetch total count and top hydrated memories in a single fast call with mtime caching."""
+    return 0, []  # Mem0 shelved 2026-10-17; recall now comes from QMD (see shelf/INDEX.md)
     cache_dir = os.path.expanduser("~/.hermes/cache")
     clean_proj = re.sub(r'[^a-zA-Z0-9_\-]', '_', project_name or "default")
     cache_file = os.path.join(cache_dir, f"preflight_mem_{clean_proj}.json")
@@ -502,7 +503,7 @@ def main():
             results[name] = result
 
     if is_first:
-        print(f"- Memory (Mem0): OK ({mem_count} memories indexed)")
+        print("- Memory: QMD (Mem0 shelved)")
     for name, _ in steps:
         print(f"- {results[name]}")
 
