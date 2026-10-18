@@ -107,9 +107,10 @@ def main():
         headers={"Content-Type": "application/json"}
     )
 
-    # Build an informative fallback message based on staged files rather than generic "Update files"
-    staged_status, _ = run_cmd(["git", "status", "--porcelain", "--ignore-submodules=dirty"])
-    staged_files = [line.strip().split()[-1] for line in staged_status.splitlines() if line.strip()]
+    # Build an informative fallback message from the index only (what is actually being committed),
+    # not the whole dirty worktree, so --paths commits aren't described by unrelated files
+    staged_names, _ = run_cmd(["git", "diff", "--cached", "--name-only"])
+    staged_files = [line.strip() for line in staged_names.splitlines() if line.strip()]
     if staged_files:
         files_summary = ", ".join(staged_files[:3])
         if len(staged_files) > 3:
