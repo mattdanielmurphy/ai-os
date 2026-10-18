@@ -278,3 +278,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 
 ## 2026-10-17
 - **Daily Claude morning check-in job:** `services/checkin/daily.py` + Claude scheduled task `morning-checkin` (7:45). Records yesterday's page results into the habit ladder and FSRS deck, builds the page with real due cards and the day's C&H comic, starts a Sonnet Remote Control reflection thread in tmux, publishes the Artifact and iMessages the link via Photon.
+- **Check-in moved to a question-button thread:** `daily.py prepare` now starts one Sonnet Remote Control thread (`checkin_prompt.md`) that asks breaths, gratitude and flashcards with AskUserQuestion, records via `daily.py finish` (ladder + FSRS) and runs the reflection. The scheduled task no longer reads the page db or publishes the Artifact; `send` texts the thread link.
