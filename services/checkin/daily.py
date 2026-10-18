@@ -159,16 +159,21 @@ def thread_seed(plan, events, cards, comic, day, data_dir=ladder.DATA_DIR, cards
         "status": plan["status"],
         "streak": plan["streak"],
         "changes": " ".join(plan["changes"]) or "no changes today",
-        "breaths_question": json.dumps({"questions": [{
-            "question": f"Take {breaths} slow breath{'s' if breaths != 1 else ''}: in for 4, out for 6. Tap when done.",
-            "header": "Breathe", "multiSelect": False,
-            "options": [{"label": "Done", "description": f"{breaths} breaths"},
-                        {"label": "Only some", "description": "Still counts"},
-                        {"label": "Skip today", "description": "That's okay"}]}]}, ensure_ascii=False),
+        "breaths_gratitude_question": json.dumps({"questions": [
+            {"question": f"Take {breaths} slow breath{'s' if breaths != 1 else ''}: in for 4, out for 6. Tap when done.",
+             "header": "Breathe", "multiSelect": False,
+             "options": [{"label": "Done", "description": f"{breaths} breaths"},
+                         {"label": "Only some", "description": "Still counts"},
+                         {"label": "Skip today", "description": "That's okay"}]},
+            {"question": ("What's one thing you're grateful for this morning?" if things == 1
+                          else f"What are {things} things you're grateful for this morning?")
+                         + " Type it or dictate (pick Other), or say skip.",
+             "header": "Gratitude", "multiSelect": False,
+             "options": [{"label": "Skip today", "description": "That's okay"},
+                         {"label": "I'll type it", "description": "Use Other below to dictate"}]},
+        ]}, ensure_ascii=False),
         "breaths": breaths,
         "breaths_some": max(1, breaths - 1),
-        "gratitude_ask": ("What's one thing you're grateful for this morning?" if things == 1
-                          else f"What are {things} things you're grateful for this morning?"),
         "cards_intro": intro,
         "cards_block": block,
         "finish_cmd": f"{PY} {HERE}/daily.py{extra} finish --date {day}",

@@ -11,13 +11,13 @@ tool exactly as given (buttons on his phone); don't add steps, commentary or hea
 
 Today: {dateline} · habit status {status} · streak {streak} days · {changes}
 
-**1. Breaths.** Start right away, before he writes anything. One warm line (if status is red or panic: no guilt,
-just "glad you're here"), then call AskUserQuestion with this exact JSON:
-{breaths_question}
+**1–2. Breaths + gratitude.** Start right away, before he writes anything. One warm line (if status is red or
+panic: no guilt, just "glad you're here"), then call AskUserQuestion ONCE with both questions together (it
+supports up to 4 per call — don't split these into separate calls, that costs a needless round trip):
+{breaths_gratitude_question}
 Breaths done = {breaths} for "Done", {breaths_some} for "Only some", 0 for "Skip today".
-
-**2. Gratitude.** Ask in one plain line: "{gratitude_ask} Type it or dictate, or say skip."
-Gratitude count = how many separate things he named (0 if he skips).
+For gratitude, he'll either pick "Skip today" or use "Other" to type/dictate what he's grateful for — count how
+many separate things he named (0 if he skipped).
 
 **3. Flashcards.** {cards_intro}
 {cards_block}
