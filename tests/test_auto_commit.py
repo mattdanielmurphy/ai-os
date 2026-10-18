@@ -1,4 +1,4 @@
-"""Regression test: auto_commit --paths must describe only the committed paths."""
+"""Regression tests: auto_commit commit messages match what is committed."""
 import os
 import subprocess
 import sys
@@ -44,15 +44,22 @@ class TestAutoCommitPathsMessage(unittest.TestCase):
         (self.repo / "skills").mkdir()
         (self.repo / "skills" / "SKILL.md").write_text("mine\n")
 
-        # Force the fallback message path (no LLM proxy)
-        with patch.object(auto_commit.urllib.request, "urlopen", side_effect=OSError("offline")), \
-             patch.object(sys, "argv", ["auto_commit.py", "--paths", "skills/SKILL.md"]):
+        # No --message: uses the staged-file fallback
+        with patch.object(sys, "argv", ["auto_commit.py", "--paths", "skills/SKILL.md"]):
             auto_commit.main()
 
         self.assertEqual(git(self.repo, "log", "-1", "--format=%s"), "Update skills/SKILL.md")
         self.assertEqual(git(self.repo, "show", "--name-only", "--format=", "HEAD"), "skills/SKILL.md")
         # Unrelated changes stay uncommitted
         self.assertIn("Discussions.html", git(self.repo, "status", "--porcelain"))
+
+    def test_agent_message_is_used_verbatim(self):
+        (self.repo / "tracked.txt").write_text("v2\n")
+        msg = "Fix tracked value\n\nBumps tracked.txt to v2 for the release."
+        with patch.object(sys, "argv", ["auto_commit.py", "-m", msg, "--paths", "tracked.txt"]):
+            auto_commit.main()
+
+        self.assertEqual(git(self.repo, "log", "-1", "--format=%B"), msg)
 
 
 if __name__ == "__main__":

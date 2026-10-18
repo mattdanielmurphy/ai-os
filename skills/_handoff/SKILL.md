@@ -77,7 +77,7 @@ The current task in 2–4 sentences, and where exactly it stopped.
 - Read the file back. Every section filled (write "none" if truly empty); next step 1 is concrete;
   parent file exists (`ls`); session ids are real, not guessed.
 - Commit only the handoff file and this thread's own work, using the repo's normal commit flow
-  (in ai-os: `python3 ~/projects/ai-os/scripts/auto_commit.py --paths <files>`). List unrelated dirty files instead of committing them.
+  (in ai-os: `python3 ~/projects/ai-os/scripts/auto_commit.py -m "<message>" --paths <files>`). List unrelated dirty files instead of committing them.
 - Reply in a few bullets: file path and line count, chain seq, and the paste prompt in its own
   code block:
 

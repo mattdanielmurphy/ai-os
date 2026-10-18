@@ -61,7 +61,7 @@ The `~/projects/ai-os/.rules/` directory is the **single source of truth** for g
 4. **Commit** both `.rules/` edits AND the regenerated files:
    ```bash
    git add .rules/ CLAUDE.md HERMES.md AGENTS.md
-   python3 ~/projects/ai-os/scripts/auto_commit.py
+   python3 ~/projects/ai-os/scripts/auto_commit.py -m "Rules: <what changed>" --paths .rules CLAUDE.md HERMES.md AGENTS.md
    ```
 
 ## Common Pitfalls

@@ -1,7 +1,7 @@
 ---
 name: ai-os-auto-commit
-description: Delegate git commits to agy's auto_commit.py script for cheap, AI-generated commit messages via the LiteLLM proxy.
-version: 1.0.0
+description: Commit and push in ai-os via scripts/auto_commit.py with an agent-written message, a secret-audit gate and optional --paths scoping.
+version: 2.0.0
 metadata:
   hermes:
     tags: [ai-os, git, commit, automation]
@@ -9,41 +9,32 @@ metadata:
 
 # AI-OS Auto-Commit
 
-When working in the `ai-os` project at `~/projects/ai-os`, use this workflow for automated git commits. The script delegates commit message generation to the local LiteLLM proxy (localhost:8082) using a cheap model (claude-haiku), then stages and commits all changes.
-
-## When to Use
-
-- At the end of a session where you've made code changes
-- After completing a feature or bug fix
-- When you want to checkpoint work with a descriptive commit message
-- **Do NOT** use for manual commits where you want a specific, hand-crafted message
+`scripts/auto_commit.py` is the standard commit + push path in `~/projects/ai-os`.
+You (the agent) write the commit message; the script handles staging, the secret gate and the push.
 
 ## Usage
 
 ```bash
 cd ~/projects/ai-os
-python3 scripts/auto_commit.py
+python3 scripts/auto_commit.py -m "Fix X: short specific subject" --paths path/one path/two
 ```
 
-The script will:
-1. Automatically transition any in-progress `.devtool/features/*.md` tasks to `status: "review"`
-2. Stage all changes (`git add .`)
-3. Generate a commit message via LiteLLM (claude-haiku) using the staged diff
-4. Commit with the generated message (format: `<action>: <description>`)
-5. Fall back to `Update files` if LiteLLM is unreachable
+- `-m/--message`: your commit message. Write a specific subject line (what changed); add a blank line
+  and a short body when the *why* isn't obvious. Multi-line messages are fine.
+- `--paths`: stage and commit only these paths. Use it whenever other sessions may have left
+  unrelated dirty files. Without it the script runs `git add .`.
+- `--result-path`: optional JSON status file.
 
-## Fallback (if LiteLLM is down)
+## What the script does
 
-If the LiteLLM proxy is not running, the script gracefully falls back. If you need a custom commit message instead:
+1. Moves in-progress `.devtool/features/*.md` tasks to `status: "review"`
+2. Stages `--paths` (or everything)
+3. Runs the secret audit gate; on a hit it unstages, aborts and exits non-zero
+4. Commits with your `-m` message, or falls back to `Update <first 3 staged files> and N other file(s)`
+5. Pushes (`git push`; detached HEAD pushes `HEAD:main`)
 
-```bash
-git add .
-git commit -m "your message here"
-```
+## Notes
 
-## Important
-
-- The script is **agnostic** to who calls it — both Hermes and agy use the same script
-- Always run it from the ai-os project root
-- The LiteLLM proxy must be running (tmux session `litellm` on port 8082)
-- Only use this in the `~/projects/ai-os` workspace
+- The fallback message is a last resort for unattended callers (`housekeep.py`, `postflight_async.py`).
+  Agents should always pass `-m`.
+- No LLM or proxy is involved any more (the LiteLLM step was removed on 2026-10-17).
