@@ -99,8 +99,8 @@ const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> 
   try {
     const run = await $.process.run(argv, { timeoutMs: 600_000 })
     if (run.exitCode === 0) {
-      const { prompt } = JSON.parse(run.stdout) as { path: string; prompt: string }
-      result = { status: 'done', text: open ? `New thread opened; paste prompt copied: ${prompt}` : prompt }
+      const { prompt, link } = JSON.parse(run.stdout) as { path: string; prompt: string; link: string }
+      result = { status: 'done', text: open ? 'New thread opened with the handoff typed in; press Enter to start it.' : `${prompt}\n\n[Open it in a new thread](${link})` }
       await update($, held, () => '')
     } else {
       result = { status: 'error', text: (run.stderr || run.stdout).trim().slice(0, 300) }
@@ -191,7 +191,7 @@ export const register: Register = on => {
   on('command.run', { command: 'fresh' }, async $ => {
     const result = await coldHandoff($, false)
     if (result.status === 'error') return { text: `Cold handoff failed: ${result.text}` }
-    return { text: `Handoff written without reloading this thread. Start a new thread with:\n\n${result.text}` }
+    return { text: `Handoff written without reloading this thread. Click the link (press Enter there to start), or paste:\n\n${result.text}` }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

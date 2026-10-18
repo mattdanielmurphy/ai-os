@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -142,10 +143,12 @@ def write(path, sid, open_app, then=""):
         paste += f" Then: {then}"
     dest.write_text(f"{brief}\n\nPaste into a new thread: \"{paste}\"\n", encoding="utf-8")
 
+    # The desktop app's new-thread link fills the prompt box (it never sends on its own).
+    link = "claude://code/new?" + urllib.parse.urlencode({"q": paste}, quote_via=urllib.parse.quote)
     if open_app:
-        subprocess.run(["pbcopy"], input=paste, text=True)
-        subprocess.run(["open", "claude://code/new?source=desktop_action"])
-    return {"path": str(dest), "prompt": paste}
+        subprocess.run(["pbcopy"], input=paste, text=True)  # fallback if the box comes up empty
+        subprocess.run(["open", link])
+    return {"path": str(dest), "prompt": paste, "link": link}
 
 
 def main():
