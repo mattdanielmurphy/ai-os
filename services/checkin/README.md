@@ -1,5 +1,7 @@
 # Morning check-in
 
+> **2026-10-17: the Artifact page is shelved** (see `shelf/INDEX.md`). The check-in is moving to native question buttons in a Code thread, which work on the phone. The page code stays here until that replaces it.
+
 Claude-native replacement for the Telegram morning flow. Order each morning:
 
 1. **Page** (Artifact, opened from the iMessage link): breaths → gratitude → newly unlocked steps → day → flashcards → comic.
