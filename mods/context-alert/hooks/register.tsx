@@ -115,13 +115,21 @@ const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> 
   return result
 }
 
+/** /haiku-handoff (and its old name /fresh). */
+const haikuCommand = async ($: EngineInterface) => {
+  const result = await coldHandoff($, false)
+  if (result.status === 'error') return { text: `Cold handoff failed: ${result.text}` }
+  return { text: `Handoff written without reloading this thread. Click the link (press Enter there to start), or paste:\n\n${result.text}` }
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     await $.command.register({
-      name: 'fresh',
-      description: 'Hand this thread off to a new one without reloading it (for a cold cache)',
+      name: 'haiku-handoff',
+      description: 'Haiku writes the handoff from the saved transcript; this thread is never re-sent',
     })
+    await $.command.register({ name: 'fresh', description: 'Old name for /haiku-handoff' })
     $.clock.every(60_000, () => {
       void $.clock.now().then(t => update($, now, () => t))
     })
@@ -186,16 +194,13 @@ export const register: Register = on => {
     return {
       drop:
         `Held: this thread's cache expired ${ago(-left)} ago, so this message would re-send ` +
-        `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /fresh to ` +
-        `hand off to a new thread cheaply (this message goes with it).` + extra,
+        `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /haiku-handoff ` +
+        `to hand off to a new thread cheaply (this message goes with it).` + extra,
     }
   })
 
-  on('command.run', { command: 'fresh' }, async $ => {
-    const result = await coldHandoff($, false)
-    if (result.status === 'error') return { text: `Cold handoff failed: ${result.text}` }
-    return { text: `Handoff written without reloading this thread. Click the link (press Enter there to start), or paste:\n\n${result.text}` }
-  })
+  on('command.run', { command: 'haiku-handoff' }, haikuCommand)
+  on('command.run', { command: 'fresh' }, haikuCommand)
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
@@ -214,34 +219,41 @@ export const register: Register = on => {
     const isAlert = current !== null && current.tokens >= ALERT
     const isCold = left !== null && left <= 0
 
+    const hint = isCold
+      ? `This agent would re-read ~${k(tokens)} at full price; Haiku reads the saved file instead.`
+      : 'This agent: best notes, cheap while the cache is warm. Haiku: faster, never re-sends the thread.'
+
     return (
       <Box flexDirection="column">
         {showSize && current !== null && (
-          <Box>
-            <Text bold color={isAlert ? 'error' : 'warning'}>
-              ⚠ Current context size: {k(current.tokens)} / {k(current.window)} (
-              {isAlert ? 'hand off at the next stopping point' : 'getting long'}){' '}
-            </Text>
-            <Button
-              key="handoff"
-              label="Write handoff"
-              onPress={() => $.prompt.fill({ text: '/_handoff', mode: 'replace' })}
-            />
-          </Box>
+          <Text bold color={isAlert ? 'error' : 'warning'}>
+            ⚠ Context: {k(current.tokens)} / {k(current.window)} (
+            {isAlert ? 'hand off at the next stopping point' : 'getting long'})
+          </Text>
         )}
         {showCache && left !== null && (
+          <Text bold color={isCold ? 'error' : 'warning'}>
+            {isCold
+              ? `❄ Cache expired ${ago(-left)} ago: next message re-sends ~${k(tokens)} tokens at full price`
+              : `⏳ Cache expires in ${ago(left)}`}
+          </Text>
+        )}
+        {(showSize || showCache) && (
           <Box>
-            <Text bold color={isCold ? 'error' : 'warning'}>
-              {isCold
-                ? `❄ Cache expired ${ago(-left)} ago: next message re-sends ~${k(tokens)} tokens at full price `
-                : `⏳ Cache expires in ${ago(left)} `}
-            </Text>
             <Button
-              key="fresh"
-              label="Fresh thread"
+              key="handoff"
+              label="Handoff by this agent"
+              variant={isCold ? 'secondary' : 'primary'}
+              onPress={() => $.prompt.fill({ text: '/_handoff', mode: 'replace' })}
+            />
+            <Text> </Text>
+            <Button
+              key="haiku"
+              label="Handoff by Haiku"
               variant={isCold ? 'primary' : 'secondary'}
               onPress={() => void coldHandoff($, true)}
             />
+            <Text dimColor> {hint}</Text>
           </Box>
         )}
         {job !== null && (

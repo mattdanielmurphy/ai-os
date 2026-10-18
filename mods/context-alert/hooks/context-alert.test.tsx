@@ -30,13 +30,15 @@ test('band stays hidden under 250k and appears above it', async ($, on) => {
   for (const surface of ['terminal', 'desktop'] as const) {
     await $.session.measure(measure(90_000))
     let ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
-    expect(await ui.find({ type: 'Text', text: /Current context size/ })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /Context: / })).toBeUndefined()
     await ui.unmount()
 
     await $.session.measure(measure(262_000))
     ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
-    expect((await ui.find({ type: 'Text', text: /Current context size/ }))?.text).toMatch(/262k \/ 1000k/)
+    expect((await ui.find({ type: 'Text', text: /Context: / }))?.text).toMatch(/262k \/ 1000k/)
     expect(await ui.find({ key: 'handoff' })).toBeDefined()
+    expect(await ui.find({ key: 'haiku' })).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /This agent: best notes/ }))).toBeDefined()
     await ui.unmount()
   }
 })
@@ -59,7 +61,7 @@ test('cache line counts down after a reply, then says it expired', async ($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
     expect((await ui.find({ type: 'Text', text: /Cache/ }))?.text).toMatch(/expires in 10 min/)
-    expect(await ui.find({ key: 'fresh' })).toBeDefined()
+    expect(await ui.find({ key: 'haiku' })).toBeDefined()
     await ui.unmount()
   }
 
@@ -67,6 +69,7 @@ test('cache line counts down after a reply, then says it expired', async ($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
     expect((await ui.find({ type: 'Text', text: /Cache/ }))?.text).toMatch(/expired 2h ago.*80k tokens/)
+    expect(await ui.find({ type: 'Text', text: /Haiku reads the saved file/ })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -98,18 +101,18 @@ test('a message sent into a cold thread is held once, then goes through', async 
 
   await clock.advance(2 * 60 * MIN)
   const held = await $.prompt.submit(phone('cold'))
-  expect(held.drop).toMatch(/expired 1h ago.*180k tokens.*\/fresh/)
+  expect(held.drop).toMatch(/expired 1h ago.*180k tokens.*\/haiku-handoff/)
   expect((await $.prompt.submit(phone('cold'))).drop).toBeUndefined()
   expect(entered).toEqual(['warm', 'cold'])
 })
 
-test('/fresh after a held message carries that message into the new thread', async ($, on) => {
+test('/haiku-handoff after a held message carries that message into the new thread', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   const runs: (readonly string[])[] = []
   on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on('prompt.fill', () => ({ isFilled: true }))
-  on('prompt.read', () => ({ value: { text: '/fresh', cursor: 6 } }))
+  on('prompt.read', () => ({ value: { text: '/haiku-handoff', cursor: 14 } }))
   on('session.id', () => ({ value: 's1' }))
   on('command.run', () => ({ text: '' }))
   on('prompt.submit', (_$, e) => ({ text: e.text }))
@@ -123,7 +126,7 @@ test('/fresh after a held message carries that message into the new thread', asy
   await clock.advance(2 * 60 * MIN)
 
   expect((await $.prompt.submit(phone('fix the bug'))).drop).toMatch(/goes with it/)
-  const out = await $.command.run({ command: 'fresh', args: '', origin: { kind: 'bridge' } })
+  const out = await $.command.run({ command: 'haiku-handoff', args: '', origin: { kind: 'bridge' } })
   const write = runs.find(a => a.includes('write'))
   expect(write?.slice(-2)).toEqual(['--then', 'fix the bug'])
   expect(JSON.stringify(out)).toMatch(/Then: fix the bug/)
