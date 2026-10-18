@@ -72,11 +72,26 @@ The current task in 2–4 sentences, and where exactly it stopped.
 - 2–5 key files or docs, with why.
 ```
 
+## 3b. Copy Matt's /_handoff message verbatim (always)
+
+Anything Matt sent with `/_handoff` (his own text, quotes, quote-with-comments, element picks,
+images, attached files) must reach the next thread exactly. Never retype or summarise it; run:
+
+```bash
+python3 ~/projects/ai-os/scripts/handoff_capture.py --handoff <handoff file>
+```
+
+It reads this turn from the transcript (`$CLAUDE_CODE_SESSION_ID`), appends a
+"Matt's message with this handoff (verbatim)" section, and saves images and `~/.claude/uploads`
+files to `docs/handoffs/<file stem>/`. Commit that folder with the handoff. Still use the message
+to shape Working on now / Next steps, but the verbatim section is the source of truth.
+
 ## 4. Check, then report
 
 - Read the file back. Every section filled (write "none" if truly empty); next step 1 is concrete;
   parent file exists (`ls`); session ids are real, not guessed.
-- Commit only the handoff file and this thread's own work, using the repo's normal commit flow
+- The verbatim section is present and its image count matches what Matt attached.
+- Commit only the handoff file (plus its `<file stem>/` folder) and this thread's own work, using the repo's normal commit flow
   (in ai-os: `python3 ~/projects/ai-os/scripts/auto_commit.py -m "<message>" --paths <files>`). List unrelated dirty files instead of committing them.
 - Reply in a few bullets: file path and line count, chain seq, and the paste prompt in its own
   code block:
@@ -84,5 +99,11 @@ The current task in 2–4 sentences, and where exactly it stopped.
   ```
   Read <absolute path> and continue.
   ```
+
+- Then offer the next thread as a linked session card, so Matt can pick the model and it nests
+  under this thread: `mcp__ccd_session__start_session` with `initiation: "own_initiative"`,
+  `context: "fresh"`, `title` = the handoff title, `prompt` = `Read <absolute path> and continue.`,
+  `background` = 2–3 lines from Chain summary (≥80 chars). Don't set `model`; Matt picks it on the card.
+  If that tool isn't available (other app, CLI), the paste prompt above is the fallback.
 
 Then keep working in this thread unless Matt says he's switching.
