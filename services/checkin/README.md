@@ -6,7 +6,7 @@ of the thread, and closing it lands him back in the chat:
 
 1. **Page** (Artifact https://claude.ai/artifact/5CLZnpsQVxcFDP7bmALrNC, `template.html` built by `build.py`):
    breathing animation → gratitude (typed) → newly unlocked habits → flashcards (instant ✅/❌, then
-   Again/Hard/Good/Easy) → "close this page to get back to the chat". No model runs here. Results save to the page's db
+   Again/Hard/Good/Easy) → "close this page and go back to the thread for part two". No model runs here. Results save to the page's db
    (`checkins/<date>`).
 2. **Talk thread** (Sonnet, Remote Control CLI in tmux): plain conversation, no question menus, so Matt can use
    Claude's dictation. How he feels, the day ahead, one light plan, then the comic as the reward. Its instructions

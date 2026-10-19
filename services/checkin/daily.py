@@ -34,7 +34,6 @@ CARDS_DB = Path(os.getenv("ASSISTANT_DB_PATH", Path.home() / ".hermes/assistant.
 PHOTON_ENV = Path.home() / "projects/daily-mini-crossword/.env"
 IDENTITY = ROOT / "private/identity.md"
 VAULT = Path.home() / "Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal"
-PY = ROOT / "services/assistant/.venv/bin/python"
 TMUX = "checkin-thread"
 MAX_CARDS = 20
 KICKOFF = f"Morning check-in: {ARTIFACT_URL}"  # the only visible first message; the instructions are a hidden system prompt
