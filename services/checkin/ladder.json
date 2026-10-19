@@ -10,7 +10,8 @@
     "reflection": { "label": "Morning reflection",      "unit": "minutes", "levels": [1, 2, 3, 5],               "start": 0, "active": true },
     "intention":  { "label": "One intention for today", "unit": "intentions", "levels": [1],                    "start": 0, "active": false },
     "stretch":    { "label": "Neck and shoulder stretch", "unit": "seconds", "levels": [20, 30, 45, 60],          "start": 0, "active": false },
-    "water":      { "label": "Glass of water first",    "unit": "glasses", "levels": [1],                        "start": 0, "active": false }
+    "water":      { "label": "Glass of water first",    "unit": "glasses", "levels": [1],                        "start": 0, "active": false },
+    "tea":        { "label": "Cup of tea",              "unit": "cups",    "levels": [1],                        "start": 0, "active": false }
   },
-  "unlock_order": ["intention", "stretch", "water"]
+  "unlock_order": ["tea", "intention", "stretch", "water"]
 }
