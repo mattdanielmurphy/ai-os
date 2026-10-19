@@ -12,10 +12,10 @@ Google Calendar, publish the page) and calls this script for the rest:
          apply its flashcard ratings to the FSRS deck and log its gratitude to Obsidian. All idempotent.
       2. Plan today, pick a fresh Cyanide & Happiness comic (and download its image), start today's talk thread
          with checkin_prompt.md as a hidden system prompt.
-      3. Build the page (morning-checkin.html) with today's due cards and the thread link.
+      3. Build the page (morning-checkin.html) with today's due cards.
       Prints JSON: {"page": ..., "thread_url": ..., "plan": ..., "cards": ...}
   daily.py send --date D [--force]
-      iMessage Matt the page link via Photon (once per day unless --force).
+      iMessage Matt the page link, then the thread link, via Photon (once per day unless --force).
 
 Run with the assistant venv (needs `fsrs`): services/assistant/.venv/bin/python services/checkin/daily.py ...
 """
@@ -269,7 +269,7 @@ def prepare(a):
 
     out["thread_url"] = start_thread(thread_seed(plan, events, comic, a.date, a.data_dir, image), a.date, a.data_dir)
     page = Path(a.out) if a.out else HERE / "morning-checkin.html"
-    subprocess.run([sys.executable, str(HERE / "build.py"), "--date", a.date, "--thread-url", out["thread_url"],
+    subprocess.run([sys.executable, str(HERE / "build.py"), "--date", a.date,
                     "--cards", str(work / "cards.json"), "--out", str(page), "--data-dir", a.data_dir],
                    check=True, capture_output=True)
     out["page"] = str(page)
@@ -306,16 +306,21 @@ def send(a):
     if not addr.startswith("http"):
         addr = "http://" + addr
     url = addr if addr.endswith("/send") else addr + "/send"
-    link = ARTIFACT_URL
-    body = json.dumps({"recipient": _recipient(), "message": link}).encode()
-    req = Request(url, data=body, method="POST",
-                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
-    with urlopen(req, timeout=30) as resp:
-        res = json.loads(resp.read() or b"{}")
-    if res.get("error") or res.get("success") is False:
-        raise SystemExit(f"Photon refused: {res.get('error')}")
+    thread = days.get(a.date, {}).get("thread_url")
+    if not thread:
+        raise SystemExit(f"no thread link for {a.date}; run prepare first")
+    # Two bare links, page first: a page can't open the Claude app (custom schemes are blocked there and https
+    # links land in Safari), but a claude:// link tapped in Messages does (2026-10-19).
+    for link in (ARTIFACT_URL, thread):
+        body = json.dumps({"recipient": _recipient(), "message": link}).encode()
+        req = Request(url, data=body, method="POST",
+                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
+        with urlopen(req, timeout=30) as resp:
+            res = json.loads(resp.read() or b"{}")
+        if res.get("error") or res.get("success") is False:
+            raise SystemExit(f"Photon refused: {res.get('error')}")
     _save_day(a.data_dir, a.date, sent_at=datetime.now().isoformat(timespec="seconds"))
-    print(json.dumps({"sent": True, "message": link}))
+    print(json.dumps({"sent": True, "messages": [ARTIFACT_URL, thread]}))
 
 
 def main():

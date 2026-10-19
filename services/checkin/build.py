@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the morning check-in page from template.html.
 
-Usage: build.py [--date YYYY-MM-DD] [--thread-url URL] [--cards F] [--out morning-checkin.html]
+Usage: build.py [--date YYYY-MM-DD] [--cards F] [--out morning-checkin.html]
 Today's doses come from ladder.py (habit ladder). Without --cards the fixture (cards.json) is used.
 The comic and the day ahead live in the talk thread, not on the page.
 """
@@ -15,7 +15,6 @@ HERE = Path(__file__).resolve().parent
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--date", default=date.today().isoformat())
-ap.add_argument("--thread-url", default="", help="claude:// link to today's talk thread")
 ap.add_argument("--cards", default=str(HERE / "cards.json"))
 ap.add_argument("--out", default=str(HERE / "morning-checkin.html"))
 ap.add_argument("--data-dir", default=str(ladder.DATA_DIR))
@@ -36,7 +35,6 @@ data = {
     "dueTotal": len(cards),
     "cards": [{k: c[k] for k in ("card_id", "prompt", "answer", "elaboration", "options", "correct_index")} for c in cards],
     "plan": plan,
-    "threadUrl": a.thread_url,
 }
 html = (HERE / "template.html").read_text().replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
 Path(a.out).write_text(html)

@@ -90,8 +90,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 .tally { font: 500 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Done */
-.fallback { font: 500 13px/1.3 var(--mono); color: var(--muted); text-align: center; }
-.fallback a { color: inherit; }
+.next { font: 600 17px/1.35 var(--display); padding: 14px 16px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); }
 .status { font: 500 12px/1.3 var(--mono); color: var(--muted); text-align: center; }
 .summary { display: grid; gap: 6px; font-size: 16px; }
 .summary b { font-family: var(--display); }
@@ -157,8 +156,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
     <h2>Nice work</h2>
     <div class="summary" id="summary"></div>
     <p class="lede">That's the tapping done. Now talk it through with Claude: how you're feeling and what's ahead today. Your reward is waiting at the end.</p>
-    <a class="btn primary" id="reflect" target="_blank" rel="noopener" hidden>Talk it through with Claude</a>
-    <p class="fallback" id="fallback" hidden>Didn't open? <a id="fallbacklink" target="_blank" rel="noopener">Open the thread on claude.ai</a></p>
+    <p class="next">Back in Messages, tap the second link to open the chat.</p>
     <button class="btn" id="moreCards" type="button" hidden>Review more cards</button>
   </section>
 
@@ -192,10 +190,6 @@ $("btitle").textContent = (WORDS[BREATHS] || BREATHS) + (BREATHS === 1 ? " slow 
 $("bcount").textContent = `0 of ${BREATHS}`;
 if (PLAN.doses.gratitude > 1) $("gtitle").textContent = `${WORDS[PLAN.doses.gratitude]} things you're grateful for`;
 if (PLAN.changes && PLAN.changes.length) { $("ladder").textContent = PLAN.changes.join(" "); $("ladder").hidden = false; }
-if (DATA.threadUrl) {
-  $("reflect").href = DATA.threadUrl; $("reflect").hidden = false;
-  $("fallbacklink").href = DATA.threadUrl.replace(/^claude:\/\//, "https://claude.ai/"); $("fallback").hidden = false;
-}
 
 function go(step) {
   state.step = step;
