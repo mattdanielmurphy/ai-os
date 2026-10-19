@@ -15,7 +15,7 @@ Google Calendar, publish the page) and calls this script for the rest:
       3. Build the page (morning-checkin.html) with today's due cards.
       Prints JSON: {"page": ..., "thread_url": ..., "plan": ..., "cards": ...}
   daily.py send --date D [--force]
-      iMessage Matt the page link, then the thread link, via Photon (once per day unless --force).
+      iMessage Matt the thread link via Photon (once per day unless --force). The thread's first message links the page.
 
 Run with the assistant venv (needs `fsrs`): services/assistant/.venv/bin/python services/checkin/daily.py ...
 """
@@ -37,7 +37,7 @@ VAULT = Path.home() / "Library/Mobile Documents/iCloud~md~obsidian/Documents/Per
 PY = ROOT / "services/assistant/.venv/bin/python"
 TMUX = "checkin-thread"
 MAX_CARDS = 20
-KICKOFF = "Morning check-in"  # the thread's only visible first message; the instructions are a hidden system prompt
+KICKOFF = f"Morning check-in: {ARTIFACT_URL}"  # the only visible first message; the instructions are a hidden system prompt
 
 
 def _days(data_dir):
@@ -197,7 +197,8 @@ def start_thread(seed, day, data_dir, timeout=90):
 
     Desktop-app sessions can't be started (or Remote-Control-linked) from an unattended scheduled run,
     so the thread is a CLI session. It lives until tomorrow's run replaces it. The instructions go in as an
-    appended system prompt, so the thread opens with just KICKOFF and Claude's first question.
+    appended system prompt, so the thread opens with just KICKOFF (today's page link) and Claude's first question.
+    The page opens in the app's viewer over the thread; closing it lands back here.
     """
     _, days = _days(data_dir)
     if days.get(day, {}).get("thread_url"):
@@ -309,9 +310,9 @@ def send(a):
     thread = days.get(a.date, {}).get("thread_url")
     if not thread:
         raise SystemExit(f"no thread link for {a.date}; run prepare first")
-    # Two bare links, page first: a page can't open the Claude app (custom schemes are blocked there and https
-    # links land in Safari), but a claude:// link tapped in Messages does (2026-10-19).
-    for link in (ARTIFACT_URL, thread):
+    # One link, to the thread: the page is linked from the thread's first message and opens in the app's viewer
+    # on top of it. A page can't link back into the app itself (claude:// does nothing, https opens Safari; 2026-10-19).
+    for link in (thread,):
         body = json.dumps({"recipient": _recipient(), "message": link}).encode()
         req = Request(url, data=body, method="POST",
                       headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
@@ -320,7 +321,7 @@ def send(a):
         if res.get("error") or res.get("success") is False:
             raise SystemExit(f"Photon refused: {res.get('error')}")
     _save_day(a.data_dir, a.date, sent_at=datetime.now().isoformat(timespec="seconds"))
-    print(json.dumps({"sent": True, "messages": [ARTIFACT_URL, thread]}))
+    print(json.dumps({"sent": True, "message": thread}))
 
 
 def main():

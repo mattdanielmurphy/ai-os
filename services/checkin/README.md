@@ -1,10 +1,12 @@
 # Morning check-in
 
-Claude-native replacement for the Telegram morning flow, in two stages, opened from an iMessage link on Matt's phone:
+Claude-native replacement for the Telegram morning flow, in two stages, both in one Code thread opened from an
+iMessage link on Matt's phone. The thread's first message links the page; the page opens in the app's viewer on top
+of the thread, and closing it lands him back in the chat:
 
 1. **Page** (Artifact https://claude.ai/artifact/5CLZnpsQVxcFDP7bmALrNC, `template.html` built by `build.py`):
    breathing animation → gratitude (typed) → newly unlocked habits → flashcards (instant ✅/❌, then
-   Again/Hard/Good/Easy) → "back in Messages, tap the second link". No model runs here. Results save to the page's db
+   Again/Hard/Good/Easy) → "close this page to get back to the chat". No model runs here. Results save to the page's db
    (`checkins/<date>`).
 2. **Talk thread** (Sonnet, Remote Control CLI in tmux): plain conversation, no question menus, so Matt can use
    Claude's dictation. How he feels, the day ahead, one light plan, then the comic as the reward. Its instructions
@@ -31,9 +33,9 @@ asked for this split.
   (ArtifactData), read Google Calendar, publish the page (Artifact). The rest is `daily.py`:
 - `prepare` records yesterday's page results (ladder, FSRS deck with the page's ratings, gratitude line in the
   Obsidian habit log; all idempotent), plans today, picks a fresh C&H comic and downloads it, starts the talk
-  thread, and builds the page with today's due cards. `send` iMessages two bare links via Photon, once per day: the
-  page, then the thread (`claude://`). A page can't open the Claude app itself: custom-scheme links do nothing there
-  and https links open Safari (tested 2026-10-19), so the hand-off goes through Messages.
+  thread, and builds the page with today's due cards. `send` iMessages the thread link (`claude://`) via Photon, once
+  per day. A page can't link into the app itself: claude:// links do nothing there and https links open Safari
+  (tested 2026-10-19), so the thread links the page rather than the other way round.
 - Page results land in the ladder and the deck the next morning. The thread records reflection minutes itself
   (`ladder.py record reflection=N`) and writes its notes to the Obsidian habit log.
 - The thread is a `claude --remote-control --model sonnet` CLI session in tmux (`checkin-thread`), because unattended
