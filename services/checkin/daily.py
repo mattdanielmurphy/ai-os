@@ -32,7 +32,6 @@ VAULT = Path.home() / "Library/Mobile Documents/iCloud~md~obsidian/Documents/Per
 PY = ROOT / "services/assistant/.venv/bin/python"
 TMUX = "checkin-thread"
 MAX_CARDS = 20
-BATCH = 4  # AskUserQuestion takes at most 4 questions per call
 
 
 def _days(data_dir):
@@ -72,11 +71,10 @@ def shuffle_card(card, day):
 
 
 def card_questions(cards):
-    """AskUserQuestion payloads, at most BATCH questions per call."""
-    qs = [{"question": c["prompt"], "header": f"Card {i + 1} of {len(cards)}", "multiSelect": False,
-           "options": [{"label": o, "description": ""} for o in c["options"]]}
-          for i, c in enumerate(cards)]
-    return [{"questions": qs[i:i + BATCH]} for i in range(0, len(qs), BATCH)]
+    """AskUserQuestion payloads, one card per call, so each answer can be marked before the next card."""
+    return [{"questions": [{"question": c["prompt"], "header": f"Card {i + 1} of {len(cards)}", "multiSelect": False,
+                            "options": [{"label": o, "description": ""} for o in c["options"]]}]}
+            for i, c in enumerate(cards)]
 
 
 def grade(cards, answers):
@@ -163,8 +161,9 @@ def thread_seed(plan, events, cards, comic, day, data_dir=ladder.DATA_DIR, cards
     things = doses.get("gratitude", 1)
     if cards:
         batches = card_questions(cards)
-        intro = (f"Call AskUserQuestion once per JSON payload below, in order ({len(cards)} card"
-                 f"{'s' if len(cards) != 1 else ''}). Don't reveal answers until step 4.")
+        intro = (f"{len(cards)} card{'s' if len(cards) != 1 else ''}, one AskUserQuestion call each, in order. "
+                 f"First, silently Read `{Path(data_dir) / 'build' / 'cards.json'}` for the answer key "
+                 f"(each card's options and 0-based correct_index; never show it).")
         block = "\n".join(json.dumps(b, ensure_ascii=False) for b in batches)
     else:
         intro, block = "No cards are due today. Skip this step and record with no `--answer`.", ""

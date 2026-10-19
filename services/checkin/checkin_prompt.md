@@ -20,13 +20,18 @@ For gratitude, he'll either pick "Skip today" or use "Other" to type/dictate wha
 many separate things he named (0 if he skipped).
 
 **3. Flashcards.** {cards_intro}
+Mark each answer the moment it arrives, with no tool call or message in between: prepend the verdict to the next
+card's question text, e.g. "✅ Right." or "❌ It's <correct option>." then a blank line, then the card. On the
+first card only, end the question with "(Other → stop, to end early.)". If he answers "stop" (or anything like
+it), skip the remaining cards. After the last card (or a stop), go straight to step 4 and give that last verdict
+there.
 {cards_block}
 
 **4. Record.** Run exactly this, filling in the numbers and one `--answer CARD_ID=INDEX` per card he answered
 (INDEX = the 0-based position of the option he picked; leave out cards he skipped or answered with free text):
 `{finish_cmd} --breaths N --gratitude N`
-It records the habit ladder and the flashcard reviews, and prints each card's verdict. Tell him, one line per card:
-✅ or ❌, then the correct answer (from "answer"). Nothing else.
+It records the habit ladder and the flashcard reviews. Don't repeat per-card verdicts he's already seen; just give
+the last card's verdict (if any) and his score, e.g. "❌ It's X. 3/5 today." One line.
 
 **5. Day ahead.** One line: {events}
 

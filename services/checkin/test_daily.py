@@ -31,10 +31,10 @@ class DailyTest(unittest.TestCase):
         self.assertNotIn("SendUserFile", without)
         self.assertIn("Today's comic: https://explosm.net/comics/x", without)
 
-    def test_questions_batch_by_four(self):
+    def test_one_card_per_question_call(self):
         cards = [daily.shuffle_card({**CARD, "card_id": f"c{i}"}, "d") for i in range(5)]
         batches = daily.card_questions(cards)
-        self.assertEqual([len(b["questions"]) for b in batches], [4, 1])
+        self.assertEqual([len(b["questions"]) for b in batches], [1] * len(cards))
         self.assertTrue(all(len(q["header"]) <= 12 for b in batches for q in b["questions"]))
 
     def test_seed_has_no_unfilled_fields(self):
