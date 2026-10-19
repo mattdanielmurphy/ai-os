@@ -15,7 +15,8 @@ Google Calendar, publish the page) and calls this script for the rest:
       3. Build the page (morning-checkin.html) with today's due cards.
       Prints JSON: {"page": ..., "thread_url": ..., "plan": ..., "cards": ...}
   daily.py send --date D [--force]
-      iMessage Matt the thread link via Photon (once per day unless --force). The thread's first message links the page.
+      iMessage Matt the thread link and the page link in one message via Photon (once per day unless --force);
+      his iPhone Shortcut opens both in turn, so the page sits on top of the thread.
 
 Run with the assistant venv (needs `fsrs`): services/assistant/.venv/bin/python services/checkin/daily.py ...
 """
@@ -309,18 +310,19 @@ def send(a):
     thread = days.get(a.date, {}).get("thread_url")
     if not thread:
         raise SystemExit(f"no thread link for {a.date}; run prepare first")
-    # One link, to the thread: the page is linked from the thread's first message and opens in the app's viewer
-    # on top of it. A page can't link back into the app itself (claude:// does nothing, https opens Safari; 2026-10-19).
-    for link in (thread,):
-        body = json.dumps({"recipient": _recipient(), "message": link}).encode()
-        req = Request(url, data=body, method="POST",
-                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
-        with urlopen(req, timeout=30) as resp:
-            res = json.loads(resp.read() or b"{}")
-        if res.get("error") or res.get("success") is False:
-            raise SystemExit(f"Photon refused: {res.get('error')}")
+    # One message, thread link first, then the page: Matt's iPhone Shortcut opens each URL in turn, so the page
+    # opens on top of the thread and closing it lands him in the chat. (A page can't link into the app itself:
+    # claude:// does nothing there and https opens Safari; 2026-10-19.)
+    message = f"{thread}\n{ARTIFACT_URL}"
+    body = json.dumps({"recipient": _recipient(), "message": message}).encode()
+    req = Request(url, data=body, method="POST",
+                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
+    with urlopen(req, timeout=30) as resp:
+        res = json.loads(resp.read() or b"{}")
+    if res.get("error") or res.get("success") is False:
+        raise SystemExit(f"Photon refused: {res.get('error')}")
     _save_day(a.data_dir, a.date, sent_at=datetime.now().isoformat(timespec="seconds"))
-    print(json.dumps({"sent": True, "message": thread}))
+    print(json.dumps({"sent": True, "message": message}))
 
 
 def main():

@@ -33,9 +33,10 @@ asked for this split.
   (ArtifactData), read Google Calendar, publish the page (Artifact). The rest is `daily.py`:
 - `prepare` records yesterday's page results (ladder, FSRS deck with the page's ratings, gratitude line in the
   Obsidian habit log; all idempotent), plans today, picks a fresh C&H comic and downloads it, starts the talk
-  thread, and builds the page with today's due cards. `send` iMessages the thread link (`claude://`) via Photon, once
-  per day. A page can't link into the app itself: claude:// links do nothing there and https links open Safari
-  (tested 2026-10-19), so the thread links the page rather than the other way round.
+  thread, and builds the page with today's due cards. `send` iMessages one message via Photon, once per day: the thread
+  link (`claude://`), then the page link. Matt's iPhone Shortcut opens each URL in turn (Repeat for each), so the
+  page opens on top of the thread. A page can't link into the app itself: claude:// links do nothing there and https
+  links open Safari (tested 2026-10-19). The thread's first message also links the page, as a fallback.
 - Page results land in the ladder and the deck the next morning. The thread records reflection minutes itself
   (`ladder.py record reflection=N`) and writes its notes to the Obsidian habit log.
 - The thread is a `claude --remote-control --model sonnet` CLI session in tmux (`checkin-thread`), because unattended
