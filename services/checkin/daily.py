@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 """Daily morning check-in job: everything that doesn't need Claude.
 
-The scheduled task `morning-checkin` (Claude desktop) reads Google Calendar (a Claude tool) and calls this script:
+Two stages each morning: a page (Artifact: breaths, gratitude, flashcards; no model) whose last button opens a
+talk thread (Sonnet, Remote Control CLI in tmux: how he feels, the day ahead, then the comic as the reward).
 
-  daily.py prepare --date D [--events F]
-      Plan today (habit ladder), pick and shuffle today's due cards, find a fresh Cyanide & Happiness comic (and download its image),
-      start today's check-in thread (Sonnet, Remote Control CLI in tmux) seeded from checkin_prompt.md.
-      Prints JSON: {"thread_url": ..., "plan": ..., "cards": ...}
+The scheduled task `morning-checkin` (Claude desktop) does the Claude-only bits (read yesterday's page doc and
+Google Calendar, publish the page) and calls this script for the rest:
+
+  daily.py prepare --date D [--checkin F] [--events F]
+      1. Record yesterday's page results (F = the ArtifactData file for checkins/<yesterday>) into the ladder,
+         apply its flashcard ratings to the FSRS deck and log its gratitude to Obsidian. All idempotent.
+      2. Plan today, pick a fresh Cyanide & Happiness comic (and download its image), start today's talk thread
+         with checkin_prompt.md as a hidden system prompt.
+      3. Build the page (morning-checkin.html) with today's due cards and the thread link.
+      Prints JSON: {"page": ..., "thread_url": ..., "plan": ..., "cards": ...}
   daily.py send --date D [--force]
-      iMessage Matt the thread link via Photon (once per day unless --force).
-  daily.py finish --date D --breaths N --gratitude N [--answer CARD_ID=INDEX ...]
-      Run by the thread itself once Matt has answered: grades the cards, applies the ratings to the FSRS deck
-      (right = Good, wrong = Again; idempotent) and records breaths/gratitude/cards in the ladder.
+      iMessage Matt the page link via Photon (once per day unless --force).
 
 Run with the assistant venv (needs `fsrs`): services/assistant/.venv/bin/python services/checkin/daily.py ...
 """
 import argparse, json, os, random, re, shlex, sqlite3, subprocess, sys, time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
 
@@ -25,6 +29,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT))
 import ladder  # noqa: E402
 
+ARTIFACT_URL = "https://claude.ai/artifact/5CLZnpsQVxcFDP7bmALrNC"
 CARDS_DB = Path(os.getenv("ASSISTANT_DB_PATH", Path.home() / ".hermes/assistant.db"))
 PHOTON_ENV = Path.home() / "projects/daily-mini-crossword/.env"
 IDENTITY = ROOT / "private/identity.md"
@@ -32,6 +37,7 @@ VAULT = Path.home() / "Library/Mobile Documents/iCloud~md~obsidian/Documents/Per
 PY = ROOT / "services/assistant/.venv/bin/python"
 TMUX = "checkin-thread"
 MAX_CARDS = 20
+KICKOFF = "Morning check-in"  # the thread's only visible first message; the instructions are a hidden system prompt
 
 
 def _days(data_dir):
@@ -62,48 +68,43 @@ def due_cards(db_path=CARDS_DB, limit=MAX_CARDS):
     return [dict(r) for r in rows]
 
 
-def shuffle_card(card, day):
-    """Shuffle a card's options (same order for a same-day re-run) and move correct_index with them."""
-    opts = json.loads(card["options"]) if isinstance(card["options"], str) else list(card["options"])
-    order = list(range(len(opts)))
-    random.Random(f"{day}:{card['card_id']}").shuffle(order)
-    return {**card, "options": [opts[i] for i in order], "correct_index": order.index(int(card["correct_index"]))}
+def load_checkin(path):
+    """ArtifactData writes {"id", "data", "version", ...} or just the fields; return the fields or None."""
+    if not path or not Path(path).exists():
+        return None
+    doc = json.loads(Path(path).read_text())
+    return doc.get("data", doc) if isinstance(doc, dict) else None
 
 
-def card_questions(cards):
-    """AskUserQuestion payloads, one card per call, so each answer can be marked before the next card."""
-    return [{"questions": [{"question": c["prompt"], "header": f"Card {i + 1} of {len(cards)}", "multiSelect": False,
-                            "options": [{"label": o, "description": ""} for o in c["options"]]}]}
-            for i, c in enumerate(cards)]
+def record_from_checkin(doc, planned, due_total):
+    """Turn a page doc into ladder record values."""
+    reviews = doc.get("reviews") or []
+    values = {
+        "breaths": int(doc.get("breaths") or 0),
+        "gratitude": 1 if str(doc.get("gratitude") or "").strip() else 0,
+        # No cards due that day counts as hitting the dose.
+        "cards": len(reviews) if (reviews or due_total) else planned.get("cards", 0),
+    }
+    for k, v in (doc.get("extras") or {}).items():
+        values[k] = v
+    return values
 
 
-def grade(cards, answers):
-    """answers: {card_id: picked index}. Returns [{card_id, correct, rating, answer}] for answered cards."""
-    out = []
-    for c in cards:
-        if c["card_id"] not in answers:
-            continue
-        ok = answers[c["card_id"]] == c["correct_index"]
-        out.append({"card_id": c["card_id"], "correct": ok, "rating": 3 if ok else 1,
-                    "answer": c["answer"], "elaboration": c.get("elaboration") or ""})
-    return out
-
-
-def apply_reviews(reviews, day, db_path=CARDS_DB):
-    """Feed ratings into the FSRS deck. Log ids are deterministic per day and card, so re-runs skip."""
+def apply_reviews(doc, day, db_path=CARDS_DB):
+    """Feed the page's Again/Hard/Good/Easy ratings into the FSRS deck. Log ids are deterministic, so re-runs skip."""
     from services.assistant.spaced_repetition.engine import FSRSEngine
     eng, applied = FSRSEngine(), 0
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
     try:
-        for r in reviews:
-            log_id = f"checkin-{day}-{r['card_id']}"
+        for r in doc.get("reviews") or []:
+            log_id = f"page-{day}-{r['card_id']}"
             if con.execute("SELECT 1 FROM fsrs_logs WHERE log_id = ?", (log_id,)).fetchone():
                 continue
             row = con.execute("SELECT * FROM fsrs_cards WHERE card_id = ?", (r["card_id"],)).fetchone()
             if not row or r.get("rating") not in (1, 2, 3, 4):
                 continue
-            at = datetime.now(timezone.utc)
+            at = datetime.fromisoformat(r["at"].replace("Z", "+00:00")) if r.get("at") else datetime.now(timezone.utc)
             card, log = eng.review(dict(row), int(r["rating"]), at)
             con.execute(
                 "UPDATE fsrs_cards SET stability=?, difficulty=?, reps=?, lapses=?, state=?, last_review=?, due_at=? WHERE card_id=?",
@@ -116,6 +117,21 @@ def apply_reviews(reviews, day, db_path=CARDS_DB):
     finally:
         con.close()
     return applied
+
+
+def log_gratitude(doc, day, vault=VAULT):
+    """Append the page's gratitude text to that day's Obsidian habit log, once."""
+    text = str(doc.get("gratitude") or "").strip()
+    if not text:
+        return False
+    log = Path(vault) / "habits/logs" / f"{day}.md"
+    old = log.read_text() if log.exists() else ""
+    line = f"- Grateful for: {' '.join(text.split())}"
+    if line in old:
+        return False
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(old + ("" if not old or old.endswith("\n") else "\n") + ("\n## Gratitude\n" if "## Gratitude" not in old else "") + line + "\n")
+    return True
 
 
 # ---- today's inputs ---------------------------------------------------------
@@ -150,55 +166,25 @@ def comic_image(data_dir, day):
     return out
 
 
-def thread_seed(plan, events, cards, comic, day, data_dir=ladder.DATA_DIR, cards_db=CARDS_DB, comic_image=None):
+def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=None):
+    """The talk thread's hidden system prompt, from checkin_prompt.md."""
     text = (HERE / "checkin_prompt.md").read_text().split("\n---\n", 1)[1].strip()
     d = date.fromisoformat(day)
-    doses = plan["doses"]
-    # Non-default paths (tests) are passed through so the thread writes where prepare read.
+    # A non-default data dir (tests) is passed through so the thread records where prepare read.
     extra_l = f" --data-dir {data_dir}" if Path(data_dir) != ladder.DATA_DIR else ""
-    extra = extra_l + (f" --cards-db {cards_db}" if Path(cards_db) != CARDS_DB else "")
-    breaths = doses.get("breaths", 1)
-    things = doses.get("gratitude", 1)
-    if cards:
-        batches = card_questions(cards)
-        intro = (f"{len(cards)} card{'s' if len(cards) != 1 else ''}, one AskUserQuestion call each, in order. "
-                 f"First, silently Read `{Path(data_dir) / 'build' / 'cards.json'}` for the answer key "
-                 f"(each card's options and 0-based correct_index; never show it).")
-        block = "\n".join(json.dumps(b, ensure_ascii=False) for b in batches)
-    else:
-        intro, block = "No cards are due today. Skip this step and record with no `--answer`.", ""
     fields = {
         "dateline": d.strftime("%A, %B ") + str(d.day),
         "status": plan["status"],
         "streak": plan["streak"],
         "changes": " ".join(plan["changes"]) or "no changes today",
-        "breaths_gratitude_question": json.dumps({"questions": [
-            {"question": f"Take {breaths} slow breath{'s' if breaths != 1 else ''}: in for 4, out for 6. Tap when done.",
-             "header": "Breathe", "multiSelect": False,
-             "options": [{"label": "Done", "description": f"{breaths} breaths"},
-                         {"label": "Only some", "description": "Still counts"},
-                         {"label": "Skip today", "description": "That's okay"}]},
-            {"question": ("What's one thing you're grateful for this morning?" if things == 1
-                          else f"What are {things} things you're grateful for this morning?")
-                         + " Type it or dictate (pick Other), or say skip.",
-             "header": "Gratitude", "multiSelect": False,
-             "options": [{"label": "Skip today", "description": "That's okay"},
-                         {"label": "I'll type it", "description": "Use Other below to dictate"}]},
-        ]}, ensure_ascii=False),
-        "breaths": breaths,
-        "breaths_some": max(1, breaths - 1),
-        "cards_intro": intro,
-        "cards_block": block,
-        "finish_cmd": f"{PY} {HERE}/daily.py{extra} finish --date {day}",
-        "ladder_args": extra_l,
-        "events": "; ".join(f"{e['when']} {e['what']}" for e in events) or "Nothing on the calendar today.",
-        "reflection_minutes": doses.get("reflection", 1),
+        "events": "; ".join(f"{e['when']} {e['what']}" for e in events) or "nothing on the calendar today",
+        "reflection_minutes": plan["doses"].get("reflection", 1),
         "here": HERE,
+        "ladder_args": extra_l,
         "vault": VAULT,
         "comic_url": comic or "https://explosm.net/comics/latest",
-        "comic_step": (f'Show him the comic image: send `{comic_image}` with the SendUserFile tool '
-                       f'(display "render", caption "Today\'s comic"). If that tool isn\'t available, skip '
-                       f'this.' if comic_image else ""),
+        "comic_step": (f'send `{comic_image}` with the SendUserFile tool (display "render", caption "Today\'s comic"). '
+                       f'If that tool isn\'t available, skip the image.' if comic_image else ""),
         "date": day,
     }
     for k, v in fields.items():
@@ -210,7 +196,8 @@ def start_thread(seed, day, data_dir, timeout=90):
     """Start the check-in thread as a Remote Control CLI session in tmux; return its claude:// link.
 
     Desktop-app sessions can't be started (or Remote-Control-linked) from an unattended scheduled run,
-    so the thread is a CLI session. It lives until tomorrow's run replaces it.
+    so the thread is a CLI session. It lives until tomorrow's run replaces it. The instructions go in as an
+    appended system prompt, so the thread opens with just KICKOFF and Claude's first question.
     """
     _, days = _days(data_dir)
     if days.get(day, {}).get("thread_url"):
@@ -218,13 +205,12 @@ def start_thread(seed, day, data_dir, timeout=90):
     subprocess.run(["tmux", "kill-session", "-t", TMUX], capture_output=True)
     seed_file = Path(data_dir) / f"checkin-{day}.md"
     seed_file.write_text(seed)
-    allowed = [f"Bash({PY} {HERE}/daily.py finish:*)", f"Bash(python3 {HERE}/ladder.py record:*)",
-               "Bash(apple-reminders add:*)"]
+    allowed = [f"Bash(python3 {HERE}/ladder.py record:*)", "Bash(apple-reminders add:*)"]
     cmd = " ".join(shlex.quote(x) for x in [
         "/opt/homebrew/bin/claude", "--remote-control", f"Morning check-in {day}", "--model", "sonnet",
         # Bypass: Matt answers this thread from his phone; per-command prompts broke the flow (2026-10-17).
         "--permission-mode", "bypassPermissions", "--add-dir", str(VAULT), "--allowedTools", *allowed,
-    ]) + f' -- "$(cat {shlex.quote(str(seed_file))})"'
+    ]) + f' --append-system-prompt "$(cat {shlex.quote(str(seed_file))})" -- {shlex.quote(KICKOFF)}'
     subprocess.run(["tmux", "new-session", "-d", "-s", TMUX, "-x", "220", "-y", "60", "-c", str(ROOT), cmd], check=True)
     end = time.time() + timeout
     while time.time() < end:
@@ -234,26 +220,41 @@ def start_thread(seed, day, data_dir, timeout=90):
         m = re.search(r"claude\.ai/code/(session_[A-Za-z0-9]+)", pane)
         if m:
             url = f"claude://code/{m.group(1)}"
-            _save_day(data_dir, day, thread_url=url)
+            _save_day(data_dir, day, thread_url=url, session_id=m.group(1))
             return url
     raise SystemExit(f"check-in thread gave no session link within {timeout}s (tmux session {TMUX})")
 
 
+def ingest(path, day, data_dir, cards_db=CARDS_DB, vault=VAULT):
+    """Record a day's page results (ladder, FSRS deck, gratitude log). Returns a summary, or None if no doc."""
+    doc = load_checkin(path)
+    if not doc:
+        return None
+    cfg = ladder.load_config()
+    planned = ladder.read_state(cfg, data_dir)["plans"].get(day, {}).get("doses", {})
+    _, days = _days(data_dir)
+    values = record_from_checkin(doc, planned, days.get(day, {}).get("due_total", 1))
+    ladder.append_record({"date": day, **values}, data_dir)
+    return {"date": day, **values, "fsrs_applied": apply_reviews(doc, day, cards_db),
+            "gratitude_logged": log_gratitude(doc, day, vault)}
+
+
 def prepare(a):
     cfg = ladder.load_config()
+    today = date.fromisoformat(a.date)
     out = {"date": a.date}
-    state, plan = ladder.plan(cfg, ladder.read_state(cfg, a.data_dir), ladder.read_history(a.data_dir),
-                              date.fromisoformat(a.date))
+    out["recorded"] = ingest(a.checkin, (today - timedelta(days=1)).isoformat(), a.data_dir, a.cards_db)
+
+    state, plan = ladder.plan(cfg, ladder.read_state(cfg, a.data_dir), ladder.read_history(a.data_dir), today)
     ladder.write_state(state, a.data_dir)
     out["plan"] = {k: plan[k] for k in ("status", "streak", "doses", "changes")}
 
     events = json.loads(Path(a.events).read_text()) if a.events else []
-    due = due_cards(a.cards_db)
-    cards = [shuffle_card(c, a.date) for c in due[:max(1, plan["doses"].get("cards", 1))]]
+    cards = due_cards(a.cards_db)
     work = Path(a.data_dir) / "build"
     work.mkdir(parents=True, exist_ok=True)
-    (work / "cards.json").write_text(json.dumps({"date": a.date, "cards": cards}, ensure_ascii=False))
-    _save_day(a.data_dir, a.date, due_total=len(due))
+    (work / "cards.json").write_text(json.dumps(cards, ensure_ascii=False))
+    _save_day(a.data_dir, a.date, due_total=len(cards))
     out["cards"] = len(cards)
     try:
         comic = comic_url(a.data_dir, a.date)
@@ -266,31 +267,13 @@ def prepare(a):
         out["comic_image_error"] = f"{type(e).__name__}: {e}"
         image = None
 
-    seed = thread_seed(plan, events, cards, comic, a.date, a.data_dir, a.cards_db, image)
-    out["thread_url"] = start_thread(seed, a.date, a.data_dir)
+    out["thread_url"] = start_thread(thread_seed(plan, events, comic, a.date, a.data_dir, image), a.date, a.data_dir)
+    page = Path(a.out) if a.out else HERE / "morning-checkin.html"
+    subprocess.run([sys.executable, str(HERE / "build.py"), "--date", a.date, "--thread-url", out["thread_url"],
+                    "--cards", str(work / "cards.json"), "--out", str(page), "--data-dir", a.data_dir],
+                   check=True, capture_output=True)
+    out["page"] = str(page)
     print(json.dumps(out, indent=2))
-
-
-def finish(a):
-    work = json.loads((Path(a.data_dir) / "build" / "cards.json").read_text())
-    if work.get("date") != a.date:
-        raise SystemExit(f"build/cards.json is for {work.get('date')}, not {a.date}")
-    answers = {}
-    for kv in a.answer:
-        cid, _, idx = kv.partition("=")
-        answers[cid.strip()] = int(idx)
-    results = grade(work["cards"], answers)
-    applied = apply_reviews(results, a.date, a.cards_db)
-    cfg = ladder.load_config()
-    planned = ladder.read_state(cfg, a.data_dir)["plans"].get(a.date, {}).get("doses", {})
-    # No cards due counts as hitting the dose.
-    cards_done = len(results) if work["cards"] else planned.get("cards", 0)
-    rec = {"date": a.date, "breaths": a.breaths, "gratitude": a.gratitude, "cards": cards_done}
-    ladder.append_record(rec, a.data_dir)
-    _save_day(a.data_dir, a.date, finished_at=datetime.now().isoformat(timespec="seconds"))
-    print(json.dumps({"recorded": rec, "fsrs_applied": applied,
-                      "cards": [{k: r[k] for k in ("card_id", "correct", "answer")} for r in results]},
-                     indent=2, ensure_ascii=False))
 
 
 # ---- iMessage -----------------------------------------------------------
@@ -323,9 +306,7 @@ def send(a):
     if not addr.startswith("http"):
         addr = "http://" + addr
     url = addr if addr.endswith("/send") else addr + "/send"
-    link = days.get(a.date, {}).get("thread_url")
-    if not link:
-        raise SystemExit(f"no thread link for {a.date}; run prepare first")
+    link = ARTIFACT_URL
     body = json.dumps({"recipient": _recipient(), "message": link}).encode()
     req = Request(url, data=body, method="POST",
                   headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
@@ -344,17 +325,14 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("prepare")
     p.add_argument("--date", default=date.today().isoformat())
+    p.add_argument("--checkin", help="ArtifactData file for checkins/<yesterday>; missing = page not used")
     p.add_argument("--events", help='JSON list of {"when", "what"} for today')
+    p.add_argument("--out", help="page path (default: morning-checkin.html here)")
     s = sub.add_parser("send")
     s.add_argument("--date", default=date.today().isoformat())
     s.add_argument("--force", action="store_true")
-    f = sub.add_parser("finish")
-    f.add_argument("--date", default=date.today().isoformat())
-    f.add_argument("--breaths", type=int, required=True)
-    f.add_argument("--gratitude", type=int, required=True, help="number of things named (0 = skipped)")
-    f.add_argument("--answer", action="append", default=[], metavar="CARD_ID=INDEX")
     a = ap.parse_args()
-    {"prepare": prepare, "send": send, "finish": finish}[a.cmd](a)
+    {"prepare": prepare, "send": send}[a.cmd](a)
 
 
 if __name__ == "__main__":

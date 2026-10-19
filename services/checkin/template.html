@@ -3,7 +3,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: one narrow column, one step on screen at a time, a five-segment progress strip on top. Dawn sky palette. */
+/* Layout: one narrow column, one step on screen at a time, a segmented progress strip on top. Dawn sky palette.
+   Stage 1 of the check-in (no model); the last step hands over to the talk thread, where the comic is the reward. */
 :root {
   --bg: #eef2f6;
   --surface: #ffffff;
@@ -30,13 +31,14 @@
   --accent: #f0a050; --accent-ink: #1b1308; --sky: #4a6584; --good: #6cc59c; --bad: #ec8a80;
   --good-bg: #173226; --bad-bg: #3a1f1d; color-scheme: dark; }
 
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); }
 .wrap { max-width: 34rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; display: grid; gap: 20px; }
 header { display: grid; gap: 4px; }
 .eyebrow { font: 500 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 h1 { font: 700 clamp(28px, 7vw, 38px)/1.05 var(--display); margin: 0; text-wrap: balance; }
 h2 { font: 700 24px/1.15 var(--display); margin: 0; text-wrap: balance; }
-.progress { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.progress { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: 6px; }
 .seg { display: grid; gap: 6px; font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: .04em; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
 .seg::before { content: ""; height: 4px; border-radius: 2px; background: var(--line); }
 .seg.done::before { background: var(--sky); }
@@ -68,12 +70,6 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 
 textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; resize: vertical; }
 
-/* Day */
-.event { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; padding-block: 10px; border-top: 1px solid var(--line); }
-.event:first-of-type { border-top: 0; }
-.when { font: 500 13px/1.3 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
-.what { font-weight: 600; min-width: 0; }
-
 /* Recall */
 .cardmeta { display: flex; justify-content: space-between; gap: 8px; }
 .prompt { font: 600 20px/1.35 var(--body); }
@@ -93,10 +89,9 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 .rate.dim { opacity: .4; }
 .tally { font: 500 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* Reward */
-.comic { width: 100%; max-width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
-.src { font: 500 13px/1.3 var(--mono); color: var(--muted); }
-.src a { color: inherit; }
+/* Done */
+.fallback { font: 500 13px/1.3 var(--mono); color: var(--muted); text-align: center; }
+.fallback a { color: inherit; }
 .status { font: 500 12px/1.3 var(--mono); color: var(--muted); text-align: center; }
 .summary { display: grid; gap: 6px; font-size: 16px; }
 .summary b { font-family: var(--display); }
@@ -143,18 +138,9 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
     </div>
   </section>
 
-  <section class="step" id="s-day" hidden>
-    <h2>Your day ahead</h2>
-    <div id="events"></div>
-    <div class="row">
-      <button class="btn" id="dback" type="button">Back</button>
-      <button class="btn primary" id="dnext" type="button">Start review</button>
-    </div>
-  </section>
-
   <section class="step" id="s-recall" hidden>
     <div class="cardmeta"><span class="eyebrow" id="deck"></span><span class="tally" id="tally"></span></div>
-    <button class="btn primary" id="tocomic" type="button" hidden>Done reviewing · claim my comic</button>
+    <button class="btn primary" id="todone" type="button" hidden>Done reviewing</button>
     <div class="prompt" id="prompt"></div>
     <div class="opts" id="opts"></div>
     <div class="reveal" id="reveal" hidden>
@@ -167,13 +153,12 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
     <p class="lede" id="nextnote" hidden></p>
   </section>
 
-  <section class="step" id="s-reward" hidden>
-    <h2>Earned it</h2>
-    <img class="comic" id="comic" alt="Today's Cyanide and Happiness comic">
-    <span class="src">Cyanide &amp; Happiness · <a id="comiclink" target="_blank" rel="noopener">explosm.net</a></span>
+  <section class="step" id="s-done" hidden>
+    <h2>Nice work</h2>
     <div class="summary" id="summary"></div>
-    <p class="lede">Page done. Everything above is saved.</p>
-    <a class="btn primary" id="reflect" hidden>Now reflect with Claude</a>
+    <p class="lede">That's the tapping done. Now talk it through with Claude: how you're feeling and what's ahead today. Your reward is waiting at the end.</p>
+    <a class="btn primary" id="reflect" target="_blank" rel="noopener" hidden>Talk it through with Claude</a>
+    <p class="fallback" id="fallback" hidden>Didn't open? <a id="fallbacklink" target="_blank" rel="noopener">Open the thread on claude.ai</a></p>
     <button class="btn" id="moreCards" type="button" hidden>Review more cards</button>
   </section>
 
@@ -185,15 +170,15 @@ const DATA = __DATA__;
 const PLAN = DATA.plan || { doses: { breaths: 3, cards: 3, gratitude: 1 }, steps: [], changes: [] };
 const BREATHS = PLAN.doses.breaths || 3;
 const EXTRAS = (PLAN.steps || []).filter(x => !["breaths", "gratitude", "cards", "reflection"].includes(x.habit));
-const STEPS = [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["day","Day"],["recall","Recall"],["reward","Reward"]];
+const STEPS = [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
 const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
-const TARGET = PLAN.doses.cards || 3; // after this many cards the comic button becomes the main call to action
+const TARGET = PLAN.doses.cards || 3; // after this many cards the Done button becomes the main call to action
 const $ = id => document.getElementById(id);
 
 let state = { date: DATA.date, step: "breathe", reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], finishedAt: null };
 const stepIndex = k => STEPS.findIndex(([s]) => s === k);
 let cardIdx = 0, picked = null, rating = false, touched = false;
-const BUILD = "v5";
+const BUILD = "v6";
 document.addEventListener("click", () => { touched = true; }, { capture: true });
 const order = DATA.cards.map(c => {
   const idx = c.options.map((_, i) => i);
@@ -207,7 +192,10 @@ $("btitle").textContent = (WORDS[BREATHS] || BREATHS) + (BREATHS === 1 ? " slow 
 $("bcount").textContent = `0 of ${BREATHS}`;
 if (PLAN.doses.gratitude > 1) $("gtitle").textContent = `${WORDS[PLAN.doses.gratitude]} things you're grateful for`;
 if (PLAN.changes && PLAN.changes.length) { $("ladder").textContent = PLAN.changes.join(" "); $("ladder").hidden = false; }
-if (DATA.threadUrl) { $("reflect").href = DATA.threadUrl; $("reflect").hidden = false; }
+if (DATA.threadUrl) {
+  $("reflect").href = DATA.threadUrl; $("reflect").hidden = false;
+  $("fallbacklink").href = DATA.threadUrl.replace(/^claude:\/\//, "https://claude.ai/"); $("fallback").hidden = false;
+}
 
 function go(step) {
   state.step = step;
@@ -215,12 +203,12 @@ function go(step) {
   STEPS.forEach(([k]) => { $("s-" + k).hidden = k !== step; });
   renderProgress();
   if (step === "recall") renderCard();
-  if (step === "reward") renderReward();
+  if (step === "done") renderDone();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function renderProgress() {
   const cur = stepIndex(state.step);
-  const reach = Math.max(state.reached || 0, state.reviews.length ? stepIndex("reward") : 0);
+  const reach = Math.max(state.reached || 0, state.reviews.length ? stepIndex("done") : 0);
   $("progress").replaceChildren(...STEPS.map(([k, label], i) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "seg" + (i === cur ? " on" : i <= reach ? " done" : "");
@@ -265,23 +253,13 @@ $("extras").replaceChildren(...EXTRAS.map(x => {
   return box;
 }));
 $("xback").onclick = () => go("grateful");
-$("xnext").onclick = () => go("day");
+$("xnext").onclick = () => go("recall");
 
 /* Gratitude */
 $("grat").addEventListener("input", e => { $("gnext").disabled = !e.target.value.trim(); try { localStorage.setItem("grat-" + DATA.date, e.target.value); } catch {} });
 try { const d = localStorage.getItem("grat-" + DATA.date); if (d) { $("grat").value = d; $("gnext").disabled = !d.trim(); } } catch {}
 $("gback").onclick = () => go("breathe");
-$("gnext").onclick = async () => { state.gratitude = $("grat").value.trim(); go(EXTRAS.length ? "extra" : "day"); await save(); };
-
-/* Day */
-$("events").replaceChildren(...(DATA.events.length ? DATA.events : [{ when: "—", what: "Nothing on the calendar. Open day." }]).map(ev => {
-  const d = document.createElement("div"); d.className = "event";
-  const w = document.createElement("span"); w.className = "when"; w.textContent = ev.when;
-  const t = document.createElement("span"); t.className = "what"; t.textContent = ev.what;
-  d.append(w, t); return d;
-}));
-$("dback").onclick = () => go(EXTRAS.length ? "extra" : "grateful");
-$("dnext").onclick = () => go("recall");
+$("gnext").onclick = async () => { state.gratitude = $("grat").value.trim(); go(EXTRAS.length ? "extra" : "recall"); await save(); };
 
 /* Recall */
 function nextUnreviewed(from) {
@@ -292,14 +270,14 @@ function nextUnreviewed(from) {
 function renderCard() {
   cardIdx = nextUnreviewed(cardIdx);
   const c = DATA.cards[cardIdx];
-  if (!c) { go("reward"); return; }
+  if (!c) { go("done"); return; }
   picked = null;
   $("deck").textContent = "forall x · " + c.card_id.replace(/^forallx_ch0?(\d+)_q0?(\d+)$/, "ch. $1, q$2");
   $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
   $("prompt").textContent = c.prompt;
   $("reveal").hidden = true; $("nextnote").hidden = true;
-  $("tocomic").hidden = state.reviews.length === 0;
-  $("tocomic").textContent = state.reviews.length >= TARGET ? `${state.reviews.length} done · claim my comic (or keep going below)` : "Done reviewing · claim my comic";
+  $("todone").hidden = state.reviews.length === 0;
+  $("todone").textContent = state.reviews.length >= TARGET ? `${state.reviews.length} done · continue (or keep going below)` : "Done reviewing · continue";
   $("opts").replaceChildren(...order[cardIdx].map(oi => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "opt"; b.textContent = c.options[oi]; b.dataset.oi = oi;
@@ -344,23 +322,21 @@ async function rate(v, ok, btn) {
   cardIdx++;
   $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
   const finished = nextUnreviewed(cardIdx) >= DATA.cards.length;
-  $("nextnote").textContent = finished ? "Saved. Opening your comic…" : "Saved. Next card…";
+  $("nextnote").textContent = finished ? "Saved. That's all the cards." : "Saved. Next card…";
   $("nextnote").hidden = false;
   renderProgress();
   save();
   setTimeout(() => {
     rating = false;
-    if (finished) go("reward");
+    if (finished) go("done");
     else { renderCard(); $("s-recall").scrollIntoView({ behavior: "smooth", block: "start" }); }
   }, 900);
 }
-$("tocomic").onclick = () => go("reward");
+$("todone").onclick = () => go("done");
 $("moreCards").onclick = () => go("recall");
 
-/* Reward */
-async function renderReward() {
-  $("comic").src = DATA.comic.src;
-  $("comiclink").href = DATA.comic.page;
+/* Done: hand over to the talk thread */
+async function renderDone() {
   const right = state.reviews.filter(r => r.correct).length;
   const lines = [
     ["Breaths", `${state.breaths} of ${BREATHS}`],
@@ -376,7 +352,7 @@ async function renderReward() {
 let dbRef = null, saving = Promise.resolve();
 function save() {
   saving = saving.then(async () => {
-    if (!dbRef) { $("status").textContent = "Not saved here. Tell Claude your answers in the thread."; return; }
+    if (!dbRef) { $("status").textContent = "Not saved here. Open this page from the morning text to save."; return; }
     try { await dbRef.set({ ...state, reviews: state.reviews }); $("status").textContent = "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
     catch (e) { $("status").textContent = "Couldn't save (" + (e && e.code || "error") + "). Tell Claude in the thread."; }
   });
@@ -398,7 +374,7 @@ function save() {
       if (!touched) { cardIdx = DATA.cards.findIndex(c => !doneIds.has(c.card_id));
       if (cardIdx < 0) cardIdx = DATA.cards.length; }
       const saved = Math.max(stepIndex(state.step), state.reached || 0,
-        state.finishedAt ? stepIndex("reward") : state.reviews.length ? stepIndex("recall") : state.gratitude ? stepIndex("day") : 0);
+        state.finishedAt ? stepIndex("done") : state.reviews.length ? stepIndex("recall") : state.gratitude ? stepIndex("recall") : 0);
       state.reached = saved;
       state.extras = d.extras || {};
       for (const [h, v] of Object.entries(state.extras)) { const c = $("x-" + h); if (c) c.checked = v > 0; }
