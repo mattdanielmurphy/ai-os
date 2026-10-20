@@ -54,18 +54,44 @@ def _save_day(data_dir, day, **fields):
 
 # ---- cards ----------------------------------------------------------------
 
-def due_cards(db_path=CARDS_DB, limit=MAX_CARDS):
+def subject(card_id):
+    """Deck subject from the card id prefix: forallx_ch01_q02 → forallx, music_cello_01 → music."""
+    return card_id.split("_", 1)[0]
+
+
+def mix_subjects(cards, day):
+    """Interleave subjects so a short session covers all of them: one card per subject in turn, most overdue first
+    within a subject. The subject that leads rotates by day, so no deck always gets the first slot."""
+    groups = {}
+    for c in cards:  # cards arrive most-overdue first
+        groups.setdefault(subject(c["card_id"]), []).append(c)
+    names = sorted(groups)
+    if not names:
+        return []
+    k = date.fromisoformat(day).toordinal() % len(names)
+    names = names[k:] + names[:k]
+    out = []
+    while any(groups.values()):
+        for n in names:
+            if groups[n]:
+                out.append(groups[n].pop(0))
+    return out
+
+
+def due_cards(db_path=CARDS_DB, limit=MAX_CARDS, day=None):
+    """Today's due cards (up to limit), mixed across subjects. Without the mix the most-overdue deck (logic, whose
+    learning-step cards fall due again within minutes) filled every slot (Matt, 2026-10-20)."""
     con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     try:
         rows = con.execute(
             """SELECT card_id, prompt, answer, elaboration, options, correct_index FROM fsrs_cards
                WHERE due_at <= ? AND options IS NOT NULL AND trim(options) NOT IN ('', '[]')
-               ORDER BY due_at, card_id LIMIT ?""",
-            (datetime.now(timezone.utc).isoformat(), limit)).fetchall()
+               ORDER BY due_at, card_id""",
+            (datetime.now(timezone.utc).isoformat(),)).fetchall()
     finally:
         con.close()
-    return [dict(r) for r in rows]
+    return mix_subjects([dict(r) for r in rows], day or date.today().isoformat())[:limit]
 
 
 def load_checkin(path):
@@ -251,7 +277,7 @@ def prepare(a):
     out["plan"] = {k: plan[k] for k in ("status", "streak", "doses", "changes")}
 
     events = json.loads(Path(a.events).read_text()) if a.events else []
-    cards = due_cards(a.cards_db)
+    cards = due_cards(a.cards_db, day=a.date)
     work = Path(a.data_dir) / "build"
     work.mkdir(parents=True, exist_ok=True)
     (work / "cards.json").write_text(json.dumps(cards, ensure_ascii=False))

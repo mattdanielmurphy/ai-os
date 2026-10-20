@@ -47,6 +47,19 @@ class DailyTest(unittest.TestCase):
             self.assertEqual(text.count("- Grateful for: Mia and the smart lights"), 1)
             self.assertFalse(daily.log_gratitude({"gratitude": " "}, "2026-10-18", vault))
 
+    def test_mix_subjects_interleaves_and_rotates(self):
+        cards = [{"card_id": f"forallx_ch0{i}_q01"} for i in range(5)] + \
+                [{"card_id": "music_cello_01"}, {"card_id": "music_cello_02"}, {"card_id": "ai_arch_01"}]
+        mixed = daily.mix_subjects(cards, "2026-10-20")
+        first3 = {daily.subject(c["card_id"]) for c in mixed[:3]}
+        self.assertEqual(first3, {"forallx", "music", "ai"})
+        self.assertEqual(len(mixed), len(cards))
+        # within a subject, most overdue first
+        logic = [c["card_id"] for c in mixed if c["card_id"].startswith("forallx")]
+        self.assertEqual(logic, [c["card_id"] for c in cards[:5]])
+        leads = {daily.subject(daily.mix_subjects(cards, f"2026-10-{d}")[0]["card_id"]) for d in (20, 21, 22)}
+        self.assertEqual(len(leads), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
