@@ -93,6 +93,8 @@
 - **Mandatory Pre-Verification**: Before writing, configuring, or hardcoding any model identifier, engine string, or voice name into code, presets, or configurations, agents MUST actively verify the exact string against authoritative documentation, official API endpoints, or official provider playgrounds. Never extrapolate or fabricate model versions or name schemes (e.g. guessing model names without verifying).
 
 # Memory & Recall (QMD)
+- **Read the index first**: `~/projects/ai-os/docs/ABOUT_MATT.md` says what Matt is doing now (school, projects) and where his things live (courses, manuals, notes, music, projects). Read it at the start of any task about Matt or his files.
+- **Search the Mac before asking Matt about himself**: check that index, then QMD, then Spotlight (`mdfind`), then `scripts/threads.py`. Ask him only when all come up empty, and say what you searched.
 - **One search over everything**: Matt's Obsidian vault and all past threads (Gemini, Antigravity, Claude Code) are indexed locally by QMD. Search it before saying something isn't known: the `qmd` MCP tools (`query` for meaning-based search, `get` to open a hit), or `qmd search "<words>"` / `qmd query "<question>"` in a shell.
 - **Automatic**: A Claude Code hook adds up to 4 related past notes/threads to each prompt, and another keeps the index current (exports Claude transcripts to `private/claude-threads/`). Treat those pointers as hints; open one only if it's relevant.
 - **Where durable facts go**: preferences and lessons go in Claude's built-in memory; curated knowledge goes in the Obsidian vault; project facts go in the project's `AG_CONTEXT.md`. Anything written to those is picked up by QMD on the next refresh.

@@ -29,11 +29,13 @@
   - Agents MUST IMMEDIATELY execute the `apple-reminders` CLI in the same turn (`apple-reminders add --title "..." --due "YYYY-MM-DD HH:MM" --notes "..."`) with intelligent due dates, contact numbers, and relevant identifiers pre-populated in the notes.
   - Agents should proactively offer to break down overwhelming or multi-step tasks into small, low-friction subtasks in Apple Reminders.
   - Do NOT create orphaned markdown to-do files in random locations that won't be actively checked on mobile.
+  - **Default to creating (2026-10-20)**: When it's unclear whether something deserves a reminder, create it anyway, then ask Matt whether he wants it deleted. A missed question must still leave a reminder behind.
 
 # Proactive System Directive & Knowledge Persistence
 - **Rule**: When Matt establishes a permanent workflow preference, tool routing rule, or operational invariant (e.g. "always do X from now on" or "agents must know this in every thread"):
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
   - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md` and `CLAUDE.md` across every future session.
+  - **Scope is global by default (2026-10-20)**: Any rule or preference Matt gives applies everywhere: every project, thread, Code session, Claude Projects, and every agent (Claude, Gemini, Codex), unless he explicitly limits it to one project or thread. NEVER ask him which scope he means; save it globally (here, `~/.claude/CLAUDE.md`, and the current project's instructions when one exists).
 
 # Music Recommendations & Apple Music Links
 - When Matt asks for music recommendations, present every resolved recommendation as a direct, clickable native Apple Music URL. Resolve links deterministically through the `music-cross-linker` iTunes Search/Lookup flow, never by hand-constructing Apple Music search links or guessing catalog IDs. Explicitly flag any recommendation without an exact Apple Music Canada catalog match rather than substituting a different release.
@@ -91,6 +93,8 @@
 - **Mandatory Pre-Verification**: Before writing, configuring, or hardcoding any model identifier, engine string, or voice name into code, presets, or configurations, agents MUST actively verify the exact string against authoritative documentation, official API endpoints, or official provider playgrounds. Never extrapolate or fabricate model versions or name schemes (e.g. guessing model names without verifying).
 
 # Memory & Recall (QMD)
+- **Read the index first**: `~/projects/ai-os/docs/ABOUT_MATT.md` says what Matt is doing now (school, projects) and where his things live (courses, manuals, notes, music, projects). Read it at the start of any task about Matt or his files.
+- **Search the Mac before asking Matt about himself**: check that index, then QMD, then Spotlight (`mdfind`), then `scripts/threads.py`. Ask him only when all come up empty, and say what you searched.
 - **One search over everything**: Matt's Obsidian vault and all past threads (Gemini, Antigravity, Claude Code) are indexed locally by QMD. Search it before saying something isn't known: the `qmd` MCP tools (`query` for meaning-based search, `get` to open a hit), or `qmd search "<words>"` / `qmd query "<question>"` in a shell.
 - **Automatic**: A Claude Code hook adds up to 4 related past notes/threads to each prompt, and another keeps the index current (exports Claude transcripts to `private/claude-threads/`). Treat those pointers as hints; open one only if it's relevant.
 - **Where durable facts go**: preferences and lessons go in Claude's built-in memory; curated knowledge goes in the Obsidian vault; project facts go in the project's `AG_CONTEXT.md`. Anything written to those is picked up by QMD on the next refresh.
