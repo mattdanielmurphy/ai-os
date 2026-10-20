@@ -271,12 +271,19 @@ function nextUnreviewed(from) {
   for (let i = from; i < DATA.cards.length; i++) if (!done.has(DATA.cards[i].card_id)) return i;
   return DATA.cards.length;
 }
+/* Course label from the card id prefix (forallx_ch04_q01 → "Symbolic Logic · forall x ch. 4"). */
+const COURSES = { forallx: "Symbolic Logic", cmput174: "CMPUT 174", music102: "World Music" };
+function deckLabel(id) {
+  const m = id.match(/^forallx_ch0?(\d+)_q/);
+  if (m) return `Symbolic Logic · forall x ch. ${m[1]}`;
+  return COURSES[id.split("_")[0]] || id.split("_")[0];
+}
 function renderCard() {
   cardIdx = nextUnreviewed(cardIdx);
   const c = DATA.cards[cardIdx];
   if (!c) { go("done"); return; }
   picked = null;
-  $("deck").textContent = "forall x · " + c.card_id.replace(/^forallx_ch0?(\d+)_q0?(\d+)$/, "ch. $1, q$2");
+  $("deck").textContent = deckLabel(c.card_id);
   $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
   $("prompt").textContent = c.prompt;
   $("reveal").hidden = true; $("nextnote").hidden = true;

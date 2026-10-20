@@ -37,6 +37,8 @@ IDENTITY = ROOT / "private/identity.md"
 VAULT = Path.home() / "Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal"
 TMUX = "checkin-thread"
 MAX_CARDS = 20
+# Only school decks go in the check-in (Matt, 2026-10-20: no drums/music-theory/AI trivia). Card id prefix = subject.
+SCHOOL_SUBJECTS = ("forallx", "cmput174", "music102")
 KICKOFF = f"Morning check-in: {ARTIFACT_URL}"  # the only visible first message; the instructions are a hidden system prompt
 
 
@@ -91,7 +93,8 @@ def due_cards(db_path=CARDS_DB, limit=MAX_CARDS, day=None):
             (datetime.now(timezone.utc).isoformat(),)).fetchall()
     finally:
         con.close()
-    return mix_subjects([dict(r) for r in rows], day or date.today().isoformat())[:limit]
+    rows = [dict(r) for r in rows if subject(r["card_id"]) in SCHOOL_SUBJECTS]
+    return mix_subjects(rows, day or date.today().isoformat())[:limit]
 
 
 def load_checkin(path):
