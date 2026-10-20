@@ -1,0 +1,6 @@
+{
+  "_about": "Upcoming exams per deck (card id prefix). Cards for a course with an exam within 7 days get more slots and lead the session. From the Fall 2026 syllabi in ~/Documents/School; update when dates change.",
+  "music102": ["2026-10-21"],
+  "forallx": ["2026-10-07", "2026-11-04", "2026-12-02"],
+  "cmput174": ["2026-11-05"]
+}

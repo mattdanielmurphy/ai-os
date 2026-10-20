@@ -61,9 +61,23 @@ def subject(card_id):
     return card_id.split("_", 1)[0]
 
 
-def mix_subjects(cards, day):
-    """Interleave subjects so a short session covers all of them: one card per subject in turn, most overdue first
-    within a subject. The subject that leads rotates by day, so no deck always gets the first slot."""
+def exam_weights(day, path=None):
+    """Slots per round for each subject: 3 if its next exam is within 2 days, 2 within a week, else 1."""
+    path = Path(path or HERE / "exams.json")
+    exams = json.loads(path.read_text()) if path.exists() else {}
+    d, w = date.fromisoformat(day), {}
+    for subj, dates in exams.items():
+        if subj.startswith("_"):
+            continue
+        ahead = [(date.fromisoformat(x) - d).days for x in dates if date.fromisoformat(x) >= d]
+        w[subj] = 3 if ahead and min(ahead) <= 2 else 2 if ahead and min(ahead) <= 7 else 1
+    return w
+
+
+def mix_subjects(cards, day, weights=None):
+    """Interleave subjects so a short session covers all of them, most overdue first within a subject. Subjects with
+    an exam coming up get more slots per round and lead (urgency first); ties rotate by day so no deck always leads."""
+    weights = exam_weights(day) if weights is None else weights
     groups = {}
     for c in cards:  # cards arrive most-overdue first
         groups.setdefault(subject(c["card_id"]), []).append(c)
@@ -72,11 +86,13 @@ def mix_subjects(cards, day):
         return []
     k = date.fromisoformat(day).toordinal() % len(names)
     names = names[k:] + names[:k]
+    names.sort(key=lambda n: -weights.get(n, 1))  # stable: rotation kept among equals
     out = []
     while any(groups.values()):
         for n in names:
-            if groups[n]:
-                out.append(groups[n].pop(0))
+            for _ in range(weights.get(n, 1)):
+                if groups[n]:
+                    out.append(groups[n].pop(0))
     return out
 
 

@@ -50,15 +50,26 @@ class DailyTest(unittest.TestCase):
     def test_mix_subjects_interleaves_and_rotates(self):
         cards = [{"card_id": f"forallx_ch0{i}_q01"} for i in range(5)] + \
                 [{"card_id": "music_cello_01"}, {"card_id": "music_cello_02"}, {"card_id": "ai_arch_01"}]
-        mixed = daily.mix_subjects(cards, "2026-10-20")
+        mixed = daily.mix_subjects(cards, "2026-10-20", weights={})
         first3 = {daily.subject(c["card_id"]) for c in mixed[:3]}
         self.assertEqual(first3, {"forallx", "music", "ai"})
         self.assertEqual(len(mixed), len(cards))
         # within a subject, most overdue first
         logic = [c["card_id"] for c in mixed if c["card_id"].startswith("forallx")]
         self.assertEqual(logic, [c["card_id"] for c in cards[:5]])
-        leads = {daily.subject(daily.mix_subjects(cards, f"2026-10-{d}")[0]["card_id"]) for d in (20, 21, 22)}
+        leads = {daily.subject(daily.mix_subjects(cards, f"2026-10-{d}", weights={})[0]["card_id"]) for d in (20, 21, 22)}
         self.assertEqual(len(leads), 3)
+
+    def test_exam_soon_gets_more_slots_and_leads(self):
+        cards = [{"card_id": f"forallx_ch0{i}_q01"} for i in range(6)] + [{"card_id": f"music102_t_{i}"} for i in range(6)]
+        mixed = daily.mix_subjects(cards, "2026-10-20", weights={"music102": 3, "forallx": 1})
+        self.assertEqual([daily.subject(c["card_id"]) for c in mixed[:4]], ["music102"] * 3 + ["forallx"])
+
+    def test_exam_weights_from_dates(self):
+        import tempfile, json as j
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            j.dump({"_about": "x", "a": ["2026-10-21"], "b": ["2026-10-25"], "c": ["2026-12-01"], "d": ["2026-10-01"]}, f)
+        self.assertEqual(daily.exam_weights("2026-10-20", f.name), {"a": 3, "b": 2, "c": 1, "d": 1})
 
 
 if __name__ == "__main__":

@@ -1,0 +1,334 @@
+{
+  "deck_id": "cmput174",
+  "deck_type": "cold_storage",
+  "title": "CMPUT 174: Python Fundamentals (Weeks 1-7)",
+  "source": "CMPUT 174 Fall 2026 (UAlberta) lectures, labs, Quiz Review and Open Book Reference",
+  "scope": "Types and simple statements, conditionals, sequences and loops, file I/O, user-defined functions, tracing and debugging (pre-midterm material)",
+  "cards": [
+    {
+      "card_id": "cmput174_types_01",
+      "prompt": "What is the type of the value returned by `input('Enter number> ')` when the user types `42`?",
+      "options": [
+        "`int`",
+        "`float`",
+        "`str`",
+        "`NoneType`"
+      ],
+      "correct_index": 2,
+      "answer": "`input()` always returns a `str`, even when the user types digits.",
+      "elaboration": "Convert explicitly with `int(input(...))` before doing arithmetic on user input."
+    },
+    {
+      "card_id": "cmput174_types_02",
+      "prompt": "Which expression evaluates without an error?",
+      "options": [
+        "`'3' + 2`",
+        "`'2' * '4'`",
+        "`+'3'`",
+        "`'2' * 4`"
+      ],
+      "correct_index": 3,
+      "answer": "`'2' * 4` is string repetition and gives `'2222'`; the other three raise a `TypeError`.",
+      "elaboration": "Python never silently converts between `str` and `int`; repetition needs a str and an int."
+    },
+    {
+      "card_id": "cmput174_types_03",
+      "prompt": "In `player_word = input('Word?')`, what kind of token is `input`?",
+      "options": [
+        "A keyword",
+        "An identifier bound to a built-in function",
+        "A string literal",
+        "An operator"
+      ],
+      "correct_index": 1,
+      "answer": "`input` (like `print` and `len`) is an identifier bound to a built-in function object, not a keyword.",
+      "elaboration": "Keywords are reserved words such as `if`, `for`, `in`, `def`, `import`; you could (but shouldn't) rebind `input`."
+    },
+    {
+      "card_id": "cmput174_types_04",
+      "prompt": "How many arguments does the outer call have in `print('1' + '2', '1,2', '1')`?",
+      "options": [
+        "3",
+        "5",
+        "4",
+        "1"
+      ],
+      "correct_index": 0,
+      "answer": "Three: each top-level comma-separated expression is one argument; the comma inside `'1,2'` is part of a string literal.",
+      "elaboration": "`'1' + '2'` is evaluated first to `'12'`, so it counts as a single argument."
+    },
+    {
+      "card_id": "cmput174_types_05",
+      "prompt": "What is the type of the expression `print('hello')`?",
+      "options": [
+        "`str`",
+        "`NoneType`",
+        "`bool`",
+        "`function`"
+      ],
+      "correct_index": 1,
+      "answer": "`print` displays text but evaluates to `None`, whose type is `NoneType`.",
+      "elaboration": "So `x = print('hi')` prints `hi` and leaves `x` bound to `None`."
+    },
+    {
+      "card_id": "cmput174_types_06",
+      "prompt": "What does `print(7 // 2, 7 % 2, 7 / 2)` output?",
+      "options": [
+        "`3 1 3.5`",
+        "`3.5 1 3`",
+        "`3 1 3`",
+        "`4 1 3.5`"
+      ],
+      "correct_index": 0,
+      "answer": "`//` is floor division (3), `%` is remainder (1), and `/` always gives a float (3.5).",
+      "elaboration": "`%` is the usual way to test evenness: `x % 2 == 0`."
+    },
+    {
+      "card_id": "cmput174_cond_01",
+      "prompt": "Given `x = 3` and `y = 7`, what is printed?\n`if x + y >= 13: print('A')` / `elif y < 10: x = x * 2; print(x + y)` / `elif x > 2: print('C')`",
+      "options": [
+        "`A`",
+        "`10`",
+        "`13`",
+        "`13` then `C`"
+      ],
+      "correct_index": 2,
+      "answer": "The first true branch is `y < 10`, so `x` becomes 6 and `6 + 7 = 13` prints; the later `elif` is skipped.",
+      "elaboration": "An if/elif/else chain runs only its first true branch, even if later conditions are also true."
+    },
+    {
+      "card_id": "cmput174_cond_02",
+      "prompt": "With `x = 10`, what prints?\n`if x > 5 and x < 10: print('A')` / `elif x > 8 and x <= 12: print('B')` / `else: print('C')`",
+      "options": [
+        "`A`",
+        "`C`",
+        "`A` then `B`",
+        "`B`"
+      ],
+      "correct_index": 3,
+      "answer": "`x < 10` is False for 10, so the first branch fails and `8 < 10 <= 12` makes the second branch print `B`.",
+      "elaboration": "Watch strict vs inclusive bounds (`<` vs `<=`) at the boundary values; exams love them."
+    },
+    {
+      "card_id": "cmput174_cond_04",
+      "prompt": "What is the key difference between three separate `if` statements and an `if`/`elif`/`elif` chain with the same conditions?",
+      "options": [
+        "Separate `if`s can each run; the chain runs at most one branch",
+        "They always behave identically",
+        "The chain checks every condition and runs all true branches",
+        "Separate `if`s stop after the first true condition"
+      ],
+      "correct_index": 0,
+      "answer": "Each independent `if` is checked on its own, while an elif chain stops at the first true branch.",
+      "elaboration": "Rewriting nested ifs as separate `if ... and ...` statements can change output when later code also matches."
+    },
+    {
+      "card_id": "cmput174_seq_01",
+      "prompt": "What does `print('python'[-2])` output?",
+      "options": [
+        "`n`",
+        "`o`",
+        "`h`",
+        "`IndexError`"
+      ],
+      "correct_index": 1,
+      "answer": "Negative indexes count from the end: `[-1]` is `n`, so `[-2]` is `o`.",
+      "elaboration": "`a[-1]` is the idiomatic way to get the last item of a list or string."
+    },
+    {
+      "card_id": "cmput174_seq_02",
+      "prompt": "Given `w = ['orange', 'chair', 'mouse', 'sandwich']`, what is `w[1:3]`?",
+      "options": [
+        "`['orange', 'chair', 'mouse']`",
+        "`['chair', 'mouse', 'sandwich']`",
+        "`['chair', 'mouse']`",
+        "`'chair'`"
+      ],
+      "correct_index": 2,
+      "answer": "A slice includes the start index and excludes the stop index, so it takes indexes 1 and 2.",
+      "elaboration": "Slices return a new list (or string); `w[:3]` is the first three items and `w[3:]` is the rest."
+    },
+    {
+      "card_id": "cmput174_seq_03",
+      "prompt": "What happens when you run `s = 'hello'` then `s[0] = 'j'`?",
+      "options": [
+        "A `TypeError`: strings are immutable",
+        "`s` becomes `'jello'`",
+        "A new variable `s[0]` is created",
+        "`s` becomes `'j'`"
+      ],
+      "correct_index": 0,
+      "answer": "Strings are immutable, so item assignment raises a `TypeError`; lists allow `alist[0] = x`.",
+      "elaboration": "To change a string, build a new one, e.g. `s = 'j' + s[1:]`."
+    },
+    {
+      "card_id": "cmput174_seq_04",
+      "prompt": "What does this print?\n`t = [1, 2]`\n`print(t.append(3))`\n`print(t)`",
+      "options": [
+        "`[1, 2, 3]` then `[1, 2, 3]`",
+        "`None` then `[1, 2]`",
+        "`3` then `[1, 2, 3]`",
+        "`None` then `[1, 2, 3]`"
+      ],
+      "correct_index": 3,
+      "answer": "`append` changes the list in place and returns `None`, so `None` prints, then the updated list.",
+      "elaboration": "Never write `t = t.append(3)`; that rebinds `t` to `None`."
+    },
+    {
+      "card_id": "cmput174_seq_05",
+      "prompt": "What is `list(range(2, 10, 3))`?",
+      "options": [
+        "`[2, 5, 8]`",
+        "`[2, 5, 8, 11]`",
+        "`[3, 6, 9]`",
+        "`[2, 3, 4, 5, 6, 7, 8, 9]`"
+      ],
+      "correct_index": 0,
+      "answer": "`range(start, stop, step)` starts at 2, adds 3 each time, and stops before 10.",
+      "elaboration": "`range(len(a))` gives every valid index `0` to `len(a) - 1`, handy for parallel lists."
+    },
+    {
+      "card_id": "cmput174_loop_01",
+      "prompt": "What does this print?\n`i = 2; total = 0`\n`while i > 0: total = total + i; i = i - 1`\n`print(i, total)`",
+      "options": [
+        "`1 3`",
+        "`0 2`",
+        "`0 3`",
+        "`2 0`"
+      ],
+      "correct_index": 2,
+      "answer": "The loop runs for `i = 2` and `i = 1`, so `total` is 3 and `i` ends at 0 when the condition fails.",
+      "elaboration": "Trace with a small table of variable values after each line to avoid off-by-one mistakes."
+    },
+    {
+      "card_id": "cmput174_loop_02",
+      "prompt": "What does this print?\n`a = [1, 2, 3]`\n`for x in a: x = x * 10`\n`print(a)`",
+      "options": [
+        "`[10, 20, 30]`",
+        "`[1, 2, 3, 10, 20, 30]`",
+        "A `TypeError`",
+        "`[1, 2, 3]`"
+      ],
+      "correct_index": 3,
+      "answer": "Reassigning the loop variable `x` only rebinds the name; the list itself is unchanged.",
+      "elaboration": "To change items in place, loop over indexes: `for i in range(len(a)): a[i] = a[i] * 10`."
+    },
+    {
+      "card_id": "cmput174_loop_03",
+      "prompt": "Which loop never terminates?",
+      "options": [
+        "`for item in things: things.append('bye')` where `things = []`",
+        "`while len(things) >= 0: things.append('bye')`",
+        "`for i in range(3): print(i)`",
+        "`while i < 2: i = i + 1` with `i = 0`"
+      ],
+      "correct_index": 1,
+      "answer": "`len(things)` is always at least 0, and appending only makes it longer, so the condition stays True forever.",
+      "elaboration": "A `while` loop needs its condition to eventually become False; check that the body moves toward that."
+    },
+    {
+      "card_id": "cmput174_file_01",
+      "prompt": "`content` holds `'apples 3\\neggs 12'`. What is `content.split()`?",
+      "options": [
+        "`['apples 3', 'eggs 12']`",
+        "`['apples 3\\neggs 12']`",
+        "`['apples', '3\\neggs', '12']`",
+        "`['apples', '3', 'eggs', '12']`"
+      ],
+      "correct_index": 3,
+      "answer": "`split()` with no argument splits on any whitespace, including newlines; `splitlines()` would give one item per line.",
+      "elaboration": "Read a file of records with `splitlines()`, then `split()` each line into its fields."
+    },
+    {
+      "card_id": "cmput174_fn_01",
+      "prompt": "What does this print?\n`def hi(): print('hi')`\n`print(hi())`",
+      "options": [
+        "`hi`",
+        "`hi` then `None`",
+        "`None`",
+        "`hi` then `hi`"
+      ],
+      "correct_index": 1,
+      "answer": "`hi()` prints `hi`, then returns `None` because it has no `return`, so the outer `print` shows `None`.",
+      "elaboration": "Every Python function returns an object; without a `return` statement it is `None`."
+    },
+    {
+      "card_id": "cmput174_fn_02",
+      "prompt": "Given `def g(a, b=2): return a * b`, what does `print(g(3), g(3, b=4))` output?",
+      "options": [
+        "`6 12`",
+        "`6 7`",
+        "`5 12`",
+        "An error: `b` is missing"
+      ],
+      "correct_index": 0,
+      "answer": "`b` defaults to 2 when omitted (3*2 = 6) and the keyword argument `b=4` overrides it (3*4 = 12).",
+      "elaboration": "You can't skip a positional argument like `pause(, '+')`; pass it by keyword instead, e.g. `pause(symbol='+')`."
+    },
+    {
+      "card_id": "cmput174_fn_03",
+      "prompt": "What does this print?\n`def f(x): x = x + 1; return x`\n`x = 5`\n`f(x)`\n`print(x)`",
+      "options": [
+        "`6`",
+        "`None`",
+        "`5`",
+        "A `NameError`"
+      ],
+      "correct_index": 2,
+      "answer": "The parameter `x` is a local variable in `f`, and the returned 6 is discarded, so the global `x` is still 5.",
+      "elaboration": "Functions create their own scope; to keep a result, assign it: `x = f(x)`."
+    },
+    {
+      "card_id": "cmput174_fn_04",
+      "prompt": "What does this print?\n`def f(a): a.append(0)`\n`b = [1]`\n`f(b)`\n`print(b)`",
+      "options": [
+        "`[1]`",
+        "`[0]`",
+        "`None`",
+        "`[1, 0]`"
+      ],
+      "correct_index": 3,
+      "answer": "The parameter `a` refers to the same list object as `b`, so mutating it inside the function changes `b`.",
+      "elaboration": "Rebinding a parameter doesn't affect the caller, but mutating a passed-in list does."
+    },
+    {
+      "card_id": "cmput174_fn_06",
+      "prompt": "What does `first_even([3, 5, 8, 10])` return?\n`def first_even(n):`\n`  for x in n:`\n`    if x % 2 == 0: return x`\n`  return -1`",
+      "options": [
+        "`8`",
+        "`10`",
+        "`-1`",
+        "`[8, 10]`"
+      ],
+      "correct_index": 0,
+      "answer": "`return` exits the function immediately at the first even value, 8, so the loop never reaches 10.",
+      "elaboration": "A `return -1` placed after the loop runs only if nothing matched, a common search pattern."
+    },
+    {
+      "card_id": "cmput174_debug_01",
+      "prompt": "A function should return the last item of `words` but crashes with `IndexError`: `return words[len(words)]`. What is the fix?",
+      "options": [
+        "`return words[len(words) + 1]`",
+        "`return words[len(words - 1)]`",
+        "`return words[len(words) - 1]`",
+        "`return words(len(words))`"
+      ],
+      "correct_index": 2,
+      "answer": "Valid indexes run from 0 to `len(words) - 1`, so the last item is `words[len(words) - 1]` (or `words[-1]`).",
+      "elaboration": "Off-by-one errors are the most common cause of `IndexError`; test with a list of length 1."
+    },
+    {
+      "card_id": "cmput174_debug_02",
+      "prompt": "Which kind of error makes a program run to completion but give the wrong answer?",
+      "options": [
+        "Syntax error",
+        "Runtime error (exception)",
+        "Logic error",
+        "Import error"
+      ],
+      "correct_index": 2,
+      "answer": "A logic error runs without crashing but computes the wrong result, so only tracing or testing reveals it.",
+      "elaboration": "Syntax errors stop the program before it runs; runtime errors like `TypeError` crash mid-run."
+    }
+  ]
+}
