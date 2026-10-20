@@ -112,8 +112,8 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
     <div class="cue" id="cue">Tap start when you're ready</div>
     <div class="count" id="bcount">0 of 3 breaths</div>
     <div class="row">
-      <button class="btn" id="bstart" type="button">Start breathing</button>
-      <button class="btn primary" id="bnext" type="button">Next</button>
+      <button class="btn primary" id="bstart" type="button">Start breathing</button>
+      <button class="btn" id="bnext" type="button" hidden>Skip</button>
     </div>
   </section>
 
@@ -215,16 +215,26 @@ function renderProgress() {
 
 /* Breathing */
 let breathing = false;
+/* One primary "Start breathing" at first; "Skip" appears after the first breath; once all are done, "Next" becomes primary. */
+function breathButtons() {
+  const done = state.breaths >= BREATHS, start = $("bstart"), next = $("bnext");
+  start.textContent = breathing ? "Breathing…" : done ? "Go again" : state.breaths ? "Keep breathing" : "Start breathing";
+  start.disabled = breathing;
+  start.classList.toggle("primary", !done);
+  next.textContent = done ? "Next" : "Skip";
+  next.classList.toggle("primary", done && !breathing);
+  next.hidden = !done && state.breaths < 1;
+}
 $("bstart").onclick = () => {
   if (breathing) return;
-  breathing = true; $("bstart").disabled = true;
+  breathing = true; breathButtons();
   const orb = $("orb"), cue = $("cue");
   const cycle = n => {
-    if (n >= BREATHS) { cue.textContent = "Nice. You're here."; breathing = false; $("bstart").disabled = false; $("bstart").textContent = "Go again"; save(); return; }
+    if (n >= BREATHS) { cue.textContent = "Nice. You're here."; breathing = false; breathButtons(); save(); return; }
     orb.className = "orb in"; cue.textContent = "Breathe in…";
     setTimeout(() => {
       orb.className = "orb out"; cue.textContent = "…and out";
-      setTimeout(() => { state.breaths = Math.max(state.breaths, n + 1); $("bcount").textContent = `${state.breaths} of ${BREATHS}`; cycle(n + 1); }, 6000);
+      setTimeout(() => { state.breaths = Math.max(state.breaths, n + 1); $("bcount").textContent = `${state.breaths} of ${BREATHS}`; breathButtons(); cycle(n + 1); }, 6000);
     }, 4000);
   };
   cycle(0);
@@ -374,7 +384,7 @@ function save() {
       for (const [h, v] of Object.entries(state.extras)) { const c = $("x-" + h); if (c) c.checked = v > 0; }
       if (d.intention && $("x-intention-text")) $("x-intention-text").value = d.intention;
       if (state.gratitude && !$("grat").value) { $("grat").value = state.gratitude; $("gnext").disabled = false; }
-      $("bcount").textContent = `${state.breaths} of ${BREATHS}`;
+      $("bcount").textContent = `${state.breaths} of ${BREATHS}`; breathButtons();
       if (!touched) go(STEPS[saved][0]);
       else if (state.step === "recall" && picked === null) renderCard();
       else renderProgress();
