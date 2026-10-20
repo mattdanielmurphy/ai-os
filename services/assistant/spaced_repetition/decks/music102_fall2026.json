@@ -1,0 +1,399 @@
+{
+  "deck_id": "music102",
+  "deck_type": "cold_storage",
+  "title": "MUSIC 102 Introduction to World Music: Units 1–3 (Midterm)",
+  "source": "UAlberta MUSIC 102 Fall 2026 lecture slides and readings: Wade ch.1, Shelemay ch.1 excerpts, Unit 2 slides (ethnomusicology history, Titon, Turino, Aymara siku, instruments, organologies, Javanese gamelan), Unit 3 freedom songs slides, syllabus readings list",
+  "scope": "Units 1–3 (Sept 2 to Oct 19, 2026), core terms, frameworks and case studies for the Oct 21 midterm",
+  "cards": [
+    {
+      "card_id": "music102_u1_01",
+      "prompt": "How did ethnomusicologist John Blacking define music?",
+      "options": [
+        "Humanly organized sound",
+        "Any sound produced intentionally",
+        "Melody set to words",
+        "Sound organized by a tonal centre"
+      ],
+      "correct_index": 0,
+      "answer": "Blacking defined music as \"humanly organized sound\" (1977).",
+      "elaboration": "Wade adds that music is also a process, and that definitions of music are culturally specific."
+    },
+    {
+      "card_id": "music102_u1_02",
+      "prompt": "What does Christopher Small mean by \"musicking\"?",
+      "options": [
+        "Taking part in a musical performance in any capacity, including listening or dancing",
+        "Composing a fixed score for others to perform",
+        "Learning a second musical tradition fluently",
+        "Recording sound in a studio for later playback"
+      ],
+      "correct_index": 0,
+      "answer": "Musicking treats music as an activity: performing, listening, rehearsing, providing material, or dancing all count.",
+      "elaboration": "It shifts attention from music as a product to music as social action, the lens Turino uses too."
+    },
+    {
+      "card_id": "music102_u1_03",
+      "prompt": "Why is melodious Qur'anic recitation not called musiqa in an Islamic context?",
+      "options": [
+        "Recitation uses no pitch changes at all",
+        "Only instruments, never voices, can make musiqa",
+        "The word musiqa is reserved for Western art music",
+        "Musiqa names secular genres, kept separate from melodic religious expression"
+      ],
+      "correct_index": 3,
+      "answer": "Musiqa covers secular genres that can carry negative associations, so sacred recitation is categorized apart from it.",
+      "elaboration": "It shows Wade's point that \"music\" is a culturally specific category, not a universal one."
+    },
+    {
+      "card_id": "music102_u1_04",
+      "prompt": "In Wade's account, what makes the meaning of a piece like \"We Shall Overcome\" \"situated\"?",
+      "options": [
+        "Its meaning lies fixed in the original notes",
+        "Its words are archaic and not meant to be understood",
+        "It gains meaning from the context in which it is heard and used",
+        "It is instrumental music treated as a narrative"
+      ],
+      "correct_index": 2,
+      "answer": "Situated meaning comes from context: the hymn became a civil rights anthem and then a global emblem of solidarity.",
+      "elaboration": "Bulgarian Roma wedding music is Wade's other example: instrumental music that came to signal resistance under state repression."
+    },
+    {
+      "card_id": "music102_u1_06",
+      "prompt": "What are vocables?",
+      "options": [
+        "Spoken mnemonics used to memorize Vedic chant",
+        "Non-lexical syllables sung to a melody, such as \"fa la la\"",
+        "Words painted literally by the melody",
+        "Short interlocking drum patterns"
+      ],
+      "correct_index": 1,
+      "answer": "Vocables are non-lexical syllables, heard for example in Native American powwow singing.",
+      "elaboration": "Ethnomusicologists avoid calling them meaningless: they can be archaic, sacred, or chosen for sonority across languages."
+    },
+    {
+      "card_id": "music102_u1_07",
+      "prompt": "Which musical texture consists of several simultaneous variations of the same melody?",
+      "options": [
+        "Monophony",
+        "Heterophony",
+        "Homophony",
+        "Polyphony"
+      ],
+      "correct_index": 1,
+      "answer": "Heterophony is many simultaneous interpretations of one melody.",
+      "elaboration": "It is the core texture of Javanese gamelan and common in participatory musics."
+    },
+    {
+      "card_id": "music102_u2_hist_01",
+      "prompt": "What did Mantle Hood pioneer as a research method?",
+      "options": [
+        "Participant observation from a liminal position",
+        "Comparative grouping of folk songs by characteristics",
+        "The four-part instrument classification system",
+        "Bi-musicality: learning to perform a second musical tradition fluently"
+      ],
+      "correct_index": 3,
+      "answer": "Hood's bi-musicality means learning music \"from the inside,\" like becoming bilingual.",
+      "elaboration": "Hood specialized in Javanese gamelan and founded the first ethnomusicology institute at UCLA in 1960."
+    },
+    {
+      "card_id": "music102_u2_hist_02",
+      "prompt": "Alan Merriam's approach in The Anthropology of Music (1964) centred on what?",
+      "options": [
+        "Bi-musicality and performance mastery",
+        "Acoustic analysis of instrument collections",
+        "Participant observation, focused on musical behaviour and concepts",
+        "Comparing musics against European classical standards"
+      ],
+      "correct_index": 2,
+      "answer": "Merriam pioneered an anthropological approach using participant observation, both observing and participating.",
+      "elaboration": "He was less focused on learning to make the music than Hood, the contrasting approach in the history lecture."
+    },
+    {
+      "card_id": "music102_u2_hist_03",
+      "prompt": "Which idea replaced ethnocentrism as ethnomusicology developed?",
+      "options": [
+        "Comparative musicology",
+        "Cultural relativism",
+        "Musical universalism",
+        "Essentialism"
+      ],
+      "correct_index": 1,
+      "answer": "Cultural relativism holds that beliefs and practices should be understood within the person's own culture.",
+      "elaboration": "Ethnocentrism judges other cultures by one's own as the standard, as early comparative musicology did against European classical music."
+    },
+    {
+      "card_id": "music102_u2_titon_01",
+      "prompt": "Which is one of Titon's four components of a music-culture?",
+      "options": [
+        "Ideas about music",
+        "Studio audio art",
+        "Bi-musicality",
+        "Colotomic structure"
+      ],
+      "correct_index": 0,
+      "answer": "Titon's four components are ideas about music, activities involving music, repertoires of music, and material culture of music.",
+      "elaboration": "Ideas include the belief system, aesthetics, contexts and history of music."
+    },
+    {
+      "card_id": "music102_u2_turino_01",
+      "prompt": "Turino defines participatory performance as having what primary goal?",
+      "options": [
+        "Producing the most polished sound for listeners",
+        "Showcasing individual virtuosity",
+        "Involving the maximum number of people in some performance role",
+        "Creating a recorded art object"
+      ],
+      "correct_index": 2,
+      "answer": "Participatory performance has no artist-audience distinction, only participants in different roles.",
+      "elaboration": "Success is judged by the intensity of social engagement more than by sound quality."
+    },
+    {
+      "card_id": "music102_u2_turino_02",
+      "prompt": "Which trait is typical of presentational rather than participatory music in Turino's comparison?",
+      "options": [
+        "Short, open, repeated forms",
+        "Feathered beginnings and endings",
+        "Closed, scripted forms with organized beginnings and endings",
+        "Dense textures and timbres"
+      ],
+      "correct_index": 2,
+      "answer": "Presentational music favours set pieces with clear beginnings and endings and contrast by design.",
+      "elaboration": "Participatory music favours open, repetitive forms that can last as long as the situation requires."
+    },
+    {
+      "card_id": "music102_u2_turino_04",
+      "prompt": "Why do participatory musics favour dense textures and \"wide\" tuning?",
+      "options": [
+        "They make each part easy for an audience to hear separately",
+        "They mask individual voices, so newcomers can join without standing out",
+        "They let soloists display new material",
+        "They make the piece easier to notate"
+      ],
+      "correct_index": 1,
+      "answer": "Dense, opaque sound has a cloaking function that lets individuality meld into collectivity.",
+      "elaboration": "This is why solos are uncommon in participatory music and, where they exist, elaborate rather than add new material."
+    },
+    {
+      "card_id": "music102_u2_siku_01",
+      "prompt": "In Aymara siku music, what are the ira and the arca?",
+      "options": [
+        "Two complementary panpipes that interlock to make one melody",
+        "A barrel drum and a transverse flute",
+        "The core melody and its elaboration",
+        "Dry-season and rainy-season genres"
+      ],
+      "correct_index": 0,
+      "answer": "The ira (6 pipes, \"the one that leads\") and arca (7 pipes, \"the one that follows\") share the melody between them.",
+      "elaboration": "Fast interlocking between them is called chuta chuta; neither player can perform the melody alone."
+    },
+    {
+      "card_id": "music102_u2_siku_02",
+      "prompt": "What is hocketing, as heard in siku music?",
+      "options": [
+        "Playing the same melody an octave apart",
+        "Overblowing to make a breathy timbre",
+        "Leading tempo changes from the drum",
+        "Alternating notes between players so their parts fit together into one line"
+      ],
+      "correct_index": 3,
+      "answer": "Hocketing (interlocking) splits a melody so each player supplies some of its notes in turn.",
+      "elaboration": "In Aymara society it enacts cooperation, reciprocity and egalitarian social norms."
+    },
+    {
+      "card_id": "music102_u2_org_01",
+      "prompt": "The Hornbostel-Sachs system classifies instruments primarily by what?",
+      "options": [
+        "The material the instrument is made of",
+        "The performance context and season",
+        "The instrument's cultural origin",
+        "How sound is excited, that is, what vibrates"
+      ],
+      "correct_index": 3,
+      "answer": "Hornbostel-Sachs sorts instruments by mode of sound excitation: membrane, string, air, or the instrument's own body.",
+      "elaboration": "Kartomi notes other cultures classify by size, materials, context, season, gender and more."
+    },
+    {
+      "card_id": "music102_u2_org_02",
+      "prompt": "Under Hornbostel-Sachs, a bossed gong or a saron metallophone is what kind of instrument?",
+      "options": [
+        "Membranophone",
+        "Idiophone",
+        "Chordophone",
+        "Aerophone"
+      ],
+      "correct_index": 1,
+      "answer": "Idiophones sound by exciting the substance of the instrument itself (\"idio\" = itself).",
+      "elaboration": "Most of the Javanese gamelan's bronze and iron instruments are idiophones."
+    },
+    {
+      "card_id": "music102_u2_org_04",
+      "prompt": "Kartomi distinguishes culture-emerging classifications from observer-imposed ones. Hornbostel-Sachs is which?",
+      "options": [
+        "Observer-imposed, an \"artificial\" scheme",
+        "Culture-emerging, a \"natural\" scheme",
+        "Neither, since it is fully objective",
+        "Culture-emerging, because it came from Javanese practice"
+      ],
+      "correct_index": 0,
+      "answer": "Hornbostel-Sachs was presented as universal but was imposed by European scholars on their collections.",
+      "elaboration": "Kartomi's point: there is no natural or objective way to classify instruments; systems reveal what matters in each culture."
+    },
+    {
+      "card_id": "music102_u3_free_01",
+      "prompt": "In Civil Rights freedom songs, what is \"lining out\"?",
+      "options": [
+        "The group sings a line and a soloist answers with a new melody",
+        "Singers drop out one at a time to leave silence",
+        "Each verse is written down and handed out before a march",
+        "A song leader introduces each new line, which the group then repeats"
+      ],
+      "correct_index": 3,
+      "answer": "Lining out is when the song leader gives each line and the congregation repeats it.",
+      "elaboration": "It lets anyone join without knowing the words, so \"the group grows the song,\" as in Hollis Watkins's \"Oh Freedom.\""
+    },
+    {
+      "card_id": "music102_u3_free_02",
+      "prompt": "What role did the song leader play in Civil Rights mass meetings and marches?",
+      "options": [
+        "A purely ceremonial role with no musical duties",
+        "A paid soloist performing for an audience",
+        "Both a musical and an organizational role",
+        "A recording engineer for studio releases"
+      ],
+      "correct_index": 2,
+      "answer": "The song leader led the singing and also organized and steered the gathering.",
+      "elaboration": "Freedom songs facilitated direct action as well as unity, morale and communication."
+    },
+    {
+      "card_id": "music102_u3_free_03",
+      "prompt": "Bernice Johnson Reagon described freedom songs as drawing on older material such as spirituals and hymns. What is this adaptation called in the lecture?",
+      "options": [
+        "Cultural revival: adapting past material for current political functions",
+        "Glocalization",
+        "Bi-musicality",
+        "Studio audio art"
+      ],
+      "correct_index": 0,
+      "answer": "Freedom songs revived spirituals, hymns, gospel, blues and R&B, linking present struggles to the strength of earlier generations.",
+      "elaboration": "\"We Shall Overcome\" moved from church hymn to mass-meeting anthem to SNCC Freedom Singers performances."
+    },
+    {
+      "card_id": "music102_u3_free_04",
+      "prompt": "The SNCC Freedom Singers (formed 1962) performing freedom songs on tour belong mainly to which of Turino's fields?",
+      "options": [
+        "Presentational performance",
+        "Participatory performance",
+        "Studio audio art",
+        "Sequential participatory music"
+      ],
+      "correct_index": 0,
+      "answer": "A professional ensemble performing for audiences is presentational, unlike mass-meeting singing where everyone joins.",
+      "elaboration": "The lecture's point: the same songs circulated across participatory, presentational and studio fields and across genres."
+    },
+    {
+      "card_id": "music102_u3_ident_01",
+      "prompt": "In Turino's \"Habits of Self, Identity, and Culture,\" how is identity framed?",
+      "options": [
+        "As a fixed essence inherited at birth",
+        "As the sum of every habit a person has",
+        "As membership in a single nation-state",
+        "As a partial selection of one's habits and traits used to represent oneself to oneself and others"
+      ],
+      "correct_index": 3,
+      "answer": "Turino treats identity as a selective representation of the self, built from habits.",
+      "elaboration": "He distinguishes cultural formations (sharing most habits) from cultural cohorts (sharing particular habits, such as age, class or interest groups)."
+    },
+    {
+      "card_id": "music102_u3_spir_01",
+      "prompt": "Arthur C. Jones reads spirituals such as \"Joshua Fit the Battle of Jericho\" as what?",
+      "options": [
+        "Concert pieces written by European composers",
+        "Purely private devotions with no social meaning",
+        "Songs of struggle and resistance, with biblical stories carrying coded hopes for freedom",
+        "Instrumental program music about battles"
+      ],
+      "correct_index": 2,
+      "answer": "Biblical stories of deliverance let enslaved singers voice resistance and hope in coded, double-edged language.",
+      "elaboration": "This coded meaning is why spirituals were later revived as freedom songs in the Civil Rights movement."
+    },
+    {
+      "card_id": "music102_u3_pow_01",
+      "prompt": "Why are vocables so common in intertribal pow-wow songs?",
+      "options": [
+        "They replace the drum when no drum is available",
+        "They let singers and dancers from different nations and languages share the songs",
+        "They are the only words allowed in sacred ceremonies",
+        "They mark the end of the Grand Entry"
+      ],
+      "correct_index": 1,
+      "answer": "Vocable-based songs cross language boundaries, which suits gatherings of many tribal nations.",
+      "elaboration": "Perea's intertribal pow-wow is a case of music building community and a shared pan-Indigenous identity."
+    },
+    {
+      "card_id": "music102_u3_act_01",
+      "prompt": "What does \"Rebel Music: Native America: 7th Generation Rises\" (2015) document?",
+      "options": [
+        "Archival recordings of nineteenth-century ceremonial songs",
+        "Young Indigenous musicians using popular music such as hip-hop for activism and identity",
+        "A classical orchestra performing Indigenous themes",
+        "A comparison of Andean and Javanese wind ensembles"
+      ],
+      "correct_index": 1,
+      "answer": "The film follows Native youth artists using contemporary genres to protest and to assert Indigenous identity.",
+      "elaboration": "Like freedom songs, it shows music working as a tool for protest and community survival."
+    },
+    {
+      "card_id": "music102_u2_gam_01",
+      "prompt": "In Javanese gamelan, what is the balungan?",
+      "options": [
+        "The large gong that ends each cycle",
+        "The solo female singer",
+        "The drum that sets tempo",
+        "The \"skeleton\" melody that other instruments elaborate"
+      ],
+      "correct_index": 3,
+      "answer": "Balungan is the skeletal melody; panerusan is its elaboration, and garap is each instrument's way of working it out.",
+      "elaboration": "Players imagine an \"inner melody\" as the real composition behind all these parts."
+    },
+    {
+      "card_id": "music102_u2_gam_02",
+      "prompt": "What is the difference between slendro and pelog?",
+      "options": [
+        "Slendro is loud style; pelog is soft style",
+        "Slendro is 7-tone; pelog is 5-tone, both equidistant",
+        "Slendro is 5-tone with near-equal intervals; pelog is 7-tone with unequal intervals",
+        "Slendro is for weddings; pelog is for shadow puppetry"
+      ],
+      "correct_index": 2,
+      "answer": "Gamelan uses two scales: 5-tone, roughly equidistant slendro and 7-tone, non-equidistant pelog.",
+      "elaboration": "Each scale has several modes (patet), such as patet nem in slendro."
+    },
+    {
+      "card_id": "music102_u2_gam_03",
+      "prompt": "What is colotomic structure in gamelan?",
+      "options": [
+        "Elaboration of the melody by soft instruments",
+        "A cyclical form punctuated at regular points by specific gongs",
+        "The ratio of the basic beat to the fastest parts",
+        "A cipher system of number notation"
+      ],
+      "correct_index": 1,
+      "answer": "Colotomic structure marks cycles with particular bossed gongs, with the gong ageng closing the largest cycle.",
+      "elaboration": "Irama, by contrast, is the rhythmic density relationship that the drummer signals changes to."
+    },
+    {
+      "card_id": "music102_u2_gam_04",
+      "prompt": "What does the Javanese aesthetic term ramé describe?",
+      "options": [
+        "A fullness of many things happening at once, in sound and sociality",
+        "Smooth, refined deference to elders",
+        "Compatibility and cooperation between players",
+        "The shadow puppet master's narration"
+      ],
+      "correct_index": 0,
+      "answer": "Ramé is the desired busy fullness, from dense musical layers to the audience eating, chatting and playing cards.",
+      "elaboration": "Rukun (cooperation) and smoothness and refinement are the related social and musical values."
+    }
+  ]
+}
