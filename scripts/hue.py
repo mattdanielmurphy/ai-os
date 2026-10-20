@@ -13,6 +13,8 @@ The app key lives in the macOS Keychain (service "ai-os-hue"), never in files.
   hue.py schedule daily                 (launchd, noon) re-apply only if tonight's times changed
   hue.py shift --up-by "YYYY-MM-DD HH:MM" --title X [--dry-run]   gradual sleep shift for an early event
   hue.py shift --cancel                 back to the normal schedule
+  hue.py retime --bed HH:MM --wake HH:MM [--from-bed HH:MM --from-wake HH:MM] [--nights N] [--reminders]
+                                        new normal times, eased in over N nights
   hue.py raw GET|PUT|POST|DELETE <resource path> [json]   escape hatch for anything else
 """
 import argparse
@@ -224,15 +226,26 @@ def anchors(cfg, night):
     bed = mins(cfg["bedtime"])
     bed += 1440 if bed < 720 else 0
     wake = mins(cfg["wake"])
+    note = "normal"
+    ramp = cfg.get("ramp")
+    if ramp:  # easing from old times to new normal ones, the same step each night
+        k = (night - datetime.date.fromisoformat(ramp["start"])).days
+        if 0 <= k < ramp["nights"]:
+            r_bed = mins(ramp["from_bed"])
+            r_bed += 1440 if r_bed < 720 else 0
+            frac = k / ramp["nights"]
+            bed = round((r_bed + (bed - r_bed) * frac) / 5) * 5
+            wake = round((mins(ramp["from_wake"]) + (wake - mins(ramp["from_wake"])) * frac) / 5) * 5
+            note = f"easing to {cfg['bedtime']}/{cfg['wake']}, night {k + 1}/{ramp['nights']}"
     shift = cfg.get("shift")
     if not shift:
-        return bed, wake, "normal"
+        return bed, wake, note
     start = datetime.date.fromisoformat(shift["start"])
     event = datetime.date.fromisoformat(shift["event_date"])
     nights = (event - start).days
     k = (night - start).days + 1  # 1 = first shifted night, nights = the night before the event
     if not 1 <= k <= nights:
-        return bed, wake, "normal"
+        return bed, wake, note
     t_wake = mins(shift["wake"])
     t_bed = t_wake - cfg["shift_sleep_hours"] * 60
     t_bed += 1440 if t_bed < 720 else 0
@@ -395,6 +408,35 @@ def add_reminder(title, due, notes):
                    check=True, capture_output=True)
 
 
+def cmd_retime(a):
+    """Set new normal bed/wake times, easing there from tonight's (or --from-*) times over --nights nights."""
+    cfg = json.loads(CONFIG.read_text())
+    night = night_of()
+    bed, wake, _ = anchors(cfg, night)
+    from_bed, from_wake = a.from_bed or clock(bed), a.from_wake or clock(wake)
+    cfg["bedtime"], cfg["wake"] = a.bed, a.wake
+    cfg["ramp"] = {"start": night.isoformat(), "nights": a.nights, "from_bed": from_bed, "from_wake": from_wake} if a.nights else None
+    print(f"New normal: bed {a.bed}, up {a.wake}" + (f", easing from bed {from_bed}/up {from_wake} over {a.nights} nights:" if a.nights else ""))
+    plan = []
+    for k in range(a.nights + 1 if a.nights else 0):
+        n = night + datetime.timedelta(days=k)
+        b, w, _ = anchors(cfg, n)
+        plan.append((n, b, w))
+        print(f"  night of {n:%a %b %d}: bed {clock(b)}, up {clock(w)}")
+    if a.dry_run:
+        return
+    CONFIG.write_text(json.dumps(cfg, indent=2) + "\n")
+    if a.reminders:
+        for n, b, w in plan[:-1]:
+            bed_at = datetime.datetime.combine(n, datetime.time()) + datetime.timedelta(minutes=b)
+            wake_at = datetime.datetime.combine(n + datetime.timedelta(days=1), datetime.time()) + datetime.timedelta(minutes=w)
+            add_reminder(f"Bed by {clock(b)} (easing to {a.bed})", bed_at - datetime.timedelta(minutes=30),
+                         "Lights start fading now; set by hue.py retime.")
+            add_reminder(f"Wake up {clock(w)} (easing to {a.wake})", wake_at, "Set by hue.py retime.")
+        print(f"Added {2 * (len(plan) - 1)} reminders (bedtime -30 min, and wake-up alarms).")
+    apply_schedule(cfg, night, activate=False)
+
+
 def cmd_shift(a):
     cfg = json.loads(CONFIG.read_text())
     if a.cancel:
@@ -458,6 +500,15 @@ def main():
     sc = sub.add_parser("schedule")
     sc.add_argument("action", choices=["apply", "show", "daily"])
     sc.set_defaults(fn=cmd_schedule)
+    rt = sub.add_parser("retime", help="change normal bed/wake times, easing there over a few nights")
+    rt.add_argument("--bed", required=True, help="new normal bedtime, HH:MM")
+    rt.add_argument("--wake", required=True, help="new normal wake time (sunrise full), HH:MM")
+    rt.add_argument("--from-bed", help="tonight's bedtime (default: whatever tonight is now)")
+    rt.add_argument("--from-wake", help="tomorrow's wake time (default: whatever it is now)")
+    rt.add_argument("--nights", type=int, default=0, help="nights to ease over (0 = switch tonight)")
+    rt.add_argument("--reminders", action="store_true", help="add bed/wake reminders for the easing nights")
+    rt.add_argument("--dry-run", action="store_true")
+    rt.set_defaults(fn=cmd_retime)
     sh = sub.add_parser("shift", help="gradually move bed and wake times earlier for an early event")
     sh.add_argument("--up-by", help='when you need to be up, e.g. "2026-10-27 04:00"')
     sh.add_argument("--title", default="early event")

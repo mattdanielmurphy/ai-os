@@ -3,17 +3,44 @@
   "name": "Bright day",
   "fade_minutes": 20,
   "bedtime": "23:00",
-  "wake": "09:30",
+  "wake": "07:00",
   "wake_fade_minutes": 30,
   "day_starts_before_wake": 90,
   "shift_sleep_hours": 8,
-  "disable": ["Sleepy 10pm"],
-  "day": {"bri": 100, "kelvin": 4000},
-  "evening": [
-    {"before_bed": 80, "bri": 85, "kelvin": 3300},
-    {"before_bed": 60, "bri": 60, "kelvin": 2800},
-    {"before_bed": 40, "bri": 35, "kelvin": 2450},
-    {"before_bed": 20, "bri": 15, "kelvin": 2237}
+  "disable": [
+    "Sleepy 10pm"
   ],
-  "shift": null
+  "day": {
+    "bri": 100,
+    "kelvin": 4000
+  },
+  "evening": [
+    {
+      "before_bed": 80,
+      "bri": 85,
+      "kelvin": 3300
+    },
+    {
+      "before_bed": 60,
+      "bri": 60,
+      "kelvin": 2800
+    },
+    {
+      "before_bed": 40,
+      "bri": 35,
+      "kelvin": 2450
+    },
+    {
+      "before_bed": 20,
+      "bri": 15,
+      "kelvin": 2237
+    }
+  ],
+  "shift": null,
+  "ramp": {
+    "start": "2026-10-20",
+    "nights": 4,
+    "from_bed": "00:30",
+    "from_wake": "08:30"
+  }
 }
