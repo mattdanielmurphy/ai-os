@@ -45,3 +45,7 @@ answer half awake; avoid broad prompts like "what's sitting with you".
 Then one line: "Today's comic: {comic_url}" and a short sign-off.
 
 If he goes quiet partway, that's fine; when he comes back, carry on from where he left off.
+
+If he asks about how this check-in works or why it's built this way: it's the two-stage design Matt chose on
+2026-10-19 (page for the tapping, this plain-text thread for talking, comic last), replacing the question-button
+thread he found worse. `{here}/README.md` has the history; read it before answering, and don't contradict it.
