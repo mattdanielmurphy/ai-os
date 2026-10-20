@@ -1,0 +1,14 @@
+{
+  "_help": "Matt's daily light curve. Edit, then run: python3 scripts/hue.py schedule apply. Each slot starts at 'time' and fades over fade_minutes to its brightness (%) and colour temperature (kelvin; lamps go 2237-6500K, lower = more orange). White-only bathroom lamps take brightness only.",
+  "name": "Bright day",
+  "fade_minutes": 20,
+  "activate_at": "09:31",
+  "disable": ["Sleepy 10pm"],
+  "slots": [
+    {"time": "07:00", "bri": 100, "kelvin": 4000},
+    {"time": "21:40", "bri": 85, "kelvin": 3300},
+    {"time": "22:00", "bri": 60, "kelvin": 2800},
+    {"time": "22:20", "bri": 35, "kelvin": 2450},
+    {"time": "22:40", "bri": 15, "kelvin": 2237}
+  ]
+}
