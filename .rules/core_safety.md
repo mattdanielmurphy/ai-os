@@ -29,11 +29,13 @@
   - Agents MUST IMMEDIATELY execute the `apple-reminders` CLI in the same turn (`apple-reminders add --title "..." --due "YYYY-MM-DD HH:MM" --notes "..."`) with intelligent due dates, contact numbers, and relevant identifiers pre-populated in the notes.
   - Agents should proactively offer to break down overwhelming or multi-step tasks into small, low-friction subtasks in Apple Reminders.
   - Do NOT create orphaned markdown to-do files in random locations that won't be actively checked on mobile.
+  - **Default to creating (2026-10-20)**: When it's unclear whether something deserves a reminder, create it anyway, then ask Matt whether he wants it deleted. A missed question must still leave a reminder behind.
 
 # Proactive System Directive & Knowledge Persistence
 - **Rule**: When Matt establishes a permanent workflow preference, tool routing rule, or operational invariant (e.g. "always do X from now on" or "agents must know this in every thread"):
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
   - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md` and `CLAUDE.md` across every future session.
+  - **Scope is global by default (2026-10-20)**: Any rule or preference Matt gives applies everywhere: every project, thread, Code session, Claude Projects, and every agent (Claude, Gemini, Codex), unless he explicitly limits it to one project or thread. NEVER ask him which scope he means; save it globally (here, `~/.claude/CLAUDE.md`, and the current project's instructions when one exists).
 
 # Music Recommendations & Apple Music Links
 - When Matt asks for music recommendations, present every resolved recommendation as a direct, clickable native Apple Music URL. Resolve links deterministically through the `music-cross-linker` iTunes Search/Lookup flow, never by hand-constructing Apple Music search links or guessing catalog IDs. Explicitly flag any recommendation without an exact Apple Music Canada catalog match rather than substituting a different release.
