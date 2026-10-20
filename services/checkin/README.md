@@ -41,3 +41,6 @@ asked for this split.
   (`ladder.py record reflection=N`) and writes its notes to the Obsidian habit log.
 - The thread is a `claude --remote-control --model sonnet` CLI session in tmux (`checkin-thread`), because unattended
   scheduled runs can't start or Remote-Control-link desktop sessions. Each run replaces yesterday's.
+
+## Early events (2026-10-20)
+The task also fetches the next 10 days and passes timed events before 7 AM as `early: true` items. The talk thread then offers a gradual sleep shift via `scripts/hue.py shift` (lights, Night Time, Wake up, bed/wake reminders).

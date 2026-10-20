@@ -233,7 +233,9 @@ def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=
         "status": plan["status"],
         "streak": plan["streak"],
         "changes": " ".join(plan["changes"]) or "no changes today",
-        "events": "; ".join(f"{e['when']} {e['what']}" for e in events) or "nothing on the calendar today",
+        "events": "; ".join(f"{e['when']} {e['what']}" for e in events if not e.get("early"))
+                  or "nothing on the calendar today",
+        "early_events": "; ".join(f"{e['when']} {e['what']}" for e in events if e.get("early")) or "none",
         "recent_notes": recent_notes(day),
         "reflection_minutes": plan["doses"].get("reflection", 1),
         "here": HERE,
@@ -390,7 +392,8 @@ def main():
     p = sub.add_parser("prepare")
     p.add_argument("--date", default=date.today().isoformat())
     p.add_argument("--checkin", help="ArtifactData file for checkins/<yesterday>; missing = page not used")
-    p.add_argument("--events", help='JSON list of {"when", "what"} for today')
+    p.add_argument("--events", help='JSON list of {"when", "what"} for today, plus {"early": true} '
+                   'items for events before 7 AM in the next 10 days')
     p.add_argument("--out", help="page path (default: morning-checkin.html here)")
     s = sub.add_parser("send")
     s.add_argument("--date", default=date.today().isoformat())

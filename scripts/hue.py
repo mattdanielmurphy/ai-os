@@ -8,11 +8,15 @@ The app key lives in the macOS Keychain (service "ai-os-hue"), never in files.
   hue.py set <room|light|all> [--on|--off] [--bri 0-100] [--kelvin 2000-6500] [--fade SECONDS]
   hue.py automations                    list bridge automations (behaviors)
   hue.py automation <name> --on|--off   enable/disable an automation
-  hue.py schedule apply                 push config/hue_schedule.json to the bridge
-  hue.py schedule show                  print the active ai-os schedule
+  hue.py schedule apply                 push config/hue_schedule.json to the bridge and activate it
+  hue.py schedule show                  print tonight's times, the curve and any shift plan
+  hue.py schedule daily                 (launchd, noon) re-apply only if tonight's times changed
+  hue.py shift --up-by "YYYY-MM-DD HH:MM" --title X [--dry-run]   gradual sleep shift for an early event
+  hue.py shift --cancel                 back to the normal schedule
   hue.py raw GET|PUT|POST|DELETE <resource path> [json]   escape hatch for anything else
 """
 import argparse
+import datetime
 import json
 import socket
 import ssl
@@ -24,7 +28,6 @@ from pathlib import Path
 BRIDGE_ID = "001788fffe6b2ad2"
 KEYCHAIN_SERVICE = "ai-os-hue"
 CONFIG = Path(__file__).resolve().parent.parent / "config" / "hue_schedule.json"
-SCHEDULE_NAME = "ai-os bright-then-fade"
 
 # The bridge uses a self-signed cert issued by Philips/Signify; we only ever talk to the LAN IP.
 _CTX = ssl.create_default_context()
@@ -187,11 +190,65 @@ def cmd_automation(a):
 SCHEDULE_SCRIPT = "7238c707-8693-4f19-9095-ccdc1444d228"  # bridge's built-in "Schedule" behavior
 EVERY_DAY = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
 SCENE_PREFIX = "ai-os "
+APPLIED = Path.home() / ".cache" / "ai-os-hue-applied.json"
+BED_AUTOMATION = "Night Time"  # Matt's own "lights off" schedule; moved with bedtime
+WAKE_AUTOMATION = "Wake up"  # Matt's sunrise routine; moved with wake time
 
 
-def hhmm(s):
+def mins(s):
     h, m = s.split(":")
-    return {"hour": int(h), "minute": int(m)}
+    return int(h) * 60 + int(m)
+
+
+def clock(m):
+    m = round(m) % 1440
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def hhmm(m):
+    m = round(m) % 1440
+    return {"hour": m // 60, "minute": m % 60}
+
+
+def night_of(now=None):
+    """The night a run belongs to: before noon still counts as last night."""
+    now = now or datetime.datetime.now()
+    return (now - datetime.timedelta(hours=12)).date()
+
+
+def anchors(cfg, night):
+    """(bedtime tonight, wake next morning) in minutes, plus a note, for the night starting on `night`.
+
+    Bedtimes live in 12:00-36:00 so that after-midnight bedtimes interpolate correctly.
+    """
+    bed = mins(cfg["bedtime"])
+    bed += 1440 if bed < 720 else 0
+    wake = mins(cfg["wake"])
+    shift = cfg.get("shift")
+    if not shift:
+        return bed, wake, "normal"
+    start = datetime.date.fromisoformat(shift["start"])
+    event = datetime.date.fromisoformat(shift["event_date"])
+    nights = (event - start).days
+    k = (night - start).days + 1  # 1 = first shifted night, nights = the night before the event
+    if not 1 <= k <= nights:
+        return bed, wake, "normal"
+    t_wake = mins(shift["wake"])
+    t_bed = t_wake - cfg["shift_sleep_hours"] * 60
+    t_bed += 1440 if t_bed < 720 else 0
+    frac = k / nights
+    step = lambda a, b: round((a + (b - a) * frac) / 5) * 5
+    return step(bed, t_bed), step(wake, t_wake), f"shift night {k}/{nights} for {shift['title']}"
+
+
+def shift_plan(cfg):
+    shift = cfg["shift"]
+    start = datetime.date.fromisoformat(shift["start"])
+    nights = (datetime.date.fromisoformat(shift["event_date"]) - start).days
+    for k in range(nights):
+        night = start + datetime.timedelta(days=k)
+        bed, wake, _ = anchors(cfg, night)
+        yield night, bed, wake
 
 
 def slot_actions(lights, slot):
@@ -206,25 +263,45 @@ def slot_actions(lights, slot):
     return actions
 
 
-def cmd_schedule(a):
-    cfg = json.loads(CONFIG.read_text())
+def build_slots(cfg, bed, wake):
+    slots = [{"at": wake - cfg["day_starts_before_wake"], **cfg["day"]}]
+    slots += [{"at": bed - e["before_bed"], "bri": e["bri"], "kelvin": e.get("kelvin")} for e in cfg["evening"]]
+    return sorted(slots, key=lambda s: round(s["at"]) % 1440)
+
+
+def move_automation(name, when, mutate):
+    for b in api("GET", "behavior_instance"):
+        if b["metadata"]["name"] == name:
+            conf = b["configuration"]
+            mutate(conf, hhmm(when))
+            api("PUT", f"behavior_instance/{b['id']}", {"configuration": conf})
+            return True
+    print(f"(no automation named {name!r}; skipped)")
+    return False
+
+
+def set_start_at(conf, t):
+    conf["when_extended"]["start_at"]["time_point"]["time"] = t
+
+
+def set_wake_time(conf, t):
+    conf["when"]["time_point"]["time"] = t
+
+
+def apply_schedule(cfg, night, activate):
     home = api("GET", "bridge_home")[0]
     group = {"rid": home["id"], "rtype": "bridge_home"}
     name = cfg["name"]
-    if a.action == "show":
-        for s in api("GET", "smart_scene"):
-            if name_of(s) == name:
-                print(f"{name}: {s['state']}, fade {s['transition_duration'] // 60000} min")
-        for slot in cfg["slots"]:
-            print(f"  {slot['time']}  {slot['bri']}%  {slot.get('kelvin', '-')}K")
-        return
+    bed, wake, note = anchors(cfg, night)
 
     # Re-applying replaces everything this command made before, so the config file stays the source of truth.
+    was_active = False
     for b in api("GET", "behavior_instance"):
         if b["metadata"]["name"] == f"{SCENE_PREFIX}{name}":
             api("DELETE", f"behavior_instance/{b['id']}")
     for s in api("GET", "smart_scene"):
         if name_of(s) == name:
+            was_active |= s["state"] == "active"
             api("DELETE", f"smart_scene/{s['id']}")
     for s in api("GET", "scene"):
         if name_of(s).startswith(SCENE_PREFIX):
@@ -232,14 +309,14 @@ def cmd_schedule(a):
 
     lights = api("GET", "light")
     timeslots = []
-    for slot in sorted(cfg["slots"], key=lambda s: s["time"]):
+    for slot in build_slots(cfg, bed, wake):
         scene = api("POST", "scene", {
-            "metadata": {"name": f"{SCENE_PREFIX}{slot['time']}"},
+            "metadata": {"name": f"{SCENE_PREFIX}{clock(slot['at'])}"},
             "group": group,
             "actions": slot_actions(lights, slot),
         })[0]
         timeslots.append({
-            "start_time": {"kind": "time", "time": {**hhmm(slot["time"]), "second": 0}},
+            "start_time": {"kind": "time", "time": {**hhmm(slot["at"]), "second": 0}},
             "target": {"rid": scene["rid"], "rtype": "scene"},
         })
     smart = api("POST", "smart_scene", {
@@ -255,16 +332,104 @@ def cmd_schedule(a):
         "metadata": {"name": f"{SCENE_PREFIX}{name}"},
         "configuration": {
             "what": [{"group": group, "recall": {"rid": smart["rid"], "rtype": "smart_scene"}}],
-            "when_extended": {"recurrence_days": EVERY_DAY, "start_at": {"time_point": {"type": "time", "time": hhmm(cfg["activate_at"])}}},
+            "when_extended": {"recurrence_days": EVERY_DAY, "start_at": {"time_point": {"type": "time", "time": hhmm(wake + 1)}}},
             "where": [{"group": group}],
         },
     })
+    move_automation(BED_AUTOMATION, bed, set_start_at)
+    move_automation(WAKE_AUTOMATION, wake - cfg["wake_fade_minutes"], set_wake_time)
     for b in api("GET", "behavior_instance"):
         if b["metadata"]["name"] in cfg.get("disable", []) and b["enabled"]:
             api("PUT", f"behavior_instance/{b['id']}", {"enabled": False})
             print(f"Disabled {b['metadata']['name']}")
-    api("PUT", f"smart_scene/{smart['rid']}", {"recall": {"action": "activate"}})
-    print(f"Applied and activated {name!r}: {len(timeslots)} slots, {cfg['fade_minutes']} min fades, re-armed daily at {cfg['activate_at']}")
+    if activate or was_active:
+        api("PUT", f"smart_scene/{smart['rid']}", {"recall": {"action": "activate"}})
+    APPLIED.parent.mkdir(parents=True, exist_ok=True)
+    APPLIED.write_text(json.dumps({"night": night.isoformat(), "bed": bed, "wake": wake, "config": cfg}))
+    print(f"Applied {name!r} for the night of {night} ({note}): bright from {clock(wake - cfg['day_starts_before_wake'])}, "
+          f"fade from {clock(bed - cfg['evening'][0]['before_bed'])}, lights off {clock(bed)}, "
+          f"sunrise {clock(wake - cfg['wake_fade_minutes'])}-{clock(wake)}"
+          f"{'' if activate or was_active else ' (left inactive; re-arms at wake)'}")
+
+
+def cmd_schedule(a):
+    cfg = json.loads(CONFIG.read_text())
+    night = night_of()
+    if a.action == "show":
+        for s in api("GET", "smart_scene"):
+            if name_of(s) == cfg["name"]:
+                print(f"{cfg['name']}: {s['state']}, fade {s['transition_duration'] // 60000} min")
+        bed, wake, note = anchors(cfg, night)
+        print(f"Tonight ({night}, {note}): bed {clock(bed)}, wake {clock(wake)}")
+        for slot in build_slots(cfg, bed, wake):
+            print(f"  {clock(slot['at'])}  {slot['bri']}%  {slot.get('kelvin') or '-'}K")
+        if cfg.get("shift"):
+            print(f"Shift plan for {cfg['shift']['title']}:")
+            for n, bed, wake in shift_plan(cfg):
+                print(f"  night of {n:%a %b %d}: bed {clock(bed)}, up {clock(wake)}")
+        return
+    if a.action == "daily":
+        # Run by launchd at noon: only touch the bridge when tonight's times differ from what's there.
+        bed, wake, _ = anchors(cfg, night)
+        try:
+            last = json.loads(APPLIED.read_text())
+            if (last["bed"], last["wake"], last["config"]) == (bed, wake, cfg):
+                print(f"Unchanged for the night of {night}; nothing to do.")
+                return
+        except (OSError, ValueError, KeyError):
+            pass
+        apply_schedule(cfg, night, activate=False)
+        return
+    apply_schedule(cfg, night, activate=True)
+
+
+def add_reminder(title, due, notes):
+    """Apple Reminders via AppleScript (the apple-reminders CLI lacks Reminders access under launchd/Claude)."""
+    script = (
+        'on run argv\n'
+        'tell application "Reminders" to make new reminder at end of list "Reminders" with properties '
+        '{name:item 1 of argv, body:item 3 of argv, due date:date (item 2 of argv), remind me date:date (item 2 of argv)}\n'
+        'end run'
+    )
+    subprocess.run(["osascript", "-e", script, title, due.strftime("%A, %B %-d, %Y at %-I:%M:%S %p"), notes],
+                   check=True, capture_output=True)
+
+
+def cmd_shift(a):
+    cfg = json.loads(CONFIG.read_text())
+    if a.cancel:
+        cfg["shift"] = None
+        CONFIG.write_text(json.dumps(cfg, indent=2) + "\n")
+        print("Shift cancelled; back to the normal schedule. (Shift reminders stay in Reminders; tick them off.)")
+        apply_schedule(cfg, night_of(), activate=False)
+        return
+    up = datetime.datetime.fromisoformat(a.up_by)
+    event_date = up.date()
+    start = datetime.date.fromisoformat(a.start) if a.start else night_of()
+    if (event_date - start).days < 1:
+        sys.exit("The event needs to be at least one night away.")
+    cfg["shift"] = {"title": a.title, "wake": up.strftime("%H:%M"), "event_date": event_date.isoformat(), "start": start.isoformat()}
+    plan = list(shift_plan(cfg))
+    base_wake = mins(cfg["wake"])
+    worst = max(abs(w2 - w1) for (_, _, w1), (_, _, w2) in zip([(None, None, base_wake)] + plan, plan))
+    print(f"Shift for {a.title} (up by {up:%a %b %d %H:%M}), about {worst} min earlier per day:")
+    for night, bed, wake in plan:
+        print(f"  night of {night:%a %b %d}: bed {clock(bed)}, up {clock(wake)}")
+    if worst > 60:
+        print("  Warning: more than an hour a day is hard to keep up; start earlier with --start if you can.")
+    if a.dry_run:
+        return
+    CONFIG.write_text(json.dumps(cfg, indent=2) + "\n")
+    if not a.no_reminders:
+        for night, bed, wake in plan:
+            bed_at = datetime.datetime.combine(night, datetime.time()) + datetime.timedelta(minutes=bed)
+            wake_at = datetime.datetime.combine(night + datetime.timedelta(days=1), datetime.time()) + datetime.timedelta(minutes=wake)
+            add_reminder(f"Bed by {clock(bed)} (shifting for {a.title})", bed_at - datetime.timedelta(minutes=30),
+                         "Lights start fading now; set by hue.py shift.")
+            add_reminder(f"Wake up {clock(wake)} (shifting for {a.title})", wake_at,
+                         "Alarm for the gradual sleep shift; set by hue.py shift.")
+        print(f"Added {2 * len(plan)} reminders (bedtime -30 min, and wake-up alarms).")
+    apply_schedule(cfg, night_of(), activate=False)
 
 
 def cmd_raw(a):
@@ -291,8 +456,16 @@ def main():
     au.add_argument("--off", action="store_true")
     au.set_defaults(fn=cmd_automation)
     sc = sub.add_parser("schedule")
-    sc.add_argument("action", choices=["apply", "show"])
+    sc.add_argument("action", choices=["apply", "show", "daily"])
     sc.set_defaults(fn=cmd_schedule)
+    sh = sub.add_parser("shift", help="gradually move bed and wake times earlier for an early event")
+    sh.add_argument("--up-by", help='when you need to be up, e.g. "2026-10-27 04:00"')
+    sh.add_argument("--title", default="early event")
+    sh.add_argument("--start", help="first night to shift (default: tonight)")
+    sh.add_argument("--dry-run", action="store_true")
+    sh.add_argument("--no-reminders", action="store_true")
+    sh.add_argument("--cancel", action="store_true")
+    sh.set_defaults(fn=cmd_shift)
     r = sub.add_parser("raw")
     r.add_argument("method")
     r.add_argument("path")
