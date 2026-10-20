@@ -192,6 +192,17 @@ def comic_image(data_dir, day):
     return out
 
 
+def recent_notes(day, vault=VAULT, days=4, limit=3000):
+    """The last few days' Obsidian habit logs (before `day`), newest first, so the thread can ask about something live."""
+    d, out = date.fromisoformat(day), []
+    for i in range(1, days + 1):
+        f = Path(vault) / "habits/logs" / f"{(d - timedelta(days=i)).isoformat()}.md"
+        if f.exists():
+            out.append(f"[{f.stem}]\n{f.read_text().strip()}")
+    text = "\n\n".join(out)
+    return (text[:limit] + "…") if len(text) > limit else (text or "(none yet)")
+
+
 def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=None):
     """The talk thread's hidden system prompt, from checkin_prompt.md."""
     text = (HERE / "checkin_prompt.md").read_text().split("\n---\n", 1)[1].strip()
@@ -204,6 +215,7 @@ def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=
         "streak": plan["streak"],
         "changes": " ".join(plan["changes"]) or "no changes today",
         "events": "; ".join(f"{e['when']} {e['what']}" for e in events) or "nothing on the calendar today",
+        "recent_notes": recent_notes(day),
         "reflection_minutes": plan["doses"].get("reflection", 1),
         "here": HERE,
         "ladder_args": extra_l,
