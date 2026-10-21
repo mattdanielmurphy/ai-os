@@ -51,9 +51,27 @@
   - **Strict Span-Only Styling Invariant**: For conversation artifacts and custom markdown layouts, agents MUST use `<span>` tags exclusively (with `display: block;`, `white-space: pre-wrap;`, and inline CSS) for all layout and styling containers. NEVER use `<div>`, `<p>`, or other block HTML tags. Use `<br>` or `<br><br>` tags within `<span>` to preserve line breaks and paragraph spacing without breaking out of the inline span container.
   - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
 
+# Every Word Costs Matt: Brevity & Whitespace (2026-10-21)
+- **Why**: Matt runs many projects at once and has no capacity for walls of text. Matt, 2026-10-21: "treat me as if every character it sends hurts me a little bit", "really spread things out visually with whitespace". Write for a reader with ADHD who will skim one glance and stop.
+- **Covers**: every message Matt reads, on every surface and agent: chat replies, project thread replies, coordinator posts, status checklists, voice-task reports. Not code, files, commit messages, docs, or drafts he'll paste elsewhere.
+- **Budget**: default ≤ 50 words. Hard cap 100 words unless he asked for detail, an explanation or a full list. A 4-bullet reply with 2-3 sentences per bullet (~150 words) is the wall he means; never send that.
+- **Shape**:
+  - Line 1 is the answer, or the one thing he must do. Nothing needed from him? Say so in line 1.
+  - One idea per line, about 12 words max. Bold the point; the bold alone must carry it.
+  - A blank line between every line or bullet, so each one stands alone.
+  - At most 4 items. More than that → the top 4, plus one line linking a file with the rest.
+  - At most one question, last, answerable with one word or an emoji (👍 = recommended option).
+- **Cut by default**: how you did it or found it; tools, steps and passing tests (just "tested"); caveats that don't change what he does; paths, hashes, IDs and log locations unless he must open one; restating his message; routing talk ("another thread has this" gets ≤ 6 words, once); things he already knows; "Good news", praise, apologies, sign-offs; more than one offer.
+- **Never cut honesty**: a failure, something untested, or a risk he must know still gets its own short line.
+- **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail to a file and link it in one line.
+- **Detail on demand**: don't preload it. He'll ask ("more", ❓). When he does, answer in the same short-line, blank-line shape; over ~15 lines goes in a file or artifact.
+- **Example**:
+  - Before (150 words): "**The nightly restart is set up and live, starting tonight at 4:30.** It restarts like Apple menu > Restart, and your windows reopen afterwards. **It won't kill work in progress.** If a Claude thread is mid-task, it tries again every 15 min until 5:45, then skips that night. An app with unsaved work…" (plus 3 more bullets like that).
+  - After (25 words): "**You: turn on auto-login** (Settings > Users & Groups)." / blank line / "**Nightly restart is live**, 4:30 tonight." / blank line / "**Never kills unsaved work.**" / blank line / "**Not tested for real yet.** You'll get a toast if it fails."
+
 # Universal Response Formatting & Progressive Disclosure Protocol
-- **Universal Cross-Platform Standard**: Across ALL platforms (Claude, Gemini, Codex, etc.), whenever the chat/thread UI supports native HTML disclosure elements, agents MUST format responses using this progressive disclosure protocol.
-- **Ultra-Concise Scannable Core**: Agents MUST keep the top-level chat narrative ultra-concise (~150-200 words), spread out with generous whitespace, clean bullet points, and zero dense walls of text.
+- **Universal Cross-Platform Standard**: Across ALL platforms (Claude, Gemini, Codex, etc.), whenever the chat/thread UI supports native HTML disclosure elements, agents MUST format responses using this progressive disclosure protocol. (Claude's Code tab and project threads don't render HTML: plain markdown only there.)
+- **Ultra-Concise Scannable Core**: The top-level chat text follows "Every Word Costs Matt" above (≤ 50 words by default, blank line between items).
 - **In-Thread Progressive Disclosure (`<details><summary>`)**:
   - Use native HTML `<details>` and `<summary>` tags for folding secondary details, technical logs, rationale, or multi-step execution context.
   - **Zero Manual Triangles**: NEVER insert manual triangles, arrows, or pointer emojis (`▶`, `▼`, `►`, `▸`, `▶︎`) inside `<summary>`. The browser UI already renders an interactive disclosure triangle that dynamically reflects the folded/expanded state. Adding manual triangles creates redundant and confusing double-triangles (`▶ ▶` or `▼ ▶`).
