@@ -5,7 +5,7 @@ Project thread in "Everything", started from Matt's message about reusing the Wo
 ## Current state
 - **Quiz skill is live:** `skills/_quiz-with-tap-menus/SKILL.md` (synced to `~/.claude/skills`, `~/.agents/skills`). Rule lines in `.rules/core_safety.md` ("Quizzes & Study Sessions"), `~/.claude/CLAUDE.md`, Claude memory `quiz-with-tap-menus.md`.
 - **No menus outside quizzes is live:** `.rules/core_safety.md`, `~/.claude/CLAUDE.md` ("Ask questions in plain text…"), memory `menus-not-for-general-questions.md`.
-- **Emoji reply set: proposed, waiting for Matt's 👍** on the proposal message. Not saved as a rule yet.
+- **Emoji reply set is live** (Matt 👍'd, 2026-10-21): `.rules/core_safety.md`, `~/.claude/CLAUDE.md`, memory `emoji-quick-replies.md`, project instructions.
 
 ## Matt's rules from this thread
 - Quizzes: AskUserQuestion, rounds of 4, `multiSelect: true` always, option `description: ""` (never "Option A"), right answer in a random position, score + one line per miss.
@@ -22,7 +22,7 @@ Project thread in "Everything", started from Matt's message about reusing the Wo
 - The Mac right-click reaction row = his 6 most recently used emojis (not configurable).
 
 ## Open
-1. **Emoji reply set** (awaiting his 👍): 👍 yes/do it · ❌ no · ❓ didn't get it, explain simpler · ⏩ next/keep going · ✋ wait, I'm typing more · ✅ done, wrap up. On approval: save to `.rules/core_safety.md` + `scripts/build_rules.py`, `~/.claude/CLAUDE.md`, memory, and send the coordinator a project-instructions line.
+1. **Emoji reply set: done.** 👍 yes/do it · ❌ no · ❓ didn't get it, explain simpler · ⏩ next/keep going · ✋ wait, I'm typing more · ✅ done, wrap up. Matt seeds his right-click row by reacting once with each.
 2. **FSRS helper (not built, needs "make it"):** small script to pull one due card from `~/.hermes/assistant.db` `fsrs_cards` for a menu and write the rating back (reuse `services/checkin/daily.py` `apply_reviews` / `FSRSEngine`). Rating map: wrong or guessing → Again, right → Good, `e` → Easy.
 3. **Quick-reply links:** Matt agreed not to build them (Safari tab per tap, agent must hold its turn).
 
