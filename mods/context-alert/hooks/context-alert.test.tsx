@@ -106,6 +106,22 @@ test('a message sent into a cold thread is held once, then goes through', async 
   expect(entered).toEqual(['warm', 'cold'])
 })
 
+test('a cold project-thread message goes through with a cost note instead of being held', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  const entered: { text: string; context?: readonly string[] }[] = []
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.submit', (_$, e) => { entered.push({ text: e.text, context: e.context }); return { text: e.text } })
+  await $.session.measure(measure(180_000))
+  await $.turn.complete(answered)
+
+  await clock.advance(3 * 60 * MIN)
+  const wake = '<wake reason="mention">\n  <message>hi</message>\n</wake>'
+  expect((await $.prompt.submit(phone(wake))).drop).toBeUndefined()
+  expect(entered).toHaveLength(1)
+  expect(entered[0].context?.join('\n')).toMatch(/expired 2h ago.*~180k tokens.*"fresh"/)
+})
+
 test('/haiku-handoff after a held message carries that message into the new thread', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   const runs: (readonly string[])[] = []

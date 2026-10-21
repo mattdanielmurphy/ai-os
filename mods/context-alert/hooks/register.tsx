@@ -90,6 +90,16 @@ export const withFiles = (text: string, files: { saved: string[]; missed: string
   return lines.join('\n\n')
 }
 
+/** Claude project threads deliver each message wrapped in a <wake> envelope. */
+export const isProjectMessage = (text: string) => text.trimStart().startsWith('<wake')
+
+/** Context for the thread's model when a project message arrived into a cold cache. */
+export const projectColdNote = (expiredMs: number, tokens: number) =>
+  `[context-alert] This thread's prompt cache expired ${ago(expiredMs)} ago, so this turn ` +
+  `re-sent ~${k(tokens)} tokens at full price (roughly 20 warm messages' worth). Open your reply ` +
+  `with one short plain line saying so, and that if Matt replies "fresh" you'll write a /_handoff ` +
+  `and he can continue in a new thread. Then answer as usual.`
+
 /** Writes a handoff from the transcript file with Haiku; the thread itself is never re-sent. */
 const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> => {
   await update($, handoff, () => ({ status: 'writing', text: 'Writing handoff with Haiku (about a minute)…' }))
@@ -183,6 +193,13 @@ export const register: Register = on => {
     const tokens = Math.max((await read($, fill))?.tokens ?? 0, c?.tokens ?? 0)
     const left = cacheLeft(c, at, tokens)
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
+
+    // A Claude project thread: the hold note shows only in the Code tab, never on the project
+    // page, and the project re-delivers the message anyway. Let it through and have the reply
+    // say what the cold read cost, so Matt can choose a fresh thread next time.
+    if (isProjectMessage(e.text)) {
+      return next({ ...e, context: [...(e.context ?? []), projectColdNote(-left, tokens)] })
+    }
 
     await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
     const files = await saveAttachments($, e.attachments ?? [], at)
