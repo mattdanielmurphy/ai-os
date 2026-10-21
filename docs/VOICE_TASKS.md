@@ -39,5 +39,5 @@ voice Claude --Gmail--> Matt's own inbox --IMAP, every 60s--> scripts/voice_task
 - Why not SendMessage to the coordinator: the coordinator is a cloud session; it isn't in
   `ListAgents` from a local session, and headless `claude -p` has no SendMessage/ListAgents at all.
   Only `mcp__claude-code-remote__send_message` with `@parent` from a live project thread reaches it.
-- Gmail label "Claude tasks" exists; an optional filter (`subject:"[Claude task]"` → label, skip inbox)
-  keeps the emails out of the inbox for the minute before they're trashed.
+- The watcher acts as the Gmail filter: on each run it moves task emails out of the inbox into the
+  "Claude tasks" label (X-GM-LABELS), so no Gmail settings rule is needed.

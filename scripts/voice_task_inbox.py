@@ -42,6 +42,7 @@ PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 LAUNCH_LOG = Path.home() / "Library" / "Logs" / "launch-agents" / "voice-task-inbox.log"
 
 SUBJECT_TAG = "[Claude task]"
+GMAIL_LABEL = "Claude tasks"
 SEARCH = '"in:sent subject:(Claude task)"'  # Gmail search; exact tag re-checked below
 RETRY_AFTER = 300   # seconds to wait after a cancelled or failed delivery
 IDLE_NEEDED = 60    # paste only after this long with no keyboard/mouse input
@@ -187,6 +188,9 @@ def run(dry_run=False):
             return 0
         if not tasks:
             return 0
+        for uid, _, _ in tasks:  # what a Gmail filter would do: out of the inbox, into the label
+            imap.uid("STORE", uid, "+X-GM-LABELS", f'("{GMAIL_LABEL}")')
+            imap.uid("STORE", uid, "-X-GM-LABELS", "(\\Inbox)")
         if screen_locked() or idle_seconds() < IDLE_NEEDED:
             return 0  # paste only when the screen is unlocked and Matt isn't typing; retry next minute
         log(f"delivering {len(tasks)} task(s): {[t[1] for t in tasks]}")
