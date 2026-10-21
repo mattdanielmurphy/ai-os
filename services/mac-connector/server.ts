@@ -24,7 +24,7 @@ const QUEUE = join(AIOS, "tmp", "voice-task-inbox", "queue");
 const WATCHER = join(AIOS, "scripts", "voice_task_inbox.py");
 const LOG = join(AIOS, "tmp", "mac-connector.log");
 const PORT = 8777;
-const PUBLIC_HOST = "macbook-pro.tail491454.ts.net";
+const PUBLIC_HOST = "macbook-pro.tail491454.ts.net:8443"; // 443 is puma-dev's
 const PATH_ENV = `${HOME}/.bun/bin:${HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`;
 
 function log(msg: string) {
