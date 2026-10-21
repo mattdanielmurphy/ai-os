@@ -33,3 +33,9 @@
 - Matt's slip at ~17:50 while typing a message: probe showed no Hammerspoon stall and no late keys (all < 10 ms). So that slip came from upstream of Hammerspoon: keys never reached the event stream (keyboard/receiver, Karabiner, or another app's event tap timing out).
 - Apps with active key taps (CGGetEventTapList): Hammerspoon x4, Supercharge 2 x5, OpenLogi Agent, rcmd, TypeWhisper, Siri, SiriNCService. Bartender 5 holds ~70 (disabled, leaked) taps.
 - Started `tmp/taplist/tapwatch` (background) logging any key tap whose latency stats jump > 20 ms or that gets disabled, to tmp/tapwatch.log. Probe (`modules/_keyprobe.lua`) still loaded for correlation; remove both when done.
+
+## 17:55 Dropout during "we'll [see if the] hammerspoon"
+- Probe: no Hammerspoon stall, no late keys around 17:52:50-17:53:35 (80 keys, all < 10 ms). The missing keys never reached the session event stream.
+- CGGetEventTapList latency fields turned out to grow while idle (time since last event), so tapwatch was useless; stopped it.
+- openlogi-agent (OpenLogi, HID++ to the Logitech receiver) opens/closes HID queues every ~30-45 s; one at 17:50:15.9 matched the earlier slip window. Weak lead, not confirmed.
+- Next: bisect hardware vs software by typing on the built-in keyboard. If clean: K850 / Unifying receiver (move receiver to an extension near the keyboard, away from the USB-C dock; or quit OpenLogi). If not: Karabiner / other key taps.
