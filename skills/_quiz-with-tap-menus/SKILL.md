@@ -22,6 +22,10 @@ format he settled on (World Music midterm, 2026-10-20). Reuse it as is.
 - **Put the right answer in a random position** each question. Don't let one round be mostly
   the same position.
 - **Make wrong options plausible**: real terms from the same material, not jokes.
+- **Never give the answer away in the menu.** No correction, hint, definition or memory hook
+  in the question text, the header or the options of the question that tests it. Corrections
+  live only in your chat reply. (Matt, 2026-10-21: "You're telling me the answer IN THE
+  QUESTION and then asking me it?")
 
 ## Each round
 1. Build questions from his actual course files first (`~/Documents/School/<course>/`,
@@ -36,7 +40,8 @@ format he settled on (World Music midterm, 2026-10-20). Reuse it as is.
    - one bullet per miss: `**2 ✗ It's <right answer>:**` + one line on why, plus a memory
      hook if two things keep getting mixed up (e.g. **H**ood = **H**ands-on, **M**erriam = **M**ind).
    - right answers as one line: `1 ✓ 3 ✓ 4 ✓`.
-5. Next round right away. Bring each miss back in a later round, reworded. If he says he
+5. Next round right away. Bring each miss back reworded, at least one round after its
+   correction, with no giveaway. If he says he
    only got one right from a hint, count it as a miss.
 6. If he says a question isn't the kind his class would ask, drop that style of question.
 
