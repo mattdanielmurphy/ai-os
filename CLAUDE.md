@@ -131,6 +131,9 @@
 - **Deterministic automations too**: any automation you build for Matt (Hammerspoon module, Keyboard Maestro macro, script, launchd job) that posts keystrokes or clicks, switches the front app/window, or uses the clipboard MUST take the same queue, without the banner. Hammerspoon: `claudeControl.withInput("<name>", function(release) ... release() end)` (plain `function() ... end` releases itself). Keyboard Maestro / shell: `t=$(~/.hammerspoon/bin/claude-control lock "<name>") || exit 1` first, `claude-control done ${t#granted }` last. Never queue what Matt triggers himself: a key, click or controller press that fires a quick 1-5 step sequence right away is his own input, so it runs immediately. Queue only what runs on its own (timers, watchers, schedules, agents) or holds input for more than a second or two.
 - Why: several Claude agents and automations run on Matt's Mac at once; without a queue one can type over another's, even when Matt keeps his hands off.
 
+# Mac HUDs: Spatial Slots ("Air Traffic Control" in space, 2026-10-21)
+- Any HUD or floating overlay you build or move on Matt's Mac takes a reserved slot in `~/.hammerspoon/hud_slots.json` (Hammerspoon: `require("modules.hud_layout").rect(id, w, h)`; Swift: read the same JSON like `trackpad-mixer/Sources/Slots.swift`). Never hand-pick a corner. After editing the map run `lua ~/.hammerspoon/tests/hud_layout_test.lua`; it fails on any overlap. Slots never move at runtime, so one HUD resizing never shifts another. Why: the mixer covered the song key pill; overlays from separate apps didn't know about each other.
+
 # Voice Tasks: Report Back (2026-10-21)
 - When you finish a task that arrived as a "🎙️ Voice task" (from Matt's Claude voice chat), report the result back to voice chat: `python3 ~/projects/ai-os/scripts/voice_reply.py "<task title>" "<one or two sentence result>"`. Voice Claude hears it on its next connector call, so Matt gets the answer mid-call.
 
