@@ -66,7 +66,8 @@ Reply with exactly ESCALATE and nothing else, without doing anything, when the r
 (coding, research, multi-step projects, anything over about a minute or needing back-and-forth), or is \
 hard to undo (deleting files or data, sending messages or emails to people, purchases, posting publicly).
 Before any synthetic keyboard or mouse input, run ~/.hammerspoon/bin/claude-control ask "<what>" 2 \
-and stop if it exits non-zero; run ~/.hammerspoon/bin/claude-control done afterwards."""
+and stop if it exits non-zero; it prints "granted <ticket>"; afterwards run \
+~/.hammerspoon/bin/claude-control done <ticket>."""
 
 
 def log(msg: str) -> None:
@@ -145,10 +146,12 @@ def run_lights(q: str) -> bool:
 def send_to_claude(q: str, submit: bool) -> bool:
     flat = " ".join(q.split())  # claude-control builds a Lua string; a raw newline breaks it
     preview = flat if len(flat) <= 80 else flat[:77] + "..."
-    if subprocess.run([CLAUDE_CONTROL, "ask", f"Hey Claude → project chat: “{preview}”", "2"],
-                      capture_output=True).returncode != 0:
-        notify("Hey Claude: cancelled")
+    ask = subprocess.run([CLAUDE_CONTROL, "ask", f"Hey Claude → project chat: “{preview}”", "2"],
+                         capture_output=True, text=True)
+    if ask.returncode != 0:
+        notify(f"Hey Claude: {ask.stdout.strip() or 'cancelled'}")
         return False
+    ticket = ask.stdout.split()[-1]  # "granted t7": release only our own turn
     try:
         started = hs_eval("return heyClaude and heyClaude.send(%s, %s) or 'missing'" % (lua_str(q), "true" if submit else "false"))
         if started not in ("working", "busy"):  # "busy": a retried call found the first one running
@@ -166,7 +169,7 @@ def send_to_claude(q: str, submit: bool) -> bool:
             return False
         return True
     finally:
-        subprocess.run([CLAUDE_CONTROL, "done"], capture_output=True)
+        subprocess.run([CLAUDE_CONTROL, "done", ticket], capture_output=True)
 
 
 def run_quick(q: str) -> str:

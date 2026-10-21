@@ -123,6 +123,12 @@
 - Outside quizzes, ask Matt questions in plain text, never in a question menu (tested 2026-10-21: menus always need a separate Submit tap, and while one is open his normal replies and Claude dictation can't reach the agent).
 - Emoji quick replies (2026-10-21): Matt may answer by reacting to an agent's message (it wakes the thread). Meanings: 👍 yes / go ahead · ❌ no, don't · ❓ didn't get it, explain simpler · ⏩ next / keep going · ✋ wait, he's typing more (do nothing yet) · ✅ done, all good, wrap up. Treat a reaction on a message that asked something as his answer.
 
+# Mac Automation: Take-Control Queue ("Air Traffic Control", 2026-10-21)
+- Before posting ANY synthetic keyboard, mouse or controller input on Matt's Mac (tests, app switching, pasting, hs.eventtap), get clearance: `~/.hammerspoon/bin/claude-control ask "<what and why>" 3`. It shows the orange banner and waits in a queue behind other agents; only one agent holds control at a time. Exit 0 prints `granted <ticket>`: go. Exit 1 (Esc, preempted, queue timeout): don't touch input.
+- Release your own turn right after with `claude-control done <ticket>` so the next agent goes. Between long input steps, check `claude-control state <ticket>` and stop at once unless it says `granted`.
+- `--urgent` jumps the line and preempts a normal holder. Use it ONLY to stop something running away right now (runaway input, a stuck loop hammering the Mac). Never for routine tests.
+- Why: several Claude agents run on Matt's Mac at once; without a queue one agent's test can collide with another's, even when Matt keeps his hands off.
+
 # Subagent Rules
 
 1. **Execution Only**: Strictly execute the plan provided by the orchestrator.

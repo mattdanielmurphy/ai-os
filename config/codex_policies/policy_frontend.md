@@ -16,3 +16,4 @@
   1. **Pressing the `Escape` key (`keydown` listener)**.
   2. **Clicking outside the modal content container (backdrop overlay click)**.
   Agents MUST NEVER author raw overlay `<div>` elements without wiring up backdrop click detection and `Escape` key handling. Where possible in React/Web apps, use an accessible, unified modal primitive, HTML `<dialog>`, or established headless component pattern that enforces backdrop dismissal and escape listeners by default.
+- **Notification Placement (2026-10-20)**: Centered, attention-grabbing notifications are only for genuinely important events (e.g. the take-control banner). Routine/status events (config reloaded, saved, synced) get a small, subtle indicator in a screen corner that fades out: transparent background, slightly translucent, no drop shadows, never shifting other overlays.
