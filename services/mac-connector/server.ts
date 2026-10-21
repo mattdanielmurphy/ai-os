@@ -14,7 +14,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { readFileSync, appendFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, statSync, realpathSync } from "node:fs";
+import { readFileSync, appendFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, statSync, realpathSync, renameSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 
 const HOME = homedir();
@@ -23,6 +23,8 @@ const ENV_FILE = join(AIOS, ".env");
 const QUEUE = join(AIOS, "tmp", "voice-task-inbox", "queue");
 const WATCHER = join(AIOS, "scripts", "voice_task_inbox.py");
 const LOG = join(AIOS, "tmp", "mac-connector.log");
+// Replies from Mac agents to voice Claude (scripts/voice_reply.py writes them).
+const OUTBOX = join(AIOS, "tmp", "voice-outbox");
 const PORT = Number(process.env.PORT ?? 8777);
 const PUBLIC_HOST = "macbook-pro.tail491454.ts.net"; // claude.ai only connects on 443
 const VAULT = join(HOME, "Library", "Mobile Documents", "iCloud~md~obsidian", "Documents", "Personal");
@@ -60,14 +62,57 @@ async function run(cmd: string[], timeoutMs = 20000): Promise<string> {
   return out;
 }
 
-const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
-const fail = (e: unknown) => ({ content: [{ type: "text" as const, text: String((e as Error).message ?? e) }], isError: true });
+// Voice Claude can't be pushed to, so updates ride along on every tool result it gets.
+function takeUpdates(): string[] {
+  if (!existsSync(OUTBOX)) return [];
+  const seen = join(OUTBOX, "seen");
+  const out: string[] = [];
+  for (const f of readdirSync(OUTBOX).filter((n) => n.endsWith(".json")).sort()) {
+    try {
+      const u = JSON.parse(readFileSync(join(OUTBOX, f), "utf8"));
+      out.push(`• ${u.title}: ${u.text}`);
+      mkdirSync(seen, { recursive: true });
+      renameSync(join(OUTBOX, f), join(seen, f));
+    } catch {}
+  }
+  return out;
+}
+const withUpdates = (t: string) => {
+  const u = takeUpdates();
+  return u.length ? `${t}\n\n📬 UPDATE FROM MATT'S MAC AGENTS (tell Matt now, before anything else):\n${u.join("\n")}` : t;
+};
+const text = (t: string) => ({ content: [{ type: "text" as const, text: withUpdates(t) }] });
+const fail = (e: unknown) => ({ content: [{ type: "text" as const, text: withUpdates(String((e as Error).message ?? e)) }], isError: true });
 
 function buildServer(): McpServer {
   const server = new McpServer({ name: "matts-mac", version: "0.1.0" }, {
-    instructions: "Matt's Mac. Use search_notes for anything about Matt, his projects, notes or past AI threads; " +
+    instructions: "Matt's Mac. After you send_task during a call, start EVERY later reply by calling check_updates " +
+      "(instant) and tell Matt about any update first: it's how his Mac agents report back. If he says he'll wait for a " +
+      "result, call wait_for_update. Use search_notes for anything about Matt, his projects, notes or past AI threads; " +
       "find_files / list_folder / read_file for files; send_task to hand real work to his project coordinator " +
       "(it runs on his Mac with full access).",
+  });
+
+  server.registerTool("check_updates", {
+    description: "Instant. Returns replies from Matt's Mac agents to tasks you sent (send_task). Call it at the start of " +
+      "every reply after you've sent a task in this call, and tell Matt right away if there is one.",
+    inputSchema: {},
+  }, async () => {
+    const u = takeUpdates();
+    return { content: [{ type: "text" as const, text: u.length ? `📬 Updates (tell Matt now):\n${u.join("\n")}` : "No new updates." }] };
+  });
+
+  server.registerTool("wait_for_update", {
+    description: "Wait up to `seconds` (max 50) for a reply from Matt's Mac agents. Only when Matt says he'll wait for a result.",
+    inputSchema: { seconds: z.number().int().min(5).max(50).optional() },
+  }, async ({ seconds }) => {
+    const until = Date.now() + (seconds ?? 45) * 1000;
+    while (Date.now() < until) {
+      const u = takeUpdates();
+      if (u.length) return { content: [{ type: "text" as const, text: `📬 Updates (tell Matt now):\n${u.join("\n")}` }] };
+      await Bun.sleep(2000);
+    }
+    return { content: [{ type: "text" as const, text: "Nothing yet. The agent is still working; check again on your next reply." }] };
   });
 
   server.registerTool("search_notes", {

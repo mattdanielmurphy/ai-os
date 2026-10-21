@@ -147,7 +147,9 @@ def compose(tasks):
     for i, (_, title, body) in enumerate(tasks, 1):
         label = title if len(tasks) == 1 else f"{i}. {title}"
         blocks.append(f"{label}\n{body}".strip())
-    return f"🎙️ {head}:\n\n" + "\n\n".join(blocks)
+    reply = ('When each one is done, report back to voice chat: '
+             'python3 ~/projects/ai-os/scripts/voice_reply.py "<title>" "<one-line result>"')
+    return f"🎙️ {head}:\n\n" + "\n\n".join(blocks) + "\n\n" + reply
 
 
 def screen_locked():

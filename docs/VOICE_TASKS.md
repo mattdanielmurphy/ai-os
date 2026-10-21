@@ -71,3 +71,12 @@ connector is on, voice Claude should prefer `send_task` over email.
 
 Unsaved calls queue a "Review unsaved voice calls" task; handle it with the `_review-voice-calls` skill
 (`skills/_review-voice-calls/SKILL.md`, helper `scripts/review_voice_calls.py`).
+
+## Replies back to voice Claude
+
+Voice Claude can't be pushed to; it only acts when Matt speaks. So replies ride on the connector:
+- An agent finishing a voice task runs `python3 ~/projects/ai-os/scripts/voice_reply.py "<title>" "<result>"`
+  (the pasted task text says so). It lands in `tmp/voice-outbox/`.
+- Every connector tool result carries any new replies, and the connector's instructions tell voice Claude
+  to call `check_updates` (instant) at the start of each reply after it sent a task, so Matt hears the
+  result on his next sentence. `wait_for_update` (≤50s) is for "I'll wait for it".
