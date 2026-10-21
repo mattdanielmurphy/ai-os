@@ -23,8 +23,10 @@ const ENV_FILE = join(AIOS, ".env");
 const QUEUE = join(AIOS, "tmp", "voice-task-inbox", "queue");
 const WATCHER = join(AIOS, "scripts", "voice_task_inbox.py");
 const LOG = join(AIOS, "tmp", "mac-connector.log");
-const PORT = 8777;
+const PORT = Number(process.env.PORT ?? 8777);
 const PUBLIC_HOST = "macbook-pro.tail491454.ts.net:8443"; // 443 is puma-dev's
+const VAULT = join(HOME, "Library", "Mobile Documents", "iCloud~md~obsidian", "Documents", "Personal");
+const CALLS = join(VAULT, "Voice calls");
 const PATH_ENV = `${HOME}/.bun/bin:${HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`;
 
 function log(msg: string) {
@@ -140,16 +142,60 @@ function buildServer(): McpServer {
     },
   }, async ({ title, ask, context, urgent }) => {
     try {
-      mkdirSync(QUEUE, { recursive: true });
       const body = [`Ask: ${ask}`, context ? `Context: ${context}` : "", `Urgent: ${urgent ? "yes" : "no"}`].filter(Boolean).join("\n\n");
-      writeFileSync(join(QUEUE, `${Date.now()}-${randomBytes(3).toString("hex")}.json`), JSON.stringify({ title, body }));
-      Bun.spawn(["/usr/bin/python3", WATCHER], { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } }).unref();
+      queueTask(title, body);
       log(`task queued: ${title}`);
       return text("Queued. It goes into Matt's project chat as soon as his Mac is unlocked and he's been idle a minute.");
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool("save_call", {
+    description: "Run this at the END of every voice call with Matt. Saves the call as a searchable note on his Mac " +
+      "(Obsidian vault, indexed for all his agents) and hands any new facts and to-dos to his project coordinator, " +
+      "which files the facts and makes the reminders, calendar events and emails.",
+    inputSchema: {
+      title: z.string().describe("What the call was about, under 8 words"),
+      summary: z.string().describe("A few sentences: what was discussed and decided"),
+      matt_said: z.string().describe("Everything Matt said, as close to word for word as you can, in order"),
+      facts: z.array(z.string()).optional().describe("New facts about Matt, his life, projects or setup worth remembering"),
+      todos: z.array(z.string()).optional().describe("Reminders, calendar events, emails or tasks to act on, with dates/times"),
+    },
+  }, async ({ title, summary, matt_said, facts, todos }) => {
+    try {
+      const now = new Date();
+      const day = now.toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
+      const hm = now.toLocaleTimeString("en-GB", { timeZone: "America/Edmonton", hour: "2-digit", minute: "2-digit" }).replace(":", "");
+      const safeTitle = title.replace(/[\/:*?"<>|#^\[\]]/g, "").trim().slice(0, 60) || "Voice call";
+      const list = (xs?: string[]) => (xs?.length ? xs.map((x) => `- ${x}`).join("\n") : "- (none)");
+      mkdirSync(CALLS, { recursive: true });
+      const name = `${day} ${hm} ${safeTitle}.md`;
+      writeFileSync(join(CALLS, name), [
+        "---", `title: ${JSON.stringify(safeTitle)}`, `created: ${day}`, `updated: ${day}`, "type: daily", "tags: [journal, ai-os]", "source: voice-chat", "---", "",
+        `# ${safeTitle}`, "", "## Summary", summary, "", "## New facts", list(facts), "", "## To-dos", list(todos), "", "## What Matt said", matt_said, "",
+      ].join("\n"));
+      try { appendFileSync(join(VAULT, "log.md"), `\n- ${day}: Voice call saved: [[Voice calls/${name.replace(/\.md$/, "")}]]\n`); } catch {}
+      Bun.spawn(["qmd", "update"], { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } }).unref();
+      if (facts?.length || todos?.length) {
+        queueTask(`File voice call: ${safeTitle}`, [
+          `From a voice call, saved at "Voice calls/${name}" in the Obsidian vault.`,
+          facts?.length ? `New facts to file (memory / ABOUT_MATT / the right note):\n${list(facts)}` : "",
+          todos?.length ? `To-dos to act on (reminders, calendar, email):\n${list(todos)}` : "",
+          "Urgent: no",
+        ].filter(Boolean).join("\n\n"));
+      }
+      log(`call saved: ${name}`);
+      return text(`Saved as "Voice calls/${name}".` + (facts?.length || todos?.length ? " Facts and to-dos were sent to the coordinator." : ""));
+    } catch (e) { return fail(e); }
+  });
+
   return server;
+}
+
+// Queue a task for the coordinator and kick the watcher so it's delivered right away.
+function queueTask(title: string, body: string) {
+  mkdirSync(QUEUE, { recursive: true });
+  writeFileSync(join(QUEUE, `${Date.now()}-${randomBytes(3).toString("hex")}.json`), JSON.stringify({ title, body }));
+  Bun.spawn(["/usr/bin/python3", WATCHER], { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } }).unref();
 }
 
 function init() {

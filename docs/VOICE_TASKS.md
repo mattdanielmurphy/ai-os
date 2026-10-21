@@ -47,3 +47,15 @@ voice Claude --Gmail--> Matt's own inbox --IMAP, every 60s--> scripts/voice_task
 `services/mac-connector` is a custom connector voice Claude can call directly: search notes, read
 files and `send_task` (seconds instead of the 60s mail poll). Gmail stays as the fallback. When the
 connector is on, voice Claude should prefer `send_task` over email.
+
+## Saving calls
+
+- `save_call` (connector tool): voice Claude runs it at the end of a call. It writes
+  `Voice calls/<date> <time> <title>.md` in the Obsidian vault (summary, new facts, to-dos, what Matt
+  said), runs `qmd update`, and queues one coordinator task to file facts and act on to-dos.
+- `scripts/pull_voice_chats.py` (launchd `com.matt.agent.voice-chat-pull`, daily 3:30): copies every
+  claude.ai voice chat (`platform == "VOICE"`) to `Voice calls/Transcripts/` via Matt's signed-in
+  Chrome (browser-use CDP, claude.ai's internal API). Calls without a save_call go to the coordinator
+  for review.
+- Line for claude.ai Settings → Profile → preferences: "In voice chats, at the end of every call (or
+  when I say bye / that's it), run the My Mac connector's save_call before you finish."
