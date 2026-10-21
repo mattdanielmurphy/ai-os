@@ -27,3 +27,9 @@
 ## 17:50 Confirmation test
 - Probe (`modules/_keyprobe.lua`, temporary, loaded from init.lua) logged key latency. Reload phase: 91 keys from 1 s after reload, all < 5 ms. Freeze phase didn't run (hs -c hung under the IPC; killed by alarm), so the "busy Hammerspoon = frozen keys" mechanism is still not directly confirmed in this test (it was correlated earlier: 421 ms stall ↔ 318 ms key latency).
 - Open: remove the probe line from init.lua and modules/_keyprobe.lua after the rerun.
+
+## 17:53 Freeze test + new slip
+- Freeze test (Hammerspoon busy 3 s via a timer, probe logging): keys typed during the freeze arrived at the end with 87-2913 ms latency, and only ~9 of ~25 expected arrived. Confirms: a busy Hammerspoon main thread delays AND drops keys.
+- Matt's slip at ~17:50 while typing a message: probe showed no Hammerspoon stall and no late keys (all < 10 ms). So that slip came from upstream of Hammerspoon: keys never reached the event stream (keyboard/receiver, Karabiner, or another app's event tap timing out).
+- Apps with active key taps (CGGetEventTapList): Hammerspoon x4, Supercharge 2 x5, OpenLogi Agent, rcmd, TypeWhisper, Siri, SiriNCService. Bartender 5 holds ~70 (disabled, leaked) taps.
+- Started `tmp/taplist/tapwatch` (background) logging any key tap whose latency stats jump > 20 ms or that gets disabled, to tmp/tapwatch.log. Probe (`modules/_keyprobe.lua`) still loaded for correlation; remove both when done.
