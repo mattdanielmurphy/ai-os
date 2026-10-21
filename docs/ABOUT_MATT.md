@@ -14,7 +14,10 @@ Ask him only if all of these come up empty, and say what you searched.
 ## Right now (update as it changes)
 - **Location**: Edmonton, Alberta (Mountain time).
 - **School**: University of Alberta, Fall 2026: CMPUT 174, MUSIC 102 (Intro to World Music), PHIL 120 (Symbolic Logic, *forall x* textbook), plus XImE ensemble (MUSIC 193A). **Class times, rooms, due dates and where he is in each course: [`docs/SCHOOL.md`](SCHOOL.md)** (check its refreshed date). Canvas: signed in via the built-in browser pane (and a dedicated Chrome profile).
-- **Music**: makes music in Ableton Live; drums, piano, bass.
+- **Music**: makes music in Ableton Live; plays drums, piano and guitar/bass. Gear at home: Yamaha digital piano (X-stand, sustain pedal), electronic drum kit (packed away as of Oct 2026), electric guitar/bass, studio monitor.
+- **Home/desk**: apartment in Edmonton; MacBook on a riser + external monitor, Logitech ergonomic keyboard and mouse, AirPods. Has a bike and a kettlebell.
+- **Car**: no CarPlay/Android Auto, uses his phone; has an old iPad mini he might mount as a dash screen. Buys gas around Edmonton / Fort Saskatchewan.
+- **Voice chat**: likes claude.ai voice for thinking out loud, then hands building to the project coordinator (`docs/VOICE_TASKS.md`). Calls are reviewed with the `_review-voice-calls` skill.
 - **Main projects**: ai-os (this repo, his agent setup), qwerty MIDI plugin, daily mini crossword (mattmurphy.ca).
 - **Working style**: procrastinates and rabbit-holes into big builds; keep steps small. Full preferences: `~/.claude/CLAUDE.md`.
 

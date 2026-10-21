@@ -59,3 +59,15 @@ connector is on, voice Claude should prefer `send_task` over email.
   for review.
 - Line for claude.ai Settings → Profile → preferences: "In voice chats, at the end of every call (or
   when I say bye / that's it), run the My Mac connector's save_call before you finish."
+
+## Voice Claude speech quirks (tested 2026-10-21)
+
+- Speed: `set_voice_mode_session_speed`, slowest is 0.8x. No timed silences.
+- Pauses: single ellipses between words (`The... moon...`) or spaced double ellipses (`The... ... moon`) add pauses cleanly.
+  Triple spaced ellipses glitch the British voice (a stray "art" before each word, once a made-up sentence). Hyphens did little.
+- Matt found the slow 0.8x pace calming at bedtime.
+
+## Reviewing calls
+
+Unsaved calls queue a "Review unsaved voice calls" task; handle it with the `_review-voice-calls` skill
+(`skills/_review-voice-calls/SKILL.md`, helper `scripts/review_voice_calls.py`).

@@ -119,7 +119,7 @@ def render(c):
 def queue_review(unsaved):
     QUEUE.mkdir(parents=True, exist_ok=True)
     body = ("These voice calls ended without save_call. Read each transcript, file any new facts about Matt "
-            "or his setup, and act on reminders, calendar events or emails he asked for:\n"
+            "or his setup, and act on reminders, calendar events or emails he asked for (use the _review-voice-calls skill):\n"
             + "\n".join(f"- {p}" for p in unsaved) + "\n\nUrgent: no")
     (QUEUE / f"{int(time.time() * 1000)}-voicepull.json").write_text(json.dumps({"title": "Review unsaved voice calls", "body": body}))
     subprocess.Popen(["/usr/bin/python3", str(WATCHER)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
