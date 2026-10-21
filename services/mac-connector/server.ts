@@ -220,6 +220,8 @@ if (process.argv.includes("--init")) {
     idleTimeout: 120,
     async fetch(req) {
       const url = new URL(req.url);
+      const shown = url.pathname.replace(token, "<token>");
+      log(`${req.method} ${shown} ua=${(req.headers.get("user-agent") ?? "").slice(0, 60)} accept=${req.headers.get("accept") ?? ""}`);
       if (url.pathname === "/health") return new Response("ok");
       if (url.pathname !== secretPath) return new Response("Not found", { status: 404 });
       // Stateless: a fresh server + transport per request.
