@@ -62,9 +62,14 @@
   - At most 4 items. More than that → the top 4, plus one line linking a file with the rest.
   - At most one question, last, answerable with one word or an emoji (👍 = recommended option).
 - **Cut by default**: how you did it or found it; tools, steps and passing tests (just "tested"); caveats that don't change what he does; paths, hashes, IDs and log locations unless he must open one; restating his message; routing talk ("another thread has this" gets ≤ 6 words, once); things he already knows; "Good news", praise, apologies, sign-offs; more than one offer.
-- **Never cut honesty**: a failure, something untested, or a risk he must know still gets its own short line.
-- **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail to a file and link it in one line.
-- **Detail on demand**: don't preload it. He'll ask ("more", ❓). When he does, answer in the same short-line, blank-line shape; over ~15 lines goes in a file or artifact.
+- **Important things go in the reply, never only in a file**: anything he must do, decisions he'd plausibly veto, risks, failures and untested parts each get one short line. Test: if he reads only the reply, he misses nothing important. (Matt, 2026-10-21: walls of text meant he skipped everything, "rather than the important things at least getting read".)
+- **Two layers: short reply + full write-up**: when the work involved decisions, changes or explanation that won't fit the budget, write the full write-up first, then reply with its summary. Matt is happy for agents to make lots of decisions, as long as he can always dig into why.
+  - Write-up content: what changed, every decision and why (and what was rejected), how it works, what's untested or risky, how to undo it. No length limit; plain readable prose with headings.
+  - Location: `docs/writeups/YYYY-MM-DD-<slug>.md` in the repo where the work happened (commit it). No repo → `~/projects/ai-os/docs/writeups/`.
+  - Delivery: last line of the reply is `Full write-up: [<name>](<path>)`. In a project thread, also attach it (`SendUserFile`, then its ref in `attached_outputs`).
+  - Skip it for quick answers and one-step tasks.
+- **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail into the write-up.
+- **Detail on demand**: when he asks ("more", ❓, "why?"), answer in the same short-line, blank-line shape, or point to the write-up section.
 - **Example**:
   - Before (150 words): "**The nightly restart is set up and live, starting tonight at 4:30.** It restarts like Apple menu > Restart, and your windows reopen afterwards. **It won't kill work in progress.** If a Claude thread is mid-task, it tries again every 15 min until 5:45, then skips that night. An app with unsaved work…" (plus 3 more bullets like that).
   - After (25 words): "**You: turn on auto-login** (Settings > Users & Groups)." / blank line / "**Nightly restart is live**, 4:30 tonight." / blank line / "**Never kills unsaved work.**" / blank line / "**Not tested for real yet.** You'll get a toast if it fails."
