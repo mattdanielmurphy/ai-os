@@ -170,7 +170,9 @@ def main():
 
     stock_names = hermes_stock()
     mine, stock = local_skills(USER_SKILLS, stock_names, "~/.claude/skills")
-    pm, ps = local_skills(Path.cwd() / ".claude" / "skills", stock_names, "this project")
+    project = Path.cwd() / ".claude" / "skills"
+    pm, ps = ([], []) if project.resolve() == USER_SKILLS.resolve() else \
+        local_skills(project, stock_names, "this project")
     am, ast = account_skills()
     mine += pm + am
     stock += ps + ast
