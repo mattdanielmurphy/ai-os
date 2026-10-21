@@ -15,7 +15,8 @@ format he settled on (World Music midterm, 2026-10-20). Reuse it as is.
 - **One call = one round of 4 questions** (the tool's max). Each question:
   - `question`: numbered, e.g. `"1. Who wrote The Anthropology of Music (1964)?"`
   - `header`: `"Q1"` … `"Q4"`
-  - `multiSelect: false`
+  - `multiSelect: true` (always), so he can pick his answer AND use Other in the same tap
+    set. Other is his only way to talk to you while a menu is open.
   - 4 `options`, each `{"label": "<the answer, 1–5 words>", "description": ""}`.
 - **`description` is always the empty string.** Never "Option A/B/C/D" or any other filler
   under a choice; he asked three times for it to go.
@@ -26,6 +27,19 @@ format he settled on (World Music midterm, 2026-10-20). Reuse it as is.
   in the question text, the header or the options of the question that tests it. Corrections
   live only in your chat reply. (Matt, 2026-10-21: "You're telling me the answer IN THE
   QUESTION and then asking me it?")
+
+## Reading his answers (Other = how it felt, or a comment)
+The result comes back as `"<question>"="<picks, comma-separated>"`. Tested 2026-10-21:
+an empty Other shows up as `Something else`; typed Other text shows up as the text itself.
+- **Answer only** → recall was in the sweet spot (FSRS Good if right).
+- **Answer + empty Other (`Something else`)** → too easy (Easy if right).
+- **Answer + `h`** → too hard (Hard if right).
+- **Wrong answer** → Again, whatever else he picked.
+- **Any other Other text** → a comment or request. Read it and act on it before the next
+  round (it may be about the quiz itself, like "drop this kind of question").
+- **Two answers ticked** → treat as a slip: count it wrong only if neither is right, and
+  mention it in one line.
+There is no separate confidence step; he finds it twice as slow (Matt, 2026-10-21).
 
 ## Each round
 1. Build questions from his actual course files first (`~/Documents/School/<course>/`,
