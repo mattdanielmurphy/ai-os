@@ -23,3 +23,7 @@ Personal identifiers (phone, student IDs, ASN, BC PEN, DOB, CCID) were replaced 
 The pre-scrub `.git` is at `~/.Trash/ai-os-pre-scrub-2026-10-17/old.git` (still contains the PII; gone once Trash is emptied). It is the only copy of these local-only branches, dropped from the new clone:
 `agy-mcp/job-5b9db406c2c64d67`, `agy-mcp/job-bf22ed13c9b94653`, `agy-mcp/job_1786255018_92ee67d1f728`, `agy-mcp/job_1786255217_556103ba1234`, `agy-mcp/job_1786264321_4309dcaad738`, `agy-mcp/job_1786264963_5697699b24a5`, `agy-mcp/job_1786265406_7c8803be59fc`, `agy-mcp/job_1786951443_4d3cc173683c`, `archive/custom-tauri`, `archive/macos-app`, `old`, plus 2 stashes from agy jobs.
 The worktrees under `.agy-mcp/worktrees/` and `~/.codex/worktrees/*/ai-os` pointed at the old `.git` and no longer work.
+
+## Background services stopped (2026-10-21)
+The shelved tools' launch agents were still running (Hermes gateway + web UI, agy-proxy, agymcp, LiteLLM, aios-server query companion; ~1 GB with their MCP children). They are booted out and `launchctl disable`d, so they stay off after a restart. Plists are untouched in `~/Library/LaunchAgents/`. `scripts/threads.py` still reads `~/.hermes/state.db` directly and doesn't need the gateway.
+Revive one: `launchctl enable gui/$(id -u)/<label> && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<label>.plist` (labels: `com.matt.agent.hermes-gateway`, `com.parantoux.hermes-webui`, `com.matt.agent.agy-proxy`, `com.matt.agent.agymcp`, `com.matt.agent.litellm`, `com.matt.agent.aios-server`).
