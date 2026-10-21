@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""Hey Claude: handle a spoken request locally, or send it to the Claude project chat.
+"""Hey Claude: handle a spoken request locally, with a quick `claude -p`, or in the project chat.
 
 Run by the "Hey Claude" Shortcut (Vocal Shortcuts phrase -> Dictate Text ->
-Run Shell Script). No API calls: simple commands run here; anything else is
-pasted into the Everything project's chat in the Claude app by the Hammerspoon
-module ~/.hammerspoon/modules/hey_claude.lua.
+Run Shell Script). Three tiers, fastest first:
+  1. local commands, no model at all (open apps, search, say, lights, math, time)
+  2. a headless `claude -p` (Sonnet, subscription, ~5s + tool calls) for quick
+     tasks and questions; the answer is spoken and shown on screen
+  3. the Everything project chat in the Claude app, for big work: when Claude
+     answers ESCALATE, or the request starts with "project" / "tell the project".
+     Pasted by the Hammerspoon module ~/.hammerspoon/modules/hey_claude.lua.
 
   hey-claude "open safari"             local: opens Safari
   hey-claude "lights off"              local: Hue
-  hey-claude "what's 12 times 7"       local: math, spoken
-  hey-claude "remind me to ..."        anything else -> project chat
+  hey-claude "remind me to ..."        quick: claude -p
+  hey-claude "project, fix the ..."    project chat
   hey-claude --dry-run "..."           print the route, do nothing
   hey-claude --no-send "..."           paste into the chat box but don't press Return
 Text can also come on stdin.
 """
+import os
 import re
 import subprocess
 import sys
@@ -37,6 +42,28 @@ LIGHTS = re.compile(
     r"|^turn\s+(?P<b>on|off)\s+(the\s+)?lights?$"
     r"|^(set\s+)?(the\s+)?lights?\s+(to\s+)?(?P<pct>\d{1,3})\s*(%|percent)?$", re.I)
 TIME = re.compile(r"what('s| is) the time|what time is it", re.I)
+PROJECT = re.compile(r"^(tell|ask|send (it|this) to)?\s*(the\s+)?project\b[\s,.:]*", re.I)
+
+QUICK_MODEL = "sonnet"
+QUICK_TIMEOUT = 120
+QUICK_CWD = Path.home()  # no project CLAUDE.md to load; ~/.claude/CLAUDE.md still applies
+QUICK_TOOLS = [
+    "Read", "WebSearch", "WebFetch",
+    "Bash(osascript:*)", "Bash(open:*)", "Bash(shortcuts run:*)", "Bash(apple-reminders:*)",
+    "Bash(python3 ~/projects/ai-os/scripts/hue.py:*)", "Bash(python3 /Users/matt/projects/ai-os/scripts/hue.py:*)",
+    "Bash(~/.hammerspoon/bin/claude-control:*)", "Bash(say:*)", "Bash(date:*)", "Bash(cal:*)",
+    "Bash(pmset -g:*)", "Bash(pgrep:*)", "Bash(ps:*)", "Bash(SwitchAudioSource:*)", "Bash(defaults read:*)",
+]
+QUICK_PROMPT = """You are Hey Claude, Matt's voice assistant on his Mac. He spoke this request; your final \
+reply is read aloud with macOS `say` and shown briefly on screen, so answer in one or two short plain \
+sentences with no markdown, lists or URLs.
+Do quick tasks yourself with Bash (osascript, open, shortcuts run, apple-reminders, \
+python3 ~/projects/ai-os/scripts/hue.py, etc.) in as few tool calls as possible. Speed matters more than polish.
+Reply with exactly ESCALATE and nothing else, without doing anything, when the request needs real work \
+(coding, research, multi-step projects, anything over about a minute or needing back-and-forth), or is \
+hard to undo (deleting files or data, sending messages or emails to people, purchases, posting publicly).
+Before any synthetic keyboard or mouse input, run ~/.hammerspoon/bin/claude-control ask "<what>" 2 \
+and stop if it exits non-zero; run ~/.hammerspoon/bin/claude-control done afterwards."""
 
 
 def log(msg: str) -> None:
@@ -82,6 +109,8 @@ def clean(text: str) -> str:
 def route(q: str) -> str:
     if not q:
         return "empty"
+    if PROJECT.match(q):
+        return "project"
     if LIGHTS.search(q):
         return "lights"
     if OPEN.match(q) or SEARCH.match(q) or SAY.match(q):
@@ -91,7 +120,7 @@ def route(q: str) -> str:
     from triage_router import evaluate_math_phrase
     if evaluate_math_phrase(q):
         return "math"
-    return "claude"
+    return "quick"
 
 
 def run_lights(q: str) -> bool:
@@ -134,11 +163,45 @@ def send_to_claude(q: str, submit: bool) -> bool:
         subprocess.run([CLAUDE_CONTROL, "done"], capture_output=True)
 
 
+def run_quick(q: str) -> str:
+    """Headless Claude Code run; returns its final reply ("" on failure)."""
+    cmd = ["claude", "-p", q, "--model", QUICK_MODEL, "--no-session-persistence",
+           "--append-system-prompt", QUICK_PROMPT,
+           # Allowlist, not bypass: a misheard request can only reach these tools.
+           "--allowedTools", *QUICK_TOOLS,
+           "--setting-sources", "", "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}']
+    env = dict(os.environ, PATH=f"/opt/homebrew/bin:/usr/local/bin:{Path.home()}/.local/bin:{os.environ.get('PATH', '')}")
+    try:
+        r = subprocess.run(cmd, cwd=QUICK_CWD, capture_output=True, text=True, timeout=QUICK_TIMEOUT, env=env)
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        log(f"  -> quick failed: {e}")
+        return ""
+    if r.returncode != 0:
+        log(f"  -> quick exit {r.returncode}: {r.stderr.strip()[-300:]}")
+    return r.stdout.strip()
+
+
+def quick_worker(q: str, submit: bool) -> int:
+    started = time.time()
+    reply = run_quick(q)
+    log(f"  -> quick {time.time() - started:.1f}s: {reply[:200]!r}")
+    if reply.strip().strip(".") == "ESCALATE" or not reply:
+        if not reply:
+            notify("Hey Claude: quick try failed, sending to the project")
+        return 0 if send_to_claude(q, submit) else 1
+    hs_eval("hs.alert.closeAll(); hs.alert.show(%s, %d)" % (lua_str(reply), min(4 + len(reply) // 25, 15)), timeout=2)
+    speak(reply)
+    return 0
+
+
 def main() -> int:
     args = sys.argv[1:]
     dry = "--dry-run" in args
     submit = "--no-send" not in args
-    text = " ".join(a for a in args if a not in ("--dry-run", "--no-send"))
+    worker = "--worker" in args
+    text = " ".join(a for a in args if a not in ("--dry-run", "--no-send", "--worker"))
+    if worker:
+        return quick_worker(text, submit)
     if not text.strip() and not sys.stdin.isatty():
         text = sys.stdin.read()
     q = clean(text)
@@ -158,7 +221,8 @@ def main() -> int:
         from triage_router import try_direct_execution
         if try_direct_execution(q):
             return 0
-        log("  -> direct failed, sending to Claude")
+        log("  -> direct failed, trying claude -p")
+        kind = "quick"
     if kind == "math":
         from triage_router import evaluate_math_phrase
         answer = evaluate_math_phrase(q)
@@ -170,6 +234,15 @@ def main() -> int:
         notify(now)
         speak(f"It's {now}")
         return 0
+    if kind == "quick":
+        # Detach so the Shortcut finishes now and "Hey Claude" is free again.
+        notify(f"🎙️ {q}")
+        subprocess.Popen([sys.executable, __file__, "--worker", *([] if submit else ["--no-send"]), q],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+        return 0
+    if kind == "project":
+        q = PROJECT.sub("", q, count=1) or q
     return 0 if send_to_claude(q, submit) else 1
 
 
