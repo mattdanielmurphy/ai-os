@@ -7,8 +7,9 @@ only send email from Matt's Gmail. So it emails Matt's own address with the subj
 Gmail over IMAP, pastes them into the project chat (where the coordinator picks them up)
 with the same Hammerspoon path Hey Claude uses, then moves the emails to Gmail Trash.
 
-Only mail that Matt's own account SENT counts (Gmail "in:sent"), so a stranger emailing
-him a "[Claude task]" subject can't inject tasks.
+Only mail that Matt's own account SENT counts (Gmail "in:sent", re-checked through the
+\\Sent label), so a stranger emailing him a "[Claude task]" subject can't inject tasks. The
+From address isn't checked: Gmail may send as an alias (matt@ his domain).
 
   voice_task_inbox.py               check once and deliver (what launchd runs)
   voice_task_inbox.py --dry-run     list pending tasks, deliver and delete nothing
@@ -21,7 +22,7 @@ Spec voice Claude follows: docs/VOICE_TASKS.md.
 import email
 import email.header
 import email.policy
-import email.utils
+import fcntl
 import imaplib
 import json
 import re
@@ -43,6 +44,7 @@ LAUNCH_LOG = Path.home() / "Library" / "Logs" / "launch-agents" / "voice-task-in
 SUBJECT_TAG = "[Claude task]"
 SEARCH = '"in:sent subject:(Claude task)"'  # Gmail search; exact tag re-checked below
 RETRY_AFTER = 300   # seconds to wait after a cancelled or failed delivery
+IDLE_NEEDED = 60    # paste only after this long with no keyboard/mouse input
 MAX_BODY = 4000     # chars per task pasted into the chat
 
 
@@ -83,7 +85,7 @@ def plain_body(msg):
     part = msg.get_body(preferencelist=("plain", "html"))
     if part is None:
         return ""
-    text = part.get_content()
+    text = part.get_content().replace("\r\n", "\n")
     if part.get_content_type() == "text/html":
         text = re.sub(r"<br\s*/?>|</p>", "\n", text, flags=re.I)
         text = re.sub(r"<[^>]+>", "", text)
@@ -92,12 +94,11 @@ def plain_body(msg):
     return re.sub(r"\n{3,}", "\n\n", text).strip()[:MAX_BODY]
 
 
-def parse_task(raw, address):
-    """(title, body) for a task email from `address`, else None."""
+def parse_task(raw):
+    """(title, body) for a task email, else None."""
     msg = email.message_from_bytes(raw, policy=email.policy.default)
     subject = decode(msg["Subject"])
-    sender = email.utils.parseaddr(decode(msg["From"]))[1].lower()
-    if not subject.startswith(SUBJECT_TAG) or sender != address.lower():
+    if not subject.startswith(SUBJECT_TAG):
         return None
     return subject[len(SUBJECT_TAG):].strip() or "(no title)", plain_body(msg)
 
@@ -111,14 +112,16 @@ def special_folder(imap, flag):
     return None
 
 
-def fetch_tasks(imap, address):
+def fetch_tasks(imap):
     """Return [(uid, title, body)] for pending task emails, oldest first."""
     _, data = imap.uid("SEARCH", "X-GM-RAW", SEARCH)
     tasks = []
     for uid in (data[0] or b"").split():
-        _, parts = imap.uid("FETCH", uid, "(BODY.PEEK[])")
-        raw = next((p[1] for p in parts if isinstance(p, tuple)), None)
-        task = parse_task(raw, address) if raw else None
+        _, parts = imap.uid("FETCH", uid, "(X-GM-LABELS BODY.PEEK[])")
+        part = next((p for p in parts if isinstance(p, tuple)), None)
+        if not part or b"\\Sent" not in part[0]:
+            continue
+        task = parse_task(part[1])
         if task:
             tasks.append((uid, *task))
     return tasks
@@ -134,13 +137,22 @@ def compose(tasks):
 
 
 def screen_locked():
-    out = subprocess.run(["ioreg", "-n", "Root", "-d1", "-a"], capture_output=True, text=True).stdout
+    out = subprocess.run(["/usr/sbin/ioreg", "-n", "Root", "-d1", "-a"], capture_output=True, text=True).stdout
     return "CGSSessionScreenIsLocked" in out
+
+
+def idle_seconds():
+    """Seconds since Matt last touched the keyboard or mouse."""
+    out = subprocess.run(["/usr/sbin/ioreg", "-c", "IOHIDSystem", "-d", "4"], capture_output=True, text=True).stdout
+    m = re.search(r'"HIDIdleTime" = (\d+)', out)
+    return int(m.group(1)) / 1e9 if m else 0
 
 
 def deliver(text):
     """Paste into the Everything project chat via Hey Claude's Hammerspoon path."""
     hey = SourceFileLoader("hey_claude", str(AIOS / "bin" / "hey-claude")).load_module()
+    shown = hey.notify
+    hey.notify = lambda msg: (log(f"  -> {msg}"), shown(msg))  # keep the failure reason
     return hey.send_to_claude(text, True)
 
 
@@ -167,7 +179,7 @@ def run(dry_run=False):
             log("couldn't find Gmail's All Mail / Trash folders")
             return 1
         imap.select(all_mail)
-        tasks = fetch_tasks(imap, address)
+        tasks = fetch_tasks(imap)
         if dry_run:
             print(f"{len(tasks)} pending task(s)")
             for _, title, body in tasks:
@@ -175,8 +187,8 @@ def run(dry_run=False):
             return 0
         if not tasks:
             return 0
-        if screen_locked():
-            return 0  # the paste needs an unlocked screen; try again next minute
+        if screen_locked() or idle_seconds() < IDLE_NEEDED:
+            return 0  # paste only when the screen is unlocked and Matt isn't typing; retry next minute
         log(f"delivering {len(tasks)} task(s): {[t[1] for t in tasks]}")
         if not deliver(compose(tasks)):
             state["last_failure"] = time.time()
@@ -211,7 +223,7 @@ PLIST_XML = """<?xml version="1.0" encoding="UTF-8"?>
   <key>StartInterval</key><integer>60</integer>
   <key>RunAtLoad</key><true/>
   <key>EnvironmentVariables</key>
-  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string></dict>
   <key>StandardOutPath</key><string>{log}</string>
   <key>StandardErrorPath</key><string>{log}</string>
 </dict>
@@ -242,6 +254,12 @@ if __name__ == "__main__":
         sys.exit(install())
     if arg == "uninstall":
         sys.exit(uninstall())
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    lock = open(STATE_DIR / "run.lock", "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)  # one run at a time
+    except OSError:
+        sys.exit(0)
     try:
         sys.exit(run(dry_run=arg == "--dry-run"))
     except (imaplib.IMAP4.error, OSError) as e:

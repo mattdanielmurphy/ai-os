@@ -143,7 +143,8 @@ def run_lights(q: str) -> bool:
 
 
 def send_to_claude(q: str, submit: bool) -> bool:
-    preview = q if len(q) <= 80 else q[:77] + "..."
+    flat = " ".join(q.split())  # claude-control builds a Lua string; a raw newline breaks it
+    preview = flat if len(flat) <= 80 else flat[:77] + "..."
     if subprocess.run([CLAUDE_CONTROL, "ask", f"Hey Claude → project chat: “{preview}”", "2"],
                       capture_output=True).returncode != 0:
         notify("Hey Claude: cancelled")
