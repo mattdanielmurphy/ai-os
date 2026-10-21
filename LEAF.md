@@ -29,11 +29,13 @@
   - Agents MUST IMMEDIATELY execute the `apple-reminders` CLI in the same turn (`apple-reminders add --title "..." --due "YYYY-MM-DD HH:MM" --notes "..."`) with intelligent due dates, contact numbers, and relevant identifiers pre-populated in the notes.
   - Agents should proactively offer to break down overwhelming or multi-step tasks into small, low-friction subtasks in Apple Reminders.
   - Do NOT create orphaned markdown to-do files in random locations that won't be actively checked on mobile.
+  - **Default to creating (2026-10-20)**: When it's unclear whether something deserves a reminder, create it anyway, then ask Matt whether he wants it deleted. A missed question must still leave a reminder behind.
 
 # Proactive System Directive & Knowledge Persistence
 - **Rule**: When Matt establishes a permanent workflow preference, tool routing rule, or operational invariant (e.g. "always do X from now on" or "agents must know this in every thread"):
   - Agents MUST NOT bury it in an obscure notes file that won't be read.
   - Agents MUST immediately update the single-source rules under `~/projects/ai-os/.rules/` and run `python3 ~/projects/ai-os/scripts/build_rules.py` so the directive is compiled into `GEMINI.md` and `CLAUDE.md` across every future session.
+  - **Scope is global by default (2026-10-20)**: Any rule or preference Matt gives applies everywhere: every project, thread, Code session, Claude Projects, and every agent (Claude, Gemini, Codex), unless he explicitly limits it to one project or thread. NEVER ask him which scope he means; save it globally (here, `~/.claude/CLAUDE.md`, and the current project's instructions when one exists).
 
 # Music Recommendations & Apple Music Links
 - When Matt asks for music recommendations, present every resolved recommendation as a direct, clickable native Apple Music URL. Resolve links deterministically through the `music-cross-linker` iTunes Search/Lookup flow, never by hand-constructing Apple Music search links or guessing catalog IDs. Explicitly flag any recommendation without an exact Apple Music Canada catalog match rather than substituting a different release.
@@ -80,6 +82,7 @@
   2. **Safe Environment Tooling (`aios-env`)**: When checking whether an environment variable is set or verifying configuration, agents MUST ONLY use safe environment inspection tooling (`aios-env check --key <KEY>` or `aios-env list`), which reports key presence, type, and character length without revealing values.
   3. **Execution-Only Environment Ingestion**: In scripts and runtime commands, environment variables must be loaded directly into process memory (e.g. `dotenv`, `os.environ`, `process.env`) without emitting values to stdout, stderr, or transcript logs.
   4. **Preflight Staged Diff Secret Gate**: All commits must pass preflight secret sanitization. Staging raw secret keys or `.env` files immediately aborts the preflight check.
+  5. **Open, Don't Hunt**: When Matt needs to add a key or secret, open the target `.env` in VS Code for him (`code <path>`, without reading it) and name the exact variable to add.
   5. **Vendor Ingestion Secret Sanitization**: When creating projects, forks, or local patches from third-party vendor code, npm packages, or submodules, agents MUST NEVER commit unpacked distributions without running automated secret detection. Agents MUST scan the vendor tree for hardcoded API keys (`AIza...`, `AKIA...`, `sk-...`, `ghp_...`, private keys) and sanitize/redact all vendor dummy or test keys BEFORE git initialization or staging.
   6. **Hard Commit-Blocking Gate in `auto_commit.py`**: `auto_commit.py` automatically runs `SecretAuditHook.audit_git_diff()` before committing. If any raw secret pattern is detected, it immediately executes `git reset`, aborts the commit/push, and exits with a fatal error.
 
@@ -109,8 +112,12 @@
   1. **Flag Big From-Scratch Projects**: Whenever Matt proposes creating a large new project from scratch, building custom tools for one-off tasks, or undertaking sweeping architectural rewrites when existing tools, libraries, or narrow fixes suffice:
      - Agents MUST actively intercept and flag the scope creep as a red flag.
      - Proactively offer the fastest, lowest-friction alternative (e.g. cloning an existing repo, adopting an established CLI/library, or taking an atomic incremental step).
+  1a. **Look for Existing Tools First (2026-10-20)**: Before designing or building anything (a tool, script, app, automation or integration), FIRST search for existing tools that already do it: built-in macOS/iOS features, apps Matt already has installed (`/Applications`), open-source projects and established libraries. Do this even when Matt doesn't ask, and present what you found (with a recommendation) before proposing a custom build. Why: Matt asked agents to always check, in case he forgets to.
   2. **Sustainable Marginal Change**: Treat software architecture like habit formation: sweeping, all-or-nothing transformations breed instability, bugs, and burnout. Always advocate for sustainable, marginal, test-driven increments over massive overhauls.
   3. **Call Out Wheel-Spinning**: If an agent observes Matt rabbit-holing into micro-optimizations or theoretical rabbit holes on throwaway tasks, directly and constructively call it out and redirect focus to the primary high-leverage outcome.
+
+# Quizzes & Study Sessions (2026-10-20)
+- When Matt asks to be quizzed or to study, follow the `_quiz-with-tap-menus` skill exactly: rounds of 4 questions in the built-in question menu (`AskUserQuestion`, never a widget or artifact, since those don't return his taps), each option's description left empty (no "Option A" text), right answer in a random position, score plus one line per miss, misses come back later. Check for typed messages that arrived while a menu was open before sending the next round.
 
 # Subagent Rules
 

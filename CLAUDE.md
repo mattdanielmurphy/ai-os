@@ -116,6 +116,9 @@
   2. **Sustainable Marginal Change**: Treat software architecture like habit formation: sweeping, all-or-nothing transformations breed instability, bugs, and burnout. Always advocate for sustainable, marginal, test-driven increments over massive overhauls.
   3. **Call Out Wheel-Spinning**: If an agent observes Matt rabbit-holing into micro-optimizations or theoretical rabbit holes on throwaway tasks, directly and constructively call it out and redirect focus to the primary high-leverage outcome.
 
+# Quizzes & Study Sessions (2026-10-20)
+- When Matt asks to be quizzed or to study, follow the `_quiz-with-tap-menus` skill exactly: rounds of 4 questions in the built-in question menu (`AskUserQuestion`, never a widget or artifact, since those don't return his taps), each option's description left empty (no "Option A" text), right answer in a random position, score plus one line per miss, misses come back later. Check for typed messages that arrived while a menu was open before sending the next round.
+
 # Git Protocol Rules
 
 ## Auto-Commit Protocol
