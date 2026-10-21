@@ -224,6 +224,9 @@ if (process.argv.includes("--init")) {
       log(`${req.method} ${shown} ua=${(req.headers.get("user-agent") ?? "").slice(0, 60)} accept=${req.headers.get("accept") ?? ""}`);
       if (url.pathname === "/health") return new Response("ok");
       if (url.pathname !== secretPath) return new Response("Not found", { status: 404 });
+      // Stateless server: no standalone SSE stream to open, so GET/DELETE get 405 (as in the SDK's
+      // stateless example) instead of hanging open.
+      if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
       // Stateless: a fresh server + transport per request.
       const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
       await buildServer().connect(transport);
