@@ -31,15 +31,16 @@ format he settled on (World Music midterm, 2026-10-20). Reuse it as is.
 ## Reading his answers (Other = how it felt, or a comment)
 The result comes back as `"<question>"="<picks, comma-separated>"`. Tested 2026-10-21:
 an empty Other shows up as `Something else`; typed Other text shows up as the text itself.
-- **Answer only** → recall was in the sweet spot (FSRS Good if right).
-- **Answer + empty Other (`Something else`)** → too easy (Easy if right).
-- **Answer + `h`** → too hard (Hard if right).
-- **Wrong answer** → Again, whatever else he picked.
+- **Answer only** → he knew it (FSRS Good if right, Again if wrong).
+- **Answer + empty Other (`Something else`)** → he was just guessing, no idea. Count it as a
+  miss even if the answer is right (Again) and bring it back like any other miss.
+- **Answer + `e`** → too easy (Easy if right).
 - **Any other Other text** → a comment or request. Read it and act on it before the next
   round (it may be about the quiz itself, like "drop this kind of question").
 - **Two answers ticked** → treat as a slip: count it wrong only if neither is right, and
   mention it in one line.
-There is no separate confidence step; he finds it twice as slow (Matt, 2026-10-21).
+There is no separate confidence step; he finds it twice as slow (Matt, 2026-10-21). The empty-Other meaning was flipped from "too easy" to
+"guessing" the same day; "h" for hard was dropped.
 
 ## Each round
 1. Build questions from his actual course files first (`~/Documents/School/<course>/`,
