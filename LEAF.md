@@ -134,7 +134,17 @@
 # Mac HUDs: Spatial Slots ("Air Traffic Control" in space, 2026-10-21)
 - Any HUD or floating overlay you build or move on Matt's Mac takes a reserved slot in `~/.hammerspoon/hud_slots.json` (Hammerspoon: `require("modules.hud_layout").rect(id, w, h)`; Swift: read the same JSON like `trackpad-mixer/Sources/Slots.swift`). Never hand-pick a corner. After editing the map run `lua ~/.hammerspoon/tests/hud_layout_test.lua`; it fails on any overlap. Slots never move at runtime, so one HUD resizing never shifts another. Why: the mixer covered the song key pill; overlays from separate apps didn't know about each other.
 
+# Coordinator Routing: What Goes to Which Thread (2026-10-21)
+- Applies to the Claude Projects coordinator and any agent handing work to another agent. Full version: `/mnt/project-files/coordinator/routing-rules.md` in the Everything project.
+- **Split before routing**: break every message into its separate asks and route each one on its own. Never route a whole message because it mentions a thread.
+- **Coordinator-meta stays with the coordinator**: rules, feedback, "from now on", or complaints about how something was handled are never forwarded to a worker thread. A message *about* a thread is not *for* it.
+- **Attach Matt's message by id only if ALL of it fits the receiving thread's scope**; otherwise restate the subset in your own words, quoting his exact sentence where his authority matters.
+- **Size check before every send**: never make a thread's job bigger than its title. Start new threads on a message that *is* the task, never on a meta message.
+- **"Why did you do that?" is a real question**: give the actual cause first, plainly and without defending, then the fix.
+- Why: on Oct 21 the coordinator narrowed an over-scoped thread correctly but attached Matt's "catch over-scoped prompts" rule to it, which was the exact mistake that rule describes. It did so out of a reflex to attach the user's message so the instruction carries his authority.
+
 # Voice Tasks: Report Back (2026-10-21)
+- Restate complex logic before building (Matt, 2026-10-21): when a request involves multi-state UI or interaction logic that's easy to misread (gestures, modes, modifiers, edge cases), reply first with the logic as you understand it, point by point, plus anything ambiguous, and build only after he confirms (👍).
 - When you finish a task that arrived as a "🎙️ Voice task" (from Matt's Claude voice chat), report the result back to voice chat: `python3 ~/projects/ai-os/scripts/voice_reply.py "<task title>" "<one or two sentence result>"`. Voice Claude hears it on its next connector call, so Matt gets the answer mid-call.
 
 # Subagent Rules
