@@ -16,6 +16,11 @@ History: 2026-10-17 the page was shelved for a question-button thread; 2026-10-1
 (Apple-only dictation in menus, a model call per card, the setup prompt and comic link visible at the top) and
 asked for this split.
 
+## In a regular (voice) chat (2026-10-21)
+A claude.ai chat that opens with "Morning check-in" calls the Mac connector's `checkin_today`, which returns
+`chat_mode.md` + today's `data/checkin-<date>.md`; `checkin_record` does the Record step. So Matt can run the talk
+half in voice mode. Shell-only steps (reminders, sleep shift) go through `send_task`.
+
 ## Files
 - `ladder.json`: habits, their dose levels, and the queue of steps to add later. Edit freely.
 - `ladder.py`: the habit ladder. `plan` picks today's doses; `record` logs what was done. Rules are in its docstring.

@@ -90,7 +90,7 @@ function buildServer(): McpServer {
       "(instant) and tell Matt about any update first: it's how his Mac agents report back. If he says he'll wait for a " +
       "result, call wait_for_update. Use search_notes for anything about Matt, his projects, notes or past AI threads; " +
       "find_files / list_folder / read_file for files; send_task to hand real work to his project coordinator " +
-      "(it runs on his Mac with full access).",
+      "(it runs on his Mac with full access). For his morning check-in, call checkin_today first.",
   });
 
   server.registerTool("check_updates", {
@@ -233,7 +233,64 @@ function buildServer(): McpServer {
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool("checkin_today", {
+    description: "Call this FIRST when Matt opens a chat with \"Morning check-in\" (or asks to do his check-in). " +
+      "Returns today's check-in instructions (his habits, calendar, recent notes); follow them for the rest of the chat.",
+    inputSchema: {},
+  }, async () => {
+    try {
+      const day = today();
+      const f = join(CHECKIN, "data", `checkin-${day}.md`);
+      if (!existsSync(f)) return text(`Today's check-in (${day}) isn't prepared yet; it's built at 7:45. ` +
+        "Tell Matt, and just have a short, warm morning chat about his day instead.");
+      const mode = readFileSync(join(import.meta.dir, "..", "checkin", "chat_mode.md"), "utf8").split("\n---\n", 2)[1].trim();
+      log(`checkin_today ${day}`);
+      return text(`${mode}\n\n---\n\n${readFileSync(f, "utf8")}`);
+    } catch (e) { return fail(e); }
+  });
+
+  server.registerTool("checkin_record", {
+    description: "Record today's morning check-in, once Matt has talked (see checkin_today): his talking minutes for the " +
+      "habit ladder and 3-5 short bullets for his habit log.",
+    inputSchema: {
+      minutes: z.number().int().min(1).max(120).describe("Minutes Matt talked (about 130 words a minute, rounded up)"),
+      bullets: z.array(z.string()).min(1).max(8).describe("3-5 short bullets, his words where possible"),
+    },
+  }, async ({ minutes, bullets }) => {
+    try {
+      const day = today();
+      const p = Bun.spawnSync(["/usr/bin/python3", join(CHECKIN, "ladder.py"), "record", "--date", day, `reflection=${minutes}`],
+        { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: PATH_ENV } });
+      if (p.exitCode !== 0) throw new Error(`ladder record failed: ${p.stderr.toString().slice(0, 300)}`);
+      appendCheckinLog(day, bullets);
+      log(`checkin_record ${day} ${minutes}m ${bullets.length} bullets`);
+      return text(`Recorded ${minutes} min and ${bullets.length} bullets for ${day}.`);
+    } catch (e) { return fail(e); }
+  });
+
   return server;
+}
+
+const CHECKIN = join(AIOS, "services", "checkin");
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
+
+// Add bullets under "## Morning check-in" in the day's habit log (the heading is created if missing).
+export function appendCheckinLog(day: string, bullets: string[], vault = VAULT) {
+  const dir = join(vault, "habits", "logs");
+  mkdirSync(dir, { recursive: true });
+  const f = join(dir, `${day}.md`);
+  const body = existsSync(f) ? readFileSync(f, "utf8") : "";
+  const lines = bullets.map((b) => `- ${b.replace(/^\s*[-*]\s*/, "").trim()}`).join("\n");
+  const at = body.indexOf("## Morning check-in");
+  let out: string;
+  if (at < 0) {
+    out = (body.trim() ? body.replace(/\s*$/, "\n\n") : "") + `## Morning check-in\n${lines}\n`;
+  } else {
+    const next = body.indexOf("\n## ", at + 1);
+    const end = next < 0 ? body.length : next;
+    out = body.slice(0, end).replace(/\s*$/, "\n") + lines + "\n" + (next < 0 ? "" : "\n" + body.slice(next + 1));
+  }
+  writeFileSync(f, out);
 }
 
 // Queue a task for the coordinator and kick the watcher so it's delivered right away.
@@ -253,7 +310,9 @@ function init() {
   console.log(p.exitCode === 0 ? "Connector URL copied to the clipboard." : "pbcopy failed");
 }
 
-if (process.argv.includes("--init")) {
+if (!import.meta.main) {
+  // imported (tests): don't serve
+} else if (process.argv.includes("--init")) {
   init();
 } else {
   const token = envToken();

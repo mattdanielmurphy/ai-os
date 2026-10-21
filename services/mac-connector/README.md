@@ -11,5 +11,8 @@ Everything project coordinator.
 - Read-only. Refuses anything outside `~`, `.env*`, keys, credentials, tokens, `.ssh`, `ai-os/private`.
 - `send_task` writes `tmp/voice-task-inbox/queue/*.json` and kicks `scripts/voice_task_inbox.py`, which
   pastes it into the project chat (take-control queue, waits for 60s idle) like the Gmail route.
+- Morning check-in: `checkin_today` returns today's talk prompt (`services/checkin/data/checkin-<date>.md`, behind
+  `services/checkin/chat_mode.md`) so a regular or voice chat that opens with "Morning check-in" runs it;
+  `checkin_record` logs the minutes (ladder) and bullets (vault habit log).
 - Install / remove: `./install.sh` / `./install.sh uninstall`. Logs: `~/Library/Logs/launch-agents/mac-connector.log`.
 - Add in claude.ai → Settings → Connectors → Add custom connector → paste the URL (no OAuth).
