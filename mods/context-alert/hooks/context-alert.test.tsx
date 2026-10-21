@@ -106,20 +106,67 @@ test('a message sent into a cold thread is held once, then goes through', async 
   expect(entered).toEqual(['warm', 'cold'])
 })
 
-test('a cold project-thread message goes through with a cost note instead of being held', async ($, on) => {
+const wake = (body: string, id = 'cmsg_M1') =>
+  '<wake reason="mention">\n  <project id="chan_1" type="project">\n    <thread ts="cmsg_T1">\n' +
+  `      <message trigger="true" from="human" id="${id}" mention="true">${body}</message>\n` +
+  '    </thread>\n  </project>\n</wake>'
+
+const projectSetup = async ($: any, on: any) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   const entered: { text: string; context?: readonly string[] }[] = []
-  on('session.measure', (_$, e) => ({ changed: e.changed }))
-  on('turn.complete', (_$, e) => ({ text: e.answer }))
-  on('prompt.submit', (_$, e) => { entered.push({ text: e.text, context: e.context }); return { text: e.text } })
+  const calls: Record<string, unknown>[] = []
+  on('session.measure', (_$: unknown, e: any) => ({ changed: e.changed }))
+  on('turn.complete', (_$: unknown, e: any) => ({ text: e.answer }))
+  on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
+  on('session.id', () => ({ value: 's1' }))
+  on('prompt.submit', (_$: unknown, e: any) => { entered.push({ text: e.text, context: e.context }); return { text: e.text } })
+  on('tool.call', (_$: unknown, e: any) => { calls.push(e); return { result: 'ok' } })
+  on('process.run', () => {
+    const stdout = JSON.stringify({ path: '/h.md', prompt: 'Read /h.md and continue. Then: is it done?' })
+    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
+  })
   await $.session.measure(measure(180_000))
   await $.turn.complete(answered)
-
   await clock.advance(3 * 60 * MIN)
-  const wake = '<wake reason="mention">\n  <message>hi</message>\n</wake>'
-  expect((await $.prompt.submit(phone(wake))).drop).toBeUndefined()
+  return { clock, entered, calls }
+}
+
+test('a cold project message is held and Matt is asked in the thread; "go" sends it on', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  const out = await $.prompt.submit(phone(wake('is it done?')))
+  expect(out.drop).toMatch(/Held \(project thread\)/)
+  expect(entered).toHaveLength(0)
+  const ask = calls.find(c => c.tool === 'mcp__hearthbot__reply')
+  expect(String(ask?.text)).toMatch(/Held, nothing sent yet.*expired 2h ago.*~180k tokens/s)
+
+  expect((await $.prompt.submit(phone(wake('go', 'cmsg_M2')))).drop).toBeUndefined()
   expect(entered).toHaveLength(1)
-  expect(entered[0].context?.join('\n')).toMatch(/expired 2h ago.*~180k tokens.*"fresh"/)
+  expect(entered[0].context?.join('\n')).toMatch(/Matt said go ahead.*is it done\?/)
+})
+
+test('"fresh" asks the coordinator for a new thread from the Haiku handoff', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  const out = await $.prompt.submit(phone(wake('Fresh', 'cmsg_M2')))
+  expect(out.drop).toMatch(/Fresh thread requested/)
+  expect(entered).toHaveLength(0)
+  const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
+  expect(ask?.session_id).toBe('@parent')
+  expect(String(ask?.message)).toMatch(/message cmsg_M1.*Read \/h\.md and continue.*His held message: is it done\?/s)
+})
+
+test('a cold project message goes through when the thread reply cannot be posted', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  const entered: string[] = []
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.submit', (_$, e) => { entered.push(e.text); return { text: e.text } })
+  on('tool.call', () => { throw new Error('no such tool') })
+  await $.session.measure(measure(180_000))
+  await $.turn.complete(answered)
+  await clock.advance(3 * 60 * MIN)
+  expect((await $.prompt.submit(phone(wake('hi')))).drop).toBeUndefined()
+  expect(entered).toHaveLength(1)
 })
 
 test('/haiku-handoff after a held message carries that message into the new thread', async ($, on) => {
