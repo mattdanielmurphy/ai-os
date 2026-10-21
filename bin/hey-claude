@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Hey Claude: handle a spoken request locally, or send it to the Claude project chat.
+
+Run by the "Hey Claude" Shortcut (Vocal Shortcuts phrase -> Dictate Text ->
+Run Shell Script). No API calls: simple commands run here; anything else is
+pasted into the Everything project's chat in the Claude app by the Hammerspoon
+module ~/.hammerspoon/modules/hey_claude.lua.
+
+  hey-claude "open safari"             local: opens Safari
+  hey-claude "lights off"              local: Hue
+  hey-claude "what's 12 times 7"       local: math, spoken
+  hey-claude "remind me to ..."        anything else -> project chat
+  hey-claude --dry-run "..."           print the route, do nothing
+  hey-claude --no-send "..."           paste into the chat box but don't press Return
+Text can also come on stdin.
+"""
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+AIOS = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(AIOS / "scripts"))
+
+HS = "/usr/local/bin/hs"
+CLAUDE_CONTROL = str(Path.home() / ".hammerspoon" / "bin" / "claude-control")
+HUE = [sys.executable, str(AIOS / "scripts" / "hue.py")]
+LOG = AIOS / "tmp" / "hey-claude.log"
+
+WAKE = re.compile(r"^\s*((hey|hi|okay|ok)[\s,]+)?(claude|clod|cloud|claud)\b[\s,.!:]*", re.I)
+OPEN = re.compile(r"^(open|launch|start)\s+(\S+\s*){1,3}$", re.I)  # short targets only: "open the PR for X" is a request
+SEARCH = re.compile(r"^(google|search)\s+\S", re.I)
+SAY = re.compile(r"^say\s+\S", re.I)
+LIGHTS = re.compile(
+    r"^(turn\s+)?(the\s+)?lights?\s+(?P<a>on|off|up|down|dim|bright|brighter|dimmer)$"
+    r"|^turn\s+(?P<b>on|off)\s+(the\s+)?lights?$"
+    r"|^(set\s+)?(the\s+)?lights?\s+(to\s+)?(?P<pct>\d{1,3})\s*(%|percent)?$", re.I)
+TIME = re.compile(r"what('s| is) the time|what time is it", re.I)
+
+
+def log(msg: str) -> None:
+    LOG.parent.mkdir(exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
+
+
+def lua_str(s: str) -> str:
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+
+
+def hs_eval(lua: str, timeout: int = 4, tries: int = 3) -> str:
+    # `hs -c` can hang or drop a call right after a Hammerspoon reload, so wrap
+    # it in a watchdog and retry empty answers. Callers' Lua must be safe to repeat.
+    for attempt in range(tries):
+        try:
+            r = subprocess.run(["perl", "-e", f"alarm {timeout + 1}; exec @ARGV", HS, "-t", str(timeout), "-c", lua],
+                               capture_output=True, text=True, timeout=timeout + 2)
+            lines = [l for l in r.stdout.splitlines() if "recursing" not in l and "Loading extension" not in l]
+            if lines:
+                return lines[-1].strip()
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(0.5)
+    return ""
+
+
+def notify(msg: str) -> None:
+    hs_eval("hs.alert.closeAll(); hs.alert.show(%s, 3)" % lua_str(msg), timeout=2)
+
+
+def speak(text: str) -> None:
+    subprocess.Popen(["say", text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def clean(text: str) -> str:
+    text = " ".join(text.split())
+    text = WAKE.sub("", text)
+    return text.strip().rstrip(".!?")
+
+
+def route(q: str) -> str:
+    if not q:
+        return "empty"
+    if LIGHTS.search(q):
+        return "lights"
+    if OPEN.match(q) or SEARCH.match(q) or SAY.match(q):
+        return "direct"
+    if TIME.fullmatch(q):
+        return "time"
+    from triage_router import evaluate_math_phrase
+    if evaluate_math_phrase(q):
+        return "math"
+    return "claude"
+
+
+def run_lights(q: str) -> bool:
+    m = LIGHTS.search(q)
+    word = (m.group("a") or m.group("b") or "").lower()
+    if m.group("pct"):
+        args = ["--on", "--bri", str(min(int(m.group("pct")), 100))]
+    elif word == "off":
+        args = ["--off"]
+    elif word in ("on", "up", "bright", "brighter"):
+        args = ["--on", "--bri", "100"]
+    else:  # down / dim / dimmer
+        args = ["--on", "--bri", "30"]
+    return subprocess.run(HUE + ["set", "all", *args], capture_output=True).returncode == 0
+
+
+def send_to_claude(q: str, submit: bool) -> bool:
+    preview = q if len(q) <= 80 else q[:77] + "..."
+    if subprocess.run([CLAUDE_CONTROL, "ask", f"Hey Claude → project chat: “{preview}”", "2"],
+                      capture_output=True).returncode != 0:
+        notify("Hey Claude: cancelled")
+        return False
+    try:
+        started = hs_eval("return heyClaude and heyClaude.send(%s, %s) or 'missing'" % (lua_str(q), "true" if submit else "false"))
+        if started not in ("working", "busy"):  # "busy": a retried call found the first one running
+            notify(f"Hey Claude: couldn't start ({started or 'Hammerspoon unreachable'})")
+            return False
+        state = "working"
+        for _ in range(50):
+            time.sleep(0.25)
+            state = hs_eval("return heyClaude.state()") or state
+            if state != "working":
+                break
+        log(f"  -> {state}")
+        if state not in ("sent", "pasted"):
+            notify(f"Hey Claude: {state}")
+            return False
+        return True
+    finally:
+        subprocess.run([CLAUDE_CONTROL, "done"], capture_output=True)
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    dry = "--dry-run" in args
+    submit = "--no-send" not in args
+    text = " ".join(a for a in args if a not in ("--dry-run", "--no-send"))
+    if not text.strip() and not sys.stdin.isatty():
+        text = sys.stdin.read()
+    q = clean(text)
+    kind = route(q)
+    log(f"{kind}: {q!r}")
+    if dry:
+        print(f"{kind}: {q}")
+        return 0
+    if kind == "empty":
+        notify("Hey Claude: didn't catch that")
+        return 1
+    if kind == "lights":
+        ok = run_lights(q)
+        notify("💡 " + q if ok else "Hey Claude: lights failed")
+        return 0 if ok else 1
+    if kind == "direct":
+        from triage_router import try_direct_execution
+        if try_direct_execution(q):
+            return 0
+        log("  -> direct failed, sending to Claude")
+    if kind == "math":
+        from triage_router import evaluate_math_phrase
+        answer = evaluate_math_phrase(q)
+        notify(answer)
+        speak(answer)
+        return 0
+    if kind == "time":
+        now = time.strftime("%-I:%M %p")
+        notify(now)
+        speak(f"It's {now}")
+        return 0
+    return 0 if send_to_claude(q, submit) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
