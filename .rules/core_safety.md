@@ -63,13 +63,14 @@
   - At most one question, last, answerable with one word or an emoji (👍 = recommended option).
 - **Cut by default**: how you did it or found it; tools, steps and passing tests (just "tested"); caveats that don't change what he does; paths, hashes, IDs and log locations unless he must open one; restating his message; routing talk ("another thread has this" gets ≤ 6 words, once); things he already knows; "Good news", praise, apologies, sign-offs; more than one offer.
 - **Important things go in the reply, never only in a file**: anything he must do, decisions he'd plausibly veto, risks, failures and untested parts each get one short line. Test: if he reads only the reply, he misses nothing important. (Matt, 2026-10-21: walls of text meant he skipped everything, "rather than the important things at least getting read".)
-- **Two layers: short reply + full write-up**: when the work involved decisions, changes or explanation that won't fit the budget, write the full write-up first, then reply with its summary. Matt is happy for agents to make lots of decisions, as long as he can always dig into why.
-  - Write-up content: what changed, every decision and why (and what was rejected), how it works, what's untested or risky, how to undo it. No length limit; plain readable prose with headings.
-  - Location: `docs/writeups/YYYY-MM-DD-<slug>.md` in the repo where the work happened (commit it). No repo → `~/projects/ai-os/docs/writeups/`.
-  - Delivery: last line of the reply is `Full write-up: [<name>](<path>)`. In a project thread, also attach it (`SendUserFile`, then its ref in `attached_outputs`).
-  - Skip it for quick answers and one-step tasks.
-- **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail into the write-up.
-- **Detail on demand**: when he asks ("more", ❓, "why?"), answer in the same short-line, blank-line shape, or point to the write-up section.
+- **Every reply has a details file behind it** (Matt, 2026-10-21): the reply is the short summary; the details file is the expanded version, so he can always dig in or do an autopsy ("why did the agent do this, what was it thinking, what did it do"). Matt is happy for agents to make lots of decisions, as long as the why is written down.
+  - One file per thread or Code session: `~/projects/ai-os/docs/details/YYYY-MM-DD-<thread-slug>.md` (cloud sessions without his Mac: `/mnt/project-files/details/`). Reuse the same file for the whole thread.
+  - Before each reply, append a section `## HH:MM <what this reply is about>`: what he asked, what you did, every decision and why (and what you rejected), how it works, what's untested or risky, how to undo it. Plain readable prose, no length limit. Write it while the reasoning is fresh, not reconstructed later.
+  - Last line of every reply: `Details: [<file name>](<path>#<section-slug>)`. In a project thread, also attach the file (`SendUserFile`, then its ref in `attached_outputs`).
+  - Commit and push it with the work (`auto_commit.py --paths`).
+  - Only pure acknowledgements (a reaction, "on it") skip it.
+- **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail into the details file.
+- **Detail on demand**: when he asks ("more", ❓, "why?"), answer in the same short-line, blank-line shape, or point to the details section.
 - **Example**:
   - Before (150 words): "**The nightly restart is set up and live, starting tonight at 4:30.** It restarts like Apple menu > Restart, and your windows reopen afterwards. **It won't kill work in progress.** If a Claude thread is mid-task, it tries again every 15 min until 5:45, then skips that night. An app with unsaved work…" (plus 3 more bullets like that).
   - After (25 words): "**You: turn on auto-login** (Settings > Users & Groups)." / blank line / "**Nightly restart is live**, 4:30 tonight." / blank line / "**Never kills unsaved work.**" / blank line / "**Not tested for real yet.** You'll get a toast if it fails."
