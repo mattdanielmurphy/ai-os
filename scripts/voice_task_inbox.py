@@ -36,6 +36,8 @@ AIOS = Path(__file__).resolve().parent.parent
 ENV_FILE = Path.home() / "projects" / "ai-os" / ".env"
 STATE_DIR = AIOS / "tmp" / "voice-task-inbox"
 STATE = STATE_DIR / "state.json"
+QUEUE = STATE_DIR / "queue"          # tasks from the Mac connector (services/mac-connector)
+QUEUE_DONE = STATE_DIR / "delivered"
 LOG = STATE_DIR / "watcher.log"
 LABEL = "com.matt.agent.voice-task-inbox"
 PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
@@ -128,6 +130,18 @@ def fetch_tasks(imap):
     return tasks
 
 
+def queued_tasks():
+    """[(path, title, body)] written by the Mac connector's send_task, oldest first."""
+    tasks = []
+    for f in sorted(QUEUE.glob("*.json")) if QUEUE.exists() else []:
+        try:
+            d = json.loads(f.read_text())
+            tasks.append((f, str(d.get("title") or "(no title)"), str(d.get("body") or "")[:MAX_BODY]))
+        except (OSError, ValueError):
+            continue
+    return tasks
+
+
 def compose(tasks):
     head = "Voice task from voice chat" if len(tasks) == 1 else f"{len(tasks)} voice tasks from voice chat"
     blocks = []
@@ -157,40 +171,48 @@ def deliver(text):
     return hey.send_to_claude(text, True)
 
 
-def run(dry_run=False):
-    address, password = load_env()
-    state = load_state()
-    if not address or not password:
-        if dry_run:
-            print("missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD in ~/projects/ai-os/.env")
-        elif not state.get("warned_missing"):  # once, not every minute
-            log("missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD in .env; waiting for them")
-            state["warned_missing"] = True
-            save_state(state)
-        return 0
-    state.pop("warned_missing", None)
-    if not dry_run and time.time() - state.get("last_failure", 0) < RETRY_AFTER:
-        return 0
+def gmail_tasks(address, password, dry_run):
+    """Open Gmail, tidy task emails out of the inbox, return (imap, trash, [(uid, title, body)])."""
     imap = imaplib.IMAP4_SSL("imap.gmail.com")
+    imap.login(address, password)
+    all_mail = special_folder(imap, "\\All")
+    trash = special_folder(imap, "\\Trash")
+    if not all_mail or not trash:
+        log("couldn't find Gmail's All Mail / Trash folders")
+        return imap, None, []
+    imap.select(all_mail)
+    tasks = fetch_tasks(imap)
+    if not dry_run:
+        for uid, _, _ in tasks:  # what a Gmail filter would do: out of the inbox, into the label
+            imap.uid("STORE", uid, "+X-GM-LABELS", f'("{GMAIL_LABEL}")')
+            imap.uid("STORE", uid, "-X-GM-LABELS", "(\\Inbox)")
+    return imap, trash, tasks
+
+
+def run(dry_run=False):
+    state = load_state()
+    address, password = load_env()
+    imap, trash, mail = None, None, []
+    if address and password:
+        state.pop("warned_missing", None)
+        try:
+            imap, trash, mail = gmail_tasks(address, password, dry_run)
+        except (imaplib.IMAP4.error, OSError) as e:
+            log(f"gmail error: {type(e).__name__}: {str(e)[:200]}")
+    elif not state.get("warned_missing"):  # once, not every minute
+        log("missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD in .env; only connector tasks will be delivered")
+        state["warned_missing"] = True
+        save_state(state)
     try:
-        imap.login(address, password)
-        all_mail = special_folder(imap, "\\All")
-        trash = special_folder(imap, "\\Trash")
-        if not all_mail or not trash:
-            log("couldn't find Gmail's All Mail / Trash folders")
-            return 1
-        imap.select(all_mail)
-        tasks = fetch_tasks(imap)
+        queued = queued_tasks()
+        tasks = queued + mail
         if dry_run:
             print(f"{len(tasks)} pending task(s)")
             for _, title, body in tasks:
                 print(f"- {title}\n  {body[:300]!r}")
             return 0
-        if not tasks:
+        if not tasks or time.time() - state.get("last_failure", 0) < RETRY_AFTER:
             return 0
-        for uid, _, _ in tasks:  # what a Gmail filter would do: out of the inbox, into the label
-            imap.uid("STORE", uid, "+X-GM-LABELS", f'("{GMAIL_LABEL}")')
-            imap.uid("STORE", uid, "-X-GM-LABELS", "(\\Inbox)")
         if screen_locked() or idle_seconds() < IDLE_NEEDED:
             return 0  # paste only when the screen is unlocked and Matt isn't typing; retry next minute
         log(f"delivering {len(tasks)} task(s): {[t[1] for t in tasks]}")
@@ -201,17 +223,21 @@ def run(dry_run=False):
             return 1
         state.pop("last_failure", None)
         save_state(state)
-        for uid, _, _ in tasks:
+        QUEUE_DONE.mkdir(parents=True, exist_ok=True)
+        for f, _, _ in queued:
+            f.rename(QUEUE_DONE / f.name)
+        for uid, _, _ in mail:
             typ, _ = imap.uid("MOVE", uid, trash)
             if typ != "OK":
                 log(f"  -> couldn't trash uid {uid.decode()}")
         log("  -> sent to the project chat; emails moved to Trash")
         return 0
     finally:
-        try:
-            imap.logout()
-        except Exception:
-            pass
+        if imap:
+            try:
+                imap.logout()
+            except Exception:
+                pass
 
 
 PLIST_XML = """<?xml version="1.0" encoding="UTF-8"?>

@@ -41,3 +41,9 @@ voice Claude --Gmail--> Matt's own inbox --IMAP, every 60s--> scripts/voice_task
   Only `mcp__claude-code-remote__send_message` with `@parent` from a live project thread reaches it.
 - The watcher acts as the Gmail filter: on each run it moves task emails out of the inbox into the
   "Claude tasks" label (X-GM-LABELS), so no Gmail settings rule is needed.
+
+## Faster route: the Mac connector (MCP)
+
+`services/mac-connector` is a custom connector voice Claude can call directly: search notes, read
+files and `send_task` (seconds instead of the 60s mail poll). Gmail stays as the fallback. When the
+connector is on, voice Claude should prefer `send_task` over email.
