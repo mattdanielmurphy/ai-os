@@ -9,7 +9,7 @@ DIR=${0:A:h}
 LOG=~/Library/Logs/launch-agents/mac-connector.log
 if [[ $1 == uninstall ]]; then
   launchctl unload $PLIST 2>/dev/null || true
-  /usr/local/bin/tailscale funnel --https=8443 off 2>/dev/null || true
+  /usr/local/bin/tailscale funnel --https=443 off 2>/dev/null || true
   [[ -f $PLIST ]] && mv $PLIST ~/.Trash/
   echo "uninstalled"; exit 0
 fi
@@ -32,5 +32,5 @@ cat > $PLIST <<PL
 PL
 launchctl unload $PLIST 2>/dev/null || true
 launchctl load $PLIST
-/usr/local/bin/tailscale funnel --bg --https=8443 8777  # 443 belongs to puma-dev
+/usr/local/bin/tailscale funnel --bg 8777  # puma-dev must bind 127.0.0.1 (see README)
 echo "installed $LABEL; funnel on"

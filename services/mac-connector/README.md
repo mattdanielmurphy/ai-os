@@ -5,7 +5,7 @@ in seconds: search notes and past threads (QMD), find / list / read files, and `
 Everything project coordinator.
 
 - Runs on `127.0.0.1:8777` (launchd `com.matt.agent.mac-connector`), published by Tailscale Funnel at
-  `https://macbook-pro.tail491454.ts.net:8443/mcp/<MAC_CONNECTOR_TOKEN>` (port 8443: puma-dev owns 443). Every other path is 404.
+  `https://macbook-pro.tail491454.ts.net/mcp/<MAC_CONNECTOR_TOKEN>` on port 443 (claude.ai never reached it on 8443). puma-dev's launchd sockets bind 127.0.0.1 so it doesn't catch Funnel traffic on 443. Every other path is 404.
 - Token lives in `~/projects/ai-os/.env`. `bun server.ts --init` creates it if missing and copies the
   full connector URL to the clipboard (it's never printed).
 - Read-only. Refuses anything outside `~`, `.env*`, keys, credentials, tokens, `.ssh`, `ai-os/private`.
