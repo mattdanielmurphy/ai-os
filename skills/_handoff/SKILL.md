@@ -1,6 +1,6 @@
 ---
 name: _handoff
-description: Write a lean, chain-linked handoff so work can continue in a fresh thread. Use when Matt types /handoff or /_handoff, says the thread is getting long, or asks to start fresh, save progress or hand off. Links every earlier thread in the chain, summarizes the whole chain, states the current task and what to keep in mind, then gives a one-line paste prompt.
+description: Write a lean, chain-linked handoff so work can continue in a fresh thread. For a cold thread named from a new one, Haiku writes it from the transcript file. Use when Matt types /handoff or /_handoff, says the thread is getting long, or asks to start fresh, save progress or hand off. Links every earlier thread in the chain, summarizes the whole chain, states the current task and what to keep in mind, then gives a one-line paste prompt.
 argument-hint: [optional focus, e.g. "just the mod spike"]
 ---
 
@@ -14,6 +14,26 @@ target and multi-pass mining. Matt wants a short brief, not a transcript.
 - Only run when Matt asks for a handoff now. If he is only asking what a handoff is, answer instead.
 - Never write a freeform handoff without this skill.
 - Focus hint from Matt (soft; the conversation is ground truth): $ARGUMENTS
+
+## 0. Another thread named? Check if it's cold
+
+If Matt names a different thread to hand off (a session id, or words like "the qwerty thread"),
+don't open or message that thread. A cold thread re-reads its whole context at full price.
+
+1. Find its session id: an id he gave, else
+   `grep -l "<distinctive words>" ~/.claude/projects/*/*.jsonl | xargs ls -t | head -5`. If several fit, ask.
+2. `python3 ~/projects/ai-os/scripts/cold_handoff.py status <sid>` gives `lastAt` (ms) and `ttlSec`.
+   It's cold when now minus `lastAt` is more than `ttlSec`.
+3. **Cold:** `python3 ~/projects/ai-os/scripts/cold_handoff.py write <sid>`. Haiku reads the
+   transcript file and writes the brief to `docs/handoffs/*-cold.md` in about 20 s. Read it back,
+   commit it, and reply with the paste prompt the script printed. Skip steps 1–4 below.
+4. **Warm:** tell Matt to run `/_handoff` in that thread now. It still has the whole context
+   cached, so it writes a better brief for less.
+
+If /_handoff runs inside the thread that's being handed off, that turn already re-read the
+context, so the cache is warm again. Do the normal handoff below. If the gap since the previous
+turn was more than an hour, add one line saying that next time he can run `/_handoff <thread>` from a
+fresh thread so the old one is never reloaded.
 
 ## 1. Gather (one message, parallel Bash)
 
