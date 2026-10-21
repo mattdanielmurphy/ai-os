@@ -41,6 +41,7 @@ LIGHTS = re.compile(
     r"^(turn\s+)?(the\s+)?lights?\s+(?P<a>on|off|up|down|dim|bright|brighter|dimmer)$"
     r"|^turn\s+(?P<b>on|off)\s+(the\s+)?lights?$"
     r"|^(set\s+)?(the\s+)?lights?\s+(to\s+)?(?P<pct>\d{1,3})\s*(%|percent)?$", re.I)
+VIDEO = re.compile(r"^(?P<verb>play|pause|resume|unpause|stop)\s+(the\s+)?(youtube\s+)?(video|youtube)$", re.I)
 TIME = re.compile(r"what('s| is) the time|what time is it", re.I)
 PROJECT = re.compile(r"^(tell|ask|send (it|this) to)?\s*(the\s+)?project\b[\s,.:]*", re.I)
 
@@ -52,13 +53,15 @@ QUICK_TOOLS = [
     "Bash(osascript:*)", "Bash(open:*)", "Bash(shortcuts run:*)", "Bash(apple-reminders:*)",
     "Bash(python3 ~/projects/ai-os/scripts/hue.py:*)", "Bash(python3 /Users/matt/projects/ai-os/scripts/hue.py:*)",
     "Bash(~/.hammerspoon/bin/claude-control:*)", "Bash(say:*)", "Bash(date:*)", "Bash(cal:*)",
+    "Bash(~/projects/ai-os/scripts/youtube.sh:*)", "Bash(/Users/matt/projects/ai-os/scripts/youtube.sh:*)",
     "Bash(pmset -g:*)", "Bash(pgrep:*)", "Bash(ps:*)", "Bash(SwitchAudioSource:*)", "Bash(defaults read:*)",
 ]
 QUICK_PROMPT = """You are Hey Claude, Matt's voice assistant on his Mac. He spoke this request; your final \
 reply is read aloud with macOS `say` and shown briefly on screen, so answer in one or two short plain \
 sentences with no markdown, lists or URLs.
 Do quick tasks yourself with Bash (osascript, open, shortcuts run, apple-reminders, \
-python3 ~/projects/ai-os/scripts/hue.py, etc.) in as few tool calls as possible. Speed matters more than polish.
+python3 ~/projects/ai-os/scripts/hue.py, ~/projects/ai-os/scripts/youtube.sh play|pause|status for YouTube \
+in Chrome, etc.) in as few tool calls as possible. Speed matters more than polish.
 Reply with exactly ESCALATE and nothing else, without doing anything, when the request needs real work \
 (coding, research, multi-step projects, anything over about a minute or needing back-and-forth), or is \
 hard to undo (deleting files or data, sending messages or emails to people, purchases, posting publicly).
@@ -113,6 +116,8 @@ def route(q: str) -> str:
         return "project"
     if LIGHTS.search(q):
         return "lights"
+    if VIDEO.match(q):
+        return "video"
     if OPEN.match(q) or SEARCH.match(q) or SAY.match(q):
         return "direct"
     if TIME.fullmatch(q):
@@ -217,6 +222,15 @@ def main() -> int:
         ok = run_lights(q)
         notify("💡 " + q if ok else "Hey Claude: lights failed")
         return 0 if ok else 1
+    if kind == "video":
+        verb = VIDEO.match(q).group("verb").lower()
+        action = "pause" if verb in ("pause", "stop") else "play"
+        env = dict(os.environ, PATH=f"/opt/homebrew/bin:/usr/local/bin:{Path.home()}/.local/bin:{os.environ.get('PATH', '')}")
+        r = subprocess.run([str(AIOS / "scripts" / "youtube.sh"), action], capture_output=True, text=True, env=env, timeout=60)
+        log(f"  -> youtube {action}: exit {r.returncode} {r.stdout.strip()[-120:]}")
+        if r.returncode != 0:
+            notify("Hey Claude: couldn't find a YouTube video in Chrome")
+        return r.returncode
     if kind == "direct":
         from triage_router import try_direct_execution
         if try_direct_execution(q):
