@@ -132,7 +132,7 @@ function buildServer(): McpServer {
 
   server.registerTool("send_task", {
     description: "Hand a task to Matt's project coordinator (Claude on his Mac with full access). It's posted into his " +
-      "Everything project chat within seconds once he's away from the keyboard. Use for real work: coding, research, " +
+      "Everything project chat within seconds. Use for real work: coding, research, " +
       "changes on his Mac, reminders, anything you can't do yourself.",
     inputSchema: {
       title: z.string().describe("Short title, under 8 words"),
@@ -145,7 +145,7 @@ function buildServer(): McpServer {
       const body = [`Ask: ${ask}`, context ? `Context: ${context}` : "", `Urgent: ${urgent ? "yes" : "no"}`].filter(Boolean).join("\n\n");
       queueTask(title, body);
       log(`task queued: ${title}`);
-      return text("Queued. It goes into Matt's project chat as soon as his Mac is unlocked and he's been idle a minute.");
+      return text("Sent. It's posted into Matt's project chat within seconds (or as soon as his Mac is unlocked), with a brief on-screen banner first.");
     } catch (e) { return fail(e); }
   });
 

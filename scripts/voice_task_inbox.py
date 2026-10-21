@@ -47,7 +47,6 @@ SUBJECT_TAG = "[Claude task]"
 GMAIL_LABEL = "Claude tasks"
 SEARCH = '"in:sent subject:(Claude task)"'  # Gmail search; exact tag re-checked below
 RETRY_AFTER = 300   # seconds to wait after a cancelled or failed delivery
-IDLE_NEEDED = 60    # paste only after this long with no keyboard/mouse input
 MAX_BODY = 4000     # chars per task pasted into the chat
 
 
@@ -156,13 +155,6 @@ def screen_locked():
     return "CGSSessionScreenIsLocked" in out
 
 
-def idle_seconds():
-    """Seconds since Matt last touched the keyboard or mouse."""
-    out = subprocess.run(["/usr/sbin/ioreg", "-c", "IOHIDSystem", "-d", "4"], capture_output=True, text=True).stdout
-    m = re.search(r'"HIDIdleTime" = (\d+)', out)
-    return int(m.group(1)) / 1e9 if m else 0
-
-
 def deliver(text):
     """Paste into the Everything project chat via Hey Claude's Hammerspoon path."""
     hey = SourceFileLoader("hey_claude", str(AIOS / "bin" / "hey-claude")).load_module()
@@ -213,8 +205,10 @@ def run(dry_run=False):
             return 0
         if not tasks or time.time() - state.get("last_failure", 0) < RETRY_AFTER:
             return 0
-        if screen_locked() or idle_seconds() < IDLE_NEEDED:
-            return 0  # paste only when the screen is unlocked and Matt isn't typing; retry next minute
+        if screen_locked():
+            return 0  # the paste needs an unlocked screen; retry next minute
+        # No idle wait (Matt, 2026-10-21): the take-control banner warns him first (Esc cancels) and
+        # hey_claude never pastes into a project chat box that holds his draft.
         log(f"delivering {len(tasks)} task(s): {[t[1] for t in tasks]}")
         if not deliver(compose(tasks)):
             state["last_failure"] = time.time()

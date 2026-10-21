@@ -32,9 +32,9 @@ voice Claude --Gmail--> Matt's own inbox --IMAP, every 60s--> scripts/voice_task
 - Credentials: `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` (Google app password) in `~/projects/ai-os/.env`.
 - Only mail Matt's account **sent** counts (`in:sent subject:(Claude task)` + the `\Sent` label), so
   outside mail with that subject can't inject tasks. No From check: Gmail sends as his domain alias.
-- Delivery waits until the screen is unlocked and Matt has been idle 60s, so it never grabs the app
-  mid-typing. Then the take-control banner (Esc cancels) and a paste into the project chat. A draft
-  in the project chat box blocks it. Cancel or failure → emails stay, retry after 5 min.
+- Delivery happens right away when the screen is unlocked (no idle wait since 2026-10-21): the
+  take-control banner shows first (Esc cancels), and a draft in the project chat box blocks it.
+  Cancel or failure → tasks stay, retry after 5 min.
 - Logs: `tmp/voice-task-inbox/watcher.log`, `~/Library/Logs/launch-agents/voice-task-inbox.log`.
 - Why not SendMessage to the coordinator: the coordinator is a cloud session; it isn't in
   `ListAgents` from a local session, and headless `claude -p` has no SendMessage/ListAgents at all.
