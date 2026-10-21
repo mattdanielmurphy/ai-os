@@ -131,7 +131,7 @@ const projectSetup = async ($: any, on: any) => {
   return { clock, entered, calls }
 }
 
-test('a cold project message is held and Matt is asked in the thread; "go" sends it on', async ($, on) => {
+test('a cold project message is held and Matt is asked in the thread; "here" sends it on', async ($, on) => {
   const { entered, calls } = await projectSetup($, on)
   const out = await $.prompt.submit(phone(wake('is it done?')))
   expect(out.drop).toMatch(/Held \(project thread\)/)
@@ -139,15 +139,15 @@ test('a cold project message is held and Matt is asked in the thread; "go" sends
   const ask = calls.find(c => c.tool === 'mcp__hearthbot__reply')
   expect(String(ask?.text)).toMatch(/Held, nothing sent yet.*expired 2h ago.*~180k tokens/s)
 
-  expect((await $.prompt.submit(phone(wake('go', 'cmsg_M2')))).drop).toBeUndefined()
+  expect((await $.prompt.submit(phone(wake('here', 'cmsg_M2')))).drop).toBeUndefined()
   expect(entered).toHaveLength(1)
   expect(entered[0].context?.join('\n')).toMatch(/Matt said go ahead.*is it done\?/)
 })
 
-test('"fresh" asks the coordinator for a new thread from the Haiku handoff', async ($, on) => {
+test('any other reply (the default) asks the coordinator for a new thread from the Haiku handoff', async ($, on) => {
   const { entered, calls } = await projectSetup($, on)
   await $.prompt.submit(phone(wake('is it done?')))
-  const out = await $.prompt.submit(phone(wake('Fresh', 'cmsg_M2')))
+  const out = await $.prompt.submit(phone(wake('sounds good', 'cmsg_M2')))
   expect(out.drop).toMatch(/Fresh thread requested/)
   expect(entered).toHaveLength(0)
   const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')

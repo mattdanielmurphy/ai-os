@@ -104,15 +104,17 @@ export const wakeParts = (text: string) => {
   return { body: unescape((body ?? text).trim()), id }
 }
 
-/** Matt's answer to a held message: a fresh thread (⏩ or "fresh"), else go ahead here. */
+/** Matt's answer to a held message. A fresh thread from the handoff is the default (👍, "fresh" or
+ *  any other reply); only ⏩ or "here"/"go" continues in this cold thread. 👍 always means the
+ *  recommended action (Matt, 2026-10-21). */
 export const wantsFresh = (text: string) =>
-  /⏩|fast_forward/.test(text) || /^\W*fresh\W*$/i.test(wakeParts(text).body)
+  !(/⏩|fast_forward/.test(text) || /^\W*(here|go)\W*$/i.test(wakeParts(text).body))
 
 /** The thread reply that tells Matt his message is on hold. */
 export const heldReply = (expiredMs: number, tokens: number) =>
   `⏸️ **Held, nothing sent yet.** This thread's cache expired ${ago(expiredMs)} ago, so answering ` +
   `here would re-read ~${k(tokens)} tokens at full price. Haiku is writing a handoff now.\n\n` +
-  `- 👍 or reply **go**: continue here anyway\n- ⏩ or reply **fresh**: start a new thread from the handoff (cheap)`
+  `- 👍 or any reply: start a new thread from the handoff (cheap, recommended)\n- ⏩ or reply **here**: continue in this thread anyway`
 
 /** What the coordinator gets when Matt picks a fresh thread. */
 export const freshAsk = (held: string, heldId: string, prompt: string) =>
