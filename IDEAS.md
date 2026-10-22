@@ -16,7 +16,7 @@ Matt "really likes" this. Right-click one of his own apps (HUD, menu bar app, we
 Claude threads about that app, each with its state: resolved, idle, waiting for his input, cache expired.
 Clicking a thread opens it. A "prod" switch hides the whole menu. Should be a shared module (next to
 hud-kit) every app imports, not per-app code. Designs: docs/details/2026-10-22-app-thread-menu.md.
-Status: idea; build only when Matt says "make it".
+Status: idea; build on Matt's 👍.
 
 ## Earn Claude with a habit step (2026-10-22)
 Matt: "a very powerful tool we can use is rewards. I'm addicted to Claude", so having to finish a step first is "a fantastic incentive".
@@ -24,7 +24,7 @@ Gate Claude use behind finishing today's habit step (first likely use: the after
 Builds on the check-in habit ladder (`services/checkin/ladder.py`), so it stays gentle: tiny doses,
 grow slowly, pull back after misses, and an escape hatch that just counts as a miss.
 Refinement (Matt, 15:25): don't ask; the gate just hands him an artifact with the logic questions to do.
-Options: docs/details/2026-10-22-claude-habit-gate.md. Status: idea; build only when Matt says "make it".
+Options: docs/details/2026-10-22-claude-habit-gate.md. Status: idea; build on Matt's 👍.
 
 ## Capture Audio: rolling buffer of system audio (2026-10-22)
 Like Ableton's Capture MIDI, but for audio: always keep the last few minutes of everything the Mac plays,
