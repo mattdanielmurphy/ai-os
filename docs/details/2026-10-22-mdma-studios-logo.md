@@ -53,3 +53,16 @@ Matt: company = Matthew Daniel Murphy Apps (MDMA), app maybe "MDMA Utilities"; w
 - Atelier: workshop; elegant, less about utilities.
 - Kept his own: MDMA Utilities (plain, clear).
 On 👍: set brand.lua longName = "Matthew Daniel Murphy Apps", name = "MDMA Apothecary" (menus show the short name).
+
+## 13:15 Round 2: nine artsy styles of logo A
+
+Matt (via coordinator): final name is "MDMA: Matt Daniel Murphy's Appothecary"; wants logo A in new, unique, artsy styles, not bland/corporate.
+
+- Name: already live in `~/.hammerspoon/modules/brand.lua` (`name = "MDMA"`, `longName = "Matt Daniel Murphy's Appothecary"`), set by the suite-app thread. Nothing changed here.
+- Drew 9 new styles (numbered 10–18 so they don't clash with round 1's 1–9): Apothecary label, Art Nouveau, Bauhaus, 60s psychedelic, Stained glass, Linocut, Memphis, Matisse cut-outs, Alchemy.
+- Picked art movements/print crafts with their own palettes (no purple/neon gradients). Apothecary label leans into the "Appothecary" pun and carries the full name on arcs.
+- Generator: `~/.hammerspoon/assets/brand/styles2/styles2.py` on branch `claude/silly-bouman-4d5a08`; sheet `A2_styles.png`.
+- rsvg-convert ignores `textPath`, so arc text is placed letter by letter (`arc_text`).
+- Rough bits: psychedelic warp is random-ish; stained glass letters cover most of the glass; Art Nouveau vines are simple. These are drafts; whichever he picks gets cleaned up.
+- Not yet checked as a monochrome menu-bar icon; that comes after a pick (the tablet shape is unchanged, so the round-1 template icon still works).
+- Undo: delete `assets/brand/styles2/` on that branch.
