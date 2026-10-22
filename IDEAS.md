@@ -62,3 +62,11 @@ into a sealed file; a separate Claude session drafts its own from a one-line pro
 opening it; then both go side by side and get merged. Competitor research comes last, only as a
 "did we miss anything?" check. Born in the Claude vision HUD thread, split out 2026-10-22.
 Details: docs/details/2026-10-22-blind-two-drafts.md. Status: now a standing rule (core_safety 1j): agents suggest it on open design tasks; no skill.
+
+## Cool GIFs, not Facebook GIFs (2026-10-22) — BUILT
+Matt wants a GIF picker that serves funny/weird/cool GIFs instead of the bland mom-on-Facebook ones
+Giphy/Tenor push. Existing tool first: [Raycast GIF Search](https://www.raycast.com/josephschmitt/gif-search)
+(Giphy, Klipy, The Finer Gifs Club, favourites). Small build option: a Raycast/Hammerspoon picker that
+pulls top posts from r/HighQualityGifs, r/reactiongifs and Finer Gifs Club plus his own starred stash.
+Options: docs/details/2026-10-22-cool-gif-sources.md. Status: built 2026-10-22 as a suite utility
+(Matt: no Raycast extension), `~/.hammerspoon/modules/gif_picker.lua`, ⌃⌥⌘G.
