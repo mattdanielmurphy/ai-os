@@ -7,16 +7,21 @@ Used by ~/.hammerspoon/modules/claude_warm.lua to nudge Matt before a big thread
   python3 scripts/warm_threads.py [--min-tokens 50000] [--all]
 
 Prints a JSON list, soonest first:
-  [{"session", "title", "lastAt", "expiresAt", "ttlSec", "tokens", "asked"}]
+  [{"session", "title", "lastAt", "expiresAt", "ttlSec", "tokens", "asked", "url"}]
+
+"url" opens the thread when Matt clicks the toast: a claude:// project-thread link for
+Claude project threads (same form as claude-control --thread), null otherwise.
 
 "Waiting on Matt" = the last thing he was shown (a project-thread reply, a decision
 card, a question menu, or a Code-tab answer) asks him something (a "?" or a 👍 offer
 near the end), and nothing has come in since. --all also lists threads that didn't ask.
 """
 import argparse
+import html
 import glob
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -25,6 +30,25 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cold_handoff import status  # noqa: E402  (last reply time, TTL, context size)
 
 LOOKBACK = 3700  # a transcript untouched for longer than the cache lifetime is already cold
+DEFAULT_PROJECT = "chan_01CUPXyY9oUwKVDFREVDpYDr"  # Everything
+THREAD_RE = re.compile(r'<thread (?:ts|id)=\\?"(cmsg_\w{20,})|\\?"thread_id\\?"\s*:\s*\\?"(cmsg_\w{20,})')
+PROJECT_RE = re.compile(r'<project id=\\?"(chan_\w+)')
+
+
+def thread_url(project, thread):
+    return f"claude://claude.ai/epitaxy/project/{project or DEFAULT_PROJECT}?thread={thread}" if thread else None
+
+
+def clean_title(text):
+    """A readable title from a first prompt: drops attachment paths (@"/Users/…") and
+    the <wake>/<relay> envelope, keeping the person's words (or the coordinator's note)."""
+    text = re.sub(r'@"[^"]*"', " ", text or "")
+    m = re.search(r"<message\b[^>]*>(.*?)</message>", text, re.S) or re.search(r"<note>(.*?)</note>", text, re.S)
+    if m:
+        text = m.group(1)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", html.unescape(text)).strip()
+    return text[:60].rstrip() + ("…" if len(text) > 60 else "")
 
 
 def asks(text):
@@ -36,8 +60,9 @@ def asks(text):
 
 
 def scan(path):
-    """(title, asked) from a transcript; asked is None when Matt has answered since."""
-    title, ai_title, first_prompt = None, None, None
+    """(title, asked, url) from a transcript; asked is None when Matt has answered since."""
+    title, ai_title, first_prompt, label = None, None, None, None
+    thread, project, reply_ids = None, None, set()
     shown, answered, hearth, status_title = None, False, False, None
     turn_text = None
     for line in path.open(encoding="utf-8", errors="replace"):
@@ -55,11 +80,21 @@ def scan(path):
         content = (d.get("message") or {}).get("content")
         if kind == "user":
             blocks = content if isinstance(content, list) else [{"type": "text", "text": content or ""}]
-            if any(b.get("type") == "tool_result" for b in blocks if isinstance(b, dict)):
+            results = [b for b in blocks if isinstance(b, dict) and b.get("type") == "tool_result"]
+            if results:
+                for b in results:  # a reply's result names its thread: {"thread_id": "cmsg_…"}
+                    if not thread and b.get("tool_use_id") in reply_ids:
+                        m = THREAD_RE.search(json.dumps(b.get("content")))
+                        thread = m and (m.group(1) or m.group(2))
                 continue
             text = " ".join(b.get("text", "") for b in blocks if isinstance(b, dict))
             if first_prompt is None and text.strip():
                 first_prompt = text.strip()
+            if text.lstrip().startswith(("<wake", "@")) or "<wake " in text[:600]:
+                m = THREAD_RE.search(text)  # the wake envelope: <thread ts="cmsg_…">
+                thread = thread or (m and (m.group(1) or m.group(2)))
+                m = PROJECT_RE.search(text)
+                project = project or (m and m.group(1))
             answered = True  # Matt (or a wake carrying his message/reaction) came in
             turn_text = None
             continue
@@ -73,16 +108,20 @@ def scan(path):
                 if name.startswith("mcp__hearthbot__"):
                     hearth = True
                 if name == "mcp__hearthbot__reply":
+                    reply_ids.add(b.get("id"))
                     shown, answered = inp.get("text", ""), False
                 elif name.endswith("ask_decision") or name == "AskUserQuestion":
                     shown, answered = "?", False
+                elif name == "mcp__hearthbot__set_thread_label":
+                    label = (inp.get("label") or "").strip() or label
                 elif name == "mcp__hearthbot__update_status":
                     first = (inp.get("text") or "").strip().splitlines()
                     status_title = first[0] if first else status_title
-    name = title or ai_title or status_title or (first_prompt or path.stem)[:60]
+    name = title or label or ai_title or status_title or clean_title(first_prompt) or path.stem[:8]
+    url = thread_url(project, thread) if hearth else None
     if shown is None or answered:
-        return name, None
-    return name, asks(shown)
+        return name, None, url
+    return name, asks(shown), url
 
 
 def main():
@@ -105,11 +144,11 @@ def main():
         expires = s["lastAt"] + s["ttlSec"] * 1000
         if expires <= now * 1000 or s["tokens"] < args.min_tokens:
             continue
-        title, asked = scan(p)
+        title, asked, url = scan(p)
         if not asked and not args.all:
             continue
         out.append({"session": p.stem, "title": title, "lastAt": s["lastAt"], "expiresAt": expires,
-                    "ttlSec": s["ttlSec"], "tokens": s["tokens"], "asked": bool(asked)})
+                    "ttlSec": s["ttlSec"], "tokens": s["tokens"], "asked": bool(asked), "url": url})
     out.sort(key=lambda t: t["expiresAt"])
     print(json.dumps(out, ensure_ascii=False))
 
