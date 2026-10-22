@@ -69,3 +69,16 @@ At 11:44 a thread in ~/projects (not a git repo) failed: `worktree_hook_failed`.
 
 ### Proposed fix
 Put the hook in ai-os's own `.claude/settings.json` instead of user settings. The app reads project hooks only from the repo the thread starts in (when that folder is the repo's top level), so ~/projects and other folders keep their normal behaviour. Writing that file was blocked by the auto-mode permission check (it changes how Claude starts), so it needs Matt's go. Unverified: whether a project-level hook runs under the same conditions as a user-level one in Remote Control starts; the plan is to test one ai-os and one ~/projects start right after.
+
+---
+
+## 14:10 Clone hook live for ai-os only
+
+### Scoped to ai-os
+Matt 👍'd. Added `ai-os/.claude/settings.json` (committed) with WorktreeCreate/WorktreeRemove hooks running `"$CLAUDE_PROJECT_DIR"/scripts/clone_worktree.py`. User settings unchanged, so other folders and repos keep the app's normal behaviour.
+
+### Both starts verified
+14:07:57: a ~/projects thread started the old way ("using base directory"). 14:08:25: an ai-os thread started via the hook, 4,436 files cloned in 2.5 s. Coordinator confirmed both sessions active.
+
+### Undo ai-os hook
+Delete `ai-os/.claude/settings.json` (or its two hook entries) and push.
