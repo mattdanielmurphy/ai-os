@@ -67,3 +67,33 @@ Long-press-drag (native selection) over words narrows the target to just those w
 The page can focus the box but can't press his hotkey. TypeWhisper has a `typewhisper://` URL scheme, but artifact pages can't launch app URL schemes (claude:// did nothing, 2026-10-19), so I won't count on it. On iPhone the keyboard mic works in the same box.
 
 Questions for Matt: Mac or iPhone for reviews; whether a tap on an already-commented sentence should bring its note back into the box (my default: yes).
+
+## 23:45 Page can start the action (router pushback)
+
+Matt pushed back on "the page can't start it" and pointed at his AIOS URL router. He's right: the page can't call the thread directly, but it can open a link, and a link can hit his Mac.
+
+---
+
+### Router idea still works
+
+`tools/url-router/AIOSURLRouter.app` caught clicks to `http://127.0.0.1:8643/*` and ran a local action instead of opening Chrome. Today it's dormant: Chrome is the default browser again and its listener (`services/url_action_listener`) was removed in an old cleanup commit. It also only works on the Mac, and only if the router is the default browser.
+
+---
+
+### Use mac connector instead
+
+`services/mac-connector` already runs on his Mac and is public over Tailscale Funnel (HTTPS, token in the path). It already has `send_task`, which queues into `tmp/voice-task-inbox/queue/` and posts to the project chat. Plan: add a plain HTTP route (e.g. `/act/<token>/review-done?id=<artifact>`) to the same server. The review page's "Done" button is a normal link to it. Mac gets the hit, queues "review <id> done" for the coordinator, which routes it to this thread; I then read the notes from the page's saved data. A tiny "Sent ✓" page is shown in the browser tab that opens.
+
+Why this over the router: works from iPhone and Mac, no default-browser swap, reuses a running service. Notes never go in the URL (privacy rule), only the page id; content stays in the page's saved data.
+
+Rejected: reviving the 127.0.0.1 router (Mac only, needs browser swap); fetch() from the page to the Mac (artifact CSP likely blocks it).
+
+---
+
+### Not tested yet
+
+Untested: whether a claude.ai artifact lets a link open an outside URL in a new tab (expected yes on Mac and iPhone, will confirm first). Delivery into the thread goes through the coordinator, so it can take ~a minute and relies on the voice-task inbox paste path (take-control queue).
+
+Undo: remove the new route from server.ts and restart the launchd agent.
+
+Defaults if Matt doesn't answer: build for both Mac and iPhone; tapping a sentence with a note reopens that note.
