@@ -31,3 +31,7 @@ Rejected: grepping any `cmsg_` in the transcript; tool output and test fixtures 
 Lua unit test (url passthrough) and a Python test (`tests/test_warm_threads.py`: path stripped, link built) pass. Live scanner run: every project thread got its own distinct link. Fired a real toast via `test()`. I did not click it myself (can't without taking the mouse); the link form is the one the banner already uses.
 
 Undo: revert the commits in ai-os and ~/.hammerspoon, then `hs -c 'hs.reload()'`.
+
+## 15:25 Test toast for a real thread
+
+Matt wanted a test toast with a button that opens a real thread. `test("cmsg_…")` now builds the toast for that thread in the Everything project; the toast's hover "Open" pill (or a click anywhere on it) opens the link. The command I gave targets this thread, so a working click lands him back here. Plain `test()` still picks the soonest linkable thread.
