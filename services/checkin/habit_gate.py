@@ -111,7 +111,7 @@ def held_context(cfg, state, habit, t):
                 "minutes of work) for his current logic unit (read the 'Logic' line in "
                 "~/projects/ai-os/docs/SCHOOL.md for the unit and chapters). Mix symbolization and "
                 f"quick-check questions, 4 plausible options each. Write them as JSON to {cards} "
-                '(a list of {"prompt", "key" (optional symbol key), "options", "correct_index", "answer", '
+                '(a list of {"prompt", "key" (optional list, one symbol per line), "options", "correct_index", "answer", '
                 f'"elaboration"}}), then run `python3 {HERE / "practice.py"} {cards}` and publish the HTML '
                 'it prints as an Artifact with capabilities {"db": {}} (same flashcard layout as the morning '
                 "check-in; never hand-write the page). Then run "

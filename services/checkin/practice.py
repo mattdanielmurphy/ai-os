@@ -4,19 +4,26 @@
 Usage: practice.py CARDS.json [--date YYYY-MM-DD] [--title T] [--deck D] [--out F]
 
 CARDS.json: a list of {"prompt", "key"?, "options": [...], "correct_index", "answer", "elaboration"}.
-"key" is an optional symbol key shown under the prompt (UD, predicates). card_id is filled in.
+"key" is an optional symbol key shown under the prompt, one item per line (a list, or "·"-separated). card_id is filled in.
 Publish the output with the `db` capability so taps are saved under practice/<date>.
 """
-import argparse, json
+import argparse, json, re
 from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
 
+def key_lines(key):
+    """Symbol key, one item per line (Matt: newlines, not "·" separators)."""
+    if isinstance(key, list):
+        return "\n".join(key)
+    return "\n".join(k.strip() for k in re.split(r"\s*[·;]\s*|\n", key) if k.strip())
+
+
 def build(cards, day, title, deck):
     cards = [{"card_id": c.get("card_id") or f"practice_{day}_q{i + 1}",
-              "prompt": c["prompt"], "key": c.get("key", ""), "options": c["options"],
+              "prompt": c["prompt"], "key": key_lines(c.get("key", "")), "options": c["options"],
               "correct_index": c["correct_index"], "answer": c["answer"], "elaboration": c.get("elaboration", "")}
              for i, c in enumerate(cards)]
     for c in cards:

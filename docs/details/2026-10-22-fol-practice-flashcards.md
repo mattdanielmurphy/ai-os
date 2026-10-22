@@ -29,3 +29,13 @@ Same five questions, now multiple choice with 3 plausible wrong options each, re
 Tested locally: practice page answers, reveals, Next, Done summary; morning check-in still starts on Breathe with all four steps. Unit tests (habit_gate, daily, ladder) pass. Not tested: db saving on the published page (no taps yet).
 
 Undo: `git revert` the commit; the old static page is version 1 of the artifact.
+
+## 14:25 Symbol key one item per line
+
+Matt (in another thread): write the key `UD: animals · Dx: … · Bx: …` with newlines instead of "·" separators.
+
+---
+
+### Key on separate lines
+
+`practice.py` now splits every key on "·", ";" or newlines (or takes a list) and shows one item per line; the template already uses `white-space: pre-line`. Done in the builder, not left to the agent, so every future gate page gets it. The gate's instruction now asks for the key as a list. Today's page is republished (same link); question 2's key also got its missing meanings (Sx: x is a student, Px: x is a professor). Tests pass.
