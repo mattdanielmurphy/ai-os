@@ -1,0 +1,62 @@
+<title>MDMA Palette Picker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: one row per hue; light and dark scale side by side, a mini UI sample for each, tap to pick. */
+/*TOKENS*/
+:root{--sans:"IBM Plex Sans",-apple-system,system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 120px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:20px}
+h1{font-size:1.6rem;margin:0;text-wrap:balance}
+p{margin:0;color:var(--muted);max-width:65ch;line-height:1.5}
+.legend{display:grid;grid-template-columns:repeat(12,1fr);gap:2px;font:11px var(--mono);color:var(--muted);text-align:center}
+.legend span{white-space:nowrap;overflow:hidden}
+.row{display:grid;grid-template-columns:110px 1fr 1fr;gap:12px;align-items:center;padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer}
+.row:hover{border-color:var(--line)}
+.row.on{border-color:var(--fg);background:var(--panel)}
+.row:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.name{font-weight:600;display:flex;gap:8px;align-items:center}
+.name small{font:11px var(--mono);color:var(--muted);font-weight:400}
+.mode{border-radius:8px;padding:8px;display:grid;gap:6px}
+.scale{display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.scale i{aspect-ratio:1;border-radius:3px;max-width:100%}
+.ui{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px}
+.btn{padding:3px 10px;border-radius:6px;font-weight:600}
+.chip{padding:2px 8px;border-radius:99px;border:1px solid}
+.tick{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);display:inline-grid;place-items:center;font-size:11px}
+.row.on .tick{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bar code{font:13px var(--mono);flex:1;min-width:0;overflow-wrap:anywhere}
+.bar button{font:600 13px var(--sans);padding:8px 14px;border-radius:8px;border:1px solid var(--fg);background:var(--fg);color:var(--bg);cursor:pointer}
+.head{display:grid;grid-template-columns:110px 1fr 1fr;gap:12px;font:12px var(--mono);color:var(--muted)}
+@media (max-width:700px){.row,.head{grid-template-columns:1fr}.head .h0{display:none}}
+</style>
+<div class="wrap">
+  <h1>MDMA master palette: pick your hues</h1>
+  <p>24 candidate hues, each a 12-step scale built for light and dark mode. Tap the hues you'd want in the first set (aim for about 7; the neutral is separate). Then copy your picks and paste them in the thread.</p>
+  <p>Steps: 1–2 backgrounds · 3–5 component fills · 6–8 borders · 9 the solid colour · 10 hover · 11–12 text.</p>
+  <div class="head"><span class="h0"></span><span>Light mode</span><span>Dark mode</span></div>
+  <div id="rows" class="wrap" style="gap:4px"></div>
+</div>
+<div class="bar"><code id="out">No hues picked yet.</code><button id="copy" type="button">Copy picks</button></div>
+<script>
+/*DATA*/
+const picked=new Set();
+const rows=document.getElementById('rows'),out=document.getElementById('out');
+function lum(h){const n=parseInt(h.slice(1),16),f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(n>>16)+.7152*f(n>>8&255)+.0722*f(n&255)}
+function mode(sc,bg){
+  const sw=sc.map((c,i)=>`<i style="background:${c}" title="step ${i+1} ${c}"></i>`).join('');
+  return `<div class="mode" style="background:${bg}"><div class="scale">${sw}</div>
+  <div class="ui"><span class="btn" style="background:${sc[8]};color:${lum(sc[8])>0.45?sc[11]:'#fff'}">Save</span>
+  <span class="chip" style="background:${sc[2]};border-color:${sc[6]};color:${sc[10]}">Tag</span>
+  <span style="color:${sc[10]}">Link text</span><span style="color:${sc[11]};font-weight:600">Heading</span></div></div>`;
+}
+D.hues.forEach(([n,h])=>{
+  const r=document.createElement('div');r.className='row';r.tabIndex=0;r.setAttribute('role','checkbox');r.setAttribute('aria-checked','false');
+  r.innerHTML=`<div class="name"><span class="tick">✓</span>${n}<small>${h}°</small></div>${mode(D.light.scales[n],D.light.background)}${mode(D.dark.scales[n],D.dark.background)}`;
+  const t=()=>{picked.has(n)?picked.delete(n):picked.add(n);r.classList.toggle('on');r.setAttribute('aria-checked',picked.has(n));out.textContent=picked.size?`Palette picks (${picked.size}): ${[...picked].join(', ')}`:'No hues picked yet.'};
+  r.onclick=t;r.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();t()}};
+  rows.appendChild(r);
+});
+document.getElementById('copy').onclick=async()=>{try{await navigator.clipboard.writeText(out.textContent);document.getElementById('copy').textContent='Copied'}catch(e){const s=getSelection(),g=document.createRange();g.selectNodeContents(out);s.removeAllRanges();s.addRange(g)}};
+</script>
