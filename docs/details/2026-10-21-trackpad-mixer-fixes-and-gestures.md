@@ -56,3 +56,7 @@ Music AppleScript: `favorited of current track` (older Music: `loved`). Toggles,
 ### record-stop
 
 The mixer already carries Music's audio through its own tap, so it can slow it itself: on pause, play the next 0.3s from a short buffer at a rate falling 1.0 → 0, pitch dropping with it, then send the real pause. Resume is normal (no spin-up). Works for tapped channels (Music, Chrome, IINA), not Piano (Ableton) or Master.
+
+## 19:20 Making Stop-hold undo obvious
+
+Matt: fine with hold-Stop = undo, but it must be blatantly obvious what's happening. Proposal: while Stop is held, its button fills up (same hold-progress fill Duration uses) with "undo" under it, and ghost marks appear on every strip at the levels it will go back to. Let go before full = plain Stop. Full = levels fade back, header reads "undo · back to before". Nothing to undo = no fill, label greys out. Rejected: instant snap back (jarring, and silent if he didn't see it).
