@@ -54,3 +54,27 @@ Root cause: `init.lua` line 46 watches all of `~/.hammerspoon/` and calls `hs.re
 3. Multiple Hammerspoon instances. Possible (copy the app, change bundle ID, point it at another config dir) but each copy needs its own Accessibility/Input Monitoring grants, a second menu bar icon, and event taps can fight. Not recommended.
 
 Untested: nothing was built. Undo: nothing to undo.
+
+## 20:46 Built: per-module Hammerspoon hot reload
+
+Matt 👍'd the pick (per-module reload first, Swift HUDs for new ones).
+
+What changed (`~/.hammerspoon`, commit 388576a):
+- `modules/module_manager.lua`: `ModuleManager.reload(id, path)` calls the old module's `stop()`, clears `package.loaded`, re-requires, and `start(true)`s it if enabled. Returns false (→ full reload) if the module has no `stop()`, fails to load, or fails to start.
+- `init.lua`: the pathwatcher now collects changed files over the 1.5 s debounce. If every one is a loaded module (`suite.pathOf`), only those are swapped; anything else (init.lua, module_manager, suite, hud_layout, modules without stop) still does `hs.reload()`.
+
+---
+
+### hot reload test
+
+Set `_G.hotMarker`, touched `modules/eye_breaks.lua` then `modules/song_key.lua`: marker survived (no full reload), console shows `↻ hot-reloaded eye_breaks` / `song_key`, module still enabled. Touched `init.lua`: marker gone (full reload, as intended).
+
+---
+
+### hot reload risk
+
+A module whose `stop()` doesn't undo everything `start()` made (hotkeys, event taps, timers, canvases) will end up with duplicates after a hot reload. I didn't audit all ~25 modules' `stop()`. If something double-fires after an edit, fix that module's `stop()`, or use the menu's full reload. Modules without `stop()` (gemini_thread_search, turn_swap…) always full-reload.
+
+Left alone: another session's uncommitted `_keyprobe` TEMP line in init.lua (not included in my commit).
+
+Undo: `git -C ~/.hammerspoon revert 388576a`.
