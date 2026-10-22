@@ -269,6 +269,30 @@ function buildServer(): McpServer {
     } catch (e) { return fail(e); }
   });
 
+  // Called by Matt's review page (services/review) through the claude.ai "My Mac" connector, so the page
+  // never opens a tab (a tab would steal focus from its comment box).
+  server.registerTool("dictate", {
+    description: "Only for Matt's review page: start, stop or toggle TypeWhisper dictation on his Mac. Text lands " +
+      "in whatever field has focus. Voice chat: don't call this.",
+    inputSchema: { action: z.enum(["start", "stop", "toggle", "status"]).optional() },
+  }, async ({ action }) => {
+    const p = Bun.spawnSync([join(AIOS, "scripts", "dictate.sh"), action ?? "toggle"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: PATH_ENV } });
+    log(`dictate ${action ?? "toggle"} exit=${p.exitCode}`);
+    if (p.exitCode !== 0) return fail(new Error(p.stderr.toString().trim().slice(0, 200) || `dictate.sh exit ${p.exitCode}`));
+    return text(p.stdout.toString().trim() || "ok");
+  });
+
+  server.registerTool("review_done", {
+    description: "Only for Matt's review page: tell the thread that published the page that he finished reviewing.",
+    inputSchema: { page: z.string(), thread: z.string().optional() },
+  }, async ({ page, thread }) => {
+    const r = actRequest(new URL(`https://x/act/x/review-done?page=${encodeURIComponent(page)}&thread=${encodeURIComponent(thread ?? "")}`));
+    if (!r.body) return fail(new Error(r.title));
+    queueTask(r.title, r.body);
+    log(`review_done ${page}`);
+    return text("Sent to the coordinator.");
+  });
+
   return server;
 }
 
