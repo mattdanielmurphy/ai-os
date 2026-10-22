@@ -33,8 +33,8 @@ virtual driver. Pieces:
 2. Silence detection → show HUD button via Hammerspoon in its own slot. Small.
 3. Picker with waveform and a drag selection. This is the rabbit hole; a crude version is "last 10/30/60 s"
    buttons, no waveform.
-Risks: first run asks for the "System Audio Recording" permission; the tap must ignore Apple Music even when it
-plays through Ableton? (No: it only excludes the Music process.) Memory and CPU cost are small.
+Risks: first run asks for the "System Audio Recording" permission (one on-screen prompt).
+Memory and CPU cost are small.
 
 ---
 
