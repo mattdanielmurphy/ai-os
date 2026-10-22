@@ -46,8 +46,18 @@ h2.pick { cursor: pointer; }
 .wrap { -webkit-user-select: none; user-select: none; }
 .boxrow { display: flex; gap: 8px; align-items: flex-start; }
 .mic { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 18px; cursor: pointer; }
-.mic.on { background: var(--bad-bg); border-color: var(--bad); }
 .wrap textarea { -webkit-user-select: text; user-select: text; }
+.micpill { flex: none; font: 600 13px/1 var(--display); padding: 8px 12px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.micpill[data-kind="live"] { color: var(--good); border-color: var(--good); background: var(--good-bg); }
+.micpill[data-kind="live"]::before { content: "● "; animation: pulse 1.4s ease-in-out infinite; }
+.micpill[data-kind="off"], .micpill[data-kind="busy"] { color: var(--bad); border-color: var(--bad); background: var(--bad-bg); }
+.micpill[data-kind="busy"] { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+.box[data-mic="live"] textarea { border-color: var(--good); box-shadow: 0 0 0 2px color-mix(in srgb, var(--good) 25%, transparent); }
+.box[data-mic="off"] textarea, .box[data-mic="busy"] textarea { border-color: var(--bad); }
+.box[data-mic="live"] .mic { background: var(--good-bg); border-color: var(--good); }
+.box[data-mic="off"] .mic, .box[data-mic="busy"] .mic { background: var(--bad-bg); border-color: var(--bad); }
+.nomic .mic, .nomic .micpill { display: none; }
 ::highlight(words) { background-color: color-mix(in srgb, #d9822b 30%, transparent); }
 </style>
 
@@ -59,6 +69,7 @@ h2.pick { cursor: pointer; }
   <nav class="progress" id="progress" aria-label="Sections"></nav>
   <div id="sections" style="display:grid;gap:20px"></div>
   <div class="donebar">
+    <span class="micpill" id="micpill" data-kind="off">Mic off</span>
     <p class="status" id="status">Tap a sentence to comment on it, beside it for the paragraph, the heading for the whole section.</p>
     <a class="btn primary" id="done" target="_blank" rel="noopener">Done, send to Claude</a>
   </div>
@@ -124,7 +135,7 @@ function render() {
     body.querySelectorAll(BLOCKS).forEach((b, i) => { b.dataset.p = `p:${S.id}:${i}`; wrapSentences(b, S.id, counter); });
     const h2 = el.querySelector("h2");
     h2.classList.add("pick");
-    h2.onclick = () => setAim(S.id, aim[S.id]?.key === "sec:" + S.id ? null : { key: "sec:" + S.id, quote: "Whole section: " + S.title });
+    h2.onclick = () => retarget(S.id, aim[S.id]?.key === "sec:" + S.id ? null : { key: "sec:" + S.id, quote: "Whole section: " + S.title });
     $("sections").append(el);
 
     const box = el.querySelector("textarea"), tick = el.querySelector(".tick input");
@@ -140,13 +151,15 @@ function render() {
       if (!s && !blk) return;
       const key = s ? s.dataset.key : blk.dataset.p;
       const quote = s ? quoteOf(body, key) : blk.textContent.replace(/\s+/g, " ").trim();
-      setAim(S.id, aim[S.id]?.key === key ? null : { key, quote });
+      retarget(S.id, aim[S.id]?.key === key ? null : { key, quote });
     });
     wordDrag(S.id, body);
     const mic = el.querySelector(".mic");
     mic.onmousedown = e => e.preventDefault();  // keep the comment box focused: TypeWhisper types into it
-    mic.onclick = () => dictate(box, mic);
-    if (idx === 0) setTimeout(() => box.focus({ preventScroll: true }), 300);
+    mic.onclick = () => micToggle(box);
+    // Clicking another section's box while the mic is live: let the words land in this box first.
+    box.addEventListener("mousedown", e => { if (mic_.live && micBox && micBox !== box) { e.preventDefault(); retarget(S.id, aim[S.id] ?? null); } });
+    if (idx === 0) { micBox = box; setTimeout(() => box.focus({ preventScroll: true }), 300); }
   });
 }
 
@@ -190,7 +203,7 @@ document.addEventListener("pointerup", () => {
   justDragged = true; setTimeout(() => justDragged = false, 0);
   const quote = range.toString().replace(/\s+/g, " ").trim();
   if (quote.length < 2 || !/[\p{L}\p{N}]{2}/u.test(quote)) { CSS.highlights?.delete("words"); return; }
-  setAim(sid, { key: "w:" + quote.slice(0, 80), quote });
+  retarget(sid, { key: "w:" + quote.slice(0, 80), quote });
   paintWords(range);
 });
 
@@ -211,7 +224,7 @@ function setAim(sid, next) {
   if (next) {
     const q = document.createElement("q"); q.textContent = next.quote;
     const x = document.createElement("button"); x.type = "button"; x.textContent = "general";
-    x.onclick = () => setAim(sid, null);
+    x.onclick = () => retarget(sid, null);
     label.append(q, x);
   } else label.append(Object.assign(document.createElement("span"), { textContent: "General comment" }));
   paintNotes(sid);
@@ -248,26 +261,91 @@ if (doneUrl) $("done").href = doneUrl;
    Mac directly: a background fetch to it is blocked (tested 2026-10-22). */
 let mcpRef = null;
 const mac = async () => (mcpRef ??= await window.claude?.use?.("mcp"));
-async function dictate(box, mic) {
-  box.focus({ preventScroll: true });
-  try {
-    const m = await mac();
-    if (!m) throw { message: "connector unavailable here" };
-    await m.callTool("My Mac", "dictate", { action: "toggle" });
-    mic.classList.toggle("on");
-  } catch (e) { $("status").textContent = "Couldn't start dictation (" + (e?.code || e?.message || "error") + "). Use your TypeWhisper hotkey."; }
+/* Auto-dictation (desktop only, agreed with Matt 2026-10-22): the mic starts when the page has focus and
+   follows the comment box. Aiming somewhere new stops it, waits for TypeWhisper to paste into the old
+   target, switches, starts again (~1s gap). The pill and the box's mic button always say whether the
+   mic can hear him; anything but "Listening" means it can't. */
+const AUTO = matchMedia("(hover: hover) and (pointer: fine)").matches;
+const mic_ = { want: AUTO, live: false, busy: "", why: "" };
+let micBox = null, micQ = Promise.resolve();
+const micDo = fn => (micQ = micQ.then(fn, fn));
+const boxOf = sid => $("sec-" + sid).querySelector("textarea");
+const WHY = { not_granted: "My Mac access not allowed", consent_required: "allow My Mac access first", server_not_connected: "can't reach your Mac",
+  server_unavailable: "can't reach your Mac", unavailable: "can't reach your Mac", tool_error: "TypeWhisper didn't answer (API server on?)" };
+const whyOf = e => WHY[e?.code] || e?.code || e?.message || "error";
+async function dt(action) {
+  const m = await mac();
+  if (!m) throw { code: "unavailable" };
+  return (await m.callTool("My Mac", "dictate", { action })).payload || {};
 }
+function paintMic() {
+  const pill = $("micpill");
+  let kind, txt;
+  if (mic_.busy) [kind, txt] = ["busy", "Mic off: " + mic_.busy + ", hold on"];
+  else if (mic_.live) [kind, txt] = ["live", "Listening"];
+  else if (!mic_.want) [kind, txt] = ["off", "Mic paused (🎙 to resume)"];
+  else [kind, txt] = ["off", "Mic off: " + (mic_.why || "not started")];
+  pill.dataset.kind = kind; pill.textContent = txt;
+  document.querySelectorAll(".box").forEach(b => b.dataset.mic = b.contains(micBox) ? kind : "");
+}
+const hereAndFocused = () => !document.hidden && document.hasFocus();
+function micStart(box) {
+  if (box) micBox = box;
+  return micDo(async () => {
+    if (!mic_.want || mic_.live) return paintMic();
+    if (!hereAndFocused()) { mic_.why = "click the page to start"; return paintMic(); }
+    micBox.focus({ preventScroll: true });  // TypeWhisper pastes into whatever has focus
+    mic_.busy = "starting"; paintMic();
+    try { const st = await dt("start"); mic_.live = !!st.is_recording; mic_.why = mic_.live ? "" : "didn't start"; }
+    catch (e) { mic_.live = false; mic_.why = whyOf(e); }
+    mic_.busy = ""; paintMic();
+  });
+}
+function micStop(why) {
+  return micDo(async () => {
+    if (why) mic_.why = why;
+    if (!mic_.live) return paintMic();
+    mic_.live = false; mic_.busy = "finishing"; paintMic();
+    try { await dt("stop"); } catch (e) { mic_.why = whyOf(e); }  // returns once the text is pasted
+    mic_.busy = ""; paintMic();
+  });
+}
+/* Aim a section's box somewhere new; with the mic live, only after the old words have landed. */
+function retarget(sid, next) {
+  if (!mic_.live) { setAim(sid, next); if (mic_.want) micStart(boxOf(sid)); return; }
+  mic_.busy = "switching"; paintMic();
+  micStop().then(() => { setAim(sid, next); micStart(boxOf(sid)); });
+}
+function micToggle(box) {
+  mic_.want = !(mic_.want && (mic_.live || mic_.busy));
+  if (mic_.want) { mic_.why = ""; micStart(box); } else micStop();
+}
+if (AUTO) {
+  // Clicks on the text must not pull focus out of the comment box (the paste would go nowhere).
+  document.addEventListener("mousedown", e => { if (document.hasFocus() && !e.target.closest("textarea,input,button,a,label")) e.preventDefault(); });
+  addEventListener("blur", () => micStop("page not in front"));
+  document.addEventListener("visibilitychange", () => document.hidden ? micStop("page hidden") : micStart());
+  addEventListener("focus", () => { mic_.why = ""; micStart(); });
+  addEventListener("pagehide", () => { if (mic_.live) dt("stop"); });
+  // Catch TypeWhisper stopping on its own (his hotkey, silence) or being started by the hotkey.
+  setInterval(() => { if (!document.hidden && mic_.want && !mic_.busy) micDo(async () => {
+    try { const st = await dt("status"); if (!!st.is_recording !== mic_.live && !mic_.busy) {
+      mic_.live = !!st.is_recording; if (!mic_.live) { mic_.want = false; mic_.why = "stopped on your Mac"; } paintMic(); } } catch {}
+  }); }, 3000);
+  setTimeout(() => micStart(), 400);
+} else document.documentElement.classList.add("nomic");
 mac();  // resolve early so Done can decide synchronously whether to follow its link
 $("done").onclick = e => {
   state.finishedAt = new Date().toISOString();
-  save();
+  mic_.want = false;
   if (mcpRef && DATA.page) {
     e.preventDefault();
-    mcpRef.callTool("My Mac", "review_done", { page: DATA.page, thread: DATA.thread || "" })
+    micStop().then(save).then(() => mcpRef.callTool("My Mac", "review_done", { page: DATA.page, thread: DATA.thread || "" })
       .then(() => $("status").textContent = "Sent. Claude picks it up in the thread.",
-            () => { if (doneUrl) window.open(doneUrl, "_blank"); else $("status").textContent = "Saved. Tell Claude \"done\" in the thread."; });
+            () => { if (doneUrl) window.open(doneUrl, "_blank"); else $("status").textContent = "Saved. Tell Claude \"done\" in the thread."; }));
     return;
   }
+  save();
   if (!doneUrl) { e.preventDefault(); $("status").textContent = "Saved. Tell Claude \"done\" in the thread."; }
   else $("status").textContent = "Sent. Claude picks it up in the thread.";
 };

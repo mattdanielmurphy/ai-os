@@ -199,3 +199,35 @@ Matt turned on TypeWhisper's API server (status call works: idle, whisper-large-
 - Leaving the page (tab hidden/closed): dictation stops.
 
 Risk: each switch means a short gap (~1s) while TypeWhisper finishes and pastes; words said in that gap may be lost. Also mic is live the whole time the page is open.
+
+## 14:20 Auto-dictation with a "mic can't hear you" state
+
+Matt accepted the switch gap ("not a big deal") but wants the page to show whenever the mic can't hear him. Built the agreed auto-dictation plan plus that indicator.
+
+---
+
+### Mic pill always visible
+
+A pill in the bottom bar: green "● Listening" only while TypeWhisper is actually recording. Anything else is red and says why: "switching, hold on" (pulsing, during the gap), "finishing", "starting", "click the page to start", "page not in front", "page hidden", "can't reach your Mac", "TypeWhisper didn't answer (API server on?)", "stopped on your Mac", or grey "Mic paused (🎙 to resume)". The comment box being dictated into gets a green or red border and its 🎙 button matches.
+
+---
+
+### How switching works
+
+Page opens (desktop only, and only when the page has keyboard focus, otherwise the paste would land in the claude.ai composer): start. Tapping a sentence/paragraph/heading, dragging words, "general", or clicking another section's box: stop, `dictate.sh stop` now waits until TypeWhisper is idle again (text pasted, ~2.5s measured), then the box switches and dictation starts again. Clicks on page text no longer steal focus from the box. Window blur or hidden tab stops it; coming back starts it. A 3s status poll catches TypeWhisper stopping on its own (e.g. his hotkey); that pauses auto mode rather than fighting him. Done stops dictation and waits for the paste before saving. iPhone: no mic UI (dictation is Mac-only).
+
+---
+
+### dictate.sh changes
+
+`start` is idempotent; `stop` waits (max 10s) for processing/inserting to finish; every action prints status JSON, which the page reads. Tested for real on his Mac with clearance: start 1.2s, stop+paste-wait 2.5s.
+
+---
+
+### Blocker: stale connector tool list
+
+claude.ai still lists My Mac's tools from before `dictate`/`review_done` were added (server has them since 11:20), so publishing the page with My Mac access was refused. Page is republished with the new UI; until the list refreshes the pill will say "Mic off: can't reach your Mac". Fix: Matt reconnects My Mac in claude.ai Settings > Connectors, then I republish with `mcp: {servers: [{server: "My Mac", tools: ["dictate","review_done"]}]}`.
+
+Untested: the whole thing end to end through the real connector (mock-tested in the browser pane: switch order stop-in-old-box then start-in-new-box, pause, failure, retry). Real gap is ~2.5s plus connector latency, more than the 1s estimate.
+
+Undo: revert this commit; republish the previous template.
