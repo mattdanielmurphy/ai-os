@@ -1707,6 +1707,8 @@ class ActionDispatcher:
         status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
         """Queries agy CLI non-interactively using free Antigravity quota with fast conversational instruction and progressive updates."""
+        if getattr(self.config, "dry_run", False):
+            return "Dry-run response from agy."
         try:
             if image_path and image_path.exists():
                 full_prompt = (
@@ -1812,6 +1814,8 @@ class ActionDispatcher:
         status_msg_id: Optional[int] = None,
     ) -> Optional[str]:
         """Queries the installed Codex CLI directly with the user's ChatGPT subscription."""
+        if getattr(self.config, "dry_run", False):
+            return "Dry-run response from codex."
         try:
             response_dir = self.config.media_tmp_dir / "codex_responses"
             response_dir.mkdir(parents=True, exist_ok=True)
@@ -1871,9 +1875,6 @@ class ActionDispatcher:
 
         falling back seamlessly to ChatGPT / Codex CLI if quota is exhausted or agy fails.
         """
-        if getattr(self.config, "dry_run", False):
-            return "Dry-run response from AI assistant."
-
         # Tier 1: Fast Agy (Gemini 3.8 Flash High)
         try:
             logger.info("Attempting primary query via agy (gemini-3.8-flash-high)...")

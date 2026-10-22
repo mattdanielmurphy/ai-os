@@ -17,3 +17,7 @@ Added ⌃⌥⌘M in `~/.hammerspoon/modules/menu_bar.lua`: pops the same ⚙︎ 
 Rejected: a new URL scheme (hammerspoon:// links already failed for him from chat).
 
 Undo: remove the hotkey block at the end of menu_bar.lua and reload.
+
+## 10:45 Big Pun style bar (from his shared chat)
+
+He shared an earlier chat where Claude tried to match the "Little Italy" bar's rhyme scheme and he found the attempts weak (forced words, no story). Goal: dense multisyllabic chain on one sound across stressed AND unstressed syllables, a word split that re-sounds (mattress → mad at us, like Little Italy → little did), and a coherent story. Original lyrics only; Pun's bar not quoted.

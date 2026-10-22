@@ -1945,3 +1945,109 @@ async def test_cmd_quiz_deck_diversification(tmp_path):
     assert await db.get_dynamic("last_active_card_id:12345") == "forallx_01"
 
     await db.close()
+
+
+@pytest.mark.asyncio
+async def test_gratitude_long_response_with_smart_quotes_and_morning_keyword():
+    """Verifies that a long gratitude response with smart quotes and the word 'morning'
+    is properly recognized as gratitude, logged to Obsidian, and advances the morning flow
+    rather than falsely classifying it as a meta comment.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        vault.mkdir(parents=True)
+        (vault / "habits" / "logs").mkdir(parents=True)
+        db_path = Path(tmpdir) / "test.db"
+
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=True,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+        )
+        db = AssistantDB(db_path)
+        await db.connect()
+        gateway = TelegramGateway(cfg)
+        dispatcher = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(vault), gateway, config=cfg)
+
+        trigger_id = "trig_morning_2026-10-17"
+        await dispatcher._set_morning_flow_stage(trigger_id, "gratitude")
+        now_utc = datetime.now(timezone.utc)
+        await db.record_outbound_signal(
+            message_id=501,
+            chat_id=12345,
+            trigger_id=trigger_id,
+            sent_at=now_utc,
+            timeout_at=now_utc,
+            status="AWAITING_INPUT",
+        )
+
+        # Long gratitude response with smart quotes and "morning" keyword
+        user_message = (
+            "I’m grateful for the barista being kind to me this morning. "
+            "And for the Ace coffee rewards to be paying out a $5 discount already; "
+            "I’ve only been signed up a couple weeks."
+        )
+
+        handled = await dispatcher.handle_text_message(user_message, 12345, 999)
+        assert handled is True
+
+        # Check today's Obsidian habit log
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_log = vault / "habits" / "logs" / f"{today_str}.md"
+        assert today_log.exists()
+        log_content = today_log.read_text(encoding="utf-8")
+        assert "barista being kind to me this morning" in log_content
+
+        # Verify morning flow advanced to review stage
+        stage = await dispatcher._morning_flow_stage(trigger_id)
+        assert stage == "review"
+
+        await db.close()
+
+
+@pytest.mark.asyncio
+async def test_gratitude_fallback_safeguard_if_model_fails():
+    """Verifies that if a conversational message contains gratitude but model fails/times out,
+    the fallback logs gratitude to Obsidian instead of displaying an unhelpful error.
+    """
+    from unittest.mock import patch, AsyncMock
+    with tempfile.TemporaryDirectory() as tmpdir:
+        vault = Path(tmpdir) / "vault"
+        vault.mkdir(parents=True)
+        (vault / "habits" / "logs").mkdir(parents=True)
+        db_path = Path(tmpdir) / "test.db"
+
+        cfg = AssistantConfig(
+            db_path=db_path,
+            obsidian_vault_path=vault,
+            dry_run=False,
+            telegram_chat_id=12345,
+            telegram_bot_token="TEST_TOKEN",
+        )
+        db = AssistantDB(db_path)
+        await db.connect()
+        gateway = TelegramGateway(cfg)
+        dispatcher = ActionDispatcher(db, FSRSEngine(cfg), HabitLogger(vault), gateway, config=cfg)
+
+        with patch.object(dispatcher, "_query_model", new_callable=AsyncMock) as mock_query:
+            mock_query.return_value = None  # Simulate LLM failure/timeout
+
+            user_msg = "Hey bot, just so you know I am grateful for good coffee today"
+            # Outside morning prompt, not starting with command prefix -> fell through to conversational
+            handled = await dispatcher.handle_text_message(user_msg, 12345, 999)
+            assert handled is False  # Return False on model fail, but fallback message delivered
+
+            # Check that gratitude was recorded
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_log = vault / "habits" / "logs" / f"{today_str}.md"
+            assert today_log.exists()
+            assert "good coffee today" in today_log.read_text(encoding="utf-8")
+
+            # Check delivered telegram message
+            last_msg = gateway._dry_run_messages[next(reversed(gateway._dry_run_messages))]
+            assert "Recorded your gratitude to Obsidian" in last_msg["text"]
+
+        await db.close()
+

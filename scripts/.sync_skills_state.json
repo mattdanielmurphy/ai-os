@@ -1779,6 +1779,15 @@
     "sha256": "f858f3523f0e63c15cc7d530774cbe7e0b0d3c89d69767afc4e33ab8158509a3"
   },
   "_handoff/SKILL.md": {
-    "sha256": "d674b6a319aca59a576f77a4927ebd02c5ae7d9e23161e9ce3b826dfb377aada"
+    "sha256": "638c7b6a1c80c6bfffc52798d9f2a986a12aa921b86104091e92a36f107e1679"
+  },
+  "_list-skills/SKILL.md": {
+    "sha256": "0b2010f4cf0edf6e167cdbdae99f5d8aafd27d4d0f1a04842d3f3fc0d4fbf4ca"
+  },
+  "_quiz-with-tap-menus/SKILL.md": {
+    "sha256": "d3ec71041ed4920d32aa2988959b8f3158ada515849c9cd094fa0cec2b2449bb"
+  },
+  "_review-voice-calls/SKILL.md": {
+    "sha256": "8ee5490455181d4b5033a0621ac1aa5a79b5a6e9aed206e993344df123aef89a"
   }
 }
