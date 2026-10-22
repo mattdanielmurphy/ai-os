@@ -35,3 +35,7 @@ Matt's screenshot (sent 14:05, landed in this thread) showed the habit gate's "F
 ### Already fixed elsewhere
 
 Commit 1472658b (14:08, after his message) already fixed it: the gate told agents to hand-write the page; now `services/checkin/practice.py` builds it from the check-in template's new practice mode (tap-to-pick multiple choice). Today's page was republished at the same link. Details: `docs/details/2026-10-22-fol-practice-flashcards.md`. I changed nothing here. Not tested by the fixer: tap saving on the published page.
+
+## 14:22 Links over terminal commands
+
+Matt: a terminal command that just opens a web page is pointless; a clickable link does it in one tap. Rule amended in `.rules/core_safety.md` and `~/.claude/CLAUDE.md`: give a terminal command only when no link can summon the thing. Edited my earlier reply to show the link.
