@@ -88,3 +88,10 @@ share formats not behaviour, one palette.json) are NOT applied yet; they wait fo
 Matt (review thread): light and dark mode are part of designing every app. ARCHITECTURE.md section 6 + checklist
 now require both modes, checked; light default, dark via system appearance. Added to core_safety.md (compiled)
 and ~/.claude/CLAUDE.md. Consistent with the old "light by default" rule; it only adds that dark must exist too.
+
+## 15:05 web_design.md rewritten
+
+Coordinator relayed the review's catch: `.rules/web_design.md` ordered a fresh random palette per project (via the
+archived generate_design_brief.py) and prescribed specific colours, contradicting "never invent a colour". Rewrote
+it: colour from the shared palette only, banned list kept, borrowed style-guide colours removed. Light/dark rule
+now names the native mechanisms too (dynamic NSColor, Hammerspoon appearance watch), since ui_web.md only covered web.

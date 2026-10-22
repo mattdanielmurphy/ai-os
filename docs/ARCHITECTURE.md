@@ -89,8 +89,9 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
   and nowhere else.
 - **Banned (Matt):** terracotta, rust, burnt orange, clay and coral-orange; purple/pink or neon gradients;
   default indigo; glassmorphism for its own sake.
-- **Light and dark for everything (Matt, 2026-10-22).** Every app, HUD, page and palette role is designed and
-  checked in both modes; light is the default, dark follows the system appearance. No screen ships in one mode only.
+- **Light and dark for everything (Matt, 2026-10-22).** Every app ships light and dark and follows the system
+  appearance (light when there's no preference). Every palette role, screen, HUD and icon is designed and
+  contrast-checked in both modes before it's done.
 - **Type:** the system font; monospaced digits for anything that counts or moves. No web fonts in native apps.
 - **Icons:** SF Symbols, tinted by role.
 - **HUD panels:** rounded corners, no drop shadows.
