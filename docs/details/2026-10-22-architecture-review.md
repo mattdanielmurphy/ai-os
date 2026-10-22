@@ -253,3 +253,37 @@ palette for ~100 apps, growing active subset), the old proposal as the starting 
 8 unlocked, `design unlock`, `ai-os/design/`), the constraints in ARCHITECTURE.md section 6 and the bans, and
 three open questions for Matt rather than for the agent (24 hues vs 100 apps, logo colours seeding the
 palette, one palette file for Swift/Lua/HTML). I did not wake the old thread (cold since Oct 21).
+
+## 15:00 Light and dark everywhere
+
+**What Matt asked:** light and dark mode for all apps, as a requirement and part of the design process for
+everything.
+
+**What the rules say today:**
+
+- `docs/ARCHITECTURE.md` section 6: "Light by default, dark only via the system appearance", and roles have "a
+  light and a dark value". Dark reads as optional, and nothing says screens, HUDs and icons are designed in both.
+- `.rules/ui_web.md`: web apps must sync with `prefers-color-scheme`. Web only; native apps and HUDs have no
+  equivalent.
+- `.rules/web_design.md`: dark mode is "or support system theme adaptation", i.e. optional.
+
+---
+
+### Wording passed to the drafting thread
+
+"Every app ships light and dark and follows the system appearance (light when there's no preference). Every
+palette role, screen, HUD and icon is designed and contrast-checked in both modes before it's done." Into
+section 6, checklist item 6 and the rule line. The new palette thread gets the same as a design requirement:
+every hue, step and role has both values, both contrast-checked, never a later pass. Routed through the
+coordinator because the drafting thread owns the plan and the rule line.
+
+---
+
+### Old web rule still orders random palettes
+
+`.rules/web_design.md` contradicts today's "never invent a colour" rule: it says every new web project must run
+`generate_design_brief.py` for a fresh randomized palette (that script is now only in `scripts/archive/`), and
+it prescribes `#f5f4ed`, `#08090a` and "single subtle indigo/violet accents". It isn't compiled into
+`CLAUDE.md` by `build_rules.py` (which only bundles `common.md` plus the per-agent files), so its reach is
+limited, but any agent reading `.rules/` directly would follow it. Suggested: retire it or rewrite it to point
+at ARCHITECTURE.md section 6. Passed to the drafting thread with the light/dark change.
