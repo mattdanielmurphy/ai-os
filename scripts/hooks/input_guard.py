@@ -66,7 +66,8 @@ def main():
               "additionalContext": f"Input guard couldn't reach Hammerspoon. This command looks like input on Matt's Mac ({why}); it still needs a claude-control ticket."}}))
         return 0
     reason = (f"Blocked by the take-control guard: this looks like input on Matt's Mac ({why}). "
-              "Get clearance first: ~/.hammerspoon/bin/claude-control ask \"<what and why>\" 3 "
+              "Get clearance first: ~/.hammerspoon/bin/claude-control ask \"<what and why>\" 3 --light "
+              "(--light = small pill for opening files/apps, focus, media, volume; drop it for typing/clicking) "
               "(exit 1 = not now: don't re-ask, tell Matt; exit 3 = stopped: end the task), "
               "run it, then claude-control done <ticket>. If this command truly doesn't touch the "
               "screen, say so to Matt instead of working around the guard.")
