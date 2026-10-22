@@ -29,3 +29,7 @@ Matt: dictation fails in TypeWhisper (gracefully) and Claude (freezes); "like my
 - After the orphans were gone coreaudiod stayed at ~130% CPU with the same errors: its internal state is already wedged. Restarting it needs sudo, which I can't do: `sudo killall coreaudiod` (audio drops for ~2 s, apps reconnect). A reboot does the same.
 - Untested: whether dictation works after that restart.
 - Rejected: disabling the song-key pill entirely — the leak is fixed, so no need.
+
+## 20:42 Reset Audio fixed it; dashboard note
+
+Matt ran his own Reset Audio Raycast script (~/Documents/raycast/reset-audio.sh), which fixed dictation. He wants a future dashboard of important buttons, with Reset Audio as one. Saved as a memory (reset-audio-and-dashboard.md) and a backlog line in PROJECT_BOARD.md; nothing built.

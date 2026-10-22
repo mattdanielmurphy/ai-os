@@ -87,3 +87,4 @@ Format: `- [ ] Task Description [project:: <project-id>] [assignee:: user|agent]
 - **`project`**: Project ID matching active repo or Obsidian note.
 - **`assignee`**: `user` (for Matt) or `agent` (for AI agents).
 - **`due`**: (Optional) Due date in `YYYY-MM-DD`.
+- [ ] Dashboard of important buttons (first: Reset Audio, ~/Documents/raycast/reset-audio.sh) [project:: ai-os] [assignee:: user]
