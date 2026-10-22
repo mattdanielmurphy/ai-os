@@ -104,23 +104,52 @@ export const wakeParts = (text: string) => {
   return { body: unescape((body ?? text).trim()), id }
 }
 
+/** Which project wake this is: mention, reactions, message-edited, ... */
+export const wakeReason = (text: string) => /^\s*<wake\b[^>]*\breason="([^"]+)"/.exec(text)?.[1] ?? ''
+
+/** Emoji a person (not an agent) put on a message, from a reactions wake. Reactions and edits
+ *  arrive as system turns (isMeta), not as Matt typing, so the person-only gate never saw them. */
+export const reactionEmoji = (text: string) =>
+  [...text.matchAll(/<reaction\b[^>]*\bemoji="([^"]+)"[^>]*\breactors="(user_[^"]*)"/g)].map(m => m[1])
+
+/** What a wake means for a held message: Matt's answer, an edit of the held text, or neither. */
+export const heldWake = (text: string, heldId?: string): 'answer' | 'edit' | 'other' => {
+  const reason = wakeReason(text)
+  if (reason === 'reactions') return reactionEmoji(text).length ? 'answer' : 'other'
+  if (reason === 'message-edited') return heldId !== undefined && wakeParts(text).id === heldId ? 'edit' : 'other'
+  return 'other'
+}
+
+/** A reply that only picks an option, so it adds nothing for the new thread to act on. */
+const bareAnswer = (body: string) =>
+  /^\W*(fresh|new( thread)?|yes|yep|yeah|ok(ay)?|sure|do it|go for it|sounds good|👍|fresh thread)?\W*$/iu.test(body)
+
 /** Matt's answer to a held message. A fresh thread from the handoff is the default (👍, "fresh" or
  *  any other reply); only ⏩ or "here"/"go" continues in this cold thread. 👍 always means the
  *  recommended action (Matt, 2026-10-21). */
 export const wantsFresh = (text: string) =>
   !(/⏩|fast_forward/.test(text) || /^\W*(here|go)\W*$/i.test(wakeParts(text).body))
 
+/** ❌ on the hold note: drop the held message. ✋ (wait, typing more) or 👀: keep holding. */
+export const heldReaction = (text: string): 'cancel' | 'wait' | null => {
+  const emoji = reactionEmoji(text).join('')
+  if (/❌|✖/.test(emoji) && !/⏩|👍/.test(emoji)) return 'cancel'
+  if (/✋|👀/.test(emoji) && !/⏩|👍/.test(emoji)) return 'wait'
+  return null
+}
+
 /** The thread reply that tells Matt his message is on hold. */
 export const heldReply = (expiredMs: number, tokens: number) =>
   `⏸️ **Held, nothing sent yet.** This thread's cache expired ${ago(expiredMs)} ago, so answering ` +
   `here would re-read ~${k(tokens)} tokens at full price. Haiku is writing a handoff now.\n\n` +
-  `- 👍 or any reply: start a new thread from the handoff (cheap, recommended)\n- ⏩ or reply **here**: continue in this thread anyway`
+  `- 👍 or any reply: start a new thread from the handoff (cheap, recommended)\n- ⏩ or reply **here**: continue in this thread anyway\n- ❌: drop it. Editing your message updates what gets sent.`
 
 /** What the coordinator gets when Matt picks a fresh thread. */
-export const freshAsk = (held: string, heldId: string, prompt: string) =>
+export const freshAsk = (held: string, heldId: string, prompt: string, followUp = '') =>
   `Matt chose a fresh thread for a message he wrote into a cold thread (context-alert held it; that ` +
   `thread never ran). Please start a new thread on his message ${heldId || '(no id)'} with a brief ` +
-  `that says: first do this, then answer him: ${prompt}\n\nHis held message: ${held}`
+  `that says: first do this, then answer him: ${prompt}\n\nHis held message: ${held}` +
+  (followUp ? `\n\nHe added, in the same thread while it was held: ${followUp}` : '')
 
 /** Writes a handoff from the transcript file with Haiku; the thread itself is never re-sent. */
 const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> => {
@@ -162,7 +191,15 @@ const answerHeld = async (
   $: EngineInterface, e: PromptSubmitInput, next: (e: PromptSubmitInput) => Promise<PromptSubmitResult>,
   w: { body: string; id?: string },
 ): Promise<PromptSubmitResult> => {
+  const reaction = wakeReason(e.text) === 'reactions' ? heldReaction(e.text) : null
+  if (reaction === 'wait') return { drop: 'Still held: Matt reacted ✋/👀, waiting for his next message.' }
   await update($, projectHeld, () => '')
+  if (reaction === 'cancel') {
+    await update($, held, () => '')
+    backgroundHandoff = null
+    await $.tool.call({ tool: 'mcp__hearthbot__reply', text: 'Dropped. Your held message was never sent.' }).catch(() => undefined)
+    return { drop: 'Held message dropped (Matt reacted ❌).' }
+  }
   if (!wantsFresh(e.text)) {
     await update($, held, () => '')
     return next({ ...e, context: [...(e.context ?? []), `[context-alert] Matt said go ahead. His message held while this thread was cold: ${w.body}`] })
@@ -171,9 +208,11 @@ const answerHeld = async (
   backgroundHandoff = null
   if (job.status !== 'done') job = await coldHandoff($, false)
   const prompt = job.prompt ?? job.text
+  const added = wakeReason(e.text) === 'reactions' ? '' : wakeParts(e.text).body
   await $.tool.call({
     tool: 'mcp__claude-code-remote__send_message',
-    session_id: '@parent', visibility: 'sent_to_shared_agent', message: freshAsk(w.body, w.id ?? '', prompt),
+    session_id: '@parent', visibility: 'sent_to_shared_agent',
+    message: freshAsk(w.body, w.id ?? '', prompt, bareAnswer(added) ? '' : added),
   }).catch(() => undefined)
   await $.tool.call({ tool: 'mcp__hearthbot__reply', text: 'Starting a fresh thread from the Haiku handoff; it will show up in the project chat with your message.' })
     .catch(() => undefined)
@@ -234,10 +273,23 @@ export const register: Register = on => {
   // Phone fallback: the band doesn't draw on mobile, so hold the first message sent into a
   // cold thread and say what it would cost. Sending again within 10 min goes through.
   on('prompt.submit', async ($, e, next) => {
-    const isPerson = ['composer', 'bridge', 'sdk'].includes(e.origin.kind)
-    if (e.command !== undefined || e.isMeta || !isPerson) return next(e)
+    if (e.command !== undefined) return next(e)
+    const isPerson = ['composer', 'bridge', 'sdk'].includes(e.origin.kind) && !e.isMeta
     const pending = isProjectMessage(e.text) ? await read($, projectHeld) : ''
-    if (pending) return answerHeld($, e, next, JSON.parse(pending) as { body: string; id?: string })
+    if (pending) {
+      const h = JSON.parse(pending) as { body: string; id?: string }
+      const kind = isPerson ? 'answer' : heldWake(e.text, h.id)
+      if (kind === 'answer') return answerHeld($, e, next, h)
+      if (kind === 'edit') {
+        // Matt edited the held message: hold the new text instead, still waiting for his answer.
+        const edited = { ...h, body: wakeParts(e.text).body }
+        await update($, projectHeld, () => JSON.stringify(edited))
+        await update($, held, () => edited.body)
+        backgroundHandoff = coldHandoff($, false).catch((err): Handoff => ({ status: 'error', text: String(err) }))
+        return { drop: 'Held message edited; still held with the new text.' }
+      }
+    }
+    if (!isPerson) return next(e)
 
     const at = await $.clock.now()
     const c = await read($, cache)

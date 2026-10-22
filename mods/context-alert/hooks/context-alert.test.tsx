@@ -155,6 +155,67 @@ test('any other reply (the default) asks the coordinator for a new thread from t
   expect(String(ask?.message)).toMatch(/message cmsg_M1.*Read \/h\.md and continue.*His held message: is it done\?/s)
 })
 
+// Reactions and edits come in as system turns (isMeta), exactly as the app delivers them.
+const system = (text: string) => ({ text, wait: false, isMeta: true, origin: { kind: 'sdk' as const } })
+const reacted = (emoji: string, reactors = 'user_M') =>
+  '<wake reason="reactions" current-time="t">\n  <project id="chan_1" type="project">\n    <thread ts="cmsg_T1"></thread>\n  </project>\n' +
+  `  <reactions channel="chan_1" thread_ts="cmsg_T1">\n    <reaction emoji="${emoji}" count="1" message_ts="cmsg_HOLD" message_from="Claude (you)" reactors="${reactors}"></reaction>\n  </reactions>\n</wake>`
+const edited = (body: string, id = 'cmsg_M1') => wake(body, id).replace('reason="mention"', 'reason="message-edited"')
+
+test('a 👍 reaction on the hold note starts the fresh thread', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  const out = await $.prompt.submit(system(reacted('👍')))
+  expect(out.drop).toMatch(/Fresh thread requested/)
+  expect(entered).toHaveLength(0)
+  const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
+  expect(String(ask?.message)).toMatch(/His held message: is it done\?$/)
+})
+
+test('a ⏩ reaction sends the held message on here', async ($, on) => {
+  const { entered } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  expect((await $.prompt.submit(system(reacted('⏩')))).drop).toBeUndefined()
+  expect(entered[0].context?.join('\n')).toMatch(/Matt said go ahead.*is it done\?/)
+})
+
+test('❌ drops the held message; ✋ keeps holding', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  expect((await $.prompt.submit(system(reacted('✋')))).drop).toMatch(/Still held/)
+  expect((await $.prompt.submit(system(reacted('❌')))).drop).toMatch(/dropped/)
+  expect(entered).toHaveLength(0)
+  expect(calls.some(c => c.tool === 'mcp__claude-code-remote__send_message')).toBe(false)
+})
+
+test('editing the held message keeps it held with the new text', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  expect((await $.prompt.submit(system(edited('is it done yet?')))).drop).toMatch(/still held/)
+  expect(entered).toHaveLength(0)
+  await $.prompt.submit(system(reacted('👍')))
+  const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
+  expect(String(ask?.message)).toMatch(/His held message: is it done yet\?/)
+})
+
+test('a follow-up message while held goes to the fresh thread with the held one', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  const out = await $.prompt.submit(phone(wake('also check the logs', 'cmsg_M2')))
+  expect(out.drop).toMatch(/Fresh thread requested/)
+  expect(entered).toHaveLength(0)
+  const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
+  expect(String(ask?.message)).toMatch(/is it done\?.*He added.*also check the logs/s)
+})
+
+test('other system turns still pass while a message is held', async ($, on) => {
+  const { entered } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  expect((await $.prompt.submit(system(edited('unrelated', 'cmsg_OTHER')))).drop).toBeUndefined()
+  expect((await $.prompt.submit(system(reacted('👍', '')))).drop).toBeUndefined()
+  expect(entered).toHaveLength(2)
+})
+
 test('a cold project message goes through when the thread reply cannot be posted', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   const entered: string[] = []
