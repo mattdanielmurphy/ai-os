@@ -202,3 +202,10 @@
 # Voice Tasks: Report Back (2026-10-21)
 - Restate complex logic before building (Matt, 2026-10-21): when a request involves multi-state UI or interaction logic that's easy to misread (gestures, modes, modifiers, edge cases), reply first with the logic as you understand it, point by point, plus anything ambiguous, and build only after he confirms (👍).
 - When you finish a task that arrived as a "🎙️ Voice task" (from Matt's Claude voice chat), report the result back to voice chat: `python3 ~/projects/ai-os/scripts/voice_reply.py "<task title>" "<one or two sentence result>"`. Voice Claude hears it on its next connector call, so Matt gets the answer mid-call.
+
+# Project Instructions Stay Pointer-Only (Matt, 2026-10-22)
+- **New rules go to `.rules/` and memory, never into the Claude Projects instructions.** The project instructions (16k-char limit) hold only what cloud and coordinator sessions can't get from his Mac: coordinator routing, cross-session essentials, and pointers here. Why: the coordinator grew them past 16k by pasting rules in.
+- When Matt gives a rule in a project, save it here (then `build_rules.py`) and in memory; the coordinator adds at most a one-line pointer to the instructions, only if cloud sessions need it.
+- **`/coord` prefix**: a thread message from Matt starting with `/coord` is for the project coordinator, not the thread agent. Don't act on it or reply.
+- **Long threads**: after a compaction or ~40 messages, finish the current step, write `HANDOFF.md` (state, every rule Matt gave, done, open, quirks) in the working repo, commit, push, and tell Matt in one line.
+- **Studying Logic (PHIL 120)**: he's discouraged and behind, so any struggle is harmful. Start every practice ladder at the symbol definitions and ramp in tiny winnable steps.
