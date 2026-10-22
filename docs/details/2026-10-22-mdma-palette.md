@@ -59,3 +59,35 @@ Fix for v2: per-hue override so bright hues keep a vivid solid and flip to dark 
 
 Untested: I couldn't screenshot the board (preview pane won't render local files); checked values numerically.
 Undo: delete the artifact; `git rm -r design/`.
+
+## 21:05 Are these stock colours?
+
+Matt asked how the colours were made and whether they're stock; he wants colours that aren't on 100M other apps.
+
+---
+
+### Honest answer on the source
+
+Not copied from any library, but generic in effect. I spaced 24 hue angles roughly evenly round the colour wheel
+at standard saturation and let Leonardo fill the steps. That is the same recipe Tailwind, Radix and Material use,
+so the results land near their blue/green/red. Nothing about them is ours.
+
+---
+
+### What makes a palette unique
+
+- **A seed from a real world**, not the colour wheel: hues lifted from a concrete source (antique apothecary
+  glass and labels fits the "MDMA Appothecary" name; also prairie/Edmonton winter light, vintage synth panels).
+- **Off-grid hue angles and an unusual chroma/lightness curve** (e.g. dusty, mineral, inky) so the suite has a
+  personality, not just a hue list.
+- **Tinted neutrals** that carry the character on every screen.
+- **A distance check**: compare every hue against Tailwind, Radix and Material and reject anything too close
+  (a delta-E threshold), so "unique" is measured, not claimed.
+- Leonardo stays: it still does the contrast-correct light/dark steps from whatever key colours we pick.
+
+---
+
+### Proposed next step
+
+Board v2: three distinct directions (apothecary glass, prairie light, synth panel), each with ~8 hues + neutral,
+light and dark, with the stock-distance check shown. Matt picks a direction, then hues.
