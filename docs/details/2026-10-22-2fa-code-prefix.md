@@ -85,3 +85,19 @@ Hammerspoon can't read chat.db or Mail without Full Disk Access (checked: both u
 ### Undo
 
 Toggle it off in the ⚙︎ menu, or `git revert 6c4d403` in ~/.hammerspoon. MessAuto is untouched (still running).
+
+## 11:45 Full Disk Access granted, MessAuto switched off
+
+---
+
+### Real messages verified
+
+With Full Disk Access, ran the module's decoder + extractor over your last 300 incoming texts: 268 had text only in attributedBody, all 268 decoded. Codes found: Google 000164 plus the same codes MessAuto logged (394890, 367502, 757847), bank/CIBC/TD/TELUS one-time codes, and one "buzz code 7613" (a door code; harmless). None of MessAuto's junk matches (01Wt4afu etc.). Message contents were read only to check this, not saved.
+
+---
+
+### MessAuto switched off
+
+`launchctl bootout` + quit, plist moved to ~/Library/LaunchAgents/Archive/Messauto.plist, its own launch_at_login set false. App still in /Applications (move to Trash if you like). Undo: move the plist back and `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/Messauto.plist`.
+
+Still untested: the Mail path on a real incoming email (parser tested on synthetic mail).
