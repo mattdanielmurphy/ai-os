@@ -67,3 +67,8 @@
 - `hammerspoon://` links in a thread reply didn't work (the app likely doesn't open custom URL schemes). Terminal fallback: `open -g "hammerspoon://claude-control-demo?tier=light"`.
 - Mods: per the code-project-parity memory (verified 2026-10-20), mod hooks (prompt.submit etc.) DO run in project threads, coordinator-spawned included; only what a mod draws (band, pane, toast) and the `/` menu don't show on the project page.
 - Action-button idea recorded in ai-os `IDEAS.md`; asked the coordinator to give it its own thread.
+
+## 21:16 Preview in the ⚙︎ menu
+
+- Added ⚙︎ AI-OS menu > Preview Claude Banner > Light pill / Full banner (`modules/menu_bar.lua`), calling `claudeControl.demo`.
+- Checked: syntax only. No IPC checks this time (avoiding the reload crash). Per the menu-bar rule, Matt clicks it himself.
