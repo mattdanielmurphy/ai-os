@@ -18,3 +18,5 @@
   - A "keep warm" auto-ping. Hammerspoon can't post into a project thread.
 - Untested: a real toast firing at T-10 on a live thread. The logic is unit-tested and the scan ran against live data.
 - Undo: untick "Keep-Warm Nudges for Waiting Claude Threads" in the Hammerspoon menu, or remove `safeRegister("modules.claude_warm")` from init.lua.
+- Live finding: the built-in mic reads "in use" all the time, likely TypeWhisper or the song-key ear. So the mic counts as busy only within 5 min of switching on, using the device watcher's "gone" event. A mic that is already on when Hammerspoon reloads counts as background until it toggles.
+- Live checks after the reload: the module is loaded, its timer and mic watcher are running, and `check()` returned "typing" while Matt typed. The scanner found no due threads at that moment, so no toast fired.
