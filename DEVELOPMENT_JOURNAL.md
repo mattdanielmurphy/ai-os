@@ -299,3 +299,4 @@ A running narrative of key decisions, pivots, and direction changes. One entry p
 - 2026-10-21: "Every Word Costs Matt" brevity rule (core_safety.md + ~/.claude/CLAUDE.md): ≤ 50 words by default, one idea per line, blank line between items, cut process/paths/caveats, with a before/after example. Replaces the old ~150-200 word guideline.
 - 2026-10-21: Brevity rule, part 2: important things (to-dos, vetoable decisions, risks, untested) always in the reply; work with real decisions gets a full write-up in docs/writeups/ linked from the short reply.
 - 2026-10-21: Brevity rule, part 3: every reply links a per-thread details file (docs/details/YYYY-MM-DD-<thread>.md, one section per reply) for autopsies.
+- 2026-10-21: Keep-warm nudges: `scripts/warm_threads.py` lists threads that asked Matt something and whose 1-hour cache is about to expire; ~/.hammerspoon `claude_warm.lua` shows one amber toast 10 min before, only when he is at the Mac and not typing/dictating.
