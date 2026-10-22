@@ -95,3 +95,10 @@ Coordinator relayed the review's catch: `.rules/web_design.md` ordered a fresh r
 archived generate_design_brief.py) and prescribed specific colours, contradicting "never invent a colour". Rewrote
 it: colour from the shared palette only, banned list kept, borrowed style-guide colours removed. Light/dark rule
 now names the native mechanisms too (dynamic NSColor, Hammerspoon appearance watch), since ui_web.md only covered web.
+
+## 15:10 Ban narrowed to terracotta only
+
+Matt: "I DO like orange as a color lol. It's just, llm apps overuse terracotta color in particular." Narrowed the
+ban everywhere (ARCHITECTURE.md, core_safety.md, web_design.md, ~/.claude/CLAUDE.md, memory) from
+"terracotta, rust, burnt orange, clay, coral-orange" to terracotta only, with a note that orange is fine. No colour
+lint exists yet (it's in the review's top 4, pending 👍); when built, it should flag only the terracotta band.

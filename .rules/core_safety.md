@@ -180,7 +180,7 @@
 - Why: several Claude agents and automations run on Matt's Mac at once; without a queue one can type over another's, even when Matt keeps his hands off.
 
 # UI Colours: Never Terracotta (Matt, 2026-10-22)
-- Never make anything terracotta, rust, burnt orange, clay or coral-orange (e.g. `#c96442`, `#C2502F`, `#EE8C6C`), in any app, page, HUD or artifact, and don't use the word in proposals. Matt: "Never ever make anything this color ever again." Existing uses get recoloured when touched. House style lives in `docs/ARCHITECTURE.md`.
+- Never make anything terracotta (the muted clay brown-orange LLM apps overuse, e.g. `#c96442`, `#C2502F`); orange itself is fine (Matt likes it), in any app, page, HUD or artifact, and don't use the word in proposals. Matt: "Never ever make anything this color ever again." Existing uses get recoloured when touched. House style lives in `docs/ARCHITECTURE.md`.
 - **Never invent a colour (Matt, 2026-10-22)**: every colour in anything built for Matt comes from one shared master palette, used by role. The suite uses a small subset of a large master palette (sized for ~100 apps); a new app that needs a colour expands the subset from the master palette, never picks its own. Until the palette is chosen (see the design-system thread), add no new hard-coded colours.
 - **Light and dark, always (Matt, 2026-10-22)**: every app, HUD, page and artifact is designed and checked in both light and dark mode; light is the default, dark follows the system appearance (web: `prefers-color-scheme`; native Swift: dynamic NSColor / NSAppearance; Hammerspoon: watch the system appearance). Every palette role, screen, HUD and icon is contrast-checked in both modes before it's done.
 

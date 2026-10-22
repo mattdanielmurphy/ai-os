@@ -87,7 +87,7 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
 - **Colour by role, not by hex.** Code names roles (for example `ink`, `paper`, `accent`, `track`, `muted`), each
   with a light and a dark value. Values live in one palette file per system, generated from the master palette,
   and nowhere else.
-- **Banned (Matt):** terracotta, rust, burnt orange, clay and coral-orange; purple/pink or neon gradients;
+- **Banned (Matt):** terracotta (the LLM-default clay brown-orange; orange in general is fine); purple/pink or neon gradients;
   default indigo; glassmorphism for its own sake.
 - **Light and dark for everything (Matt, 2026-10-22).** Every app ships light and dark and follows the system
   appearance (light when there's no preference). Every palette role, screen, HUD and icon is designed and

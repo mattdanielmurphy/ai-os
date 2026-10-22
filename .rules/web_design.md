@@ -6,7 +6,7 @@
 
 ## Permanently Banned Aesthetics ("AI Slop")
 1. **Aggressive Tech Gradients:** Banned. No purple-to-pink, blue-to-violet, or neon gloss gradients on text, buttons, hero elements, or card borders.
-2. **Banned hues:** no default indigo/violet accents, no generic amber/brown-orange (`amber-500`, warm mustard). **Never terracotta (Matt, 2026-10-22: "Never ever make anything this color ever again")**: no terracotta, rust, burnt orange, clay or coral-orange anywhere, and don't use the word in proposals.
+2. **Banned hues:** no default indigo/violet accents, no generic amber/brown-orange (`amber-500`, warm mustard). **Never terracotta (Matt, 2026-10-22: "Never ever make anything this color ever again")**: no terracotta (the muted clay brown-orange LLM apps overuse, e.g. `#c96442`, `#C2502F`); orange itself is fine (Matt likes it), and don't use the word in proposals.
 3. **Slop Decoration:** No unearned glassmorphism/backdrop blurs without real surface depth, no accent left-rail strips on cards, no icon toppers centered over every heading, and no monument stat numbers taking up storytelling space.
 4. **Compositional Defaulting:** Never default to centered hero + 3 identical card tiles. Commit to a surface archetype before writing layout or tokens.
 5. **Unsolicited Dark-Only Pages:** Never ship a page in dark mode only; light is the default and dark follows the system.
