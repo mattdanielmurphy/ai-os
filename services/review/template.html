@@ -227,6 +227,8 @@ function save() {
 
 render();
 renderProgress();
+// Probe: can this page reach the Mac without opening a tab? (decides how a dictation button would work)
+if (DATA.act) fetch(DATA.act + "/ping", { mode: "no-cors" }).then(() => console.log("mac ping ok"), e => console.log("mac ping blocked", e));
 (async () => {
   const db = await window.claude?.use?.("db");
   if (!db) return;

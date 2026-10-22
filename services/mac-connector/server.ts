@@ -309,6 +309,7 @@ export const actToken = (token: string) => createHash("sha256").update(`${token}
 const ID = /^[A-Za-z0-9_-]{1,80}$/;
 export function actRequest(url: URL): { status: number; title: string; body?: string } {
   const [, , , action] = url.pathname.split("/");
+  if (action === "ping") return { status: 204, title: "ping" };
   if (action !== "review-done") return { status: 404, title: "Unknown action" };
   const page = url.searchParams.get("page") ?? "", thread = url.searchParams.get("thread") ?? "";
   if (!ID.test(page) || (thread && !ID.test(thread))) return { status: 400, title: "Bad link" };
@@ -354,6 +355,7 @@ if (!import.meta.main) {
       if (url.pathname.startsWith(`/act/${actToken(token)}/`)) {
         const r = actRequest(url);
         if (r.body) { queueTask(r.title, r.body); log(`act queued: ${r.title}`); }
+        if (r.status === 204) { log(`act ping from ${req.headers.get("origin") ?? "?"}`); return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*" } }); }
         return htmlPage(r.status === 200 ? "Sent ✓ You can close this tab." : r.title, r.status);
       }
       if (url.pathname !== secretPath) return new Response("Not found", { status: 404 });
