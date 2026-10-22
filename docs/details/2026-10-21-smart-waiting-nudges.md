@@ -30,4 +30,4 @@
   - The `donotdisturbd` log: the state is `<private>`, and a 3 h scan is slow.
   - The Shortcuts "Get Current Focus" action: it needs Matt to build a shortcut.
 - Note: `log` in Matt's zsh is shadowed by a function, so use `/usr/bin/log`.
-- Untested: the "on" case, because DND was off. It returned false correctly with DND off.
+- Verified 00:09: with DND on, `focusOn()` returned true (`com.apple.menuextra.focusmode|Focus`). With it off, it returned false.
