@@ -49,3 +49,13 @@ Matt was already signed in to music.apple.com in the built-in browser pane (my f
 ### Web player works for Apple Music
 
 Saved method: the desktop Music app is blocked for computer use, but music.apple.com in the built-in browser pane is signed in and can add albums. Library tracks can then be put into playlists by AppleScript.
+
+## 23:55 No AI music rule
+
+Matt: avoid AI music like the plague. Saved globally (`.rules/core_safety.md` → rebuilt GEMINI/CLAUDE rules, plus `~/.claude/CLAUDE.md`).
+
+---
+
+### Current picks look human-made
+
+All 8 song playlists are his own favourites by real artists. Backing albums: Gene2020 modal tracks (2017) and Guitar Backing Tracks blues (2019) both predate cheap AI music generation; the Joplin album (2017) is solo piano recordings. Not proven human, but low risk. Swap them if anything sounds off.
