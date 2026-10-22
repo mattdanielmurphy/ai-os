@@ -19,6 +19,9 @@
 9. **Always Test Code Changes:** Agents MUST run a relevant test or verification after every code change; never decide to skip testing. Prefer the existing focused automated tests. When no applicable test exists, run the code or a minimal smoke/integration check and inspect its output. If the preferred check is unavailable or fails, try another meaningful verification path and report the results and any remaining uncertainty.
 10. **Puma-dev Local Dev Domains (`.test`):** For web applications and local development servers, prefer human-readable `.test` domains powered by `puma-dev` instead of memorizing random or ephemeral ports (e.g. `crossword.test`). Map projects by adding their port or proxy configuration into `~/.puma-dev/<app-name>` (e.g. `echo "3000" > ~/.puma-dev/<app-name>`). Never rely on arbitrary unmapped ports when a readable `.test` local domain can be established.
 
+## Menu Bar Items: Ask Matt to Test (2026-10-21)
+- Don't try to test menu bar icons or menus yourself (screenshots, clicking, AX): Matt's menu bar is full, so new icons usually hide in his Bartender drawer. Check it compiles/starts, then ask Matt to click through it and report.
+
 ## Path Migration Guardrail
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:

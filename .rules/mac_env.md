@@ -11,4 +11,3 @@
   - Obtain window coordinates using AppleScript System Events (`osascript -e 'tell application "System Events" to tell process "<Name>" to get {position of front window, size of front window}'`).
   - Capture target window using `screencapture -x -R<x,y,w,h> ./tmp/<name>.png`.
   - Inspect with `view_file` to evaluate visual fidelity directly with multimodal vision.
-
