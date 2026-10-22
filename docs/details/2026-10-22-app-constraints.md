@@ -73,3 +73,12 @@ Changed: ARCHITECTURE.md sections 8–9 + checklist + draft rule line; `.rules/c
 `~/.claude/CLAUDE.md` (old line replaced); memory `software-for-matt-not-audience` trashed, `ship-ready-by-default`
 added. The project instructions still carry the old "software for HIM" lines; asked the coordinator to update them
 (only it can). Kept "flag features for imagined users" so the rabbit-hole guard survives.
+
+## 14:55 No colours in the plan
+
+Matt (review thread): the plan must prescribe no colours, since the palette isn't picked; stress one unified
+system; agents never invent a colour; large master palette with a small active subset that grows per app (~100
+apps someday). Rewrote ARCHITECTURE.md section 6: no hex values, no named accent, no "warm ink/paper"; kept roles,
+the banned list, light default, type, icons. Added "Never invent a colour" to core_safety.md (compiled) and
+~/.claude/CLAUDE.md; memory no longer mentions sage. The review's top 4 (enforcement scripts, shared state folder,
+share formats not behaviour, one palette.json) are NOT applied yet; they wait for Matt's 👍 in the review thread.

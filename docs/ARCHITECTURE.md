@@ -76,22 +76,25 @@ shape when the second app needs one.
 
 ## 6. One look
 
-Until the palette thread's tokens exist, these are the house style (neutrals taken from what already ships):
+No colours are picked yet. This plan deliberately names none; the palette and brand come from the "Personal
+design system and palette" and "MDMA Appothecary logo" threads. What is fixed is the system:
 
-- **Colour by role, not by hex.** Code names roles (`ink`, `paper`, `accent`, `track`, `muted`), each with a
-  light and a dark value. Hex lives in one place per kit (today: the `Palette` enum in
-  `trackpad-mixer/Sources/HUD.swift` is the reference; move it into hud-kit as `Palette.swift` and a matching
-  `modules/palette.lua` the next time either is touched).
-- **Warm ink and paper neutrals, one sage accent** (`#4F8A6C` light / `#7FB89A` dark, interim until the palette
-  pick). **Never terracotta, rust, burnt orange or clay** (Matt, 2026-10-22). No purple/pink or neon gradients, no default indigo, no glassmorphism for its own sake.
+- **One unified palette, never an agent's own colour.** Agents never invent, eyeball or copy a colour. Every
+  colour comes from the shared palette by role.
+- **Large master palette, small active subset.** The master palette is big enough for ~100 apps. The suite uses a
+  small subset of it; a new app that needs a new colour expands the subset with the next fitting colour from the
+  master palette (recorded with the app that claimed it), never a random pick and never a colour outside it.
+- **Colour by role, not by hex.** Code names roles (for example `ink`, `paper`, `accent`, `track`, `muted`), each
+  with a light and a dark value. Values live in one palette file per system, generated from the master palette,
+  and nowhere else.
+- **Banned (Matt):** terracotta, rust, burnt orange, clay and coral-orange; purple/pink or neon gradients;
+  default indigo; glassmorphism for its own sake.
 - **Light by default**, dark only via the system appearance.
 - **Type:** the system font; monospaced digits for anything that counts or moves. No web fonts in native apps.
 - **Icons:** SF Symbols, tinted by role.
-- **HUD panels:** translucent paper/ink panel, rounded corners (about 8 pt), hairline track, no drop shadows.
-- **Known drift to fix when touched:** the mixer's accent (`#C2502F`) and the take-control banner's orange
-  (`#FF7A1A`, `#B3401E`) are banned colours; both move to the accent role. Don't add new one-off hexes.
-- When the palette thread's master palette is adopted, its generated tokens (Swift, Lua, CSS) replace the
-  hex values above; the roles stay.
+- **HUD panels:** rounded corners, no drop shadows.
+- **Until the palette lands:** don't add new hard-coded colours; reuse what an app already has, and expect every
+  existing hard-coded colour to move to roles when the palette is adopted.
 
 ---
 
@@ -150,5 +153,5 @@ Until the palette thread's tokens exist, these are the house style (neutrals tak
 > **App constraints (Matt, 2026-10-22):** every app or utility built for Matt follows
 > `~/projects/ai-os/docs/ARCHITECTURE.md`: pick the platform by job (Hammerspoon glue, standalone Swift HUDs on
 > hud-kit), build shared behaviour once in hud-kit or the Lua modules, claim screen space/keys/input from the
-> shared registries, keep feel in tweaks, colour by role from the house palette, name things from
+> shared registries, keep feel in tweaks, colour by role from the one shared palette (never an agent's own colour), name things from
 > `brand.lua`, ship-ready by default, and make every interface self-explanatory. Read it before starting or restructuring any app.
