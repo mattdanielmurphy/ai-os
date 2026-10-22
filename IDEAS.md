@@ -33,3 +33,11 @@ clicking it opens a picker to grab a clip from the buffer. Existing-tool route f
 (installed) can do System Audio "all except Music" + Time Shift/Recorder. Custom route: macOS 14.2+ Core Audio
 process tap excluding Music.app, in-memory ring buffer, HUD + waveform picker.
 Assessment: docs/details/2026-10-22-capture-audio-buffer.md. Status: idea; awaiting Matt's pick.
+
+## Own dictation app in the mac-utilities suite (2026-10-22)
+Matt floated building his own dictation tool as part of his mac-utilities / Raycast-replacement suite.
+Must-haves: live streaming text while still speaking (Claude's dictation is the benchmark), no "Thank you."
+hallucination on silent triggers, polished UX. Existing-tool route first: Superwhisper realtime + local
+Parakeet, Aqua Voice streaming (cloud), Parrot (free, local streaming). Flagged as a rabbit hole;
+if built, start from Parrot / FluidAudio Parakeet rather than from scratch.
+Survey: docs/details/2026-10-22-dictation-tool-survey.md. Status: idea; build on Matt's 👍.
