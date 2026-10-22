@@ -33,3 +33,13 @@ clicking it opens a picker to grab a clip from the buffer. Existing-tool route f
 (installed) can do System Audio "all except Music" + Time Shift/Recorder. Custom route: macOS 14.2+ Core Audio
 process tap excluding Music.app, in-memory ring buffer, HUD + waveform picker.
 Assessment: docs/details/2026-10-22-capture-audio-buffer.md. Status: idea; awaiting Matt's pick.
+
+## Wake-up call from an agent, in character (2026-10-22)
+Matt: "having an agent CALL and speak to you seems like one of the greatest ways to get up ... Once you speak for 5s,
+you're up." Do the talk half of the morning check-in as a real phone call. Each morning Sonnet invents a legitimately
+funny original character (name, job, running gag), picks a matching voice, and calls; missed call → an in-character
+voicemail, and the iMessage with the page link names who called, so he goes "aw, I missed the butler". Real
+celebrity voices (Snoop Dogg) are out: cloning a voice you don't own breaks ElevenLabs/Deepgram ToS and personality
+rights, so original characters only. Stack: his own `tools/voice-agent-tester` (Deepgram Voice Agent, 4 personas
+already) + Twilio for the phone leg + Sonnet via the Max plan's monthly API credit; ~$0.40 per 5-min call.
+Plan: docs/details/2026-10-22-agent-wake-up-call.md. Status: idea; build step 1 on Matt's 👍.
