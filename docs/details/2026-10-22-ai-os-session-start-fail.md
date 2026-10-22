@@ -27,3 +27,19 @@ Added `node_modules/` and `skills/.hub/index-cache/` to `.gitignore`, `git rm --
 ### Still open
 The remaining ~110 MB per copy is real git-checkout files; APFS clones would make it ~0, but the app creates worktrees, not us. Existing old copies keep their checked-out packages until a dedupe or cleanup.
 Undo: `git revert 5f1a33a9`.
+
+---
+
+## 11:02 APFS-clone worktrees via a WorktreeCreate hook
+
+### Hook found
+The Claude desktop app (app.asar, `[WorktreeHooks]` module) runs a `WorktreeCreate` command hook from settings instead of its own `git worktree add` when one is configured for new branches. Contract: JSON on stdin `{session_id, cwd: <base repo>, hook_event_name, name}`; the last stdout line must be the absolute path of a new directory (not the base repo). Hooks in user settings (`~/.claude/settings.json`) always run; project-level ones can be skipped. `WorktreeRemove` gets `{worktree_path}`.
+
+### How the clone hook works
+`scripts/clone_worktree.py`: `git worktree add --no-checkout -b claude/<name>` from origin's default branch (same as the app), then clonefile() every tracked file whose base-checkout content matches that commit, then `git reset` + `checkout -- .` so git writes only files that differ. Any error in the clone step falls back to a normal checkout.
+
+### Test results
+Test worktree: 4 MB of disk (vs 450 MB before today, 112 MB after untracking node_modules), 3 s, `git status` clean, right branch, an edit in the copy did not touch the main checkout.
+
+### Not switched on yet
+Rejected switching it on silently: it would run for every repo's new threads on the Mac, and it relies on undocumented app behaviour; if the hook errors, threads can't start. Also, the app's own pool/cleanup skips hook-made worktrees (fine at ~0 MB each). Switch on = add WorktreeCreate/WorktreeRemove entries in `~/.claude/settings.json` pointing at the script; undo = remove them.
