@@ -93,3 +93,13 @@ Wiggle now sets a speed multiplier: goal = 1 + 3 × wiggle speed (pad heights/s)
 ### Wiggle untested by hand
 
 Built and restarted; the feel needs Matt's fingers. Knobs: `wiggleGain`, `wiggleRise`, `wiggleMaxBoost` in Sources/HUD.swift. Also seen in the log: an Audio Hijack session with TrackpadMixer as a source was detected as running, so session detection works.
+
+## 14:05 Fade curve spends too long at the quiet end
+
+Asked: rises spend too long in the quiet early part and rush the loud end; should be the opposite.
+
+---
+
+### Loudness-weighted fade curve
+
+Fades were linear in fader level (a 50 dB taper), so a 0→100% rise spent its first ~40% of time below -30 dB, nearly inaudible. Now fades move evenly in level^2.5 (Fade.loudWeight in Sources/Mixer.swift). Rise 0→100: 40% at 10% of the time, 76% at half time, the last 24% takes the second half. Falls mirror it: leave the top slowly, drop fast through the quiet end. Moving evenly in that space keeps the path the same when the fade is restarted on every finger move (an ease-out curve on progress would also work for rises but stalls falls). Fade lengths and wiggle unchanged. Also applies to Lights, Mic and Master. Untested by hand; raise loudWeight (3–4) for an even longer top.
