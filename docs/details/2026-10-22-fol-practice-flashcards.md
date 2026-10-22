@@ -57,3 +57,27 @@ Matt asked if there's a better way than going back to the thread to reply 👍.
 ### Done button wakes thread
 
 Yes. The review page (`services/review`) already does this: its Done button links to the Mac connector's `/act/<token>/review-done` route (`services/mac-connector/server.ts`), which queues a note the coordinator routes to the thread. The practice page's Done screen could use the same route with a `practice-done` action that runs `habit_gate.py done` on the Mac and wakes the thread, so the held message carries on without him typing. Not built yet; offered as "👍 = make it". Rejected: having the agent poll the artifact db on his next message (still needs him to send something).
+
+---
+
+## 14:50 Done button built
+
+Matt 👍'd, and added "when I OBVIOUSLY want something, just do it please" (saved as rule 1g in `.rules/core_safety.md`, rebuilt, plus a memory).
+
+---
+
+### How Done works
+
+- Practice page's Done screen has a "Done, unlock Claude" button. It calls the My Mac connector's new `practice_done` tool when the page has it; otherwise it opens the connector's `/act/<act token>/practice-done` link (a tab opens and says "Unlocked ✓").
+- Either way the Mac runs `habit_gate.py page-done`: records today's step (like 👍) and returns a note naming every project thread that was holding a message. The connector queues that note for the coordinator, which wakes those threads; each agent says "Unlocked" and carries on, and scores the taps for the question ladder.
+- `habit_gate.py` now remembers which thread got the hold (`waiting` in gate.json), read from the wake envelope's thread id.
+- Connector restarted (launchd kickstart). The public link was hit once for real: 200, logged, no threads woken (today is already marked skipped, so nothing changed).
+
+---
+
+### Untested and caveats
+
+- Today's page has the button but only the link fallback: this session's copy of the My Mac connector's tool list is stale, so the publish refused declaring `practice_done`. New sessions should see it; the gate instruction tells the agent to fall back to db-only if refused.
+- The full chain (tap → coordinator → thread wakes) hasn't run with a real held thread; the unit test covers recording + naming the thread.
+- Code-tab sessions (no project thread id) aren't woken; there 👍 still works.
+- Another thread (question ladder) edits `habit_gate.py` too; my edits were kept small around theirs.

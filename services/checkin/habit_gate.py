@@ -17,6 +17,8 @@ CLI (agents use these):
   habit_gate.py hook                 read the hook JSON on stdin, print hook JSON
   habit_gate.py done | skip          record today's step and unlock
   habit_gate.py url <artifact-url>   remember today's practice page so other threads reuse it
+  habit_gate.py page-done            the page's Done button (via the Mac connector): record the step
+                                     and print the note that wakes every thread holding a message
   habit_gate.py page                 build today's page from the current rung's card bank (prints the HTML path)
   habit_gate.py score [DATE] < doc   record a page's taps (its db doc JSON on stdin); may change rung
   habit_gate.py status
@@ -163,8 +165,10 @@ def held_context(cfg, state, habit, t):
     n = max(3, minutes)
     url = read_gate(t.date().isoformat()).get("url")
     rung = load_rungs()["rungs"][read_rung()["rung"]]
-    publish = ('as an Artifact with capabilities {"db": {}} (same flashcard layout as the morning check-in; '
-               f"never hand-write the page). Then run `python3 {SCRIPT} url <artifact url>` so other threads "
+    publish = ('as an Artifact with capabilities {"db": {}, "mcp": {"servers": [{"server": "My Mac", '
+               '"tools": ["practice_done"]}]}} (same flashcard layout as the morning check-in; '
+               f"never hand-write the page; if the publish rejects the mcp part, publish with just {{\"db\": {{}}}}: "
+               f"the Done button then falls back to a link). Then run `python3 {SCRIPT} url <artifact url>` so other threads "
                "reuse the same page.")
     if url:
         page = f"Today's practice page already exists: {url}. Give him that link."
@@ -183,8 +187,8 @@ def held_context(cfg, state, habit, t):
     return (
         "HABIT GATE (Matt set this up himself on 2026-10-22: he earns Claude by doing today's logic "
         "study step first; don't ask him whether he wants to, just hand it over). "
-        f"{page} Your reply is at most 3 short lines: the page link, then 'Reply 👍 when done "
-        "(or type skip).' Don't work on his message yet; it stays queued in this thread and you "
+        f"{page} Your reply is at most 3 short lines: the page link, then 'Tap Done on the page "
+        "when finished (or reply 👍 / type skip).' Don't work on his message yet; it stays queued in this thread and you "
         "carry on with it once he's done. Exception: if his message is urgent (stop a running task, "
         "a deadline, something broken), handle it and mention the page once.")
 
@@ -222,7 +226,32 @@ def hook(payload, cfg=None):
                 "few words, then carry on with his earlier request in this thread, if any. " + score_hint(t))
     if kind == "reaction":
         return None
+    hold_thread(payload.get("prompt", ""), t)
     return held_context(cfg, state, habit, t)
+
+
+def hold_thread(prompt, t):
+    """Remember which project thread is holding a message, so the page's Done button can wake it."""
+    m = re.search(r'<thread ts="(cmsg_[A-Za-z0-9]+)"', prompt)
+    if not m:
+        return
+    g = read_gate(t.date().isoformat())
+    if m.group(1) not in g.setdefault("waiting", []):
+        g["waiting"].append(m.group(1))
+        write_gate(g)
+
+
+def page_done(cfg, state, t):
+    """Done tapped on the page: record the step; the note tells the coordinator which threads to wake."""
+    g = read_gate(t.date().isoformat())
+    minutes = finish(cfg, state, t, skipped=False) if g["status"] == "pending" else None
+    threads = g.get("waiting", [])
+    wake = (" ".join(f"Wake thread {th} (message_thread)." for th in threads) + " Each one's agent says "
+            "'Unlocked' in a few words and carries on with the message it was holding. " + score_hint(t)
+            if threads else "No thread is holding a message; nothing to wake.")
+    note = (f"Matt tapped Done on today's logic practice page (habit gate step "
+            f"{f'recorded, {minutes} min' if minutes is not None else 'already recorded'}). {wake}\n\nUrgent: no")
+    return {"minutes": minutes, "threads": threads, "note": note}
 
 
 def build_page(cfg, state, t):
@@ -259,6 +288,8 @@ def main(argv):
                                                      "additionalContext": ctx}}))
     elif cmd in ("done", "skip"):
         print(f"recorded {finish(cfg, state, t, skipped=cmd == 'skip')} min")
+    elif cmd == "page-done":
+        print(json.dumps(page_done(cfg, state, t), ensure_ascii=False))
     elif cmd == "page":
         print(build_page(cfg, state, t))
     elif cmd == "score":

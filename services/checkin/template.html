@@ -163,6 +163,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
     <div class="summary" id="summary"></div>
     <p class="lede" id="donetext">That's the tapping done. Now talk it through with Claude: how you're feeling and what's ahead today. Your reward is waiting at the end.</p>
     <p class="next" id="nextstep">Close this page and go back to the thread for part two. A question is waiting for you there.</p>
+    <a class="btn primary" id="unlock" target="_blank" rel="noopener" hidden>Done, unlock Claude</a>
     <button class="btn" id="moreCards" type="button" hidden>Review more cards</button>
   </section>
 
@@ -201,7 +202,8 @@ if (PLAN.doses.gratitude > 1) $("gtitle").textContent = `${WORDS[PLAN.doses.grat
 if (PRACTICE) {
   document.title = $("title").textContent = DATA.title || "Practice";
   $("donetext").textContent = "That's today's study step done.";
-  $("nextstep").textContent = "Go back to the thread and reply 👍. Claude picks up your message from there.";
+  $("nextstep").textContent = "Tap Done: Claude unlocks and carries on with your message in the thread.";
+  $("unlock").hidden = false;
 }
 if (!PRACTICE && PLAN.changes && PLAN.changes.length) { $("ladder").textContent = PLAN.changes.join(" "); $("ladder").hidden = false; }
 
@@ -394,6 +396,22 @@ async function renderDone() {
   $("summary").replaceChildren(...lines.map(([k, v]) => { const p = document.createElement("p"); const b = document.createElement("b"); b.textContent = k + ": "; p.append(b, document.createTextNode(v)); return p; }));
   if (!state.finishedAt) { state.finishedAt = new Date().toISOString(); await save(); }
 }
+
+/* Practice Done: tell the Mac (habit_gate.py page-done), which records the step and wakes the waiting threads.
+   Through the "My Mac" connector when the page has it (no tab opens), else the connector's /act link. */
+const unlockUrl = DATA.act ? DATA.act + "/practice-done" : "";
+if (unlockUrl) $("unlock").href = unlockUrl;
+let mcpRef = null;
+if (PRACTICE) window.claude?.use?.("mcp").then(m => { mcpRef = m; }, () => {});
+$("unlock").onclick = e => {
+  if (!mcpRef && unlockUrl) { $("nextstep").textContent = "Sent. Claude picks up your message in the thread."; return; }
+  e.preventDefault();
+  if (!mcpRef) { $("nextstep").textContent = "Can't reach your Mac from here. Reply 👍 in the thread."; return; }
+  $("unlock").textContent = "Sending…";
+  mcpRef.callTool("My Mac", "practice_done", {}).then(
+    () => { $("unlock").textContent = "Unlocked ✓"; $("nextstep").textContent = "Claude picks up your message in the thread."; },
+    () => { if (unlockUrl) window.open(unlockUrl, "_blank"); else $("nextstep").textContent = "Couldn't reach your Mac. Reply 👍 in the thread."; $("unlock").textContent = "Done, unlock Claude"; });
+};
 
 /* Saving to the shared store Claude reads */
 let dbRef = null, saving = Promise.resolve();

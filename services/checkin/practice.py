@@ -5,13 +5,15 @@ Usage: practice.py CARDS.json [--date YYYY-MM-DD] [--title T] [--deck D] [--out 
 
 CARDS.json: a list of {"prompt", "key"?, "options": [...], "correct_index", "answer", "elaboration"}.
 "key" is an optional symbol key shown under the prompt, one item per line (a list, or "·"-separated). card_id is filled in.
-Publish the output with the `db` capability so taps are saved under practice/<date>.
+Publish with capabilities {"db": {}, "mcp": {"servers": [{"server": "My Mac", "tools": ["practice_done"]}]}}:
+taps save under practice/<date>, and the Done button unlocks Claude through the Mac connector.
 """
 import argparse, json, re
 from datetime import date
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+ACT_FILE = Path.home() / "projects" / "ai-os" / "tmp" / "mac-connector-act-url"  # written by services/mac-connector
 
 
 def key_lines(key):
@@ -30,7 +32,8 @@ def build(cards, day, title, deck):
         assert 0 <= c["correct_index"] < len(c["options"]), c["card_id"]
     d = date.fromisoformat(day)
     data = {"mode": "practice", "date": day, "dateline": d.strftime("%A, %B ") + str(d.day),
-            "title": title, "deck": deck, "dueTotal": len(cards), "cards": cards,
+            "title": title, "deck": deck,
+            "act": ACT_FILE.read_text().strip() if ACT_FILE.exists() else "", "dueTotal": len(cards), "cards": cards,
             "plan": {"doses": {"cards": len(cards)}, "steps": [], "changes": []}}
     html = (HERE / "template.html").read_text()
     html = html.replace("<title>Morning Check-In</title>", f"<title>{title}</title>", 1)

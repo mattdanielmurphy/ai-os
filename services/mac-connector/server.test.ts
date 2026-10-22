@@ -40,3 +40,8 @@ test("review-done queues a fixed-shape note", () => {
   expect(actRequest(new URL("https://h/act/x/review-done?page=a%20b")).status).toBe(400);
   expect(actRequest(new URL("https://h/act/x/rm-rf?page=a")).status).toBe(404);
 });
+test("practice-done runs the gate step, no note in the link", () => {
+  const r = actRequest(new URL("https://h/act/x/practice-done"));
+  expect(r.run).toBe("practice-done");
+  expect(r.body).toBeUndefined();
+});

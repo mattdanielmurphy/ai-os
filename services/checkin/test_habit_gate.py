@@ -32,7 +32,7 @@ class GateTest(unittest.TestCase):
         ctx = run("fix the mixer")
         self.assertIn("HABIT GATE", ctx)
         self.assertIn("habit_gate.py page", ctx)  # first rungs are a fixed card bank
-        self.assertIn("Reply 👍 when done", ctx)
+        self.assertIn("Tap Done on the page", ctx)
 
     def test_morning_weekend_and_agents_pass(self):
         self.assertIsNone(run("hi", when="2026-10-22T11:00"))
@@ -53,6 +53,17 @@ class GateTest(unittest.TestCase):
 
     def test_done_text_in_thread(self):
         self.assertIn("Unlocked", run(WAKE.format(who="human", text="Done!")))
+        self.assertIsNone(run("next"))
+
+    def test_page_done_records_and_names_waiting_threads(self):
+        held = WAKE.format(who="human", text="build it").replace("<project>", '<project><thread ts="cmsg_01ABC">')
+        run(held)
+        os.environ["HABIT_GATE_NOW"] = "2026-10-22T15:30"
+        cfg = ladder.load_config()
+        out = habit_gate.page_done(cfg, ladder.read_state(cfg, TMP), habit_gate.now())
+        self.assertEqual(out["threads"], ["cmsg_01ABC"])
+        self.assertIn("Wake thread cmsg_01ABC", out["note"])
+        self.assertEqual(self.history()[-1]["study"], 5)
         self.assertIsNone(run("next"))
 
     def test_skip_records_zero(self):

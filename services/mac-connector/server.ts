@@ -293,6 +293,16 @@ function buildServer(): McpServer {
     return text("Sent to the coordinator.");
   });
 
+  server.registerTool("practice_done", {
+    description: "Only for Matt's logic practice page: record today's habit-gate study step and wake the threads holding his messages.",
+    inputSchema: {},
+  }, async () => {
+    try {
+      const r = practiceDone();
+      return text(r.threads.length ? "Unlocked. Claude picks up your message in the thread." : "Unlocked.");
+    } catch (e) { return fail(e as Error); }
+  });
+
   return server;
 }
 
@@ -318,6 +328,16 @@ export function appendCheckinLog(day: string, bullets: string[], vault = VAULT) 
   writeFileSync(f, out);
 }
 
+// Practice page Done: habit_gate.py records the step and writes the note naming the threads to wake.
+export function practiceDone(gate = join(CHECKIN, "habit_gate.py")): { threads: string[]; note: string } {
+  const p = Bun.spawnSync(["python3", gate, "page-done"], { stdout: "pipe", stderr: "pipe", env: { ...process.env, PATH: PATH_ENV } });
+  if (p.exitCode !== 0) throw new Error(`habit_gate page-done failed: ${p.stderr.toString().slice(0, 200)}`);
+  const r = JSON.parse(p.stdout.toString());
+  if (r.threads.length) queueTask("Practice done", r.note);
+  log(`practice_done threads=${r.threads.length}`);
+  return r;
+}
+
 // Queue a task for the coordinator and kick the watcher so it's delivered right away.
 function queueTask(title: string, body: string) {
   mkdirSync(QUEUE, { recursive: true });
@@ -331,9 +351,10 @@ function queueTask(title: string, body: string) {
 export const actToken = (token: string) => createHash("sha256").update(`${token}:act`).digest("base64url").slice(0, 32);
 
 const ID = /^[A-Za-z0-9_-]{1,80}$/;
-export function actRequest(url: URL): { status: number; title: string; body?: string } {
+export function actRequest(url: URL): { status: number; title: string; body?: string; run?: string } {
   const [, , , action] = url.pathname.split("/");
   if (action === "ping") return { status: 204, title: "ping" };
+  if (action === "practice-done") return { status: 200, title: "Practice done", run: "practice-done" };
   if (action !== "review-done") return { status: 404, title: "Unknown action" };
   const page = url.searchParams.get("page") ?? "", thread = url.searchParams.get("thread") ?? "";
   if (!ID.test(page) || (thread && !ID.test(thread))) return { status: 400, title: "Bad link" };
@@ -379,6 +400,10 @@ if (!import.meta.main) {
       if (url.pathname.startsWith(`/act/${actToken(token)}/`)) {
         const r = actRequest(url);
         if (r.body) { queueTask(r.title, r.body); log(`act queued: ${r.title}`); }
+        if (r.run === "practice-done") {
+          try { practiceDone(); return htmlPage("Unlocked ✓ Claude picks up your message in the thread."); }
+          catch (e) { log(String(e)); return htmlPage("Couldn't record it. Reply 👍 in the thread.", 500); }
+        }
         if (r.status === 204) { log(`act ping from ${req.headers.get("origin") ?? "?"}`); return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*" } }); }
         return htmlPage(r.status === 200 ? "Sent ✓ You can close this tab." : r.title, r.status);
       }
