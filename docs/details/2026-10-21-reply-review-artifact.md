@@ -161,3 +161,25 @@ The obvious route (a mic button that's a link to a new `/act/…/dictate` route)
 ### Probe is live
 
 Added `/act/<token>/ping` (204, logs "act ping") and the page now fires one background fetch to it on load. When Matt opens the page, the Mac log shows whether it got through. I couldn't open it myself: the browser pane isn't signed in to claude.ai. If it gets through: mic button calls `/act/…/dictate`, which runs dictate.sh toggle, focus stays in the comment box. If blocked: fall back to his TypeWhisper hotkey, or a Hammerspoon hotkey.
+
+## 11:22 Probe failed; drag rebuilt; mic via My Mac connector
+
+---
+
+### Background ping blocked
+
+Matt opened the page several times; the Mac log never got a ping from it (only my own curl). So an artifact page can't call the Mac in the background (the platform blocks outside fetches). A link would work but opens a tab and steals focus, which breaks dictation.
+
+---
+
+### Live word drag
+
+Native text selection is off on the page (still on in comment boxes). A mouse drag now runs our own selection: it paints the words with the CSS Highlight API while the mouse is still moving, snapped to whole words, and aims the comment box at them on release. Tested with a real drag in the browser pane. Touch on iPhone is unchanged (tap a sentence).
+
+---
+
+### Mic through connector
+
+New Mac connector tools `dictate` (runs scripts/dictate.sh toggle) and `review_done`. The page calls them through the claude.ai "My Mac" connector (the page's `mcp` capability), so no tab opens and focus stays in the comment box. A 🎙 button sits next to each box. Done uses the same route, with the old link as a fallback.
+
+Blocked on Matt: giving the page access to his My Mac connector was refused by my permission guard without his explicit OK, so the published page has the button but can't call it yet. Also TypeWhisper's API server is still off. The first click will also show a claude.ai consent prompt.
