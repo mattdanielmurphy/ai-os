@@ -19,6 +19,7 @@ hud-kit) every app imports, not per-app code. Designs: docs/details/2026-10-22-a
 Status: idea; build only when Matt says "make it".
 
 ## Earn Claude with a habit step (2026-10-22)
+Matt: "a very powerful tool we can use is rewards. I'm addicted to Claude", so having to finish a step first is "a fantastic incentive".
 Gate Claude use behind finishing today's habit step (first likely use: the afternoon logic study block).
 Builds on the check-in habit ladder (`services/checkin/ladder.py`), so it stays gentle: tiny doses,
 grow slowly, pull back after misses, and an escape hatch that just counts as a miss.
