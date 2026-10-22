@@ -131,3 +131,34 @@ Cause: the speed goal followed the instantaneous wiggle, and speed only ever ris
 ### Tested here
 
 Built, restarted, audio flowing (peak dump). Feel untested by hand.
+
+## 16:50 Smooth fader lines (visual smoothing)
+
+Matt: fader lines still move jerkily after all the wiggle/curve math; the final motion must look smooth, visual-only smoothing is fine; expose the amount in tweaks.
+
+
+---
+
+### Why the lines jerked
+
+Every finger move calls `Mixer.fadeToward`, which restarts the fade from the current level with a new target and end time. Position stays continuous, but the speed jumps on each restart (new slope, new loud-weight curve span), and touch frames arrive unevenly. Wiggle boost changes `endsAt` too, so speed steps again. The HUD drew `ch.level` raw, so every speed step showed.
+
+
+---
+
+### Spring smoothing on the drawn lines
+
+`MixerView` (Sources/HUD.swift) now draws each line (level fill, fade-target line, pending-target bar, and the compact strip's bar/marker) at a critically damped spring position that chases the real value (SmoothDamp step, smooths speed as well as position). Stepped once per drawn frame; a `CADisplayLink` redraws at the screen's refresh while any line is still moving and pauses itself when all have settled (no idle CPU). New lines start at their goal (no swoop in). Audio is untouched (it already has its own ~60ms slew).
+
+Rejected: re-architecting fades to keep velocity continuous in the model. Bigger change, touches audio; Matt said visual smoothing is enough.
+
+
+---
+
+### Smoothing knob
+
+`display.smoothing` in tweaks.json / ⌃⌥⌘T, default 0.08 s, 0 = off, max 0.5. Higher = silkier but the line lags the sound more.
+
+Untested by hand. Undo: set the knob to 0, or `git revert` the commit. Built, snapshot rendered, mixer restarted with `scripts/restart-mixer`, running.
+
+Side note: the HUD accent is `#C2502F`, the terracotta Matt banned; left alone because colours wait for the master palette.
