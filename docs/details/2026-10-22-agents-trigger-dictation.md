@@ -39,3 +39,13 @@ Matt worried that starting dictation via the API would drop the text streaming i
 No. In TypeWhisper's source (cloned to ai-os/tmp/typewhisper-src), `POST /v1/dictation/start` → `DictationViewModel.apiStartRecording` → the same private `startRecording(...)` the hotkey handler (`handleHotkeyDictationStart`) calls. So the overlay, live preview, engine and insertion are identical; only the trigger differs. Still to confirm on screen once the API server switch is on.
 
 The "best Mac dictation app / build my own" and clipboard-history asks went to their own threads (coordinator).
+
+## 16:22 Always link threads
+
+Matt: whenever an agent mentions a thread, especially new ones, it must link it. My 16:25 reply said "have their own threads" with no links.
+
+---
+
+### Rule saved everywhere
+
+Added to `.rules/core_safety.md` (compiled into CLAUDE.md/GEMINI.md via build_rules.py), `~/.claude/CLAUDE.md`, and Claude memory (`always-link-threads.md`). Asked the coordinator to add it to the project instructions. The two threads: Best Mac dictation setup (cmsg_01CUPXyY9oUwKVDFREVDpYDrFhEp8MBfuUdsVVpu2pGsGz), Clipboard history for the launcher (cmsg_01CUPXyY9oUwKVDFREVDpYDr9kkEpMve97Wx5ysMxpu7hD).
