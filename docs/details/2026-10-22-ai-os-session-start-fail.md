@@ -13,3 +13,17 @@ Deleted `node_modules` in 37 worktrees with no open files (lsof) and no file cha
 
 ### Undo / risk
 Resuming one of those sessions needs `bun install` in its worktree. Space will run out again as worktrees pile up; a scheduled cleanup would prevent it.
+
+---
+
+## 10:55 Root cause: node_modules was committed to git
+
+### Committed packages
+Matt asked why copies cost real space on APFS. Tests: `bun install` in a fresh worktree used ~1 MB (bun already clones from its cache). `git worktree add` used 450 MB, because 301 MB of `node_modules` (4,652 files) plus a 23 MB Hermes index cache were tracked in git (added by an auto-commit, `0e301781`). Git writes real files on checkout, so every thread copied them.
+
+### Fix applied
+Added `node_modules/` and `skills/.hub/index-cache/` to `.gitignore`, `git rm --cached` (local files kept). New worktree now costs 112 MB instead of 450 MB (measured). Threads in a worktree need `bun install` before running JS scripts; that costs ~0 disk.
+
+### Still open
+The remaining ~110 MB per copy is real git-checkout files; APFS clones would make it ~0, but the app creates worktrees, not us. Existing old copies keep their checked-out packages until a dedupe or cleanup.
+Undo: `git revert 5f1a33a9`.
