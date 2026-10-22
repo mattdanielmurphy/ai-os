@@ -22,3 +22,8 @@
 - Added: install.sh skips the icon with a hint when Command Line Tools (swiftc) are missing, instead of aborting.
 - Tested: menubar.swift compiles; binary ran 5s without crashing (with claude-control clearance). Repo is public; logged-out clone works. Not tested: clicking the icon's items, or a full install on a Mac without Hammerspoon.
 - Tyler's final prompt: posted as a card in the thread.
+
+## 18:27 Rule: ask Matt to test menu bar items
+- Matt: menu bar icons are hard for agents to test (Bartender drawer); ask him instead.
+- Saved: ai-os `.rules/core_safety.md` (compiled into CLAUDE.md / GEMINI.md via build_rules.py), `~/.claude/CLAUDE.md`, memory `menu-bar-ask-matt-to-test`. First put it in `.rules/mac_env.md`, but that file isn't compiled into the prompts, so moved it.
+- Asked Matt to click through the ⚙︎ → Lid items on his Mac.
