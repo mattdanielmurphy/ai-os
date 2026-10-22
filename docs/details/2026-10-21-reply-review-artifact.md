@@ -97,3 +97,27 @@ Untested: whether a claude.ai artifact lets a link open an outside URL in a new 
 Undo: remove the new route from server.ts and restart the launchd agent.
 
 Defaults if Matt doesn't answer: build for both Mac and iPhone; tapping a sentence with a note reopens that note.
+
+## 09:50 Built and published
+
+Matt 👍'd. Built it.
+
+---
+
+### Done route live
+
+`services/mac-connector` has `/act/<act token>/review-done?page=&thread=`. The act token is a hash of the connector token, so pages never carry the MCP token, and the route only queues a fixed-shape note for the coordinator (page id + thread id, validated). Tested: unit tests, and over the public Funnel URL (wrong token 404, bad id 400). Not yet tested: a real click delivering through the coordinator to this thread.
+
+---
+
+### Page built
+
+`services/review/` (template + build.py), look from new shared `services/pages/kit.css`. Tested in the browser pane: sentence split keeps bold/links, tap switches target, re-tap restores the note, general box, word drag snaps to whole words, tick updates progress. Published: https://claude.ai/artifact/JQcNpN5dEb5kgPtCEm9xcF (reviewing this details file as a trial).
+
+---
+
+### Check-in not migrated yet
+
+The check-in page still has its own CSS copy. Moving it onto kit.css touches the 7:45 daily job, so I left it for a separate careful step.
+
+Undo: revert the services/review, services/pages and mac-connector /act commits; restart the connector.
