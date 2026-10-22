@@ -89,7 +89,8 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
   and nowhere else.
 - **Banned (Matt):** terracotta, rust, burnt orange, clay and coral-orange; purple/pink or neon gradients;
   default indigo; glassmorphism for its own sake.
-- **Light by default**, dark only via the system appearance.
+- **Light and dark for everything (Matt, 2026-10-22).** Every app, HUD, page and palette role is designed and
+  checked in both modes; light is the default, dark follows the system appearance. No screen ships in one mode only.
 - **Type:** the system font; monospaced digits for anything that counts or moves. No web fonts in native apps.
 - **Icons:** SF Symbols, tinted by role.
 - **HUD panels:** rounded corners, no drop shadows.
@@ -134,7 +135,7 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
 3. Slot claimed, hotkeys claimed (once the registry exists), input goes through `claude-control`.
 4. Window behaviour from the kit; Escape and outside click close.
 5. Feel knobs in `tweaks.json`.
-6. Colours by role from the palette; SF Symbols; light by default.
+6. Colours by role from the palette; SF Symbols; designed and checked in light and dark.
 7. Repo, `AG_CONTEXT.md`, `build.sh`, tests, `ca.mattmurphy.*`.
 8. Just for Matt or for the world? Settings, onboarding, README; every shortcut and gesture has a visible hint.
 

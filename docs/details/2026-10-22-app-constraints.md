@@ -82,3 +82,9 @@ apps someday). Rewrote ARCHITECTURE.md section 6: no hex values, no named accent
 the banned list, light default, type, icons. Added "Never invent a colour" to core_safety.md (compiled) and
 ~/.claude/CLAUDE.md; memory no longer mentions sage. The review's top 4 (enforcement scripts, shared state folder,
 share formats not behaviour, one palette.json) are NOT applied yet; they wait for Matt's 👍 in the review thread.
+
+## 15:00 Light and dark for everything
+
+Matt (review thread): light and dark mode are part of designing every app. ARCHITECTURE.md section 6 + checklist
+now require both modes, checked; light default, dark via system appearance. Added to core_safety.md (compiled)
+and ~/.claude/CLAUDE.md. Consistent with the old "light by default" rule; it only adds that dark must exist too.
