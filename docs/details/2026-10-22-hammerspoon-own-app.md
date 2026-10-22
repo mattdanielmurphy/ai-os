@@ -55,3 +55,24 @@ Changed the default name from "AI-OS" to "Mac Utilities": AI-OS is his agent set
 the mac-utilities repo. Rename later is cheap. Option 2 (renamed .app) stays a per-Mac step, not shipped in the suite.
 
 The 2FA "G-" ask that arrived alongside is already handled in its own thread (MessAuto regex), so not touched here.
+
+## 17:25 Is a renamed Hammerspoon allowed
+
+---
+
+### MIT license allows it
+
+Hammerspoon is MIT ([LICENSE](https://github.com/Hammerspoon/hammerspoon/blob/master/LICENSE)): copying,
+modifying, renaming and redistributing are allowed as long as the copyright + license notice ships with it (it
+lives inside the app bundle copy anyway). Polite extra: "built on Hammerspoon" in the About text. Not legal advice,
+but MIT is about as permissive as it gets. Option 2 was meant for his Mac only, not shipped to Tyler.
+
+---
+
+### Permission re-grant cost
+
+An ad-hoc signature changes on every rebuild, so macOS would ask again for Accessibility (and Screen Recording /
+mic where used) after each Hammerspoon update. Fix: sign with one self-made certificate kept in the login keychain;
+macOS then recognises the app across rebuilds, so the grant happens once. Untested on his Mac.
+Risks left: `hs` CLI / IPC with a renamed bundle; Sparkle must be off (updates via the script instead).
+Plan: do option 1 now (needed either way), then try option 2 as a spike.
