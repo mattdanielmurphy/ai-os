@@ -91,3 +91,50 @@ so the results land near their blue/green/red. Nothing about them is ours.
 
 Board v2: three distinct directions (apothecary glass, prairie light, synth panel), each with ~8 hues + neutral,
 light and dark, with the stock-distance check shown. Matt picks a direction, then hues.
+
+## 21:20 Board v2: three seeded directions
+
+Matt 👍'd the three directions and said he likes orange; the ban is terracotta only (LLM-default clay
+brown-orange). The rules already said that after a pull, so nothing to change there.
+
+---
+
+### Three directions on the board
+
+Same link, version 2: https://claude.ai/artifact/49fWnnWw1J4zUsyRhiqkgf. Each direction has 8 hues plus a tinted
+neutral, a sample "app" in light and dark, and per-hue scales. Picks: a direction button plus hue rows; the
+bottom bar copies them.
+
+- **Apothecary glass**: cobalt bottle, tincture (clear orange), absinthe, verdigris, oxblood, lavender oil,
+  uranium glass, iodine. Warm paper neutral.
+- **Prairie light**: canola, big sky, winter dusk, aspen, sunset (orange), frost, aurora, fireweed. Cool snow
+  neutral.
+- **Synth panel**: signal red, panel orange, patch yellow, phosphor, VFD teal, knob blue, patch violet, tape
+  cream. Aluminium neutral.
+
+---
+
+### Stock colour check
+
+- Every key colour is compared (CIEDE2000) with **986 stock colours**: every Tailwind v3 shade and every Radix
+  step, light and dark. 2-3 is a just-noticeable difference; target is 6+.
+- If a key is too close, it's nudged up to 8° of hue, 0.06 lightness and 0.02 chroma, smallest change first.
+  A bigger search worked numerically but wrecked the colours (signal red turned into salmon), so I capped it.
+- **5 hues are still under 6** and marked "close to" on the board: cobalt bottle (5.2), oxblood (5.0),
+  aurora (4.5), signal red (3.6), knob blue (4.9). Strong reds and blues are where stock palettes are densest.
+- Terracotta guard: any key within 12 of `#c96442` / `#c2502f` is rejected.
+- Honest limit: one hue alone can't be truly unique; 986 stock colours cover sRGB closely. What makes the suite
+  ours is the **set**: the specific hues together, their neutral and their light/dark curves.
+
+---
+
+### How v2 is built
+
+- `design/candidates/directions.js`: OKLCH seeds per direction -> nudge -> Leonardo light/dark scales.
+  The key colour is kept exactly as step 9 in both modes (fixes v1's muddy yellows); text on it flips
+  dark/white by luminance.
+- `board2.js` + `board2.template.html` build the page. Dev deps added: tailwindcss 3.4.17, @radix-ui/colors
+  3.0.0 (only for the comparison).
+- The picker page's own chrome uses a few fixed greys; it's a tool, not a suite app, so it isn't on the
+  palette.
+- Untested visually: still no way to screenshot it here. JS parses; values checked numerically.

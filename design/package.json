@@ -5,5 +5,9 @@
   "dependencies": {
     "@adobe/leonardo-contrast-colors": "^1.1.0",
     "culori": "^4.0.2"
+  },
+  "devDependencies": {
+    "@radix-ui/colors": "3.0.0",
+    "tailwindcss": "3.4.17"
   }
 }

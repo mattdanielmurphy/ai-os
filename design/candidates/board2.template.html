@@ -1,0 +1,90 @@
+<title>MDMA Palette Picker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: three direction sections; each opens with a light+dark app sample, then one tappable row per hue. */
+:root{--bg:#f7f7f6;--fg:#1d1c1a;--muted:#5f5d59;--line:#d9d7d3;--panel:#efeeec;--warn:#8a5a00;
+--sans:"IBM Plex Sans",-apple-system,system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#191918;--fg:#ecebe8;--muted:#a3a19c;--line:#3a3936;--panel:#232321;--warn:#e7b04a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#191918;--fg:#ecebe8;--muted:#a3a19c;--line:#3a3936;--panel:#232321;--warn:#e7b04a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 130px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:28px}
+h1{font-size:1.6rem;margin:0;text-wrap:balance}h2{font-size:1.25rem;margin:0}
+p{margin:0;color:var(--muted);max-width:65ch;line-height:1.5}
+section{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px}
+section.on{border-color:var(--fg);border-width:2px;padding:13px}
+.dhead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.pickdir{font:600 13px var(--sans);padding:7px 12px;border-radius:8px;border:1px solid var(--fg);background:transparent;color:var(--fg);cursor:pointer}
+section.on .pickdir{background:var(--fg);color:var(--bg)}
+.samples{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.app{border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0}
+.app .top{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.app .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.app .card{border-radius:8px;padding:8px;font-size:12px;border:1px solid;min-width:0;overflow:hidden}
+.app .card b{display:block;height:6px;border-radius:3px;margin-top:6px}
+.app .btns{display:flex;gap:6px;flex-wrap:wrap}
+.app .btn{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.head{display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;font:12px var(--mono);color:var(--muted)}
+.row{display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;align-items:center;padding:8px;border:1px solid transparent;border-radius:10px;cursor:pointer}
+.row:hover{border-color:var(--line)}.row.on{border-color:var(--fg);background:var(--panel)}
+.row:focus-visible,.pickdir:focus-visible,.bar button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.name{display:grid;gap:2px;font-weight:600}
+.name .k{display:flex;gap:6px;align-items:center}
+.name small{font:11px var(--mono);color:var(--muted);font-weight:400}
+.name .close{color:var(--warn)}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+.mode{border-radius:8px;padding:6px}
+.scale{display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.scale i{aspect-ratio:1;border-radius:3px}
+.scale i.key{outline:2px solid currentColor;outline-offset:-2px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bar code{font:13px var(--mono);flex:1;min-width:0;overflow-wrap:anywhere}
+.bar button{font:600 13px var(--sans);padding:8px 14px;border-radius:8px;border:1px solid var(--fg);background:var(--fg);color:var(--bg);cursor:pointer}
+@media (max-width:760px){.samples,.row,.head{grid-template-columns:1fr}.head{display:none}.app .cards{grid-template-columns:1fr 1fr}}
+</style>
+<div class="wrap">
+  <div style="display:grid;gap:10px">
+    <h1>MDMA master palette: pick a direction</h1>
+    <p>Three palettes, each seeded from a real world instead of the colour wheel. Every hue was checked against all <span id="n"></span> Tailwind and Radix colours and nudged until it's clearly different (distance 6+). The few that couldn't get there without losing their character are marked.</p>
+    <p>Pick one direction (or mix), then tap the hues you like. Each scale shows light mode and dark mode; the outlined square is the hue itself.</p>
+  </div>
+  <div id="dirs" class="wrap" style="gap:24px"></div>
+</div>
+<div class="bar"><code id="out">Nothing picked yet.</code><button id="copy" type="button">Copy picks</button></div>
+<script>
+/*DATA*/
+const $=s=>document.querySelector(s);$('#n').textContent=D.stockCount;
+function lum(h){const n=parseInt(h.slice(1),16),f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(n>>16)+.7152*f(n>>8&255)+.0722*f(n&255)}
+const on=h=>lum(h)>0.36?'#151413':'#ffffff';
+const dirPick=new Set(),huePick=new Map();
+function app(dir,dark){
+  const N=dark?dir.neutral.dark:dir.neutral.light,bg=dark?dir.neutral.bgDark:dir.neutral.bgLight,H=dir.hues;
+  const sc=h=>dark?h.dark:h.light;
+  const cards=H.slice(0,4).map(h=>`<div class="card" style="background:${sc(h)[1]};border-color:${sc(h)[5]};color:${sc(h)[10]}">${h.name}<b style="background:${h.key}"></b></div>`).join('');
+  const btns=H.slice(4,8).map(h=>`<span class="btn" style="background:${h.key};color:${on(h.key)}">${h.name}</span>`).join('');
+  return `<div class="app" style="background:${bg};color:${N[11]};border:1px solid ${N[5]}"><div class="top"><span>${dark?'Dark':'Light'} mode</span><span style="color:${N[10]};font-weight:400;font-size:12px">${dir.title}</span></div><div class="cards">${cards}</div><div class="btns">${btns}</div></div>`;
+}
+function scale(s,bg){return `<div class="mode" style="background:${bg};color:${lum(bg)>.5?'#000':'#fff'}"><div class="scale">${s.map((c,i)=>`<i${i===8?' class="key"':''} style="background:${c}" title="step ${i+1} ${c}"></i>`).join('')}</div></div>`}
+function render(){
+  const parts=[];
+  if(dirPick.size)parts.push('Direction: '+[...dirPick].map(id=>D.directions[id].title).join(' + '));
+  if(huePick.size)parts.push('Hues: '+[...huePick.values()].join(', '));
+  $('#out').textContent=parts.length?parts.join('. ')+'.':'Nothing picked yet.';
+}
+for(const [id,dir] of Object.entries(D.directions)){
+  const sec=document.createElement('section');
+  sec.innerHTML=`<div class="dhead"><div style="display:grid;gap:4px"><h2>${dir.title}</h2><p>${dir.blurb}</p></div><button class="pickdir" type="button">Pick this direction</button></div>
+  <div class="samples">${app(dir,false)}${app(dir,true)}</div><div class="head"><span></span><span>Light mode</span><span>Dark mode</span></div>`;
+  sec.querySelector('.pickdir').onclick=()=>{dirPick.has(id)?dirPick.delete(id):dirPick.add(id);sec.classList.toggle('on');render()};
+  for(const h of dir.hues){
+    const r=document.createElement('div');r.className='row';r.tabIndex=0;r.setAttribute('role','checkbox');r.setAttribute('aria-checked','false');
+    const close=h.distance<D.minDE;
+    r.innerHTML=`<div class="name"><span class="k"><span class="dot" style="background:${h.key}"></span>${h.name}</span><small>${h.key}</small><small class="${close?'close':''}">${close?'close to ':'nearest: '}${h.nearest} · ${h.distance}</small></div>${scale(h.light,dir.neutral.bgLight)}${scale(h.dark,dir.neutral.bgDark)}`;
+    const key=id+':'+h.name,t=()=>{huePick.has(key)?huePick.delete(key):huePick.set(key,`${h.name} (${dir.title})`);r.classList.toggle('on');r.setAttribute('aria-checked',huePick.has(key));render()};
+    r.onclick=t;r.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();t()}};
+    sec.appendChild(r);
+  }
+  $('#dirs').appendChild(sec);
+}
+$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText($('#out').textContent);$('#copy').textContent='Copied'}catch(e){const s=getSelection(),g=document.createRange();g.selectNodeContents($('#out'));s.removeAllRanges();s.addRange(g)}};
+</script>
