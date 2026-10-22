@@ -8,3 +8,5 @@ to summon it in a particular state, the same way agents do when they test it. Pr
 `hammerspoon://claude-control-demo?tier=light|full` previews the take-control banner.
 Proposed shape: one `hammerspoon://demo?id=<thing>&state=<state>` route backed by a small registry,
 listed in a "Demos" submenu of the ⚙︎ AI-OS menu; Swift apps take `--demo <state>`. Status: proposed, awaiting Matt's OK.
+
+- **Action buttons/links in chat (2026-10-21)**: custom clickable links or buttons in project threads, wired to commands on the Mac (e.g. "summon this HUD in state X"), so Matt can trigger things the way agents do when testing. Could unlock a lot of modding of the project page. First try: `hammerspoon://` links in a thread reply weren't clickable.

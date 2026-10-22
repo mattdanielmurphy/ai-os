@@ -61,3 +61,9 @@
 - Most likely trigger: my own `hs -c` checks, killed by a 5 s watchdog right after the hot reload, possibly together with the other thread's testing. My code change itself isn't on the stack.
 - I didn't relaunch Hammerspoon (coordinator asked Matt).
 - Possible fix for later: avoid `hs -c` straight after a reload, or make the CLI wrapper wait for reload to settle.
+
+## 21:14 Links failed; mods question
+
+- `hammerspoon://` links in a thread reply didn't work (the app likely doesn't open custom URL schemes). Terminal fallback: `open -g "hammerspoon://claude-control-demo?tier=light"`.
+- Mods: per the code-project-parity memory (verified 2026-10-20), mod hooks (prompt.submit etc.) DO run in project threads, coordinator-spawned included; only what a mod draws (band, pane, toast) and the `/` menu don't show on the project page.
+- Action-button idea recorded in ai-os `IDEAS.md`; asked the coordinator to give it its own thread.
