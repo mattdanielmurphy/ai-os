@@ -43,3 +43,9 @@ celebrity voices (Snoop Dogg) are out: cloning a voice you don't own breaks Elev
 rights, so original characters only. Stack: his own `tools/voice-agent-tester` (Deepgram Voice Agent, 4 personas
 already) + Twilio for the phone leg + Sonnet via the Max plan's monthly API credit; ~$0.40 per 5-min call.
 Plan: docs/details/2026-10-22-agent-wake-up-call.md. Status: idea; build step 1 on Matt's 👍.
+
+## Shortcut registry: air traffic control for hotkeys (2026-10-22)
+One global registry of keyboard shortcuts so Matt's apps (Hammerspoon modules, trackpad-mixer, lidstay,
+launcher, etc.) never grab the same combo. Same idea as `hud_slots.json` for screen space: a shared JSON
+(e.g. `~/.hammerspoon/hotkeys.json`) each app reads to claim its keys, plus a test that fails on any clash.
+Should be a shared module every app imports. Status: idea; build on Matt's 👍.
