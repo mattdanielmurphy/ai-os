@@ -235,7 +235,8 @@ def study_line(plan, day, data_dir=ladder.DATA_DIR, cfg=None):
         return "none"
     d, parts = date.fromisoformat(day), []
     if "study" in plan["doses"]:
-        parts.append(f"today's lunch-then-study block is {plan['doses']['study']} minutes, right after lunch.")
+        parts.append(f"today's lunch-then-study block is {plan['doses']['study']} minutes, right after lunch, in SUB "
+                     "(Students' Union Building). If the public piano is free after, playing it is a bonus, never required.")
     last = d - timedelta(days=1)
     while not ladder.scheduled(cfg, "study", last):
         last -= timedelta(days=1)

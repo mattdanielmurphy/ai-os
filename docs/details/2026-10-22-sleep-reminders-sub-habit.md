@@ -39,3 +39,18 @@ Rejected: Calendar events (he said no), Apple Reminders (nagging, and against th
 ### Calendar answer
 
 Recommendation: the main calendar holds only fixed commitments (time + place you've committed to: classes, appointments, shifts, ticketed shows). Want-to events with a real time (a concert, a jam) go on a separate "Maybe" calendar he can hide. Habits and flexible intentions never go on a calendar; they live in the ladder. Why: if the calendar mixes must and maybe, he stops trusting it and misses the musts.
+
+## 09:45 SUB habit built (merged into lunch-then-study)
+
+Matt 👍'd the SUB plan. Meanwhile the "Logic catch-up and study block" thread had added a weekday "Lunch, then study" ladder habit (15 min start). Two study habits at once would break "very patient", so I merged them (default; that thread's merge question was unanswered).
+
+---
+
+### Merged into one habit
+
+- Label is now "Lunch, then study in SUB" (`services/checkin/ladder.json`).
+- Levels now 5 → 10 → 15 → 20 → 25 → 30 min (was 15 → 60), matching the approved 5-min start and his 30-min goal. Tomorrow's dose: 5 min. Today's 15-min logic block from the other thread is unchanged.
+- Growth/pull-back reuse that thread's weekday + own-track logic: +1 step per full kept week, eases after skips.
+- Morning check-in line (`daily.py study_line`) now says "in SUB" and that the public piano after is a bonus, never required.
+- Tests updated for the new label/start dose; all 18 pass.
+- Undo: separate them by reverting this commit and adding a new `sub` habit with `days` + `own_track`.

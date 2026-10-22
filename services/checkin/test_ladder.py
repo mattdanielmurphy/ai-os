@@ -30,7 +30,7 @@ class LadderTest(unittest.TestCase):
         _, plans = simulate(["hit"] * 7)  # Sun Oct 18 .. Sat Oct 24
         self.assertEqual([("study" in p["doses"]) for p in plans], [False, True, True, True, True, True, False])
         step = next(s for s in plans[1]["steps"] if s["habit"] == "study")
-        self.assertEqual((step["dose"], step["when"]), (15, "afternoon"))
+        self.assertEqual((step["dose"], step["when"]), (5, "afternoon"))
 
     def test_weekends_dont_block_weekday_habit_growth(self):
         state, _ = simulate(["hit"] * 31)
@@ -42,7 +42,7 @@ class LadderTest(unittest.TestCase):
             return dict(r, study=study) if 0 < i % 7 < 6 else r
         state, plans = simulate([day(i, 20) for i in range(15)] + [day(15, 0), day(16, 0), day(17, 20)])
         self.assertLess(plans[17]["doses"]["study"], plans[16]["doses"]["study"])
-        self.assertTrue(any("Lunch, then study eased" in c for c in plans[17]["changes"]))
+        self.assertTrue(any("Lunch, then study in SUB eased" in c for c in plans[17]["changes"]))
         self.assertEqual(plans[0]["status"], "green")
 
     def test_plan_is_idempotent_per_day(self):
