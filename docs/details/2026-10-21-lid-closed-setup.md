@@ -7,3 +7,11 @@
 - Why a file: the daemon runs as root; a user-writable file is the simplest IPC with no extra permissions. Risk: any local user can pause it (harmless).
 - Tested: dry runs (manual, future, expired, garbage, none); plain-Lua smoke test of the menu (caught a Lua 5.4 `%-I` date bug, fixed); live: writing `manual` flipped SleepDisabled to 0 within 7s, removing it flipped back to 1. Not tested: clicking the actual menu items.
 - Undo: remove the `lid_sleep` line from `menu_bar.lua`; lidstay ignores a missing pause file.
+
+## 18:20 Standalone menu bar icon for Tyler
+- Asked: when Tyler installs lidstay he gets a menu bar icon just for lidstay; Matt keeps his ⚙︎ Lid submenu.
+- Did: `menubar.swift` (AppKit status item, SF Symbols laptop/moon), same items as lid_sleep.lua. install.sh compiles it with swiftc (ships with git's Command Line Tools, so Tyler already has it) and loads user LaunchAgent `local.lidstay.menu`. KeepAlive only on crash, so "Quit" stays quit until login.
+- Decision: default on, auto-off if `~/.hammerspoon/modules/lid_sleep.lua` exists, so Matt's reinstalls never add a second icon. Override `MENUBAR=1|0`.
+- Rejected: SwiftBar/xbar (Tyler would need another app), Hammerspoon (same).
+- Tested: compiles; launched 4s without crashing. Not tested: icon visible (screenshot missed menu bar), menu clicks, the install.sh run itself (needs sudo).
+- Undo: `MENUBAR=0 ./install.sh` or `./uninstall.sh`; revert lidstay commit 7e70d2b.
