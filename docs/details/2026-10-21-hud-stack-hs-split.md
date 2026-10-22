@@ -78,3 +78,21 @@ A module whose `stop()` doesn't undo everything `start()` made (hotkeys, event t
 Left alone: another session's uncommitted `_keyprobe` TEMP line in init.lua (not included in my commit).
 
 Undo: `git -C ~/.hammerspoon revert 388576a`.
+
+## 21:16 Self-cleaning hot reload + the crash
+
+Matt: "I have no memory" — so double-firing must be caught by the system, not by him noticing. (His sticky-notes/shortcut-tutor idea went to a separate thread per the coordinator.)
+
+---
+
+### leak sweep
+
+`module_manager.lua` now wraps the constructors for hotkeys, key/event taps, timers, canvases, webviews, pathwatchers, tasks and app/screen/usb/caffeinate watchers. While a module's `start()` runs, everything it creates is recorded. On hot reload, after the old `stop()`, anything still active is logged (`⚠️ hot reload leak` in the console + `~/.hammerspoon/cache/hot_reload_leaks.log`) and stopped/deleted, so the new copy can't double up. Tested: a fake module that leaked a repeating timer was caught and cleaned; eye_breaks, song_key and claude_warm hot-reloaded with no leaks and Hammerspoon stayed up. Not covered: objects created at require time or later inside callbacks; hotkeys can't report "enabled", so they're deleted silently rather than logged.
+
+---
+
+### crash cause
+
+Hammerspoon crashed at 20:57:38 (crash report: SIGTRAP in `ipc_sendMessage`). My checks wrapped `hs -c` in a perl alarm; when one timed out, the CLI process died and Hammerspoon crashed sending the reply to its dead port. AG_CONTEXT actually recommended that alarm pattern, so other agents would hit it too. Fixes: init.lua now skips replies to ports already invalid (narrows it, not proven to catch every race: I didn't re-run the crash on purpose); AG_CONTEXT now says never kill an `hs -c` client, run slow checks in the background instead. Matt relaunched Hammerspoon after his 👍.
+
+Commit 79f06a6 in ~/.hammerspoon. Undo: `git -C ~/.hammerspoon revert 79f06a6`.
