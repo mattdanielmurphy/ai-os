@@ -43,3 +43,16 @@ Test worktree: 4 MB of disk (vs 450 MB before today, 112 MB after untracking nod
 
 ### Not switched on yet
 Rejected switching it on silently: it would run for every repo's new threads on the Mac, and it relies on undocumented app behaviour; if the hook errors, threads can't start. Also, the app's own pool/cleanup skips hook-made worktrees (fine at ~0 MB each). Switch on = add WorktreeCreate/WorktreeRemove entries in `~/.claude/settings.json` pointing at the script; undo = remove them.
+
+---
+
+## 11:17 Clone hook switched on
+
+### Switched on
+Matt 👍'd. Added `WorktreeCreate` (timeout 120 s) and `WorktreeRemove` (60 s) hooks to `~/.claude/settings.json`, both running `python3 ~/projects/ai-os/scripts/clone_worktree.py`. Backup of the old settings: `ai-os/tmp/settings.json.bak-*`.
+
+### Hardening before switch-on
+Fetch timeout no longer raises; an existing `claude/<name>` branch is reused instead of failing; remove no longer uses `--force`, so a worktree with uncommitted changes is kept (hook exits 1). Tested create + remove via the stdin contract on ai-os (4,431 files cloned in 2.4 s) and ~/.hammerspoon; dirty remove kept the folder, clean remove deleted it.
+
+### Undo
+Delete the two entries under `hooks` in `~/.claude/settings.json`. Log: `~/Library/Logs/clone_worktree.log`.

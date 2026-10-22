@@ -46,8 +46,11 @@ def start_ref(base):
     ref = git(base, "symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD", check=False).strip()
     if ref:
         branch = ref.split("/", 1)[1]
-        subprocess.run(["git", "-C", base, "fetch", "-q", "origin", branch],
-                       capture_output=True, timeout=20)
+        try:
+            subprocess.run(["git", "-C", base, "fetch", "-q", "origin", branch],
+                           capture_output=True, timeout=20)
+        except subprocess.TimeoutExpired:
+            pass                                    # offline: start from the last fetch
         return ref
     return "HEAD"
 
@@ -77,7 +80,11 @@ def create(base, name):
     wt = os.path.join(base, ".claude", "worktrees", name)
     branch = f"claude/{name}"
     start = start_ref(base)
-    git(base, "worktree", "add", "--no-checkout", "-q", "-b", branch, wt, start)
+    if git(base, "rev-parse", "-q", "--verify", f"refs/heads/{branch}", check=False).strip():
+        git(base, "worktree", "add", "--no-checkout", "-q", wt, branch)
+        start = branch
+    else:
+        git(base, "worktree", "add", "--no-checkout", "-q", "-b", branch, wt, start)
     t0 = time.time()
     try:
         cloned = clone_files(base, wt, start)
@@ -92,8 +99,11 @@ def create(base, name):
 
 
 def remove(path, base):
-    git(base, "worktree", "remove", "--force", path, check=False)
-    log(f"remove {path}")
+    # No --force: a worktree with uncommitted changes stays, like the app's own cleanup.
+    r = subprocess.run(["git", "-C", base, "worktree", "remove", path], capture_output=True, text=True)
+    log(f"remove {path}: {'ok' if r.returncode == 0 else 'kept: ' + r.stderr.strip()}")
+    if r.returncode != 0:
+        sys.exit(1)
 
 
 def main():
