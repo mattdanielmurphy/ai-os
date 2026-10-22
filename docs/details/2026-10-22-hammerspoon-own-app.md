@@ -44,3 +44,14 @@ Searched for an existing rebrand tool or Spoon: found none.
 Default suggestion "AI-OS" (the menu is already "AI-OS Controls"). Matt's call.
 
 Recorded the vision in `~/.hammerspoon/IDEAS.md`.
+
+## 17:20 The app is the utilities suite
+
+Matt: the own-app idea is almost the same as the mac-utilities suite. Agreed: the suite (toggleable modules in
+`modules/suite.lua`, ⚙︎ menu, hourly self-update, `UTILITIES.md`) already behaves like an app. So the name belongs
+to the suite, and option 1 should rename the suite, the ⚙︎ menu and the mac-utilities repo together.
+
+Changed the default name from "AI-OS" to "Mac Utilities": AI-OS is his agent setup, and the suite already matches
+the mac-utilities repo. Rename later is cheap. Option 2 (renamed .app) stays a per-Mac step, not shipped in the suite.
+
+The 2FA "G-" ask that arrived alongside is already handled in its own thread (MessAuto regex), so not touched here.
