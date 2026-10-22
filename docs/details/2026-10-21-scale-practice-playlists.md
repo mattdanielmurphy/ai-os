@@ -39,3 +39,13 @@ It picks D, B♭, A and E♭ 12-bar blues (shuffle + slow), Joplin rags in B♭ 
 ### Undo
 
 Delete the `🎹 Scale Practice` folder in Music. Comments: search tracks whose comment contains "Scale:". Scripts and how to rerun: `~/projects/ai-os/scripts/scale-playlists/README.md`.
+
+## 23:52 Backing tracks added
+
+Matt was already signed in to music.apple.com in the built-in browser pane (my first check ran before the page finished loading and saw a "Sign In" button). I added the 4 albums to his library with the web player's + button (he okayed library adds), then ran `add_backing.applescript`: `🎹 Blues & Ragtime` has 16 tracks, `🎹 Modal backing (D & A)` has 14. All 30 of 30 were found. Side effect: those 4 albums (80 tracks) are now in his library. To undo, remove the albums in Music.
+
+---
+
+### Web player works for Apple Music
+
+Saved method: the desktop Music app is blocked for computer use, but music.apple.com in the built-in browser pane is signed in and can add albums. Library tracks can then be put into playlists by AppleScript.
