@@ -33,3 +33,25 @@ AA Terms of Use (artificialanalysis.ai/docs/legal/Terms-of-Use.pdf): no scraping
 3. Drop cost from public charts entirely (score vs speed only).
 
 Undo: git revert d00fde5 in model-charts.
+
+## 22:45 Email revised: link + chart code offer
+
+Matt asked (via coordinator) to add https://www.mattmurphy.ca/projects/model-charts and say AA is welcome to use his 3D chart code. The original card text wasn't saved anywhere I could find, so I rewrote the email from the handoff's points (cost-per-task in free API; else weekly read with attribution or pay per call).
+
+---
+
+### Repo is private
+
+model-charts on GitHub is private, so the email offers to send the code on request instead of linking it. Making it public would be Matt's call.
+
+---
+
+### No general contact address
+
+AA's site only lists media@ and critpt@ addresses. No general/API inbox found, so the To field is left for Matt (their site contact form or media@ are the options).
+
+---
+
+### Mail not opened
+
+claude-control returned "hammerspoon unreachable", so I didn't open Mail (opening apps needs clearance). Draft also saved at model-charts/tmp/aa-email.txt (gitignored).
