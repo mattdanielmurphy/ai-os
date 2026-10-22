@@ -6,7 +6,7 @@ price. This reads the thread straight from its transcript file instead, has Haik
 /_handoff-style brief in a throwaway session, and gives back a one-line paste prompt for a
 new thread. The old thread is never sent to its own model again.
 
-  python3 scripts/cold_handoff.py status <session_id>          # JSON: lastAt, ttlSec, tokens
+  python3 scripts/cold_handoff.py status <session_id>          # JSON: lastAt, ttlSec, tokens, project
   python3 scripts/cold_handoff.py write <session_id> [--open]  # JSON: path, prompt
 
 `write --open` also copies the paste prompt to the clipboard and opens a new Code thread
@@ -75,8 +75,11 @@ def find_transcript(sid):
 
 def status(path):
     """Time of the last model response, its cache lifetime and the context it carried."""
-    last_at, ttl, tokens = None, None, 0
+    last_at, ttl, tokens, project = None, None, 0, False
     for line in path.open(encoding="utf-8", errors="replace"):
+        # A Claude project thread: its messages arrive wrapped in <wake> envelopes.
+        if not project and '"type":"user"' in line.replace(" ", "") and "<wake " in line:
+            project = True
         try:
             d = json.loads(line)
         except json.JSONDecodeError:
@@ -97,7 +100,7 @@ def status(path):
     ms = None
     if last_at:
         ms = int(datetime.datetime.fromisoformat(last_at.replace("Z", "+00:00")).timestamp() * 1000)
-    return {"lastAt": ms, "ttlSec": ttl or DEFAULT_TTL, "tokens": tokens}
+    return {"lastAt": ms, "ttlSec": ttl or DEFAULT_TTL, "tokens": tokens, "project": project}
 
 
 def project_root(cwd):

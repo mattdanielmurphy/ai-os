@@ -216,6 +216,20 @@ test('other system turns still pass while a message is held', async ($, on) => {
   expect(entered).toHaveLength(2)
 })
 
+test('in a project thread, a message without the envelope is still held the thread way', async ($, on) => {
+  const { entered, calls } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('hi', 'cmsg_M0'))) // held; marks the session as a project thread
+  await $.prompt.submit(phone(wake('here', 'cmsg_M1'))) // sends it on
+  entered.length = 0
+  calls.length = 0
+  const out = await $.prompt.submit(phone('Matt · 9:32 PM\nthis is 100% not held'))
+  expect(out.drop).toMatch(/Held \(project thread\)/)
+  expect(calls.some(c => c.tool === 'mcp__hearthbot__reply')).toBe(true)
+  // A second message is his answer, never a "send again" pass-through.
+  expect((await $.prompt.submit(phone(wake('(don\'t stop it!)', 'cmsg_M2')))).drop).toMatch(/Fresh thread requested/)
+  expect(entered).toHaveLength(0)
+})
+
 test('a cold project message goes through when the thread reply cannot be posted', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   const entered: string[] = []

@@ -27,6 +27,7 @@ const handoff = atom({ plugin: 'context-alert', key: 'handoff' } as const, null)
 const sendAnywayUntil = atom({ plugin: 'context-alert', key: 'sendAnywayUntil' } as const, 0)
 const held = atom({ plugin: 'context-alert', key: 'held' } as const, '')
 const projectHeld = atom({ plugin: 'context-alert', key: 'projectHeld' } as const, '')
+const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
 
 export const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -236,7 +237,8 @@ export const register: Register = on => {
       await update($, now, () => t)
       const run = await $.process.run(['python3', script($), 'status', await $.session.id()])
       if (run.exitCode !== 0) return
-      const s = JSON.parse(run.stdout) as { lastAt: number | null; ttlSec: number; tokens: number }
+      const s = JSON.parse(run.stdout) as { lastAt: number | null; ttlSec: number; tokens: number; project?: boolean }
+      if (s.project) await update($, inProject, () => true)
       if (s.lastAt === null) return
       const fromFile: Cache = { lastAt: s.lastAt, ttlMs: s.ttlSec * 1000, tokens: s.tokens }
       await update($, cache, c => c ?? fromFile)
@@ -275,7 +277,12 @@ export const register: Register = on => {
   on('prompt.submit', async ($, e, next) => {
     if (e.command !== undefined) return next(e)
     const isPerson = ['composer', 'bridge', 'sdk'].includes(e.origin.kind) && !e.isMeta
-    const pending = isProjectMessage(e.text) ? await read($, projectHeld) : ''
+    // A project thread is known by any earlier <wake>, not only this message's: after the Mac
+    // reconnects, a queued message can arrive without the envelope and was held the Code-tab
+    // way, so a second message slipped through as "send again" (2026-10-22).
+    if (isProjectMessage(e.text)) await update($, inProject, () => true)
+    const project = isProjectMessage(e.text) || (await read($, inProject))
+    const pending = project ? await read($, projectHeld) : ''
     if (pending) {
       const h = JSON.parse(pending) as { body: string; id?: string }
       const kind = isPerson ? 'answer' : heldWake(e.text, h.id)
@@ -299,7 +306,10 @@ export const register: Register = on => {
 
     // A Claude project thread: the Code tab's hold note never shows on the project page, so the
     // mod says it in the thread itself and waits for Matt's go or fresh.
-    if (isProjectMessage(e.text)) {
+    if (project) {
+      await $.process.run(['mkdir', '-p', HELD_DIR]).catch(() => undefined)
+      await $.process.run(['sh', '-c', `cat >> ${HELD_DIR}/holds.log`], { stdin: `${new Date(at).toISOString()} ${JSON.stringify(e.text.slice(0, 300))}\n` })
+        .catch(() => undefined)
       const w = wakeParts(e.text)
       const posted = await $.tool.call({ tool: 'mcp__hearthbot__reply', text: heldReply(-left, tokens) })
         .then(() => true, () => false)

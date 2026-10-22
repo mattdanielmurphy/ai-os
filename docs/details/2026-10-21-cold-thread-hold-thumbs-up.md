@@ -36,3 +36,19 @@
 **So:** the hold works. "Canoodling" is the app's working indicator for the half-second the hook runs (it posts the hold note), shown before the dropped turn's end reaches the project page. It's cosmetic; the mod can't change that indicator.
 
 **No code change.**
+
+## 21:40 "This is 100% not held" — and it wasn't
+
+**What happened:** after the Mac came back online (03:32Z), Matt's first message in this thread *was* held, but by the Code-tab branch ("send it again to go ahead"), not the project-thread branch. That branch posts nothing in the thread and lets any message in the next 10 minutes through. So his second message, "(don't stop it!)", went straight to the model at full price (~223k tokens). He was right.
+
+**Why:** the mod decided "project thread or not" from each message's own text (does it start with `<wake`). The first message after the reconnect evidently didn't, so it got the Code-tab treatment. Dropped prompts aren't saved in the transcript, so its exact shape is unknown.
+
+**Fix (context-alert 0.3.5):**
+- The session remembers it's a project thread once any `<wake>` arrives, and on start reads that from its transcript (`cold_handoff.py status` now returns `project`). Any cold message in a project thread gets the thread hold note and waits for his answer; the 10-minute "send again" pass-through never applies there.
+- Every project hold appends the first 300 chars of the held message to `tmp/held/holds.log`, so the next odd format can be seen.
+
+**Tested:** 16/16 mod tests (new one: an envelope-less message in a known project thread is held the thread way, and the next message is treated as his answer). `cold_handoff.py status` returns `project: true` on two real thread transcripts.
+
+**Live:** installed as 0.3.5; loads on the app's next restart. Not tried live yet.
+
+**Undo:** revert the commit, bump version, `claude plugin update context-alert@ai-os-mods`.

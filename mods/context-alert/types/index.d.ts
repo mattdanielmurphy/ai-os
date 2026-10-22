@@ -19,6 +19,8 @@ declare module 'claude-code' {
       held: string
       /** A project message held in a cold thread (JSON of { body, id }) until Matt says go or fresh. */
       projectHeld: string
+      /** This session is a Claude project thread (it has had a <wake> message). */
+      inProject: boolean
     }
   }
 }
