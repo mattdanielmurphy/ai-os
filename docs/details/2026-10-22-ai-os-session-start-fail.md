@@ -56,3 +56,16 @@ Fetch timeout no longer raises; an existing `claude/<name>` branch is reused ins
 
 ### Undo
 Delete the two entries under `hooks` in `~/.claude/settings.json`. Log: `~/Library/Logs/clone_worktree.log`.
+
+---
+
+## 11:47 Rolled back: the hook broke non-repo folders
+
+### What broke
+At 11:44 a thread in ~/projects (not a git repo) failed: `worktree_hook_failed`. Without a hook, the app skips worktrees for non-repo folders and runs in the folder itself. With a user-level WorktreeCreate hook it calls the hook for every new thread, including non-repo folders, and aborts the session if the hook fails; it also rejects a hook that prints the base folder, so a user-level hook can't fall back to "no copy". The clone part worked: ai-os and ~/.hammerspoon threads started fine from 11:21.
+
+### Rolled back
+11:47: removed both hooks from `~/.claude/settings.json`. Threads everywhere are back to the app's normal behaviour (plain git copies, 112 MB for ai-os).
+
+### Proposed fix
+Put the hook in ai-os's own `.claude/settings.json` instead of user settings. The app reads project hooks only from the repo the thread starts in (when that folder is the repo's top level), so ~/projects and other folders keep their normal behaviour. Writing that file was blocked by the auto-mode permission check (it changes how Claude starts), so it needs Matt's go. Unverified: whether a project-level hook runs under the same conditions as a user-level one in Remote Control starts; the plan is to test one ai-os and one ~/projects start right after.
