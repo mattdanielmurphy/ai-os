@@ -52,3 +52,11 @@ take-control banner's separate orange.
 ### Untested and risky
 
 Nothing executable changed. Undo: `git rm docs/ARCHITECTURE.md`.
+
+## 14:35 Terracotta banned
+
+Matt (via coordinator, his words): "Never ever make anything this color ever again." Swapped the interim accent
+in ARCHITECTURE.md to sage (#4F8A6C / #7FB89A); sage was already the house second hue, and green isn't on any
+banned list. Added the ban to `.rules/core_safety.md` (compiled), `.rules/web_design.md` (which used to *recommend*
+terracotta `#c96442`) and `~/.claude/CLAUDE.md`. Not changed: the mixer's live accent `#C2502F` and the take-control
+banner orange; both are listed as drift to recolour. Undo: revert the commit.

@@ -76,20 +76,20 @@ shape when the second app needs one.
 
 ## 6. One look
 
-Until the palette thread's tokens exist, these are the house style (taken from what already ships):
+Until the palette thread's tokens exist, these are the house style (neutrals taken from what already ships):
 
 - **Colour by role, not by hex.** Code names roles (`ink`, `paper`, `accent`, `track`, `muted`), each with a
   light and a dark value. Hex lives in one place per kit (today: the `Palette` enum in
   `trackpad-mixer/Sources/HUD.swift` is the reference; move it into hud-kit as `Palette.swift` and a matching
   `modules/palette.lua` the next time either is touched).
-- **Warm ink and paper neutrals, one terracotta accent** (`#C2502F` light / `#EE8C6C` dark), sage as the only
-  second hue. No purple/pink or neon gradients, no default indigo, no glassmorphism for its own sake.
+- **Warm ink and paper neutrals, one sage accent** (`#4F8A6C` light / `#7FB89A` dark, interim until the palette
+  pick). **Never terracotta, rust, burnt orange or clay** (Matt, 2026-10-22). No purple/pink or neon gradients, no default indigo, no glassmorphism for its own sake.
 - **Light by default**, dark only via the system appearance.
 - **Type:** the system font; monospaced digits for anything that counts or moves. No web fonts in native apps.
 - **Icons:** SF Symbols, tinted by role.
 - **HUD panels:** translucent paper/ink panel, rounded corners (about 8 pt), hairline track, no drop shadows.
-- **Known drift to fix when touched:** the take-control banner uses its own orange (`#FF7A1A`, `#B3401E`);
-  it should move to the accent role. Don't add new one-off hexes.
+- **Known drift to fix when touched:** the mixer's accent (`#C2502F`) and the take-control banner's orange
+  (`#FF7A1A`, `#B3401E`) are banned colours; both move to the accent role. Don't add new one-off hexes.
 - When the palette thread's master palette is adopted, its generated tokens (Swift, Lua, CSS) replace the
   hex values above; the roles stay.
 
