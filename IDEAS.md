@@ -23,4 +23,5 @@ Matt: "a very powerful tool we can use is rewards. I'm addicted to Claude", so h
 Gate Claude use behind finishing today's habit step (first likely use: the afternoon logic study block).
 Builds on the check-in habit ladder (`services/checkin/ladder.py`), so it stays gentle: tiny doses,
 grow slowly, pull back after misses, and an escape hatch that just counts as a miss.
+Refinement (Matt, 15:25): don't ask; the gate just hands him an artifact with the logic questions to do.
 Options: docs/details/2026-10-22-claude-habit-gate.md. Status: idea; build only when Matt says "make it".

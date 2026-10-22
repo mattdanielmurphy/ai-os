@@ -45,3 +45,18 @@ Recorded in `IDEAS.md` ("Earn Claude with a habit step").
 
 - Nothing built. Hooks also fire in other agents' sessions on his Mac; the gate must only check Matt-typed prompts (not relays or scheduled wakes).
 - Undo: remove the hook entry from settings and the habit from `ladder.json`.
+
+## 09:25 Refinement: the gate hands over the questions
+
+Matt: "you don't even ask me, you just give me an artifact with the logic questions" (his message looked cut off mid-sentence).
+
+---
+
+### Revised Option A logic
+
+1. After 14:00 on weekdays, if today's logic step isn't recorded, Matt's first prompt is held.
+2. Instead of a question, the hold reply links a ready-made logic artifact: today's dose worth of questions (5 min to start), from his current logic course material.
+3. Finishing the set records the step in the ladder and unlocks Claude for the day.
+4. Escape hatch kept (`skip`): passes through, counts as a miss, so the dose shrinks rather than nagging.
+
+Unresolved: where questions come from (course notes per SCHOOL.md vs generated); whether the artifact reports completion back itself (artifact database) or Matt replies `done`.
