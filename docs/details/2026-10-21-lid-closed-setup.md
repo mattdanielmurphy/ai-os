@@ -15,3 +15,10 @@
 - Rejected: SwiftBar/xbar (Tyler would need another app), Hammerspoon (same).
 - Tested: compiles; launched 4s without crashing. Not tested: icon visible (screenshot missed menu bar), menu clicks, the install.sh run itself (needs sudo).
 - Undo: `MENUBAR=0 ./install.sh` or `./uninstall.sh`; revert lidstay commit 7e70d2b.
+
+## 18:25 lidstay-only menu bar icon for Tyler
+- Asked: Tyler should get a menu bar icon just for lidstay when he fetches the repo. (Rest of that message, shared self-updating suite etc., went to the "Shared self-updating utility suite" thread per the coordinator.)
+- Two versions got built at once: mine (SwiftBar plugin, needs SwiftBar app + manual plugin-folder pick) and a duplicate thread's native `menubar.swift` (AppKit status item, built by install.sh with swiftc, per-user LaunchAgent `local.lidstay.menu`, skipped where Hammerspoon's `lid_sleep.lua` exists). Kept the native one: no extra app, auto-starts, `git pull && ./install.sh` rebuilds it. Removed the SwiftBar plugin (git rm).
+- Added: install.sh skips the icon with a hint when Command Line Tools (swiftc) are missing, instead of aborting.
+- Tested: menubar.swift compiles; binary ran 5s without crashing (with claude-control clearance). Repo is public; logged-out clone works. Not tested: clicking the icon's items, or a full install on a Mac without Hammerspoon.
+- Tyler's final prompt: posted as a card in the thread.
