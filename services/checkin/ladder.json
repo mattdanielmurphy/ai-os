@@ -15,5 +15,7 @@
     "study":      { "label": "Lunch, then study in SUB","unit": "minutes", "levels": [5, 10, 15, 20, 25, 30], "start": 0, "active": true,
                     "days": [0, 1, 2, 3, 4], "when": "afternoon", "own_track": true }
   },
-  "unlock_order": ["tea", "intention", "stretch", "water"]
+  "unlock_order": ["tea", "intention", "stretch", "water"],
+  "gate": { "_about": "habit_gate.py: after 'after' on the habit's days, Matt's first Claude prompt gets today's logic practice page; 👍/done records the dose, skip records 0.",
+            "enabled": true, "habit": "study", "after": "14:00" }
 }

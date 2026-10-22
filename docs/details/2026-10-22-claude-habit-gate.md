@@ -60,3 +60,34 @@ Matt: "you don't even ask me, you just give me an artifact with the logic questi
 4. Escape hatch kept (`skip`): passes through, counts as a miss, so the dose shrinks rather than nagging.
 
 Unresolved: where questions come from (course notes per SCHOOL.md vs generated); whether the artifact reports completion back itself (artifact database) or Matt replies `done`.
+
+## 09:55 Built and live
+
+Matt approved with 👍 (I wrongly asked him to confirm it; rule saved: approvals are "Reply 👍 to …").
+
+---
+
+### How the gate works
+
+- `services/checkin/habit_gate.py`, a Claude Code UserPromptSubmit hook, config `"gate"` in `ladder.json` (habit `study`, after 14:00, weekdays from the habit's `days`).
+- It never blocks a prompt. It adds context telling the agent to hand over today's logic practice page (an Artifact, questions ~ 1 per minute of today's study dose, answers hidden until tapped) and hold his request.
+- 👍 reaction or "done" records the dose in the ladder history and unlocks for the day; the agent then carries on with the held request. "skip" records 0 and unlocks; the ladder shrinks the dose after two short days.
+- First thread builds the page and saves its URL (`habit_gate.py url`); other threads reuse it that day.
+- Only Matt's own messages: agent/coordinator relays, side-session events, scheduled runs and non-👍 reactions pass untouched.
+- If the morning check-in already recorded study for today, no gate.
+
+---
+
+### Decisions
+
+- Context, not a hard block: a blocked prompt in a project thread would just look like Claude ignoring him (no message on the project page). Context also lets the agent resume his request after.
+- Questions generated per day by the agent from SCHOOL.md's current logic unit, not a fixed bank: always matches where he is in the course.
+- Any crash in the hook passes silently, so the gate can never lock him out.
+
+---
+
+### Untested / risks
+
+- Not yet tried live in a real afternoon thread (tests cover the logic with simulated prompts and times).
+- Each thread's agent decides how to word it; if one ignores the context, the gate just doesn't fire there.
+- Undo: set `"enabled": false` in `ladder.json`, or remove the hook line from `~/.claude/settings.json`.
