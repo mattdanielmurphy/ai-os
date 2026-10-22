@@ -191,3 +191,56 @@ input queue, slots).
 ### How to undo
 
 Nothing to undo: this review changed no code or plan text. Only this details file was added.
+
+## 14:55 No prescribed colours in the plan
+
+**What Matt asked:** make sure the plan prescribes no colours (the palette isn't picked yet), stress one unified
+system where agents never invent a colour, and plan for a big master palette (~100 apps one day) with a small
+active subset that grows when a new app needs a colour. He pointed at his earlier brand/palette thread.
+
+**What I found:** the drafting thread already made this change at 14:54 (commit bac95d4f, "Plan names no
+colours; rule: never invent a colour"). I checked the new `docs/ARCHITECTURE.md`: no hex values, no sage, no
+named hues left; only the banned list names colours, which is a ban, not a prescription. The rule line and
+`.rules/core_safety.md` now carry "never invent a colour". So I did not send a second, duplicate change.
+
+---
+
+### Already done by the drafting thread
+
+Section 6 now opens with "No colours are picked yet", then: one unified palette, agents never invent, eyeball
+or copy a colour; a large master palette sized for ~100 apps with a small active subset that a new app expands
+(recorded with the app that claimed it, never a random pick); colour by role; one palette file per system,
+generated from the master palette. Checklist item 6 and the rule line match.
+
+---
+
+### One conflict left in section 5
+
+Section 5 still says "timings, curves, sizes, opacities and **colours** are tweak knobs". That contradicts
+section 6 ("values live in one palette file ... and nowhere else") and is how drift already happens: the quote
+tool's tweaks file holds its own hex (`#2b5f75`) as a knob. Suggested wording for section 5: "Colours are not
+per-app knobs. The palette is tuned in one place (one entry in the Tweaks panel); an app's knob may choose
+which role it uses, never a hex." This is the same point as note 4 above ("One palette file for all"), so it's
+covered by Matt's 👍 on the earlier reply.
+
+---
+
+### Palette thread already planned this
+
+Matt's "Personal design system and palette" thread (Oct 21) proposed exactly this system and has been waiting
+on his 👍 since 2026-10-21 20:44: a generated master palette (Adobe Leonardo for contrast-correct steps), 24
+hues x 12 steps each in light and dark, Radix-style step jobs (1-2 backgrounds, 6-8 borders, 9 solid, 11-12
+text), 8 hues unlocked at first, and `design unlock <hue> --app <name>` to grow the subset and record the
+claim. Source in `ai-os/design/`, generating CSS variables, a Mantine theme, Swift colours and `palette.lua`.
+Simpler alternative it offered: Radix Colors as-is (31 scales).
+
+Two things to carry into that work when it restarts:
+
+- **24 hues may be short for ~100 apps** if every app claims its own hue. Because Leonardo generates scales,
+  the master can grow past 24 without re-picking; or apps share a hue and differ by role use. Decide this
+  when the palette is designed, not now.
+- **The logo thread's brand colours** ("MDMA Appothecary logo") should come from, or seed, the master palette,
+  not become a second brand palette.
+
+That thread is cold (over a day idle), so per the routing rules it restarts as a fresh thread from its
+proposal rather than being woken. Offered to Matt as 👍 = restart.
