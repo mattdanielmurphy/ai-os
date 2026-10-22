@@ -62,3 +62,19 @@ Existing tools considered: Keyboard Maestro's built-in web server (lists macros 
 Limits: tapping opens a browser tab on the Mac (a small "done" page). Works only on the Mac, not the iPhone (it can't reach localhost). Phone would need the VPS or Tailscale: out of scope for now.
 
 Plan: first one test link (banner light preview), Matt taps it from the thread. If the app opens it, build the registry. Nothing built yet; waiting for Matt's OK.
+
+## 21:30 Test action link built
+
+Matt 👍'd the test link and asked what "drawings" meant (mods' on-screen bits: the band above the prompt, side panes, toasts).
+
+---
+
+### What got built
+
+- `~/.hammerspoon/modules/action_links.lua`: `hs.httpserver` on localhost:3095, a whitelist table of path → action. Unknown paths 404; `/` lists the actions as links. The result page says "✓ done" and tries to close its tab after 1.5s (browsers may refuse).
+- `~/.puma-dev/do` = 3095, so `http://do.test/...` works.
+- Registered in `init.lua` after claude_control; started live without a Hammerspoon reload (`hs -c`), so nothing on screen changed.
+- First actions: `/demo/banner/light`, `/demo/banner/full` (call `claudeControl.demo`).
+- Tested: curl to localhost and do.test lists the actions; unknown path 404. Not tested: the actual demo trigger (that's visible, Matt taps it) and whether the chat opens http links.
+- Risk: any local web page could GET these URLs. Fine while actions are harmless previews; anything risky later needs a token or POST.
+- Undo: remove the init.lua line, `mv modules/action_links.lua ~/.Trash/`, `mv ~/.puma-dev/do ~/.Trash/`.
