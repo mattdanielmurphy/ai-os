@@ -46,3 +46,25 @@ Matt 👍'd adding a VPS key. Generated ~/.ssh/id_ed25519 on the VPS (no passphr
 Rejected: copying the Mac's gh token to the VPS (moves a secret), per-repo deploy keys (30 repos).
 
 Undo: delete the "oracle-vps" key in GitHub settings; move ~/.ssh/id_ed25519* on the VPS aside.
+
+## 23:40 VPS ready except the host start
+
+Done and tested: GitHub key added (`ssh -T git@github.com` greets mattdanielmurphy), Claude signed in (`claude auth status` loggedIn), ai-os cloned to ~/projects/ai-os on the VPS, ~/.claude/skills symlinked to ai-os/skills (103 skills), Mac's ~/.claude/CLAUDE.md copied over, and a systemd user timer `ai-os-pull.timer` runs `git pull --ff-only` every 15 min (first run succeeded). Linger is on, so user services run without a login.
+
+---
+
+### Host start was blocked
+
+I tried to install an always-on `claude remote-control --permission-mode auto` systemd service. The safety classifier blocked it as creating an unattended agent, so I didn't work around it. Matt starts it himself instead, in tmux, in default permission mode (he approves actions from the app):
+
+`ssh -t oracle-vps 'tmux new -A -s claude-rc "cd ~/projects/ai-os && ~/.local/bin/claude remote-control --name vps-ai-os"'`
+
+Accept the folder-trust prompt, then Ctrl-b d to detach. tmux doesn't survive a VPS reboot; a systemd service would, once he's happy with it (he can tell me to install it, which gives explicit authorization).
+
+---
+
+### Not carried over yet
+
+Mac settings.json hooks and plugins (paths are Mac-specific), the QMD index, MCP connectors. The global CLAUDE.md copy will go stale; not synced automatically yet.
+
+Undo: `systemctl --user disable --now ai-os-pull.timer`; remove ~/.claude/skills symlink; delete the oracle-vps key in GitHub settings.
