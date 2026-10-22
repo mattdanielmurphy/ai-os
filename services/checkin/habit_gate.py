@@ -106,11 +106,15 @@ def held_context(cfg, state, habit, t):
     if url:
         page = f"Today's practice page already exists: {url}. Give him that link."
     else:
-        page = (f"Build and publish an Artifact with {n} short PHIL 120 practice questions (about {minutes} "
-                "minutes of work) for his current logic unit: read the 'Logic' line in "
-                "~/projects/ai-os/docs/SCHOOL.md for the unit and chapters. Mix symbolization and "
-                "quick-check questions; each answer stays hidden until he taps to reveal it after trying. "
-                "Light mode, his usual simple style. Then run "
+        cards = DATA_DIR / "practice" / f"{t.date().isoformat()}.json"
+        page = (f"Make today's practice page: {n} multiple-choice PHIL 120 questions (about {minutes} "
+                "minutes of work) for his current logic unit (read the 'Logic' line in "
+                "~/projects/ai-os/docs/SCHOOL.md for the unit and chapters). Mix symbolization and "
+                f"quick-check questions, 4 plausible options each. Write them as JSON to {cards} "
+                '(a list of {"prompt", "key" (optional symbol key), "options", "correct_index", "answer", '
+                f'"elaboration"}}), then run `python3 {HERE / "practice.py"} {cards}` and publish the HTML '
+                'it prints as an Artifact with capabilities {"db": {}} (same flashcard layout as the morning '
+                "check-in; never hand-write the page). Then run "
                 f"`python3 {SCRIPT} url <artifact url>` so other threads reuse the same page.")
     return (
         "HABIT GATE (Matt set this up himself on 2026-10-22: he earns Claude by doing today's logic "

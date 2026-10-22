@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Morning Check-In</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,7 +73,8 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 
 /* Recall */
 .cardmeta { display: flex; justify-content: space-between; gap: 8px; }
-.prompt { font: 600 20px/1.35 var(--body); }
+.prompt { font: 600 20px/1.35 var(--body); white-space: pre-line; }
+.key { font: 15px/1.4 var(--mono); color: var(--muted); white-space: pre-line; }
 .opts { display: grid; gap: 8px; }
 .opt { text-align: left; font: 16px/1.4 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
 .opt.right { background: var(--good-bg); border-color: var(--good); }
@@ -82,6 +84,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 .verdict { font: 600 15px/1.2 var(--display); }
 .verdict.ok { color: var(--good); } .verdict.no { color: var(--bad); }
 .rates { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rates:has(> :only-child) { grid-template-columns: 1fr; }
 .rate { font: 600 14px/1.1 var(--display); padding: 12px 4px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; display: grid; gap: 4px; }
 .rate small { font: 500 10px/1 var(--mono); color: var(--muted); letter-spacing: .04em; }
 .rate.chosen { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); opacity: 1; }
@@ -101,7 +104,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 <div class="wrap">
   <header>
     <span class="eyebrow" id="dateline"></span>
-    <h1>Good morning, Matt</h1>
+    <h1 id="title">Good morning, Matt</h1>
   </header>
   <p class="ladder" id="ladder" hidden></p>
   <nav class="progress" id="progress" aria-label="Check-in steps"></nav>
@@ -142,6 +145,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
     <div class="cardmeta"><span class="eyebrow" id="deck"></span><span class="tally" id="tally"></span></div>
     <button class="btn primary" id="todone" type="button" hidden>Done reviewing</button>
     <div class="prompt" id="prompt"></div>
+    <p class="key" id="key" hidden></p>
     <div class="opts" id="opts"></div>
     <div class="reveal" id="reveal" hidden>
       <div class="verdict" id="verdict"></div>
@@ -157,8 +161,8 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
   <section class="step" id="s-done" hidden>
     <h2>Nice work</h2>
     <div class="summary" id="summary"></div>
-    <p class="lede">That's the tapping done. Now talk it through with Claude: how you're feeling and what's ahead today. Your reward is waiting at the end.</p>
-    <p class="next">Close this page and go back to the thread for part two. A question is waiting for you there.</p>
+    <p class="lede" id="donetext">That's the tapping done. Now talk it through with Claude: how you're feeling and what's ahead today. Your reward is waiting at the end.</p>
+    <p class="next" id="nextstep">Close this page and go back to the thread for part two. A question is waiting for you there.</p>
     <button class="btn" id="moreCards" type="button" hidden>Review more cards</button>
   </section>
 
@@ -170,12 +174,15 @@ const DATA = __DATA__;
 const PLAN = DATA.plan || { doses: { breaths: 3, cards: 3, gratitude: 1 }, steps: [], changes: [] };
 const BREATHS = PLAN.doses.breaths || 3;
 const EXTRAS = (PLAN.steps || []).filter(x => !x.when && !["breaths", "gratitude", "cards", "reflection"].includes(x.habit));
-const STEPS = [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
+/* Practice mode (habit gate's study page, practice.py): just the cards, no breaths/gratitude, no FSRS ratings. */
+const PRACTICE = DATA.mode === "practice";
+const STEPS = PRACTICE ? [["recall","Practice"],["done","Done"]]
+  : [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
 const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
 const TARGET = PLAN.doses.cards || 3; // after this many cards the Done button becomes the main call to action
 const $ = id => document.getElementById(id);
 
-let state = { date: DATA.date, step: "breathe", reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], skipped: [], finishedAt: null };
+let state = { date: DATA.date, step: STEPS[0][0], reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], skipped: [], finishedAt: null };
 const stepIndex = k => STEPS.findIndex(([s]) => s === k);
 let cardIdx = 0, picked = null, rating = false, touched = false;
 const BUILD = "v6";
@@ -191,12 +198,17 @@ const WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "E
 $("btitle").textContent = (WORDS[BREATHS] || BREATHS) + (BREATHS === 1 ? " slow breath" : " slow breaths");
 $("bcount").textContent = `0 of ${BREATHS}`;
 if (PLAN.doses.gratitude > 1) $("gtitle").textContent = `${WORDS[PLAN.doses.gratitude]} things you're grateful for`;
-if (PLAN.changes && PLAN.changes.length) { $("ladder").textContent = PLAN.changes.join(" "); $("ladder").hidden = false; }
+if (PRACTICE) {
+  document.title = $("title").textContent = DATA.title || "Practice";
+  $("donetext").textContent = "That's today's study step done.";
+  $("nextstep").textContent = "Go back to the thread and reply 👍. Claude picks up your message from there.";
+}
+if (!PRACTICE && PLAN.changes && PLAN.changes.length) { $("ladder").textContent = PLAN.changes.join(" "); $("ladder").hidden = false; }
 
 function go(step) {
   state.step = step;
   state.reached = Math.max(state.reached || 0, stepIndex(step));
-  STEPS.forEach(([k]) => { $("s-" + k).hidden = k !== step; });
+  document.querySelectorAll("section.step").forEach(el => { el.hidden = el.id !== "s-" + step; });
   renderProgress();
   if (step === "recall") renderCard();
   if (step === "done") renderDone();
@@ -278,6 +290,7 @@ const COURSES = { forallx: "Symbolic Logic", cmput174: "CMPUT 174", music102: "W
 function deckLabel(id) {
   const m = id.match(/^forallx_ch0?(\d+)_q/);
   if (m) return `Symbolic Logic · forall x ch. ${m[1]}`;
+  if (DATA.deck) return DATA.deck;
   return COURSES[id.split("_")[0]] || id.split("_")[0];
 }
 function renderCard() {
@@ -288,6 +301,7 @@ function renderCard() {
   $("deck").textContent = deckLabel(c.card_id);
   $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length - state.skipped.length} due`;
   $("prompt").textContent = c.prompt;
+  $("key").textContent = c.key || ""; $("key").hidden = !c.key;
   $("reveal").hidden = true; $("nextnote").hidden = true;
   $("todone").hidden = state.reviews.length === 0;
   $("todone").textContent = state.reviews.length >= TARGET ? `${state.reviews.length} done · continue (or keep going below)` : "Done reviewing · continue";
@@ -313,10 +327,12 @@ function pick(oi) {
   $("answer").textContent = c.answer;
   $("elab").textContent = c.elaboration;
   const suggest = ok ? 3 : 1;
-  $("rates").replaceChildren(...RATES.map(([v, label]) => {
+  $("reveal").querySelector(".eyebrow").hidden = PRACTICE;
+  $("mistap").hidden = PRACTICE;
+  $("rates").replaceChildren(...(PRACTICE ? [[ok ? 3 : 1, "Next"]] : RATES).map(([v, label]) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "rate" + (v === suggest ? " suggest" : "");
-    b.innerHTML = `${label}<small>${v === suggest ? "tip" : "&nbsp;"}</small>`;
+    b.innerHTML = `${label}<small>${v === suggest && !PRACTICE ? "tip" : "&nbsp;"}</small>`;
     b.onclick = () => rate(v, ok, b);
     return b;
   }));
@@ -369,7 +385,7 @@ $("moreCards").onclick = () => go("recall");
 /* Done: hand over to the talk thread */
 async function renderDone() {
   const right = state.reviews.filter(r => r.correct).length;
-  const lines = [
+  const lines = PRACTICE ? [["Questions", `${right} of ${state.reviews.length} correct`]] : [
     ["Breaths", `${state.breaths} of ${BREATHS}`],
     ["Grateful for", state.gratitude || "skipped"],
     ["Cards", state.reviews.length ? `${right} of ${state.reviews.length} correct` : "none today"],
@@ -383,7 +399,7 @@ async function renderDone() {
 let dbRef = null, saving = Promise.resolve();
 function save() {
   saving = saving.then(async () => {
-    if (!dbRef) { $("status").textContent = "Not saved here. Open this page from the morning text to save."; return; }
+    if (!dbRef) { if (!PRACTICE) $("status").textContent = "Not saved here. Open this page from the morning text to save."; return; }
     try { await dbRef.set({ ...state, reviews: state.reviews }); $("status").textContent = "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
     catch (e) { $("status").textContent = "Couldn't save (" + (e && e.code || "error") + "). Tell Claude in the thread."; }
   });
@@ -392,7 +408,7 @@ function save() {
 (async () => {
   const db = await window.claude?.use?.("db");
   if (!db) return;
-  dbRef = db.doc("checkins/" + DATA.date);
+  dbRef = db.doc((PRACTICE ? "practice/" : "checkins/") + DATA.date);
   try {
     const snap = await dbRef.get();
     if (snap.exists) {
@@ -421,5 +437,5 @@ function save() {
   } catch {}
 })();
 
-renderProgress();
+if (PRACTICE) go("recall"); else renderProgress();
 </script>
