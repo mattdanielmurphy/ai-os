@@ -26,3 +26,13 @@
 **Live:** installed (0.3.4, managed scope); the app loads it after its next restart (the nightly 04:30 restart covers it).
 
 **Undo:** `git revert` the commit, bump version, `claude plugin update context-alert@ai-os-mods`.
+
+## 18:55 "Canoodling" after the hold: is it really held?
+
+**Asked:** in "Always-on piano and MIDI capture" the hold note appeared but the thread showed "Canoodling" (working), so Matt suspected the message went through anyway.
+
+**Checked:** that thread's transcript (gallant-borg 39f1c442…jsonl). At 00:50:20 the message was queued and dropped by the hook ("Held (project thread): cache expired 1h ago, ~188k tokens"). There is no API request after it: the model never ran and nothing was re-read. The session list now shows that thread as waiting on Matt, not working.
+
+**So:** the hold works. "Canoodling" is the app's working indicator for the half-second the hook runs (it posts the hold note), shown before the dropped turn's end reaches the project page. It's cosmetic; the mod can't change that indicator.
+
+**No code change.**
