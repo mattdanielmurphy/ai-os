@@ -31,3 +31,23 @@ Matt: "when I was resizing, it disappeared; prevent that happening".
 ### Undo
 
 `git revert HEAD` in trackpad-mixer and hud-kit, `./build.sh`, `scripts/restart-mixer`.
+
+## 09:55 Audio Hijack + reverse capture idea
+
+---
+
+### Hijack status
+
+Already fixed by an earlier thread (commit 242e78f, 09:42): while Audio Hijack is open, apps in its saved sessions stay untapped. Gap: an app you add to a Hijack session while it's open is picked up on the next refresh, not instantly (untested).
+
+---
+
+### Reverse capture plan
+
+Not a bad idea; the buffer is easy because the mixer already taps every app. Proposed POC:
+1. Mixer keeps a rolling 5 min buffer of everything except Music (stereo 48 kHz float ≈ 115 MB RAM; could halve with Int16).
+2. When non-Music audio stops, a small HUD button shows for ~10s (own hud_slots slot).
+3. Click → a strip with the waveform of the buffer; it pre-selects the last sound burst (silence-bounded, like Capture MIDI's guess). Drag to change the selection.
+4. Enter / button → WAV saved to ~/Desktop (or clipboard), Esc closes.
+Hard parts: the waveform picker UI, and the "guess" logic. Rejected: ScreenCaptureKit (separate capture path, duplicate permission), buying GhostTape/ReplayMac (no picker, but worth a look first).
+Existing tools: GhostTape, ReplayMac (github picccassso/ReplayMac), Hotmic.
