@@ -244,3 +244,12 @@ Two things to carry into that work when it restarts:
 
 That thread is cold (over a day idle), so per the routing rules it restarts as a fresh thread from its
 proposal rather than being woken. Offered to Matt as 👍 = restart.
+
+## 14:58 Palette restart handed to the coordinator
+
+Matt 👍'd the restart. Thread sessions can't start threads, so I asked the coordinator to start a fresh one,
+attaching Matt's palette message and a self-contained brief: his requirements (never invent a colour, master
+palette for ~100 apps, growing active subset), the old proposal as the starting point (Leonardo, 24 x 12,
+8 unlocked, `design unlock`, `ai-os/design/`), the constraints in ARCHITECTURE.md section 6 and the bans, and
+three open questions for Matt rather than for the agent (24 hues vs 100 apps, logo colours seeding the
+palette, one palette file for Swift/Lua/HTML). I did not wake the old thread (cold since Oct 21).
