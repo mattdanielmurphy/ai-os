@@ -13,9 +13,11 @@ Google Calendar, publish the page) and calls this script for the rest:
       2. Plan today, pick a fresh Cyanide & Happiness comic (and download its image), start today's talk thread
          with checkin_prompt.md as a hidden system prompt.
       3. Build the page (morning-checkin.html) with today's due cards.
-      Prints JSON: {"page": ..., "thread_url": ..., "plan": ..., "cards": ...}
+      Prints JSON: {"page": ..., "chat_url": ..., "plan": ..., "cards": ...}
+      The talk happens in a regular chat (voice works there): the prompt is saved to data/checkin-<date>.md for the
+      My Mac connector's checkin_today. --code-thread also starts the old Code thread (tmux RC session).
   daily.py send --date D [--force]
-      iMessage Matt the thread link and the page link in one message via Photon (once per day unless --force);
+      iMessage Matt the new-chat link and the page link in one message via Photon (once per day unless --force);
       his iPhone Shortcut opens both in turn, so the page sits on top of the thread.
 
 Run with the assistant venv (needs `fsrs`): services/assistant/.venv/bin/python services/checkin/daily.py ...
@@ -39,6 +41,10 @@ TMUX = "checkin-thread"
 MAX_CARDS = 20
 # Only school decks go in the check-in (Matt, 2026-10-20: no drums/music-theory/AI trivia). Card id prefix = subject.
 SCHOOL_SUBJECTS = ("forallx", "cmput174", "music102")
+# The check-in runs in a regular chat so Matt can switch to voice (Matt, 2026-10-22: "the check-in I got this
+# morning was a CODE thread, not a chat thread"). The link opens a new chat with this text typed in; he taps send,
+# and the My Mac connector's checkin_today hands it today's prompt (data/checkin-<date>.md + chat_mode.md).
+CHAT_URL = "https://claude.ai/new?q=Morning%20check-in"
 KICKOFF = f"Morning check-in: {ARTIFACT_URL}"  # the only visible first message; the instructions are a hidden system prompt
 
 
@@ -222,6 +228,30 @@ def recent_notes(day, vault=VAULT, days=4, limit=3000):
     return (text[:limit] + "…") if len(text) > limit else (text or "(none yet)")
 
 
+def study_line(plan, day, data_dir=ladder.DATA_DIR, cfg=None):
+    """The afternoon study block: today's dose, and whether to ask about the last school day (Matt, 2026-10-22)."""
+    cfg = cfg or ladder.load_config()
+    if "study" not in cfg["habits"]:
+        return "none"
+    d, parts = date.fromisoformat(day), []
+    if "study" in plan["doses"]:
+        parts.append(f"today's lunch-then-study block is {plan['doses']['study']} minutes, right after lunch, in SUB "
+                     "(Students' Union Building). If the public piano is free after, playing it is a bonus, never required.")
+    last = d - timedelta(days=1)
+    while not ladder.scheduled(cfg, "study", last):
+        last -= timedelta(days=1)
+    done = next((r.get("study") for r in ladder.read_history(data_dir) if r["date"] == last.isoformat()), None)
+    extra = f" --data-dir {data_dir}" if Path(data_dir) != ladder.DATA_DIR else ""
+    when = "yesterday" if last == d - timedelta(days=1) else last.strftime("%A")
+    if done is not None:
+        parts.append(f"{when} he studied {done} minutes (already recorded; mention it in a few words if it fits).")
+    else:
+        parts.append(f"ask once, in a few words, how {when}'s lunch-then-study block went (minutes), then record it "
+                     f"silently: `python3 {HERE}/ladder.py{extra} record --date {last.isoformat()} study=<minutes>` "
+                     f"(0 if skipped, no guilt).")
+    return " ".join(parts)
+
+
 def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=None):
     """The talk thread's hidden system prompt, from checkin_prompt.md."""
     text = (HERE / "checkin_prompt.md").read_text().split("\n---\n", 1)[1].strip()
@@ -238,6 +268,7 @@ def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=
         "early_events": "; ".join(f"{e['when']} {e['what']}" for e in events if e.get("early")) or "none",
         "recent_notes": recent_notes(day),
         "reflection_minutes": plan["doses"].get("reflection", 1),
+        "study": study_line(plan, day, data_dir),
         "here": HERE,
         "ladder_args": extra_l,
         "vault": VAULT,
@@ -249,6 +280,13 @@ def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=
     for k, v in fields.items():
         text = text.replace("{" + k + "}", str(v))
     return text
+
+
+def write_seed(seed, day, data_dir):
+    """Today's check-in prompt; the connector's checkin_today serves it to the regular chat."""
+    seed_file = Path(data_dir) / f"checkin-{day}.md"
+    seed_file.write_text(seed)
+    return seed_file
 
 
 def start_thread(seed, day, data_dir, timeout=90):
@@ -263,8 +301,7 @@ def start_thread(seed, day, data_dir, timeout=90):
     if days.get(day, {}).get("thread_url"):
         return days[day]["thread_url"]
     subprocess.run(["tmux", "kill-session", "-t", TMUX], capture_output=True)
-    seed_file = Path(data_dir) / f"checkin-{day}.md"
-    seed_file.write_text(seed)
+    seed_file = write_seed(seed, day, data_dir)
     allowed = [f"Bash(python3 {HERE}/ladder.py record:*)", "Bash(apple-reminders add:*)"]
     cmd = " ".join(shlex.quote(x) for x in [
         "/opt/homebrew/bin/claude", "--remote-control", f"Morning check-in {day}", "--model", "sonnet",
@@ -327,7 +364,12 @@ def prepare(a):
         out["comic_image_error"] = f"{type(e).__name__}: {e}"
         image = None
 
-    out["thread_url"] = start_thread(thread_seed(plan, events, comic, a.date, a.data_dir, image), a.date, a.data_dir)
+    seed = thread_seed(plan, events, comic, a.date, a.data_dir, image)
+    write_seed(seed, a.date, a.data_dir)
+    if a.code_thread:  # old Code-thread flow, kept as an opt-in fallback
+        out["thread_url"] = start_thread(seed, a.date, a.data_dir)
+    else:
+        out["chat_url"] = CHAT_URL
     page = Path(a.out) if a.out else HERE / "morning-checkin.html"
     subprocess.run([sys.executable, str(HERE / "build.py"), "--date", a.date,
                     "--cards", str(work / "cards.json"), "--out", str(page), "--data-dir", a.data_dir],
@@ -366,13 +408,12 @@ def send(a):
     if not addr.startswith("http"):
         addr = "http://" + addr
     url = addr if addr.endswith("/send") else addr + "/send"
-    thread = days.get(a.date, {}).get("thread_url")
-    if not thread:
-        raise SystemExit(f"no thread link for {a.date}; run prepare first")
-    # One message, thread link first, then the page: Matt's iPhone Shortcut opens each URL in turn, so the page
-    # opens on top of the thread and closing it lands him in the chat. (A page can't link into the app itself:
-    # claude:// does nothing there and https opens Safari; 2026-10-19.)
-    message = f"{thread}\n{ARTIFACT_URL}"
+    if not (Path(a.data_dir) / f"checkin-{a.date}.md").exists():
+        raise SystemExit(f"no check-in prompt for {a.date}; run prepare first")
+    # One message, chat link first, then the page: Matt's iPhone Shortcut opens each URL in turn, so the page
+    # opens on top of the chat and closing it lands him there. The Code thread link only if prepare --code-thread.
+    chat = days.get(a.date, {}).get("thread_url") or CHAT_URL
+    message = f"{chat}\n{ARTIFACT_URL}"
     body = json.dumps({"recipient": _recipient(), "message": message}).encode()
     req = Request(url, data=body, method="POST",
                   headers={"Content-Type": "application/json", "Authorization": f"Bearer {env['IMESSAGE_TOKEN']}"})
@@ -395,6 +436,7 @@ def main():
     p.add_argument("--events", help='JSON list of {"when", "what"} for today, plus {"early": true} '
                    'items for events before 7 AM in the next 10 days')
     p.add_argument("--out", help="page path (default: morning-checkin.html here)")
+    p.add_argument("--code-thread", action="store_true", help="also start the old Code talk thread (fallback)")
     s = sub.add_parser("send")
     s.add_argument("--date", default=date.today().isoformat())
     s.add_argument("--force", action="store_true")

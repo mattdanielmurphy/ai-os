@@ -442,7 +442,7 @@ def cmd_shift(a):
     if a.cancel:
         cfg["shift"] = None
         CONFIG.write_text(json.dumps(cfg, indent=2) + "\n")
-        print("Shift cancelled; back to the normal schedule. (Shift reminders stay in Reminders; tick them off.)")
+        print("Shift cancelled; back to the normal schedule.")
         apply_schedule(cfg, night_of(), activate=False)
         return
     up = datetime.datetime.fromisoformat(a.up_by)
@@ -462,7 +462,7 @@ def cmd_shift(a):
     if a.dry_run:
         return
     CONFIG.write_text(json.dumps(cfg, indent=2) + "\n")
-    if not a.no_reminders:
+    if a.reminders:  # off by default: Matt doesn't want bed/wake reminders (2026-10-22)
         for night, bed, wake in plan:
             bed_at = datetime.datetime.combine(night, datetime.time()) + datetime.timedelta(minutes=bed)
             wake_at = datetime.datetime.combine(night + datetime.timedelta(days=1), datetime.time()) + datetime.timedelta(minutes=wake)
@@ -506,7 +506,7 @@ def main():
     rt.add_argument("--from-bed", help="tonight's bedtime (default: whatever tonight is now)")
     rt.add_argument("--from-wake", help="tomorrow's wake time (default: whatever it is now)")
     rt.add_argument("--nights", type=int, default=0, help="nights to ease over (0 = switch tonight)")
-    rt.add_argument("--reminders", action="store_true", help="add bed/wake reminders for the easing nights")
+    rt.add_argument("--reminders", action="store_true", help="also add bed/wake reminders (Matt doesn't want them)")
     rt.add_argument("--dry-run", action="store_true")
     rt.set_defaults(fn=cmd_retime)
     sh = sub.add_parser("shift", help="gradually move bed and wake times earlier for an early event")
@@ -514,7 +514,7 @@ def main():
     sh.add_argument("--title", default="early event")
     sh.add_argument("--start", help="first night to shift (default: tonight)")
     sh.add_argument("--dry-run", action="store_true")
-    sh.add_argument("--no-reminders", action="store_true")
+    sh.add_argument("--reminders", action="store_true", help="also add bed/wake reminders (Matt doesn't want them)")
     sh.add_argument("--cancel", action="store_true")
     sh.set_defaults(fn=cmd_shift)
     r = sub.add_parser("raw")

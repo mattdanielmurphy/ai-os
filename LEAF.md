@@ -33,6 +33,8 @@
   - Agents should proactively offer to break down overwhelming or multi-step tasks into small, low-friction subtasks in Apple Reminders.
   - Do NOT create orphaned markdown to-do files in random locations that won't be actively checked on mobile.
   - **Default to creating (2026-10-20)**: When it's unclear whether something deserves a reminder, create it anyway, then ask Matt whether he wants it deleted. A missed question must still leave a reminder behind.
+  - **No sleep reminders (Matt, 2026-10-22)**: never create "go to bed" / "wake up" reminders, alarms or notifications (Reminders, Calendar, scripts like `hue.py`). The Hue lights already carry the bed/wake cues.
+  - **Habits stay off the calendar (Matt, 2026-10-22)**: new habits start tiny and grow slowly, pull back after any missed day, and live in the check-in habit ladder (`services/checkin/ladder.json`), not in Calendar.
 
 # Proactive System Directive & Knowledge Persistence
 - **Rule**: When Matt establishes a permanent workflow preference, tool routing rule, or operational invariant (e.g. "always do X from now on" or "agents must know this in every thread"):
@@ -42,6 +44,7 @@
 
 # Music Recommendations & Apple Music Links
 - When Matt asks for music recommendations, present every resolved recommendation as a direct, clickable native Apple Music URL. Resolve links deterministically through the `music-cross-linker` iTunes Search/Lookup flow, never by hand-constructing Apple Music search links or guessing catalog IDs. Explicitly flag any recommendation without an exact Apple Music Canada catalog match rather than substituting a different release.
+- **No AI-generated music, ever (Matt, 2026-10-22: "avoid AI music like the plague")**: in recommendations, playlists and backing tracks, pick only music made by real people. Prefer established artists and releases from before ~2023; skip anonymous mass-upload catalogs, "lofi/AI" channels and tracks that look generated. When unsure, leave it out and say so.
 
 # Zero-Placeholder Policy & User Context Auto-Population
 - **Rule**: Agents MUST NEVER emit generic user placeholders (e.g. `[Your Name]`, `[Your Student ID]`, `[Your CCID]`, `[Your Email]`, `[Insert Date]`) in templates, email drafts, forms, or scripts when the information exists in the project context or personal vault.
@@ -154,7 +157,7 @@
 # Quizzes & Study Sessions (2026-10-20)
 - When Matt asks to be quizzed or to study, follow the `_quiz-with-tap-menus` skill exactly: rounds of 4 questions in the built-in question menu (`AskUserQuestion`, never a widget or artifact, since those don't return his taps), `multiSelect: true` on every question so Other works as his comment channel (answer + empty Other = just guessing (counts as a miss), answer + "e" = too easy, other text = a comment to act on), each option's description left empty (no "Option A" text), right answer in a random position, score plus one line per miss, misses come back later with no giveaway (never put a correction, hint or the answer in the question or menu that tests it; corrections go only in the chat reply). Check for typed messages that arrived while a menu was open before sending the next round.
 - Outside quizzes, ask Matt questions in plain text, never in a question menu (tested 2026-10-21: menus always need a separate Submit tap, and while one is open his normal replies and Claude dictation can't reach the agent).
-- Emoji quick replies (2026-10-21): Matt may answer by reacting to an agent's message (it wakes the thread). Meanings: 👍 yes / go ahead · ❌ no, don't · ❓ didn't get it, explain simpler · ⏩ next / keep going · ✋ wait, he's typing more (do nothing yet) · ✅ done, all good, wrap up. Treat a reaction on a message that asked something as his answer. When you offer choices, make 👍 the default/recommended action and list it first (Matt, 2026-10-21: e.g. a cold-thread prompt's 👍 = fresh thread from a Haiku handoff).
+- Emoji quick replies (2026-10-21): Matt may answer by reacting to an agent's message (it wakes the thread). Meanings: 👍 yes / go ahead · ❌ no, don't · ❓ didn't get it, explain simpler · ⏩ next / keep going · ✋ wait, he's typing more (do nothing yet) · ✅ done, all good, wrap up. Treat a reaction on a message that asked something as his answer. When you offer choices, make 👍 the default/recommended action and list it first (Matt, 2026-10-21: e.g. a cold project thread now moves to a fresh thread from a Sonnet handoff by default, ⏩ keeps it). Ask for approval as "Reply 👍 to <action>", never "say <phrase>" (Matt, 2026-10-22); a 👍 on any message that offers an action means go, so never ask him to confirm it again.
 
 # Mac Automation: Take-Control Queue ("Air Traffic Control", 2026-10-21)
 - Before posting ANY synthetic keyboard, mouse or controller input on Matt's Mac (tests, app switching, pasting, hs.eventtap), get clearance: `~/.hammerspoon/bin/claude-control ask "<what and why>" 3`. It shows the orange banner and waits in a queue behind other agents; only one agent holds control at a time. Exit 0 prints `granted <ticket>`: go. Exit 1 (Esc, preempted, queue timeout): don't touch input.

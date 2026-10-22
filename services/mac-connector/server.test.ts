@@ -25,3 +25,18 @@ test("appends a new section after other sections", () => {
   appendCheckinLog("2026-10-21", ["hi"], v);
   expect(log(v)).toBe("## Gratitude\n- sun\n\n## Morning check-in\n- hi\n");
 });
+
+import { actToken, actRequest } from "./server.ts";
+test("act token is derived, not the connector token", () => {
+  expect(actToken("abc")).not.toContain("abc");
+  expect(actToken("abc")).toHaveLength(32);
+  expect(actToken("abc")).toBe(actToken("abc"));
+});
+test("review-done queues a fixed-shape note", () => {
+  const ok = actRequest(new URL("https://h/act/x/review-done?page=AbC123&thread=cmsg_01XYZ"));
+  expect(ok.status).toBe(200);
+  expect(ok.body).toContain("artifact/AbC123");
+  expect(ok.body).toContain("cmsg_01XYZ");
+  expect(actRequest(new URL("https://h/act/x/review-done?page=a%20b")).status).toBe(400);
+  expect(actRequest(new URL("https://h/act/x/rm-rf?page=a")).status).toBe(404);
+});

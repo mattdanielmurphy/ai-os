@@ -2,7 +2,7 @@
 """Hand off a thread whose prompt cache has gone cold, without reloading it.
 
 Resuming a long thread after its cache expires re-sends the whole conversation at full
-price. This reads the thread straight from its transcript file instead, has Haiku write a
+price. This reads the thread straight from its transcript file instead, has Sonnet (low effort) write a
 /_handoff-style brief in a throwaway session, and gives back a one-line paste prompt for a
 new thread. The old thread is never sent to its own model again.
 
@@ -26,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from export_claude_threads import export, slug  # noqa: E402
 
-MAX_CHARS = 400_000  # newest part of the conversation Haiku reads (~100k tokens)
+MAX_CHARS = 400_000  # newest part of the conversation Sonnet reads (~100k tokens)
 DEFAULT_TTL = 3600   # every request on this Mac so far used the 1-hour cache
 
 BRIEF = """You are writing a handoff brief so a fresh Claude Code thread can continue the work in
@@ -129,11 +129,11 @@ def write(path, sid, open_app, then=""):
     prompt = BRIEF.format(date=today, sid=sid, title=title, cut=cut) + convo
 
     run = subprocess.run(
-        ["claude", "-p", "--model", "haiku", "--no-session-persistence", "--tools", ""],
+        ["claude", "-p", "--model", "sonnet", "--effort", "low", "--no-session-persistence", "--tools", ""],
         input=prompt, capture_output=True, text=True, timeout=600)
     brief = run.stdout.strip()
     if run.returncode != 0 or not brief.startswith("#"):
-        sys.exit(f"Haiku did not write a brief: {(run.stderr or run.stdout).strip()[:300]}")
+        sys.exit(f"Sonnet did not write a brief: {(run.stderr or run.stdout).strip()[:300]}")
 
     out_dir = project_root(cwd) / "docs" / "handoffs"
     out_dir.mkdir(parents=True, exist_ok=True)

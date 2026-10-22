@@ -37,7 +37,7 @@ test('band stays hidden under 250k and appears above it', async ($, on) => {
     ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
     expect((await ui.find({ type: 'Text', text: /Context: / }))?.text).toMatch(/262k \/ 1000k/)
     expect(await ui.find({ key: 'handoff' })).toBeDefined()
-    expect(await ui.find({ key: 'haiku' })).toBeDefined()
+    expect(await ui.find({ key: 'sonnet' })).toBeDefined()
     expect((await ui.find({ type: 'Text', text: /This agent: best notes/ }))).toBeDefined()
     await ui.unmount()
   }
@@ -61,7 +61,7 @@ test('cache line counts down after a reply, then says it expired', async ($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
     expect((await ui.find({ type: 'Text', text: /Cache/ }))?.text).toMatch(/expires in 10 min/)
-    expect(await ui.find({ key: 'haiku' })).toBeDefined()
+    expect(await ui.find({ key: 'sonnet' })).toBeDefined()
     await ui.unmount()
   }
 
@@ -69,7 +69,7 @@ test('cache line counts down after a reply, then says it expired', async ($, on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
     expect((await ui.find({ type: 'Text', text: /Cache/ }))?.text).toMatch(/expired 2h ago.*80k tokens/)
-    expect(await ui.find({ type: 'Text', text: /Haiku reads the saved file/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Sonnet reads the saved file/ })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -101,7 +101,7 @@ test('a message sent into a cold thread is held once, then goes through', async 
 
   await clock.advance(2 * 60 * MIN)
   const held = await $.prompt.submit(phone('cold'))
-  expect(held.drop).toMatch(/expired 1h ago.*180k tokens.*\/haiku-handoff/)
+  expect(held.drop).toMatch(/expired 1h ago.*180k tokens.*\/cold-handoff/)
   expect((await $.prompt.submit(phone('cold'))).drop).toBeUndefined()
   expect(entered).toEqual(['warm', 'cold'])
 })
@@ -121,14 +121,19 @@ const projectSetup = async ($: any, on: any) => {
   on('session.id', () => ({ value: 's1' }))
   on('prompt.submit', (_$: unknown, e: any) => { entered.push({ text: e.text, context: e.context }); return { text: e.text } })
   on('tool.call', (_$: unknown, e: any) => { calls.push(e); return { result: 'ok' } })
-  on('process.run', () => {
+  // The handoff takes about a minute for real; here it waits until the test calls finish().
+  let finish = () => {}
+  const written = new Promise<void>(r => { finish = r })
+  on('process.run', async (_$: unknown, e: any) => {
+    if (e.argv.includes('write')) await written
     const stdout = JSON.stringify({ path: '/h.md', prompt: 'Read /h.md and continue. Then: is it done?' })
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
   })
   await $.session.measure(measure(180_000))
   await $.turn.complete(answered)
   await clock.advance(3 * 60 * MIN)
-  return { clock, entered, calls }
+  const settle = async () => { finish(); for (let i = 0; i < 50; i++) await new Promise(r => setTimeout(r, 0)) }
+  return { clock, entered, calls, settle }
 }
 
 test('a cold project message is held and Matt is asked in the thread; "here" sends it on', async ($, on) => {
@@ -137,17 +142,19 @@ test('a cold project message is held and Matt is asked in the thread; "here" sen
   expect(out.drop).toMatch(/Held \(project thread\)/)
   expect(entered).toHaveLength(0)
   const ask = calls.find(c => c.tool === 'mcp__hearthbot__reply')
-  expect(String(ask?.text)).toMatch(/Held, nothing sent yet.*expired 2h ago.*~180k tokens/s)
+  expect(String(ask?.text)).toMatch(/expired 2h ago, so this moves to a fresh thread.*~180k tokens/s)
 
   expect((await $.prompt.submit(phone(wake('here', 'cmsg_M2')))).drop).toBeUndefined()
   expect(entered).toHaveLength(1)
   expect(entered[0].context?.join('\n')).toMatch(/Matt said go ahead.*is it done\?/)
 })
 
-test('any other reply (the default) asks the coordinator for a new thread from the Haiku handoff', async ($, on) => {
-  const { entered, calls } = await projectSetup($, on)
+test('any other reply (the default) asks the coordinator for a new thread from the handoff', async ($, on) => {
+  const { entered, calls, settle } = await projectSetup($, on)
   await $.prompt.submit(phone(wake('is it done?')))
-  const out = await $.prompt.submit(phone(wake('sounds good', 'cmsg_M2')))
+  const pending = $.prompt.submit(phone(wake('sounds good', 'cmsg_M2')))
+  await settle()
+  const out = await pending
   expect(out.drop).toMatch(/Fresh thread requested/)
   expect(entered).toHaveLength(0)
   const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
@@ -162,14 +169,57 @@ const reacted = (emoji: string, reactors = 'user_M') =>
   `  <reactions channel="chan_1" thread_ts="cmsg_T1">\n    <reaction emoji="${emoji}" count="1" message_ts="cmsg_HOLD" message_from="Claude (you)" reactors="${reactors}"></reaction>\n  </reactions>\n</wake>`
 const edited = (body: string, id = 'cmsg_M1') => wake(body, id).replace('reason="mention"', 'reason="message-edited"')
 
-test('a 👍 reaction on the hold note starts the fresh thread', async ($, on) => {
-  const { entered, calls } = await projectSetup($, on)
+test('with no answer, the held message moves to a fresh thread once the handoff is written', async ($, on) => {
+  const { entered, calls, settle } = await projectSetup($, on)
   await $.prompt.submit(phone(wake('is it done?')))
-  const out = await $.prompt.submit(system(reacted('👍')))
+  expect(calls.some(c => c.tool === 'mcp__claude-code-remote__send_message')).toBe(false)
+  await settle()
+  const asks = calls.filter(c => c.tool === 'mcp__claude-code-remote__send_message')
+  expect(asks).toHaveLength(1)
+  expect(String(asks[0].message)).toMatch(/His held message: is it done\?.*#cmsg_T1.*context-alert handed-off:/s)
+  expect(entered).toHaveLength(0)
+  // Answered and cleared: a later message is not treated as an answer to it.
+  expect((await $.prompt.submit(system(reacted('👍')))).drop).toBeUndefined()
+})
+
+test('⏩ before the handoff is written keeps it here; nothing moves', async ($, on) => {
+  const { calls, entered, settle } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  expect((await $.prompt.submit(system(reacted('⏩')))).drop).toBeUndefined()
+  await settle()
+  expect(calls.some(c => c.tool === 'mcp__claude-code-remote__send_message')).toBe(false)
+  expect(entered).toHaveLength(1)
+})
+
+test('✋ stops the automatic move until his next message', async ($, on) => {
+  const { calls, settle } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  await $.prompt.submit(system(reacted('✋')))
+  await settle()
+  expect(calls.some(c => c.tool === 'mcp__claude-code-remote__send_message')).toBe(false)
+  expect((await $.prompt.submit(phone(wake('ok go', 'cmsg_M2')))).drop).toMatch(/Fresh thread requested/)
+})
+
+test("the coordinator's handed-off note gets the link line, and never reaches the model", async ($, on) => {
+  const { calls, entered } = await projectSetup($, on)
+  const note = '<relay from="coordinator" session="s" current-time="t" reason="relay">\n  <note>context-alert handed-off: cmsg_NEW1</note>\n</relay>'
+  const out = await $.prompt.submit(system(note))
+  expect(out.drop).toMatch(/Handed off to cmsg_NEW1/)
+  expect(entered).toHaveLength(0)
+  const line = calls.find(c => c.tool === 'mcp__hearthbot__reply')
+  expect(String(line?.text)).toMatch(/Handed off to \[the new thread\]\(#cmsg_NEW1\) because the cache expired/)
+})
+
+test('a 👍 reaction on the hold note starts the fresh thread', async ($, on) => {
+  const { entered, calls, settle } = await projectSetup($, on)
+  await $.prompt.submit(phone(wake('is it done?')))
+  const pending = $.prompt.submit(system(reacted('👍')))
+  await settle()
+  const out = await pending
   expect(out.drop).toMatch(/Fresh thread requested/)
   expect(entered).toHaveLength(0)
   const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
-  expect(String(ask?.message)).toMatch(/His held message: is it done\?$/)
+  expect(String(ask?.message)).toMatch(/His held message: is it done\?\n\nLinks:/)
 })
 
 test('a ⏩ reaction sends the held message on here', async ($, on) => {
@@ -189,19 +239,21 @@ test('❌ drops the held message; ✋ keeps holding', async ($, on) => {
 })
 
 test('editing the held message keeps it held with the new text', async ($, on) => {
-  const { entered, calls } = await projectSetup($, on)
+  const { entered, calls, settle } = await projectSetup($, on)
   await $.prompt.submit(phone(wake('is it done?')))
   expect((await $.prompt.submit(system(edited('is it done yet?')))).drop).toMatch(/still held/)
   expect(entered).toHaveLength(0)
-  await $.prompt.submit(system(reacted('👍')))
+  await settle()
   const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
   expect(String(ask?.message)).toMatch(/His held message: is it done yet\?/)
 })
 
 test('a follow-up message while held goes to the fresh thread with the held one', async ($, on) => {
-  const { entered, calls } = await projectSetup($, on)
+  const { entered, calls, settle } = await projectSetup($, on)
   await $.prompt.submit(phone(wake('is it done?')))
-  const out = await $.prompt.submit(phone(wake('also check the logs', 'cmsg_M2')))
+  const pending = $.prompt.submit(phone(wake('also check the logs', 'cmsg_M2')))
+  await settle()
+  const out = await pending
   expect(out.drop).toMatch(/Fresh thread requested/)
   expect(entered).toHaveLength(0)
   const ask = calls.find(c => c.tool === 'mcp__claude-code-remote__send_message')
@@ -217,7 +269,7 @@ test('other system turns still pass while a message is held', async ($, on) => {
 })
 
 test('in a project thread, a message without the envelope is still held the thread way', async ($, on) => {
-  const { entered, calls } = await projectSetup($, on)
+  const { entered, calls, settle } = await projectSetup($, on)
   await $.prompt.submit(phone(wake('hi', 'cmsg_M0'))) // held; marks the session as a project thread
   await $.prompt.submit(phone(wake('here', 'cmsg_M1'))) // sends it on
   entered.length = 0
@@ -226,7 +278,9 @@ test('in a project thread, a message without the envelope is still held the thre
   expect(out.drop).toMatch(/Held \(project thread\)/)
   expect(calls.some(c => c.tool === 'mcp__hearthbot__reply')).toBe(true)
   // A second message is his answer, never a "send again" pass-through.
-  expect((await $.prompt.submit(phone(wake('(don\'t stop it!)', 'cmsg_M2')))).drop).toMatch(/Fresh thread requested/)
+  const pending = $.prompt.submit(phone(wake('(don\'t stop it!)', 'cmsg_M2')))
+  await settle()
+  expect((await pending).drop).toMatch(/Fresh thread requested/)
   expect(entered).toHaveLength(0)
 })
 

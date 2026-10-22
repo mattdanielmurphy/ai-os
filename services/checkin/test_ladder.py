@@ -24,7 +24,25 @@ def simulate(days, cfg=None):
 class LadderTest(unittest.TestCase):
     def test_starts_at_current_doses(self):
         _, plans = simulate(["hit"])
-        self.assertEqual(plans[0]["doses"], {"breaths": 3, "gratitude": 1, "cards": 1, "reflection": 1})
+        self.assertEqual(plans[0]["doses"], {"breaths": 3, "gratitude": 1, "cards": 1, "reflection": 1})  # Sunday
+
+    def test_weekday_habit_only_on_its_days(self):
+        _, plans = simulate(["hit"] * 7)  # Sun Oct 18 .. Sat Oct 24
+        self.assertEqual([("study" in p["doses"]) for p in plans], [False, True, True, True, True, True, False])
+        step = next(s for s in plans[1]["steps"] if s["habit"] == "study")
+        self.assertEqual((step["dose"], step["when"]), (5, "afternoon"))
+
+    def test_weekends_dont_block_weekday_habit_growth(self):
+        state, _ = simulate(["hit"] * 31)
+        self.assertTrue(any(e["kind"] == "up" and e["habit"] == "study" for e in state["events"]))
+
+    def test_skipped_study_twice_eases_it(self):
+        def day(i, study):
+            r = {"breaths": 3, "gratitude": 1, "cards": 1, "reflection": 1}
+            return dict(r, study=study) if 0 < i % 7 < 6 else r
+        state, plans = simulate([day(i, 20) for i in range(15)] + [day(15, 0), day(16, 0), day(17, 20)])
+        self.assertLess(plans[17]["doses"]["study"], plans[16]["doses"]["study"])
+        self.assertTrue(any("Lunch, then study in SUB eased" in c for c in plans[17]["changes"]))
         self.assertEqual(plans[0]["status"], "green")
 
     def test_plan_is_idempotent_per_day(self):
@@ -37,11 +55,12 @@ class LadderTest(unittest.TestCase):
 
     def test_grows_once_a_week_and_adds_a_step_within_a_month(self):
         state, plans = simulate(["hit"] * 31)
-        ups = [e for e in state["events"] if e["kind"] == "up"]
-        unlocks = [e for e in state["events"] if e["kind"] == "unlock"]
+        shared = [e for e in state["events"] if e["habit"] != "study"]  # study grows on its own clock
+        ups = [e for e in shared if e["kind"] == "up"]
+        unlocks = [e for e in shared if e["kind"] == "unlock"]
         self.assertGreaterEqual(len(ups), 2)
         self.assertGreaterEqual(len(unlocks), 1)
-        change_days = [p["date"] for p in plans if p["changes"]]
+        change_days = sorted({e["date"] for e in shared})
         gaps = [(date.fromisoformat(b) - date.fromisoformat(a)).days for a, b in zip(change_days, change_days[1:])]
         self.assertTrue(all(g >= 7 for g in gaps), gaps)
 
@@ -60,7 +79,8 @@ class LadderTest(unittest.TestCase):
         _, plans = simulate(["hit"] * 8 + [None, None, "hit"])
         p = plans[10]
         self.assertEqual(p["status"], "panic")
-        self.assertEqual(p["doses"], {"breaths": 1, "gratitude": 1, "cards": 1, "reflection": 1})
+        self.assertEqual({k: v for k, v in p["doses"].items() if k != "study"},
+                         {"breaths": 1, "gratitude": 1, "cards": 1, "reflection": 1})
 
     def test_penalty_applies_once_not_every_day(self):
         state, plans = simulate(["hit"] * 8 + [None] + ["hit"] * 3)

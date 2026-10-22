@@ -1,6 +1,6 @@
 ---
 name: _handoff
-description: Write a lean, chain-linked handoff so work can continue in a fresh thread. For a cold thread named from a new one, Haiku writes it from the transcript file. Use when Matt types /handoff or /_handoff, says the thread is getting long, or asks to start fresh, save progress or hand off. Links every earlier thread in the chain, summarizes the whole chain, states the current task and what to keep in mind, then gives a one-line paste prompt.
+description: Write a lean, chain-linked handoff so work can continue in a fresh thread. For a cold thread named from a new one, Sonnet (low effort) writes it from the transcript file. Use when Matt types /handoff or /_handoff, says the thread is getting long, or asks to start fresh, save progress or hand off. Links every earlier thread in the chain, summarizes the whole chain, states the current task and what to keep in mind, then gives a one-line paste prompt.
 argument-hint: [optional focus, e.g. "just the mod spike"]
 ---
 
@@ -24,8 +24,8 @@ don't open or message that thread. A cold thread re-reads its whole context at f
    `grep -l "<distinctive words>" ~/.claude/projects/*/*.jsonl | xargs ls -t | head -5`. If several fit, ask.
 2. `python3 ~/projects/ai-os/scripts/cold_handoff.py status <sid>` gives `lastAt` (ms) and `ttlSec`.
    It's cold when now minus `lastAt` is more than `ttlSec`.
-3. **Cold:** `python3 ~/projects/ai-os/scripts/cold_handoff.py write <sid>`. Haiku reads the
-   transcript file and writes the brief to `docs/handoffs/*-cold.md` in about 20 s. Read it back,
+3. **Cold:** `python3 ~/projects/ai-os/scripts/cold_handoff.py write <sid>`. Sonnet (low effort) reads
+   the transcript file and writes the brief to `docs/handoffs/*-cold.md` in about 30 s. Read it back,
    commit it, and reply with the paste prompt the script printed. Skip steps 1–4 below.
 4. **Warm:** tell Matt to run `/_handoff` in that thread now. It still has the whole context
    cached, so it writes a better brief for less.

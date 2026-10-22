@@ -15,7 +15,7 @@ import { z } from "zod";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { readFileSync, appendFileSync, existsSync, mkdirSync, writeFileSync, readdirSync, statSync, realpathSync, renameSync } from "node:fs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 
 const HOME = homedir();
 const AIOS = join(HOME, "projects", "ai-os");
@@ -25,6 +25,7 @@ const WATCHER = join(AIOS, "scripts", "voice_task_inbox.py");
 const LOG = join(AIOS, "tmp", "mac-connector.log");
 // Replies from Mac agents to voice Claude (scripts/voice_reply.py writes them).
 const OUTBOX = join(AIOS, "tmp", "voice-outbox");
+export const ACT_URL_FILE = join(AIOS, "tmp", "mac-connector-act-url");
 const PORT = Number(process.env.PORT ?? 8777);
 const PUBLIC_HOST = "macbook-pro.tail491454.ts.net"; // claude.ai only connects on 443
 const VAULT = join(HOME, "Library", "Mobile Documents", "iCloud~md~obsidian", "Documents", "Personal");
@@ -300,6 +301,29 @@ function queueTask(title: string, body: string) {
   Bun.spawn(["/usr/bin/python3", WATCHER], { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } }).unref();
 }
 
+// Links on Matt's artifact pages (e.g. a review page's Done button) hit /act/<actToken>/...
+// The act token is derived from the connector token, so a page never carries the MCP token
+// and a leaked page link can only queue a short, fixed-shape note for the coordinator.
+export const actToken = (token: string) => createHash("sha256").update(`${token}:act`).digest("base64url").slice(0, 32);
+
+const ID = /^[A-Za-z0-9_-]{1,80}$/;
+export function actRequest(url: URL): { status: number; title: string; body?: string } {
+  const [, , , action] = url.pathname.split("/");
+  if (action !== "review-done") return { status: 404, title: "Unknown action" };
+  const page = url.searchParams.get("page") ?? "", thread = url.searchParams.get("thread") ?? "";
+  if (!ID.test(page) || (thread && !ID.test(thread))) return { status: 400, title: "Bad link" };
+  return { status: 200, title: "Review done", body: [
+    `Matt finished reviewing on artifact https://claude.ai/artifact/${page} (Done button).`,
+    thread ? `Route to thread ${thread} (message_thread) so its agent reads his ticks and notes from the page's db (ArtifactData, collection "reviews").` : "Find the thread that published this page and route it there.",
+    "Urgent: no",
+  ].join("\n\n") };
+}
+
+const htmlPage = (msg: string, status = 200) => new Response(
+  `<!doctype html><meta name=viewport content="width=device-width"><title>${msg}</title>` +
+  `<body style="font:600 22px -apple-system,sans-serif;display:grid;place-items:center;height:90vh;color:#234">${msg}</body>`,
+  { status, headers: { "content-type": "text/html; charset=utf-8" } });
+
 function init() {
   let token = envToken();
   if (!token) {
@@ -324,9 +348,14 @@ if (!import.meta.main) {
     idleTimeout: 120,
     async fetch(req) {
       const url = new URL(req.url);
-      const shown = url.pathname.replace(token, "<token>");
+      const shown = url.pathname.replace(token, "<token>").replace(actToken(token), "<act>");
       log(`${req.method} ${shown} ua=${(req.headers.get("user-agent") ?? "").slice(0, 60)} accept=${req.headers.get("accept") ?? ""}`);
       if (url.pathname === "/health") return new Response("ok");
+      if (url.pathname.startsWith(`/act/${actToken(token)}/`)) {
+        const r = actRequest(url);
+        if (r.body) { queueTask(r.title, r.body); log(`act queued: ${r.title}`); }
+        return htmlPage(r.status === 200 ? "Sent ✓ You can close this tab." : r.title, r.status);
+      }
       if (url.pathname !== secretPath) return new Response("Not found", { status: 404 });
       // Stateless server: no standalone SSE stream to open, so GET/DELETE get 405 (as in the SDK's
       // stateless example) instead of hanging open.
@@ -337,6 +366,8 @@ if (!import.meta.main) {
       return transport.handleRequest(req);
     },
   });
+  // Page builders (services/review) read the act base URL from here; it never holds the MCP token.
+  writeFileSync(ACT_URL_FILE, `https://${PUBLIC_HOST}/act/${actToken(token)}`, { mode: 0o600 });
   log(`listening on 127.0.0.1:${PORT}`);
   console.log(`mac-connector listening on 127.0.0.1:${PORT}`);
 }
