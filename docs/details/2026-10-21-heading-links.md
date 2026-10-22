@@ -40,3 +40,21 @@ I read "whitespace around each section" as the details file sections (the place 
 Project instructions (Talking to Matt) need the same line; asked the coordinator to add it. Mac-path anchors (`/Users/matt/...#slug`) in the Code tab are untested; only `/mnt/project-files/...#slug` was confirmed.
 
 Undo: revert the commit on this branch and rebuild rules; remove the added sentence in `~/.claude/CLAUDE.md`.
+
+## 19:20 Why two links showed raw paths
+
+Matt asked why the top two links in the mixer thread's reply showed as file paths. Checked the rendered page in the built-in browser (DOM text of each link chip): "Hue:" and "Wiggle:" showed the path; "Secondary functions:", "Shift look:", "Record stop:" showed labels. Same markdown shape, anchors all existed, so the difference was the label.
+
+
+---
+
+### Label test
+
+Posted a test reply here with five variants and read the rendered page: `[**Hue:**]` path, `[Hue:]` (not bold) label, `[**Hue rate:**]` label, `[**Abcdefghijklmnop:**]` path, `[**Hue**]` path. So a bold label with no space in it falls back to the raw path; length doesn't matter. Likely a renderer quirk in the Claude app, not something we control.
+
+
+---
+
+### Fix
+
+Rule now says bold link labels need at least two words (`.rules/core_safety.md`, rebuilt; `~/.claude/CLAUDE.md`). Rejected: dropping bold inside links (plain one-word works, but bold is how Matt skims). Undo: revert the commit.
