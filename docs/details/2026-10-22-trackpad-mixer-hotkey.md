@@ -103,3 +103,31 @@ Asked: rises spend too long in the quiet early part and rush the loud end; shoul
 ### Loudness-weighted fade curve
 
 Fades were linear in fader level (a 50 dB taper), so a 0→100% rise spent its first ~40% of time below -30 dB, nearly inaudible. Now fades move evenly in level^2.5 (Fade.loudWeight in Sources/Mixer.swift). Rise 0→100: 40% at 10% of the time, 76% at half time, the last 24% takes the second half. Falls mirror it: leave the top slowly, drop fast through the quiet end. Moving evenly in that space keeps the path the same when the fade is restarted on every finger move (an ease-out curve on progress would also work for rises but stalls falls). Fade lengths and wiggle unchanged. Also applies to Lights, Mic and Master. Untested by hand; raise loudWeight (3–4) for an even longer top.
+
+## 14:58 Stepped faders, wiggle tiers, curve pulled back
+
+Asked: fader levels move in discrete steps; wiggle climbs gently to "medium", then one more wiggle leaps to far too fast; the loud-end curve went too far.
+
+---
+
+### Smooth fader audio
+
+Cause: fades send a new gain to the taps at most 20×/s; the audio thread jumped to each new gain within one buffer (~10ms) and held it for the rest of the 50ms, a staircase. Now the gain glides toward its target sample by sample (one-pole, 60ms, `TapChannel.glideSeconds` in Taps.swift), longer than the gap between updates, so it's continuous. Replaced taps now stop 0.3s after their gain is set to 0 (was 0.1s) so the glide reaches silence first. Ableton, Master and Lights aren't taps; if one of them steps, say which.
+
+---
+
+### Gentler wiggle step-ups
+
+Cause: the speed goal followed the instantaneous wiggle, and speed only ever rises, so one fast stroke ratcheted it to a high speed for good. Now the speed follows the wiggle averaged over 0.8s (`wiggle.settle`) and climbs at most 2× per second (`wiggle.maxStepUp`). Both are knobs in the ⌃⌥⌘T Tweaks panel with the rest.
+
+---
+
+### Curve pulled back
+
+`fade.loudWeight` 2.5 → 1.8: a full rise now reaches ~28% at 10% of its time and ~68% at half time (was 40% / 76%).
+
+---
+
+### Tested here
+
+Built, restarted, audio flowing (peak dump). Feel untested by hand.
