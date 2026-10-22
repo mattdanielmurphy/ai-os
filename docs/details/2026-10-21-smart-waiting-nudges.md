@@ -20,3 +20,14 @@
 - Undo: untick "Keep-Warm Nudges for Waiting Claude Threads" in the Hammerspoon menu, or remove `safeRegister("modules.claude_warm")` from init.lua.
 - Live finding: the built-in mic reads "in use" all the time, likely TypeWhisper or the song-key ear. So the mic counts as busy only within 5 min of switching on, using the device watcher's "gone" event. A mic that is already on when Hammerspoon reloads counts as background until it toggles.
 - Live checks after the reload: the module is loaded, its timer and mic watcher are running, and `check()` returned "typing" while Matt typed. The scanner found no due threads at that moment, so no toast fired.
+
+## 00:10 Obey Do Not Disturb
+- Asked: "obey DND too".
+- Did: with any Focus on (DND included), a due nudge waits, like it does while he types. It is dropped if the Focus stays on until 1 min before expiry.
+- How: `M.focusOn()` reads Control Center's menu bar over AX. A Focus item appears only while a Focus is active, and the setting `NSStatusItem Visible FocusModes` = 0 shows it is "When Active". It runs only when a nudge is due.
+- Rejected:
+  - `~/Library/DoNotDisturb/DB/Assertions.json`: "Operation not permitted" for both the shell and Hammerspoon, since neither has Full Disk Access.
+  - The `donotdisturbd` log: the state is `<private>`, and a 3 h scan is slow.
+  - The Shortcuts "Get Current Focus" action: it needs Matt to build a shortcut.
+- Note: `log` in Matt's zsh is shadowed by a function, so use `/usr/bin/log`.
+- Untested: the "on" case, because DND was off. It returned false correctly with DND off.
