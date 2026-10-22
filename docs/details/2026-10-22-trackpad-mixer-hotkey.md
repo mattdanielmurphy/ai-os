@@ -55,3 +55,19 @@ Verified: with Audio Hijack open and idle, Music is tapped again (log: "Music: t
 ### Undo
 
 Revert "Only leave Audio Hijack's apps untapped while a session runs" in trackpad-mixer, `./build.sh`, `scripts/restart-mixer`.
+
+## 13:55 Recording post-mixer audio in Audio Hijack
+
+Asked: System-Wide Audio in Audio Hijack records audio as if the mixer weren't there; how to record the mixed result.
+
+---
+
+### Why SWA misses the mixer
+
+The mixer taps each app (muting it at the source) and plays the audio back itself at the fader's gain. System-Wide Audio grabs each app's audio as the app produces it, so it gets the pre-fader copy.
+
+---
+
+### Setup instead of SWA
+
+In the session, replace System-Wide Audio with two Application sources: TrackpadMixer (all tapped apps, post-fader; if it's not in the picker, choose it from `~/projects/trackpad-mixer/bin/TrackpadMixer.app`) and Ableton Live (never tapped, so it isn't in the mixer's output). Add an Output Device block if you stop hearing it. No mixer code change needed: the mixer never taps itself or Ableton, so a running session doesn't change its behaviour. Rejected: a Loopback virtual device (same result, one more app in the chain). Untested; Matt to try.
