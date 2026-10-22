@@ -183,3 +183,19 @@ Native text selection is off on the page (still on in comment boxes). A mouse dr
 New Mac connector tools `dictate` (runs scripts/dictate.sh toggle) and `review_done`. The page calls them through the claude.ai "My Mac" connector (the page's `mcp` capability), so no tab opens and focus stays in the comment box. A 🎙 button sits next to each box. Done uses the same route, with the old link as a fallback.
 
 Blocked on Matt: giving the page access to his My Mac connector was refused by my permission guard without his explicit OK, so the published page has the button but can't call it yet. Also TypeWhisper's API server is still off. The first click will also show a claude.ai consent prompt.
+
+## 11:36 Auto-start dictation (logic before building)
+
+Matt turned on TypeWhisper's API server (status call works: idle, whisper-large-v3-turbo). He asked: no click to start dictation; start on page open, or at least the moment he highlights something. Both are possible through the My Mac connector.
+
+---
+
+### Proposed dictation logic
+
+- Page opens: dictation starts, typing into the first section's box (general comment). The very first time, claude.ai shows a one-time "allow My Mac" prompt; after that it's silent.
+- Tap a sentence / paragraph / heading, or drag words: dictation stops, waits for TypeWhisper to paste into the box (so the words land on the old target), then the box switches to the new target and dictation starts again.
+- Tap the same target again ("general"): same stop → paste → switch → start.
+- 🎙 button: manual pause/resume.
+- Leaving the page (tab hidden/closed): dictation stops.
+
+Risk: each switch means a short gap (~1s) while TypeWhisper finishes and pastes; words said in that gap may be lost. Also mic is live the whole time the page is open.
