@@ -29,3 +29,7 @@ Rendering is tested (drawn off screen to an image). Clicking the buttons wasn't,
 `~/.hammerspoon/tweaks/quote_comment.json` / ⌃⌥⌘T panel, "Quote comments (⌥R)": bar.right, bar.bottom, bar.height, bar.gap, bar.text, look.accent, look.alpha, look.dimAlpha.
 
 Undo: `git -C ~/.hammerspoon revert 4f4cc90`.
+
+## 14:40 No terracotta
+
+Matt's message also said never use terracotta again. The bar's pill used #c96442 (the old badge colour, Claude's terracotta). Changed the default to deep teal #2b5f75 in code and tweaks/quote_comment.json. Other terracotta across his apps is handled in another thread.
