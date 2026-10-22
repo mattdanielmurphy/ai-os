@@ -145,3 +145,19 @@ On mouseup the selection's ends are pushed out to word boundaries, and the words
 Clicking inside a paragraph's box but not on a sentence (e.g. to the right of a short last line) aims at the whole paragraph; list items count as paragraphs. Clicking the section heading aims at the whole section. Picked paragraphs/sections get a soft tint. Notes are stored under `p:<section>:<n>` and `sec:<section>` keys next to the sentence keys. Tested via synthetic clicks.
 
 Untested by me: real mouse drags on his Mac (I used synthetic ranges).
+
+## 10:12 Dictation from the page: one probe first
+
+The "Agents triggering dictation" thread found TypeWhisper has a local API; `scripts/dictate.sh start|stop|toggle` drives it (needs Settings > Advanced > API server on).
+
+---
+
+### Link would steal focus
+
+The obvious route (a mic button that's a link to a new `/act/…/dictate` route) has a catch: a link opens a browser tab, which takes focus, so the dictated text would land in that tab, not the comment box. It only works if the page can call the Mac in the background (fetch) without opening anything. Artifact pages may block that (content security policy).
+
+---
+
+### Probe is live
+
+Added `/act/<token>/ping` (204, logs "act ping") and the page now fires one background fetch to it on load. When Matt opens the page, the Mac log shows whether it got through. I couldn't open it myself: the browser pane isn't signed in to claude.ai. If it gets through: mic button calls `/act/…/dictate`, which runs dictate.sh toggle, focus stays in the comment box. If blocked: fall back to his TypeWhisper hotkey, or a Hammerspoon hotkey.
