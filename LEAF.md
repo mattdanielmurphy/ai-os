@@ -19,6 +19,9 @@
 9. **Always Test Code Changes:** Agents MUST run a relevant test or verification after every code change; never decide to skip testing. Prefer the existing focused automated tests. When no applicable test exists, run the code or a minimal smoke/integration check and inspect its output. If the preferred check is unavailable or fails, try another meaningful verification path and report the results and any remaining uncertainty.
 10. **Puma-dev Local Dev Domains (`.test`):** For web applications and local development servers, prefer human-readable `.test` domains powered by `puma-dev` instead of memorizing random or ephemeral ports (e.g. `crossword.test`). Map projects by adding their port or proxy configuration into `~/.puma-dev/<app-name>` (e.g. `echo "3000" > ~/.puma-dev/<app-name>`). Never rely on arbitrary unmapped ports when a readable `.test` local domain can be established.
 
+## Menu Bar Items: Ask Matt to Test (2026-10-21)
+- Don't try to test menu bar icons or menus yourself (screenshots, clicking, AX): Matt's menu bar is full, so new icons usually hide in his Bartender drawer. Check it compiles/starts, then ask Matt to click through it and report.
+
 ## Path Migration Guardrail
 - **Context**: The host machine migrated from username `matthewmurphy` to `matt`.
 - **Constraint**: When parsing, reading, creating, or writing absolute paths, files, scripts, or configuration settings:
@@ -67,6 +70,8 @@
   - One file per thread or Code session: `~/projects/ai-os/docs/details/YYYY-MM-DD-<thread-slug>.md` (cloud sessions without his Mac: `/mnt/project-files/details/`). Reuse the same file for the whole thread.
   - Before each reply, append a section `## HH:MM <what this reply is about>`: what he asked, what you did, every decision and why (and what you rejected), how it works, what's untested or risky, how to undo it. Plain readable prose, no length limit. Write it while the reasoning is fresh, not reconstructed later.
   - Last line of every reply: `Details: [<file name>](<path>#<section-slug>)`. In a project thread, also attach the file (`SendUserFile`, then its ref in `attached_outputs`).
+  - **Link each line to its own heading (Matt, 2026-10-22, tested working)**: in a non-trivial reply, wrap each line's bold point in a link to its own `###` subsection under that reply's `## HH:MM` section, e.g. `[**Tyler pulls prod hourly.**](/mnt/project-files/<file>.md#prod-pulls-hourly)`. Tapping it opens the file at that heading, so each point can be explored on its own. Keep every heading unique in the file (its slug is the anchor). The line itself still carries the point; the link is only for digging deeper. Tiny replies skip this.
+  - **Generous whitespace around each linked section**: in the details file, put a blank line, a `---` rule, and another blank line before every linked `###` heading, so the section he lands on stands clearly apart from its neighbours.
   - Commit and push it with the work (`auto_commit.py --paths`).
   - Only pure acknowledgements (a reaction, "on it") skip it.
 - **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail into the details file.

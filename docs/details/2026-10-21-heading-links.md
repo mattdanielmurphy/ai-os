@@ -13,3 +13,30 @@ Proposed rule (waiting on Matt's 👍 and his tap result): each non-trivial repl
 Rejected: changing the global rule before Matt confirms the links actually land on the heading.
 
 Undo: nothing changed yet.
+
+## 18:36 Heading links rule made global
+
+Matt tapped the demo links: they open at the heading ("Yes, they work! ok, I REALLY love it"). He asked to also make generous whitespace around each linked section a rule.
+
+
+---
+
+### Rule text
+
+Added to `.rules/core_safety.md` (Every Word Costs Matt > details file), rebuilt with `build_rules.py` (CLAUDE.md, GEMINI.md, Codex AGENTS.md), and one line in `~/.claude/CLAUDE.md`. Each non-trivial reply line wraps its bold point in a link to its own unique `###` subsection under the reply's `## HH:MM` section. Tiny replies skip it. The line still carries the point on its own.
+
+
+---
+
+### Whitespace choice
+
+I read "whitespace around each section" as the details file sections (the place he lands). Markdown previews collapse extra blank lines, and raw HTML like `<br>` shows as text in the Claude app, so the reliable spacer is blank line + `---` + blank line before each linked heading. Rejected: `&nbsp;` lines (fragile, may render as text). If he meant the reply lines instead, those already get a blank line between each.
+
+
+---
+
+### Still open
+
+Project instructions (Talking to Matt) need the same line; asked the coordinator to add it. Mac-path anchors (`/Users/matt/...#slug`) in the Code tab are untested; only `/mnt/project-files/...#slug` was confirmed.
+
+Undo: revert the commit on this branch and rebuild rules; remove the added sentence in `~/.claude/CLAUDE.md`.
