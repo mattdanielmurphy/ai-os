@@ -25,7 +25,7 @@ def test_scan_finds_thread_link(tmp_path):
                                                  "content": '{"thread_id":"cmsg_01CUPXyY9oUwKVDFREVDpYDrOTHER"}'}]}},
     ]
     f.write_text("\n".join(json.dumps(r) for r in rows))
-    title, asked, url = W.scan(f)
+    title, asked, ref = W.scan(f)
     assert title == "Why isn't this flashing?"
     assert asked is True
-    assert url == "claude://claude.ai/epitaxy/project/chan_01CUPXyY9oUwKVDFREVDpYDr?thread=cmsg_01CUPXyY9oUwKVDFREVDpYDrROOT"
+    assert ref == {"thread": "cmsg_01CUPXyY9oUwKVDFREVDpYDrROOT", "project": "chan_01CUPXyY9oUwKVDFREVDpYDr"}

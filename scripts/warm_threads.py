@@ -7,10 +7,11 @@ Used by ~/.hammerspoon/modules/claude_warm.lua to nudge Matt before a big thread
   python3 scripts/warm_threads.py [--min-tokens 50000] [--all]
 
 Prints a JSON list, soonest first:
-  [{"session", "title", "lastAt", "expiresAt", "ttlSec", "tokens", "asked", "url"}]
+  [{"session", "title", "lastAt", "expiresAt", "ttlSec", "tokens", "asked", "thread", "project"}]
 
-"url" opens the thread when Matt clicks the toast: a claude:// project-thread link for
-Claude project threads (same form as claude-control --thread), null otherwise.
+"thread"/"project" are a Claude project thread's root cmsg_ id and chan_ id (null for
+Code-tab sessions); Hammerspoon's modules/claude_links.lua turns them into the link a
+toast click opens, the same helper the claude-control banner uses.
 
 "Waiting on Matt" = the last thing he was shown (a project-thread reply, a decision
 card, a question menu, or a Code-tab answer) asks him something (a "?" or a 👍 offer
@@ -35,10 +36,8 @@ THREAD_RE = re.compile(r'<thread (?:ts|id)=\\?"(cmsg_\w{20,})|\\?"thread_id\\?"\
 PROJECT_RE = re.compile(r'<project id=\\?"(chan_\w+)')
 
 
-def thread_url(project, thread):
-    # Path form: the desktop app keeps only the path of a claude://claude.ai/epitaxy link and
-    # drops ?thread=, which landed on the project's thread list. (project is implied by the id.)
-    return f"claude://claude.ai/epitaxy/project/thread/{thread}" if thread else None
+def thread_ref(project, thread):
+    return {"thread": thread, "project": project or DEFAULT_PROJECT} if thread else None
 
 
 def clean_title(text):
@@ -62,7 +61,7 @@ def asks(text):
 
 
 def scan(path):
-    """(title, asked, url) from a transcript; asked is None when Matt has answered since."""
+    """(title, asked, ref) from a transcript; asked is None when Matt has answered since."""
     title, ai_title, first_prompt, label = None, None, None, None
     thread, project, reply_ids = None, None, set()
     shown, answered, hearth, status_title = None, False, False, None
@@ -120,10 +119,10 @@ def scan(path):
                     first = (inp.get("text") or "").strip().splitlines()
                     status_title = first[0] if first else status_title
     name = title or label or ai_title or status_title or clean_title(first_prompt) or path.stem[:8]
-    url = thread_url(project, thread) if hearth else None
+    ref = thread_ref(project, thread) if hearth else None
     if shown is None or answered:
-        return name, None, url
-    return name, asks(shown), url
+        return name, None, ref
+    return name, asks(shown), ref
 
 
 def main():
@@ -146,11 +145,12 @@ def main():
         expires = s["lastAt"] + s["ttlSec"] * 1000
         if expires <= now * 1000 or s["tokens"] < args.min_tokens:
             continue
-        title, asked, url = scan(p)
+        title, asked, ref = scan(p)
         if not asked and not args.all:
             continue
         out.append({"session": p.stem, "title": title, "lastAt": s["lastAt"], "expiresAt": expires,
-                    "ttlSec": s["ttlSec"], "tokens": s["tokens"], "asked": bool(asked), "url": url})
+                    "ttlSec": s["ttlSec"], "tokens": s["tokens"], "asked": bool(asked),
+                    "thread": ref and ref["thread"], "project": ref and ref["project"]})
     out.sort(key=lambda t: t["expiresAt"])
     print(json.dumps(out, ensure_ascii=False))
 
