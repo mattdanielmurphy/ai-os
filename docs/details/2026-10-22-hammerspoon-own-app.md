@@ -106,3 +106,11 @@ those. Undo option 1: `git revert 9437d42` in ~/.hammerspoon and reload.
 
 Rough guess: a few hundred "Matthew Daniel Murphy"s worldwide (~10k Matthew Murphys × a few % with middle name
 Daniel). Napkin math, not data.
+
+## 19:02 Renamed to MDMA: Matt Daniel Murphy's Appothecary
+
+Matt's final pick (logo thread, relayed by the coordinator). `modules/brand.lua`: name "MDMA", longName
+"Matt Daniel Murphy's Appothecary". ⚙︎ menu header shows "MDMA: Matt Daniel Murphy's Appothecary"; Quit says
+"Quit MDMA"; UTILITIES.md title updated. Commit b030b9b on main, pulled live, reload verified via `hs -c`
+(brand loaded, 🔨 still hidden). Note: `hs -c 'hs.reload()'` hangs because the reload kills IPC; background it or
+kill it after a few seconds. Undo: `git revert b030b9b`.
