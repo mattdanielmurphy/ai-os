@@ -162,3 +162,7 @@ Rejected: re-architecting fades to keep velocity continuous in the model. Bigger
 Untested by hand. Undo: set the knob to 0, or `git revert` the commit. Built, snapshot rendered, mixer restarted with `scripts/restart-mixer`, running.
 
 Side note: the HUD accent is `#C2502F`, the terracotta Matt banned; left alone because colours wait for the master palette.
+
+## 16:58 Banner click opened the thread list
+
+Matt: clicking a claude-control banner opened the threads list, not the thread. His click (16:37) predates commit cf6ee8d in ~/.hammerspoon (16:44, another agent), which switched every banner/toast link to `claude://code/project/<chan>?thread=<cmsg>`. The old `claude://claude.ai/epitaxy/project/...?thread=` form loses the query and lands on the list. Checked the Claude app's URL handler (app.asar): `/code/project/<chan>` with `thread=cmsg_…` is parsed into a thread id, so the new form should open the thread. Live Hammerspoon already resolves thread ids to the new form. Not click-tested: opening the app would change Matt's screen, so he tests it with the command in the reply. Possible remaining failure: a feature gate in the handler can divert the link; if so the next fix is in claude_links.lua.
