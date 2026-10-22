@@ -41,3 +41,47 @@ Untested: a real incoming Google text (next one will confirm).
 ### Undo
 
 `cp "~/Library/Application Support/messauto/config.toml.bak-2026-10-22" "~/Library/Application Support/messauto/config.toml"`
+
+## 11:35 Own Hammerspoon 2FA utility (replacing MessAuto)
+
+Asked: replace MessAuto entirely with a lightweight Hammerspoon utility in the suite (trust + matching UI).
+
+---
+
+### Built otp_copy module
+
+`~/.hammerspoon/modules/otp_copy.lua`, menu "2FA Code Auto-Copy (Messages & Mail)", in `suite.SHAREABLE`, documented in UTILITIES.md, published to mac-utilities (d6f3e59).
+- Messages: pathwatcher on ~/Library/Messages; on chat.db change, async `/usr/bin/sqlite3 -readonly -json` for new incoming rows (last 10 min). Decodes `attributedBody` when `text` is empty (newer macOS).
+- Mail: pathwatcher on ~/Library/Mail for new `.emlx`; Lua MIME parser (multipart, quoted-printable, base64, encoded subjects), prefers text/plain.
+- Extraction rewritten in Lua (MessAuto's regex approach replaced): needs a keyword; nearest candidate within 100 bytes; digits preferred; `G-123456` → `123456`; rejects URL/ID tokens and mixed-case strings (fixes MessAuto's `01Wt4afu` / `Nova-3` false positives in your log).
+- Rejected: hs.sqlite3 (sync on main thread, blocks key taps); one-letter-prefix rule kept narrow (only single capital + dash + digits) so codes like `RKJ-YP6` stay whole.
+
+---
+
+### Safer clipboard handling
+
+Copied with `org.nspasteboard.ConcealedType` + `TransientType`, so Pastebot/Maccy/Raycast skip it. Wiped after 2 min, restoring what was on the clipboard before (unless you copied something since). Back-to-back codes keep the original pre-code clipboard. Writes go through `claudeControl.withInput`.
+
+---
+
+### Code pill
+
+Green tinted pill (claude_notify "done" palette), new `otp_code` HUD slot bottom-left above the reload ↻ (layout test passes). Fades after 12 s, click dismisses. Bumped to 96% opacity after the first screenshot showed text bleeding through. Not draggable: it's a transient toast, not a HUD.
+
+---
+
+### Full Disk Access needed
+
+Hammerspoon can't read chat.db or Mail without Full Disk Access (checked: both unreadable). Granting it is a security setting, so only Matt can do it. Until then the module alerts once and idles, so MessAuto stays on until the new one is confirmed working.
+
+---
+
+### Tests and what's untested
+
+`lua tests/otp_copy_test.lua`: all MessAuto upstream cases + Google + your log's false positives + attributedBody + emlx parsing pass. Live: clipboard types and pill verified on screen. Untested: real Messages/Mail watchers (blocked on Full Disk Access), and the attributedBody layout on your actual chat.db.
+
+---
+
+### Undo
+
+Toggle it off in the ⚙︎ menu, or `git revert 6c4d403` in ~/.hammerspoon. MessAuto is untouched (still running).

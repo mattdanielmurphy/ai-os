@@ -55,3 +55,54 @@ Changed the default name from "AI-OS" to "Mac Utilities": AI-OS is his agent set
 the mac-utilities repo. Rename later is cheap. Option 2 (renamed .app) stays a per-Mac step, not shipped in the suite.
 
 The 2FA "G-" ask that arrived alongside is already handled in its own thread (MessAuto regex), so not touched here.
+
+## 17:25 Is a renamed Hammerspoon allowed
+
+---
+
+### MIT license allows it
+
+Hammerspoon is MIT ([LICENSE](https://github.com/Hammerspoon/hammerspoon/blob/master/LICENSE)): copying,
+modifying, renaming and redistributing are allowed as long as the copyright + license notice ships with it (it
+lives inside the app bundle copy anyway). Polite extra: "built on Hammerspoon" in the About text. Not legal advice,
+but MIT is about as permissive as it gets. Option 2 was meant for his Mac only, not shipped to Tyler.
+
+---
+
+### Permission re-grant cost
+
+An ad-hoc signature changes on every rebuild, so macOS would ask again for Accessibility (and Screen Recording /
+mic where used) after each Hammerspoon update. Fix: sign with one self-made certificate kept in the login keychain;
+macOS then recognises the app across rebuilds, so the grant happens once. Untested on his Mac.
+Risks left: `hs` CLI / IPC with a renamed bundle; Sparkle must be off (updates via the script instead).
+Plan: do option 1 now (needed either way), then try option 2 as a spike.
+
+## 17:35 Branded as MDMA Studios
+
+Matt picked "MDMA Studios" (Matthew Daniel Murphy App Studios); "Mac Utilities" too generic. Option 1 is live
+(commit 9437d42 on ~/.hammerspoon main, pulled into the live config, reloaded).
+
+---
+
+### What changed
+
+- `modules/brand.lua`: the one place the name lives (`name`, `longName`). Rename = edit that file.
+- ⚙︎ menu: header, tooltip, notifications say MDMA Studios; "Quit MDMA Studios"; "Built on Hammerspoon…" opens
+  About; "Check for Hammerspoon Updates...". Autosave name kept as "AI-OS Controls" so Bartender keeps its spot.
+- Stock 🔨 icon hidden (`hs.menuIcon(false)`, only after ⚙︎ is created). Verified: menuIcon() = false, ⚙︎ exists.
+- UTILITIES.md title + suite alert text; `bin/ship-public` now ships `modules/brand.lua` (Tyler's copy needs it).
+- Other sessions' uncommitted edits in the live checkout (otp_copy etc.) were kept via autostash.
+
+---
+
+### Still says Hammerspoon
+
+Bartender, ⌘-Tab, Activity Monitor, the Console window title, System Settings. Only option 2 (renamed .app) fixes
+those. Undo option 1: `git revert 9437d42` in ~/.hammerspoon and reload.
+
+---
+
+### Name estimate
+
+Rough guess: a few hundred "Matthew Daniel Murphy"s worldwide (~10k Matthew Murphys × a few % with middle name
+Daniel). Napkin math, not data.
