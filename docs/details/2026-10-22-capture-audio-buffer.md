@@ -46,3 +46,7 @@ Rejected: building the waveform picker up front (rabbit hole), BlackHole/Loopbac
 fights the mixer).
 
 Undo: nothing changed except IDEAS.md and this file.
+
+## 14:20 Put on hold
+
+Matt (via coordinator): reverse audio capture is on hold; it will be a custom build later, inside his Utilities app. Recorded in IDEAS.md. Nothing built.

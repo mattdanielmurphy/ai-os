@@ -32,7 +32,7 @@ except Apple Music. After audio plays, a small HUD button appears (own slot in `
 clicking it opens a picker to grab a clip from the buffer. Existing-tool route first: Audio Hijack 4.5.5
 (installed) can do System Audio "all except Music" + Time Shift/Recorder. Custom route: macOS 14.2+ Core Audio
 process tap excluding Music.app, in-memory ring buffer, HUD + waveform picker.
-Assessment: docs/details/2026-10-22-capture-audio-buffer.md. Status: idea; awaiting Matt's pick.
+Assessment: docs/details/2026-10-22-capture-audio-buffer.md. Status: on hold (Matt, 2026-10-22): custom build later, as part of his Utilities app.
 
 ## Wake-up call from an agent, in character (2026-10-22)
 Matt: "having an agent CALL and speak to you seems like one of the greatest ways to get up ... Once you speak for 5s,
