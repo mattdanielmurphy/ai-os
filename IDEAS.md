@@ -10,3 +10,10 @@ Proposed shape: one `hammerspoon://demo?id=<thing>&state=<state>` route backed b
 listed in a "Demos" submenu of the ⚙︎ AI-OS menu; Swift apps take `--demo <state>`. Status: proposed, awaiting Matt's OK.
 
 - **Action buttons/links in chat (2026-10-21)**: custom clickable links or buttons in project threads, wired to commands on the Mac (e.g. "summon this HUD in state X"), so Matt can trigger things the way agents do when testing. Could unlock a lot of modding of the project page. First try: `hammerspoon://` links in a thread reply weren't clickable.
+
+## Right-click an app → its Claude threads (2026-10-22)
+Matt "really likes" this. Right-click one of his own apps (HUD, menu bar app, web app) and see the recent
+Claude threads about that app, each with its state: resolved, idle, waiting for his input, cache expired.
+Clicking a thread opens it. A "prod" switch hides the whole menu. Should be a shared module (next to
+hud-kit) every app imports, not per-app code. Designs: docs/details/2026-10-22-app-thread-menu.md.
+Status: idea; build only when Matt says "make it".
