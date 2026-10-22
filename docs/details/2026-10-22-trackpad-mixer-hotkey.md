@@ -31,3 +31,27 @@ Tested: build, safe restart, summon + close via the notification (log shows both
 ### Undo
 
 Revert the commits in trackpad-mixer ("Hotkey summons the mixer…") and ~/.hammerspoon ("Add ⌃⌥⌘V…"), rebuild, `scripts/restart-mixer`.
+
+## 13:50 Music fader breaks when Audio Hijack is open
+
+Asked: Music's fader stopped working whenever Audio Hijack was open, even with no session running.
+
+---
+
+### Cause and fix
+
+Cause: the mixer left every app in Audio Hijack's saved sessions untapped whenever Hijack was open. Music is a source in the "Input Device" session (with Claude), so Music lost its fader.
+
+Fix: they're only left untapped while a session is actually running, judged by Core Audio's IsRunning flag on Audio Hijack's or arkaudiod's audio process. Checked every 0.2s, so a starting recording re-taps quickly. Rejected: Audio Hijack's JS scripting via URL (no way to read state back without hacks, may pull it forward).
+
+---
+
+### Session detection untested
+
+Verified: with Audio Hijack open and idle, Music is tapped again (log: "Music: tapping 1 audio process(es)"). Not verified: that a running session flips the flag. If it doesn't, a recording of Music would come out silent. Test: start the session, play Music, check the recording; the log line "Audio Hijack session running: leaving … alone" confirms it.
+
+---
+
+### Undo
+
+Revert "Only leave Audio Hijack's apps untapped while a session runs" in trackpad-mixer, `./build.sh`, `scripts/restart-mixer`.
