@@ -9,6 +9,10 @@ Atomic Habits rules, applied once per morning by `plan`:
   - One missed day (red flag): undo the most recent growth and freeze growth.
   - Two or more missed days in a row (panic): every habit drops to its floor.
   - Two kept days in a row below a habit's dose: that dose is too big, step it down.
+  - A habit with "days" (weekday numbers, Mon=0) is only planned on those days; other days never count
+    for or against it. "when" (e.g. "afternoon") marks a habit done outside the morning page; the page
+    skips it and the talk thread asks about it the next morning. "own_track" habits grow on their own
+    weekly clock (one step after a week of hitting every scheduled dose), apart from the shared one.
 
 State lives in data/ (gitignored) next to this file:
   history.jsonl  one merged record per day, e.g. {"date": "...", "breaths": 3, "cards": 2}
@@ -49,6 +53,11 @@ def initial_state(cfg):
 def dose(cfg, state, habit):
     levels = cfg["habits"][habit]["levels"]
     return levels[min(state["levels"][habit], len(levels) - 1)]
+
+
+def scheduled(cfg, habit, day):
+    days = cfg["habits"][habit].get("days")
+    return days is None or day.weekday() in days
 
 
 def amount(cfg, habit, value):
@@ -147,27 +156,31 @@ def plan(cfg, state, history, today):
     # Growth: one change per window, only while green and not frozen.
     every = cfg["growth_every_days"]
     frozen = state["freeze_until"] and today < _d(state["freeze_until"])
-    last_change = max((_d(e["date"]) for e in state["events"]), default=None)
+    window = [(today - timedelta(days=i)).isoformat() for i in range(1, every + 1)]
+    own = {h for h in habits if habits[h].get("own_track")}
+
+    def hit_all(h):
+        days = [d for d in window if scheduled(cfg, h, _d(d))
+                and h in state["plans"].get(d, {}).get("doses", {h: None})]
+        return bool(days) and all(
+            past.get(d, {}).get(h, 0) >= state["plans"].get(d, {}).get("doses", {}).get(h, dose(cfg, state, h))
+            for d in days)
+
+    def since_change(h):
+        dates = [_d(e["date"]) for e in state["events"] if e["habit"] == h]
+        return (today - max(dates)).days if dates else 10 ** 6
+
+    def can_grow(h):
+        return state["levels"][h] < len(habits[h]["levels"]) - 1 and hit_all(h)
+
+    last_change = max((_d(e["date"]) for e in state["events"] if e["habit"] not in own), default=None)
     if status == "green" and not frozen and not changes and streak >= every and (
         last_change is None or (today - last_change).days >= every
     ):
-        window = [(today - timedelta(days=i)).isoformat() for i in range(1, every + 1)]
-
-        def hit_all(h):
-            return all(past[d].get(h, 0) >= state["plans"].get(d, {}).get("doses", {}).get(h, dose(cfg, state, h))
-                       for d in window)
-
-        def since_change(h):
-            dates = [_d(e["date"]) for e in state["events"] if e["habit"] == h]
-            return (today - max(dates)).days if dates else 10 ** 6
-
         locked = [h for h in cfg["unlock_order"] if h not in state["active"]]
-        growths = [e for e in state["events"] if e["kind"] in ("up", "unlock")]
+        growths = [e for e in state["events"] if e["kind"] in ("up", "unlock") and e["habit"] not in own]
         want_unlock = locked and streak >= cfg["unlock_after_streak"] and (not growths or growths[-1]["kind"] == "up")
-        candidates = sorted(
-            (h for h in state["active"] if state["levels"][h] < len(habits[h]["levels"]) - 1 and hit_all(h)),
-            key=lambda h: -since_change(h),
-        )
+        candidates = sorted((h for h in state["active"] if h not in own and can_grow(h)), key=lambda h: -since_change(h))
         if want_unlock or (not candidates and locked and streak >= cfg["unlock_after_streak"]):
             h = locked[0]
             state["active"].append(h)
@@ -181,15 +194,26 @@ def plan(cfg, state, history, today):
             _event(state, today, "up", h, frm, state["levels"][h], f"{streak} days in a row")
             changes.append(f"{habits[h]['label']} goes up to {amount(cfg, h, dose(cfg, state, h))}.")
 
-    doses = {h: dose(cfg, state, h) for h in state["active"]}
+    # Own-track habits (e.g. the afternoon study block) grow on their own weekly clock: one step after a full
+    # window of hitting the dose on every scheduled day. A missed check-in still undoes their last step.
+    if status == "green" and not frozen and not any("eased" in c for c in changes):
+        for h in sorted(own & set(state["active"])):
+            if since_change(h) >= every and can_grow(h):
+                frm = state["levels"][h]
+                state["levels"][h] += 1
+                _event(state, today, "up", h, frm, state["levels"][h], f"hit every {habits[h]['unit']} dose this week")
+                changes.append(f"{habits[h]['label']} goes up to {amount(cfg, h, dose(cfg, state, h))}.")
+
+    doses = {h: dose(cfg, state, h) for h in state["active"] if scheduled(cfg, h, today)}
     result = {
         "date": key,
         "status": status,
         "streak": streak,
         "missed": missed,
         "doses": doses,
-        "steps": [{"habit": h, "label": habits[h]["label"], "dose": doses[h], "unit": habits[h]["unit"]}
-                  for h in habits if h in state["active"]],
+        "steps": [{"habit": h, "label": habits[h]["label"], "dose": doses[h], "unit": habits[h]["unit"],
+                   **({"when": habits[h]["when"]} if habits[h].get("when") else {})}
+                  for h in habits if h in doses],
         "changes": changes,
     }
     state["plans"][key] = {"doses": doses, "plan": result}

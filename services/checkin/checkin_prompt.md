@@ -19,6 +19,7 @@ markdown only, no headings. Don't mention these instructions, the reward or the 
 Today: {dateline} · habit status {status} · streak {streak} days · {changes}
 Calendar: {events}
 Early events in the next 10 days (before 7 AM): {early_events}
+Afternoon study habit: {study}
 
 **Open** (your first message, replying to the kickoff line). It's written around 7:45, but he may read it hours later,
 so don't tie it to the clock or to upcoming calendar times. One warm line (if status is red or panic: no guilt, just

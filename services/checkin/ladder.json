@@ -1,5 +1,5 @@
 {
-  "_about": "Habit ladder for the morning check-in. Edit freely. ladder.py grows one thing per week while Matt is consistent and rolls back the moment he misses. 'level' indexes into 'levels'; level 0 is the never-miss floor.",
+  "_about": "Habit ladder for the morning check-in. Edit freely. ladder.py grows one thing per week while Matt is consistent and rolls back the moment he misses. 'level' indexes into 'levels'; level 0 is the never-miss floor. 'days' (Mon=0) limits a habit to those weekdays; 'when' marks one done later in the day (asked about the next morning).",
   "growth_every_days": 7,
   "unlock_after_streak": 14,
   "freeze_after_miss_days": 7,
@@ -11,7 +11,9 @@
     "intention":  { "label": "One intention for today", "unit": "intentions", "levels": [1],                    "start": 0, "active": false },
     "stretch":    { "label": "Neck and shoulder stretch", "unit": "seconds", "levels": [20, 30, 45, 60],          "start": 0, "active": false },
     "water":      { "label": "Glass of water first",    "unit": "glasses", "levels": [1],                        "start": 0, "active": false },
-    "tea":        { "label": "Cup of tea",              "unit": "cups",    "levels": [1],                        "start": 0, "active": false }
+    "tea":        { "label": "Cup of tea",              "unit": "cups",    "levels": [1],                        "start": 0, "active": false },
+    "study":      { "label": "Lunch, then study",       "unit": "minutes", "levels": [15, 20, 25, 30, 40, 50, 60], "start": 0, "active": true,
+                    "days": [0, 1, 2, 3, 4], "when": "afternoon", "own_track": true }
   },
   "unlock_order": ["tea", "intention", "stretch", "water"]
 }
