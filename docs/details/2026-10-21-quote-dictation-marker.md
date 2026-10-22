@@ -10,3 +10,8 @@
 ## 18:38 How queuing works
 - Matt confirmed the ↳ marker works; asked how to queue.
 - Answered from modules/quote_comment.lua header: ⌥R on the next highlight moves the box (quote + comment) to a hidden queue and starts a fresh quote; plain Return sends queue + box together; ⌥⇧R queues with no comment; ⌥⌘R puts the queue back in the box without sending; "❝ N queued" pill has Remove last / Clear. Not tested on screen by me.
+
+## 18:44 New flow: Return saves the comment
+- Matt's test: quotes piled up in the box instead of queuing, and no pill showed. Likely cause: on ⌥R the tool checks the previous box element is still "alive"; Claude's web composer seems to get re-created, so the check fails and the next quote is appended below as if the box held a draft. Not confirmed.
+- Matt wants: Return after a dictated comment saves quote+comment to the queue and clears the box (pill shows); later, his final Return sends with all quotes inserted above what he typed.
+- Plan: decide by box content, not the element: box contains a "↳" comment line → Return = queue + clear; otherwise queue non-empty → Return = insert queue above and send. Restated to Matt before building (multi-state logic rule).
