@@ -53,5 +53,5 @@ Should be a shared module every app imports. Status: idea; build on Matt's 👍.
 ## Live-tweak layer for every app (2026-10-22)
 Every app agents build exposes its feel knobs (fade curves, timings, sizes, colours) in one
 `tweaks.json`, hot-reloaded with no side effects, so Matt turns knobs without reading code.
-Later: one shared slider panel (Tweakpane) over all apps' tweaks files. Options + rule draft:
+Status: built 2026-10-22 (hud-kit Tweaks.swift, Hammerspoon modules/tweaks.lua, ⌃⌥⌘T panel). Details:
 docs/details/2026-10-22-live-tweak-config.md
