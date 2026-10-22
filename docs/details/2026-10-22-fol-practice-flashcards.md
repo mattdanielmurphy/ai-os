@@ -39,3 +39,9 @@ Matt (in another thread): write the key `UD: animals · Dx: … · Bx: …` with
 ### Key on separate lines
 
 `practice.py` now splits every key on "·", ";" or newlines (or takes a list) and shows one item per line; the template already uses `white-space: pre-line`. Done in the builder, not left to the agent, so every future gate page gets it. The gate's instruction now asks for the key as a list. Today's page is republished (same link); question 2's key also got its missing meanings (Sx: x is a student, Px: x is a professor). Tests pass.
+
+---
+
+### Saving check
+
+The coordinator saw no `practice` rows while Matt was mid-quiz; I confirmed the collection is empty. The same save code works on the morning check-in (rows for Oct 17–21), so the code path is fine; the likely cause is taps made before the page's db connection arrived (save() silently skipped them), or a view of version 1 (static, no db). Fix in `template.html`: when the db connects and there's no saved doc yet, it saves the taps already made; in practice mode, a view with no db now says "Answers aren't being saved in this view." I couldn't open the live page myself (the built-in browser isn't signed in to claude.ai), so this is untested live. Not republished yet, so Matt's quiz isn't interrupted mid-way; it applies to every gate page built from now on.

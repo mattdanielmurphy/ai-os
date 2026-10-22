@@ -407,7 +407,7 @@ function save() {
 }
 (async () => {
   const db = await window.claude?.use?.("db");
-  if (!db) return;
+  if (!db) { if (PRACTICE) $("status").textContent = "Answers aren't being saved in this view."; return; }
   dbRef = db.doc((PRACTICE ? "practice/" : "checkins/") + DATA.date);
   try {
     const snap = await dbRef.get();
@@ -433,7 +433,7 @@ function save() {
       else if (state.step === "recall" && picked === null) renderCard();
       else renderProgress();
       $("status").textContent = "Picked up where you left off";
-    }
+    } else if (state.reviews.length || state.skipped.length) save(); // taps made before the db connected
   } catch {}
 })();
 
