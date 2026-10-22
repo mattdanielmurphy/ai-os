@@ -71,3 +71,25 @@ The mixer taps each app (muting it at the source) and plays the audio back itsel
 ### Setup instead of SWA
 
 In the session, replace System-Wide Audio with two Application sources: TrackpadMixer (all tapped apps, post-fader; if it's not in the picker, choose it from `~/projects/trackpad-mixer/bin/TrackpadMixer.app`) and Ableton Live (never tapped, so it isn't in the mixer's output). Add an Output Device block if you stop hearing it. No mixer code change needed: the mixer never taps itself or Ableton, so a running session doesn't change its behaviour. Rejected: a Loopback virtual device (same result, one more app in the chain). Untested; Matt to try.
+
+## 14:00 Wiggle accelerates too fast
+
+Asked: wiggling speeds up the fade at about the right rate, but then it keeps accelerating (3s for 0–30%, then 0.5s for 30–100%).
+
+---
+
+### Cause of the runaway
+
+Each frame of wiggle took a fraction of the remaining time off, and the gain grew with every second of sustained wiggle (×(1 + seconds)). Shrinking the time left by a fraction every frame means the speed (distance left / time left) keeps climbing even at a constant wiggle.
+
+---
+
+### New wiggle model
+
+Wiggle now sets a speed multiplier: goal = 1 + 3 × wiggle speed (pad heights/s), max 8×, eased in over ~0.4s. It only rises; when the wiggle stops, the fade keeps the faster pace to the end. The fade covers its normal time `boost` times faster, so the speed is steady. Rejected: keeping the old credit model with a cap (still curves).
+
+---
+
+### Wiggle untested by hand
+
+Built and restarted; the feel needs Matt's fingers. Knobs: `wiggleGain`, `wiggleRise`, `wiggleMaxBoost` in Sources/HUD.swift. Also seen in the log: an Audio Hijack session with TrackpadMixer as a source was detected as running, so session detection works.
