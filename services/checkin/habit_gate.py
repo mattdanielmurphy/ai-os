@@ -17,7 +17,14 @@ CLI (agents use these):
   habit_gate.py hook                 read the hook JSON on stdin, print hook JSON
   habit_gate.py done | skip          record today's step and unlock
   habit_gate.py url <artifact-url>   remember today's practice page so other threads reuse it
+  habit_gate.py page                 build today's page from the current rung's card bank (prints the HTML path)
+  habit_gate.py score [DATE] < doc   record a page's taps (its db doc JSON on stdin); may change rung
   habit_gate.py status
+
+Question ladder (logic_rungs.json, Matt 2026-10-22): symbols first, then words -> symbols, predicates,
+reading formulas, simple symbolizing, then mixed Unit 5. Moves up only once every card in the rung
+has been right and the last page scored >= advance_at; a page under drop_below steps back one rung.
+State: data/logic_rung.json.
 """
 
 import json
@@ -37,6 +44,58 @@ SCRIPT = Path(__file__).resolve()
 # Wakes and envelopes that aren't Matt typing to an agent.
 NOT_MATT = ("<relay", "<cross-session-message", "<side-sessions-event", "<task-notification",
             "<ci-monitor-event", "<project_claude_message", "<coordinator-relay", "<scheduled")
+
+
+RUNGS = HERE / "logic_rungs.json"
+
+
+def load_rungs():
+    return json.loads(RUNGS.read_text())
+
+
+def read_rung():
+    p = DATA_DIR / "logic_rung.json"
+    r = json.loads(p.read_text()) if p.exists() else {}
+    return {"rung": 0, "right": [], "missed": [], "scored": [], **r}
+
+
+def write_rung(r):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / "logic_rung.json").write_text(json.dumps(r, indent=2, ensure_ascii=False))
+
+
+def pick_cards(rung, r, n):
+    """Last page's misses first, then cards never answered right, then the rest."""
+    bank = rung["cards"]
+    order = ([c for c in bank if c["card_id"] in r["missed"]]
+             + [c for c in bank if c["card_id"] not in r["missed"] and c["card_id"] not in r["right"]]
+             + [c for c in bank if c["card_id"] in r["right"] and c["card_id"] not in r["missed"]])
+    return order[:n]
+
+
+def score(doc, day):
+    """Record a page's taps (its db doc: reviews with card_id/correct); returns the rung state."""
+    lad, r = load_rungs(), read_rung()
+    if day in r["scored"]:
+        return r
+    reviews = [v for v in doc.get("reviews", []) if v.get("card_id") not in doc.get("skipped", [])]
+    right = [v["card_id"] for v in reviews if v.get("correct")]
+    missed = [v["card_id"] for v in reviews if not v.get("correct")]
+    r["scored"] = (r["scored"] + [day])[-30:]
+    if not reviews:
+        write_rung(r)
+        return r
+    r["right"] = sorted(set(r["right"]) | set(right))
+    r["missed"] = sorted(set(missed) - set(right))
+    frac = len(right) / len(reviews)
+    bank = {c["card_id"] for c in lad["rungs"][r["rung"]].get("cards", [])}
+    if frac < lad["drop_below"] and r["rung"] > 0:
+        r["rung"] -= 1
+    elif frac >= lad["advance_at"] and bank <= set(r["right"]) and r["rung"] < len(lad["rungs"]) - 1:
+        r["rung"] += 1
+    r["last"] = {"date": day, "right": len(right), "of": len(reviews)}
+    write_rung(r)
+    return r
 
 
 def now():
@@ -103,19 +162,24 @@ def held_context(cfg, state, habit, t):
     minutes = ladder.dose(cfg, state, habit)
     n = max(3, minutes)
     url = read_gate(t.date().isoformat()).get("url")
+    rung = load_rungs()["rungs"][read_rung()["rung"]]
+    publish = ('as an Artifact with capabilities {"db": {}} (same flashcard layout as the morning check-in; '
+               f"never hand-write the page). Then run `python3 {SCRIPT} url <artifact url>` so other threads "
+               "reuse the same page.")
     if url:
         page = f"Today's practice page already exists: {url}. Give him that link."
+    elif "cards" in rung:
+        page = (f"Make today's practice page: run `python3 {SCRIPT} page` and publish the HTML it prints "
+                + publish + " Don't add or change questions: the ladder picks them.")
     else:
         cards = DATA_DIR / "practice" / f"{t.date().isoformat()}.json"
         page = (f"Make today's practice page: {n} multiple-choice PHIL 120 questions (about {minutes} "
                 "minutes of work) for his current logic unit (read the 'Logic' line in "
-                "~/projects/ai-os/docs/SCHOOL.md for the unit and chapters). Mix symbolization and "
-                f"quick-check questions, 4 plausible options each. Write them as JSON to {cards} "
+                "~/projects/ai-os/docs/SCHOOL.md for the unit and chapters). "
+                f"{rung['brief']} 4 plausible options each. Write them as JSON to {cards} "
                 '(a list of {"prompt", "key" (optional list, one symbol per line), "options", "correct_index", "answer", '
                 f'"elaboration"}}), then run `python3 {HERE / "practice.py"} {cards}` and publish the HTML '
-                'it prints as an Artifact with capabilities {"db": {}} (same flashcard layout as the morning '
-                "check-in; never hand-write the page). Then run "
-                f"`python3 {SCRIPT} url <artifact url>` so other threads reuse the same page.")
+                "it prints " + publish)
     return (
         "HABIT GATE (Matt set this up himself on 2026-10-22: he earns Claude by doing today's logic "
         "study step first; don't ask him whether he wants to, just hand it over). "
@@ -123,6 +187,17 @@ def held_context(cfg, state, habit, t):
         "(or type skip).' Don't work on his message yet; it stays queued in this thread and you "
         "carry on with it once he's done. Exception: if his message is urgent (stop a running task, "
         "a deadline, something broken), handle it and mention the page once.")
+
+
+def score_hint(t):
+    """Tell the agent to feed today's taps to the question ladder."""
+    day = t.date().isoformat()
+    url = read_gate(day).get("url")
+    if not url:
+        return ""
+    return (f"Quietly, first: read his taps with ArtifactData get on {url}, collection 'practice', "
+            f"doc_id '{day}', and pipe that document's JSON into `python3 {SCRIPT} score {day}` "
+            "(it moves the question ladder). Don't mention scores unless he asks.")
 
 
 def hook(payload, cfg=None):
@@ -144,10 +219,28 @@ def hook(payload, cfg=None):
     if word in ("done", "👍") or (kind == "reaction" and "👍" in text):
         m = finish(cfg, state, t, skipped=False)
         return (f"HABIT GATE: Matt finished today's study step ({m} min, recorded). Say 'Unlocked' in a "
-                "few words, then carry on with his earlier request in this thread, if any.")
+                "few words, then carry on with his earlier request in this thread, if any. " + score_hint(t))
     if kind == "reaction":
         return None
     return held_context(cfg, state, habit, t)
+
+
+def build_page(cfg, state, t):
+    """Write today's cards from the current rung's bank and build the page; returns the HTML path."""
+    import practice
+    r = read_rung()
+    rung = load_rungs()["rungs"][r["rung"]]
+    habit = gate_cfg(cfg).get("habit")
+    n = max(3, ladder.dose(cfg, state, habit)) if habit in state["active"] else 5
+    cards = pick_cards(rung, r, n)
+    day = t.date().isoformat()
+    (DATA_DIR / "practice").mkdir(parents=True, exist_ok=True)
+    (DATA_DIR / "practice" / f"{day}.json").write_text(json.dumps(cards, indent=1, ensure_ascii=False))
+    out = DATA_DIR / "build" / f"practice-{day}.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(practice.build(cards, day, "Logic practice: " + rung["name"].lower(),
+                                  "PHIL 120 · Symbolic Logic"))
+    return out
 
 
 def main(argv):
@@ -166,6 +259,13 @@ def main(argv):
                                                      "additionalContext": ctx}}))
     elif cmd in ("done", "skip"):
         print(f"recorded {finish(cfg, state, t, skipped=cmd == 'skip')} min")
+    elif cmd == "page":
+        print(build_page(cfg, state, t))
+    elif cmd == "score":
+        day = argv[2] if len(argv) > 2 else t.date().isoformat()
+        r = score(json.loads(sys.stdin.read() or "{}"), day)
+        print(json.dumps({"rung": r["rung"], "name": load_rungs()["rungs"][r["rung"]]["name"],
+                          "last": r.get("last")}, ensure_ascii=False))
     elif cmd == "url":
         g = read_gate(t.date().isoformat())
         g["url"] = argv[2]

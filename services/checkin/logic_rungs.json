@@ -1,0 +1,70 @@
+{
+  "_about": "Habit gate question ladder for PHIL 120 (forall x, FOL). habit_gate.py starts at rung 0 and moves up only when every card in the rung has been answered right at least once and the last page scored >= advance_at; a page under drop_below steps back one rung. Rungs with 'cards' are a fixed bank (habit_gate.py page builds them); rungs with 'brief' are written by the agent. Matt, 2026-10-22: the gate jumped to symbolization before he knew the symbols.",
+  "advance_at": 0.8,
+  "drop_below": 0.5,
+  "rungs": [
+    {
+      "name": "What each symbol means",
+      "cards": [
+        {"card_id": "sym_forall", "prompt": "What does ∀ mean?", "options": ["every / for all", "some / there is", "not", "and"], "correct_index": 0, "answer": "∀ = every (for all).", "elaboration": "An upside-down A, for All. ∀x Dx: everything is a D."},
+        {"card_id": "sym_exists", "prompt": "What does ∃ mean?", "options": ["every / for all", "some / there is at least one", "is the same as", "or"], "correct_index": 1, "answer": "∃ = some (there is at least one).", "elaboration": "A backwards E, for Exists. ∃x Dx: something is a D."},
+        {"card_id": "sym_not", "prompt": "What does ¬ mean?", "options": ["and", "if … then", "not", "or"], "correct_index": 2, "answer": "¬ = not.", "elaboration": "¬Db: b is not a D."},
+        {"card_id": "sym_and", "prompt": "What does ∧ mean?", "options": ["or", "and", "not", "if and only if"], "correct_index": 1, "answer": "∧ = and.", "elaboration": "Both sides are true. Db ∧ Bb: b is a D and b is a B."},
+        {"card_id": "sym_or", "prompt": "What does ∨ mean?", "options": ["and", "every", "or", "if … then"], "correct_index": 2, "answer": "∨ = or.", "elaboration": "At least one side is true. It points down like a v, the opposite of ∧."},
+        {"card_id": "sym_if", "prompt": "What does → mean?", "options": ["if … then", "and", "is the same as", "some"], "correct_index": 0, "answer": "→ = if … then.", "elaboration": "Da → Ba: if a is a D, then a is a B."},
+        {"card_id": "sym_iff", "prompt": "What does ↔ mean?", "options": ["or", "if … then (one way only)", "not", "if and only if"], "correct_index": 3, "answer": "↔ = if and only if.", "elaboration": "Both sides have the same truth value: an arrow going both ways."},
+        {"card_id": "sym_eq", "prompt": "What does = mean?", "options": ["is the same thing as", "is a kind of", "and", "every"], "correct_index": 0, "answer": "= : is the very same thing as.", "elaboration": "a = b: a and b are one object with two names."}
+      ]
+    },
+    {
+      "name": "Which symbol for each word",
+      "cards": [
+        {"card_id": "word_every", "prompt": "Which symbol means \"every\"?", "options": ["∃", "∀", "∧", "→"], "correct_index": 1, "answer": "∀", "elaboration": "∀ is an upside-down A, for All."},
+        {"card_id": "word_some", "prompt": "Which symbol means \"some\" (at least one)?", "options": ["∀", "∨", "∃", "="], "correct_index": 2, "answer": "∃", "elaboration": "∃ is a backwards E, for Exists."},
+        {"card_id": "word_not", "prompt": "Which symbol means \"not\"?", "options": ["¬", "∧", "↔", "∀"], "correct_index": 0, "answer": "¬", "elaboration": "¬ goes in front of whatever it denies."},
+        {"card_id": "word_and", "prompt": "Which symbol means \"and\"?", "options": ["∨", "→", "∧", "∃"], "correct_index": 2, "answer": "∧", "elaboration": "∧ points up; ∨ (or) points down."},
+        {"card_id": "word_or", "prompt": "Which symbol means \"or\"?", "options": ["∧", "∨", "¬", "="], "correct_index": 1, "answer": "∨", "elaboration": "∨ points down, like the v in \"vel\" (Latin for or)."},
+        {"card_id": "word_if", "prompt": "Which symbol means \"if … then\"?", "options": ["↔", "∧", "→", "∀"], "correct_index": 2, "answer": "→", "elaboration": "One-way arrow: if the left is true, the right is true."},
+        {"card_id": "word_iff", "prompt": "Which symbol means \"if and only if\"?", "options": ["↔", "→", "=", "∨"], "correct_index": 0, "answer": "↔", "elaboration": "Two-way arrow: each side guarantees the other."},
+        {"card_id": "word_same", "prompt": "Which symbol means \"is the same thing as\"?", "options": ["↔", "∧", "∃", "="], "correct_index": 3, "answer": "=", "elaboration": "= is for objects (a = b); ↔ is for whole sentences."}
+      ]
+    },
+    {
+      "name": "Predicates, names and variables",
+      "cards": [
+        {"card_id": "pnv_pred", "prompt": "In Dx, what is D?", "key": ["Dx: x is a dog"], "options": ["a predicate (a property, like \"is a dog\")", "a name", "a variable", "a quantifier"], "correct_index": 0, "answer": "A predicate.", "elaboration": "Capital letters are predicates: properties or relations."},
+        {"card_id": "pnv_var", "prompt": "In Dx, what is x?", "key": ["Dx: x is a dog"], "options": ["a name", "a variable (a placeholder)", "a predicate", "a sentence"], "correct_index": 1, "answer": "A variable.", "elaboration": "x, y, z are placeholders. They only say something once a quantifier (∀x or ∃x) binds them."},
+        {"card_id": "pnv_name", "prompt": "In Db, what is b?", "key": ["Dx: x is a dog", "b: Bella"], "options": ["a variable", "a predicate", "a name (one particular thing)", "a connective"], "correct_index": 2, "answer": "A name.", "elaboration": "Lowercase a to r are names. Db: Bella is a dog."},
+        {"card_id": "pnv_read1", "prompt": "What does Db say?", "key": ["Dx: x is a dog", "b: Bella"], "options": ["Something is a dog.", "Bella is a dog.", "Every dog is Bella.", "Bella is not a dog."], "correct_index": 1, "answer": "Bella is a dog.", "elaboration": "Put the name where the x was: \"x is a dog\" becomes \"Bella is a dog\"."},
+        {"card_id": "pnv_read2", "prompt": "What does Lab say?", "key": ["Lxy: x likes y", "a: Amir", "b: Bella"], "options": ["Bella likes Amir.", "Amir and Bella like something.", "Amir likes Bella.", "Everyone likes Bella."], "correct_index": 2, "answer": "Amir likes Bella.", "elaboration": "Order matters: the first letter fills x, the second fills y."},
+        {"card_id": "pnv_ud", "prompt": "What is the UD?", "options": ["a list of the symbols", "the domain: all the things we're talking about", "the main connective", "a kind of predicate"], "correct_index": 1, "answer": "The domain (universe of discourse).", "elaboration": "∀x means every thing in the UD; ∃x means some thing in the UD."}
+      ]
+    },
+    {
+      "name": "Read one-quantifier formulas",
+      "cards": [
+        {"card_id": "read_all", "prompt": "What does ∀x Dx say?", "key": ["UD: animals", "Dx: x is a dog"], "options": ["Every animal is a dog.", "Some animal is a dog.", "No animal is a dog.", "x is a dog."], "correct_index": 0, "answer": "Every animal is a dog.", "elaboration": "∀x: every thing in the UD."},
+        {"card_id": "read_some", "prompt": "What does ∃x Dx say?", "key": ["UD: animals", "Dx: x is a dog"], "options": ["Every animal is a dog.", "Some animal is a dog.", "Some animal is not a dog.", "No animal is a dog."], "correct_index": 1, "answer": "Some animal is a dog.", "elaboration": "∃x: at least one thing in the UD."},
+        {"card_id": "read_none", "prompt": "What does ¬∃x Dx say?", "key": ["UD: animals", "Dx: x is a dog"], "options": ["Some animal is not a dog.", "Every animal is a dog.", "No animal is a dog.", "Not every animal is a dog."], "correct_index": 2, "answer": "No animal is a dog.", "elaboration": "Not (there is a dog) = there are no dogs."},
+        {"card_id": "read_somenot", "prompt": "What does ∃x ¬Dx say?", "key": ["UD: animals", "Dx: x is a dog"], "options": ["No animal is a dog.", "Some animal is not a dog.", "Every animal is a dog.", "Bella is not a dog."], "correct_index": 1, "answer": "Some animal is not a dog.", "elaboration": "There is something that is not a dog."},
+        {"card_id": "read_alldogs", "prompt": "What does ∀x(Dx → Bx) say?", "key": ["UD: animals", "Dx: x is a dog", "Bx: x barks"], "options": ["Some dog barks.", "Every animal is a dog that barks.", "Every dog barks.", "If anything barks, it is a dog."], "correct_index": 2, "answer": "Every dog barks.", "elaboration": "For everything: if it's a dog, then it barks. \"Every\" pairs with →."},
+        {"card_id": "read_somedog", "prompt": "What does ∃x(Dx ∧ Bx) say?", "key": ["UD: animals", "Dx: x is a dog", "Bx: x barks"], "options": ["Some dog barks.", "Every dog barks.", "If something is a dog, it barks.", "No dog barks."], "correct_index": 0, "answer": "Some dog barks.", "elaboration": "Something is a dog and it barks. \"Some\" pairs with ∧."}
+      ]
+    },
+    {
+      "name": "Symbolize one-quantifier sentences",
+      "cards": [
+        {"card_id": "sym1_all", "prompt": "Symbolize: Everything is red.", "key": ["Rx: x is red"], "options": ["∃x Rx", "∀x Rx", "Rx", "¬∀x Rx"], "correct_index": 1, "answer": "∀x Rx", "elaboration": "Everything → ∀."},
+        {"card_id": "sym1_some", "prompt": "Symbolize: Something is red.", "key": ["Rx: x is red"], "options": ["∀x Rx", "∃x ¬Rx", "∃x Rx", "Ra"], "correct_index": 2, "answer": "∃x Rx", "elaboration": "Something → ∃."},
+        {"card_id": "sym1_none", "prompt": "Symbolize: Nothing is red.", "key": ["Rx: x is red"], "options": ["¬∃x Rx", "∃x ¬Rx", "∀x Rx", "¬Ra"], "correct_index": 0, "answer": "¬∃x Rx", "elaboration": "Nothing is red = it's not the case that something is red. (∀x ¬Rx also works.)"},
+        {"card_id": "sym1_every", "prompt": "Symbolize: Every cat sleeps.", "key": ["Cx: x is a cat", "Sx: x sleeps"], "options": ["∀x(Cx ∧ Sx)", "∃x(Cx ∧ Sx)", "∀x(Cx → Sx)", "∀x(Sx → Cx)"], "correct_index": 2, "answer": "∀x(Cx → Sx)", "elaboration": "Every A is B → ∀x(Ax → Bx). With ∧ it would say everything is a sleeping cat."},
+        {"card_id": "sym1_somecat", "prompt": "Symbolize: Some cat sleeps.", "key": ["Cx: x is a cat", "Sx: x sleeps"], "options": ["∃x(Cx → Sx)", "∃x(Cx ∧ Sx)", "∀x(Cx → Sx)", "∃x Cx ∧ Sb"], "correct_index": 1, "answer": "∃x(Cx ∧ Sx)", "elaboration": "Some A is B → ∃x(Ax ∧ Bx)."},
+        {"card_id": "sym1_nocat", "prompt": "Symbolize: No cat sleeps.", "key": ["Cx: x is a cat", "Sx: x sleeps"], "options": ["∀x(Cx → ¬Sx)", "∃x(Cx ∧ ¬Sx)", "¬∀x(Cx → Sx)", "∀x(¬Cx → Sx)"], "correct_index": 0, "answer": "∀x(Cx → ¬Sx)", "elaboration": "No A is B → every A is not B. (¬∃x(Cx ∧ Sx) also works.)"}
+      ]
+    },
+    {
+      "name": "Unit 5 mixed",
+      "brief": "Unit 5 mixed questions (forall x ch. 23-29): symbolizing with two quantifiers or a relation, free vs bound variables, main operator, identity (only, at least two, the). Always give a \"key\" listing the UD and every predicate and name used."
+    }
+  ]
+}

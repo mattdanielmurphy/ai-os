@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,7 +23,7 @@ def run(prompt, when="2026-10-22T15:00"):  # a Thursday
 class GateTest(unittest.TestCase):
     def setUp(self):
         for f in Path(TMP).glob("*"):
-            f.unlink()
+            shutil.rmtree(f) if f.is_dir() else f.unlink()
 
     def history(self):
         return ladder.read_history(TMP)
@@ -30,7 +31,7 @@ class GateTest(unittest.TestCase):
     def test_holds_matt_prompt_in_afternoon(self):
         ctx = run("fix the mixer")
         self.assertIn("HABIT GATE", ctx)
-        self.assertIn("5 minutes", ctx)
+        self.assertIn("habit_gate.py page", ctx)  # first rungs are a fixed card bank
         self.assertIn("Reply 👍 when done", ctx)
 
     def test_morning_weekend_and_agents_pass(self):
@@ -73,6 +74,28 @@ class GateTest(unittest.TestCase):
     def test_already_recorded_by_checkin_passes(self):
         ladder.append_record({"date": "2026-10-22", "study": 10}, TMP)
         self.assertIsNone(run("hi"))
+
+
+    def test_ladder_starts_with_symbol_bank(self):
+        self.assertIn(" page`", run("hi"))
+        os.environ["HABIT_GATE_NOW"] = "2026-10-22T15:00"
+        cfg = ladder.load_config()
+        out = habit_gate.build_page(cfg, ladder.read_state(cfg, TMP), habit_gate.now())
+        cards = json.loads((Path(TMP) / "practice" / "2026-10-22.json").read_text())
+        self.assertEqual([c["card_id"] for c in cards][:2], ["sym_forall", "sym_exists"])
+        self.assertIn("What does ∀ mean?", out.read_text())
+
+    def test_ladder_moves_only_when_solid(self):
+        ids = [c["card_id"] for c in habit_gate.load_rungs()["rungs"][0]["cards"]]
+        doc = lambda ok, bad=(): {"reviews": [{"card_id": i, "correct": True} for i in ok]
+                                  + [{"card_id": i, "correct": False} for i in bad]}
+        self.assertEqual(habit_gate.score(doc(ids[:5]), "d1")["rung"], 0)  # perfect, but not every card seen
+        self.assertEqual(habit_gate.score(doc(ids[:5]), "d1")["rung"], 0)  # same day counts once
+        r = habit_gate.score(doc(ids[5:7], ids[7:]), "d2")
+        self.assertEqual((r["rung"], r["missed"]), (0, [ids[7]]))  # 2/3 < 80%
+        self.assertEqual(habit_gate.pick_cards(habit_gate.load_rungs()["rungs"][0], r, 2)[0]["card_id"], ids[7])
+        self.assertEqual(habit_gate.score(doc(ids[7:]), "d3")["rung"], 1)
+        self.assertEqual(habit_gate.score(doc([], ["word_every", "word_some"]), "d4")["rung"], 0)  # rough page: back one
 
 
 if __name__ == "__main__":
