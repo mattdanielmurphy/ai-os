@@ -38,3 +38,18 @@ Flat, Realistic 3D, Engraving, Risograph, 70s retro, Pixel art (32×32 hand-plac
 ### Known rough bits
 
 Pixel art shows faint seams between pixels in the preview; engraving hatching is a quick crescent. Both get cleaned up if picked. Undo: delete assets/brand/styles/.
+
+## 11:47 Naming: an A-word for "app suite"
+
+Matt: company = Matthew Daniel Murphy Apps (MDMA), app maybe "MDMA Utilities"; wishes for an A-word meaning app suite.
+
+---
+
+### A-word options
+
+- Apothecary: a shop of remedies; matches the pill logo exactly. Recommended.
+- Arsenal / Armory: a collection of tools, a bit aggressive.
+- Array: a set of things; dry, techy.
+- Atelier: workshop; elegant, less about utilities.
+- Kept his own: MDMA Utilities (plain, clear).
+On 👍: set brand.lua longName = "Matthew Daniel Murphy Apps", name = "MDMA Apothecary" (menus show the short name).
