@@ -121,3 +121,27 @@ Matt 👍'd. Built it.
 The check-in page still has its own CSS copy. Moving it onto kit.css touches the 7:45 daily job, so I left it for a separate careful step.
 
 Undo: revert the services/review, services/pages and mac-connector /act commits; restart the connector.
+
+## 10:15 Size, word drag, paragraph and section picks
+
+Matt tried it on his Mac: far too big, drag didn't select whole words, wants to pick a whole paragraph or section, more inner padding, a wider card, a bit more vertical space. Dictation-from-a-tap went to the coordinator (his words quoted), since he believes another thread is on the URL-router route.
+
+---
+
+### Smaller and roomier
+
+Review-only overrides (kit.css and the check-in are untouched): body 16px, h1 ~30px, section h2 20px, headings inside a reply 16-18px, column 46rem, card padding 32px 40px (20px on phones), larger gaps and line-height 1.65. Done bar is now a small button on the right with the status text on the left, not a full-width orange slab.
+
+---
+
+### Whole-word drag
+
+On mouseup the selection's ends are pushed out to word boundaries, and the words stay painted with the CSS Highlight API while the comment box takes focus (a normal selection would vanish when the box is focused). Tested in the browser pane: a drag from mid-word gave "pushed back".
+
+---
+
+### Paragraph and section picks
+
+Clicking inside a paragraph's box but not on a sentence (e.g. to the right of a short last line) aims at the whole paragraph; list items count as paragraphs. Clicking the section heading aims at the whole section. Picked paragraphs/sections get a soft tint. Notes are stored under `p:<section>:<n>` and `sec:<section>` keys next to the sentence keys. Tested via synthetic clicks.
+
+Untested by me: real mouse drags on his Mac (I used synthetic ranges).
