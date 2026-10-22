@@ -17,3 +17,9 @@ Claude threads about that app, each with its state: resolved, idle, waiting for 
 Clicking a thread opens it. A "prod" switch hides the whole menu. Should be a shared module (next to
 hud-kit) every app imports, not per-app code. Designs: docs/details/2026-10-22-app-thread-menu.md.
 Status: idea; build only when Matt says "make it".
+
+## Earn Claude with a habit step (2026-10-22)
+Gate Claude use behind finishing today's habit step (first likely use: the afternoon logic study block).
+Builds on the check-in habit ladder (`services/checkin/ladder.py`), so it stays gentle: tiny doses,
+grow slowly, pull back after misses, and an escape hatch that just counts as a miss.
+Options: docs/details/2026-10-22-claude-habit-gate.md. Status: idea; build only when Matt says "make it".
