@@ -25,3 +25,11 @@ Builds on the check-in habit ladder (`services/checkin/ladder.py`), so it stays 
 grow slowly, pull back after misses, and an escape hatch that just counts as a miss.
 Refinement (Matt, 15:25): don't ask; the gate just hands him an artifact with the logic questions to do.
 Options: docs/details/2026-10-22-claude-habit-gate.md. Status: idea; build only when Matt says "make it".
+
+## Capture Audio: rolling buffer of system audio (2026-10-22)
+Like Ableton's Capture MIDI, but for audio: always keep the last few minutes of everything the Mac plays,
+except Apple Music. After audio plays, a small HUD button appears (own slot in `~/.hammerspoon/hud_slots.json`);
+clicking it opens a picker to grab a clip from the buffer. Existing-tool route first: Audio Hijack 4.5.5
+(installed) can do System Audio "all except Music" + Time Shift/Recorder. Custom route: macOS 14.2+ Core Audio
+process tap excluding Music.app, in-memory ring buffer, HUD + waveform picker.
+Assessment: docs/details/2026-10-22-capture-audio-buffer.md. Status: idea; awaiting Matt's pick.
