@@ -45,3 +45,15 @@ Matt (in another thread): write the key `UD: animals · Dx: … · Bx: …` with
 ### Saving check
 
 The coordinator saw no `practice` rows while Matt was mid-quiz; I confirmed the collection is empty. The same save code works on the morning check-in (rows for Oct 17–21), so the code path is fine; the likely cause is taps made before the page's db connection arrived (save() silently skipped them), or a view of version 1 (static, no db). Fix in `template.html`: when the db connects and there's no saved doc yet, it saves the taps already made; in practice mode, a view with no db now says "Answers aren't being saved in this view." I couldn't open the live page myself (the built-in browser isn't signed in to claude.ai), so this is untested live. Not republished yet, so Matt's quiz isn't interrupted mid-way; it applies to every gate page built from now on.
+
+---
+
+## 14:45 A better way than "reply 👍"
+
+Matt asked if there's a better way than going back to the thread to reply 👍.
+
+---
+
+### Done button wakes thread
+
+Yes. The review page (`services/review`) already does this: its Done button links to the Mac connector's `/act/<token>/review-done` route (`services/mac-connector/server.ts`), which queues a note the coordinator routes to the thread. The practice page's Done screen could use the same route with a `practice-done` action that runs `habit_gate.py done` on the Mac and wakes the thread, so the held message carries on without him typing. Not built yet; offered as "👍 = make it". Rejected: having the agent poll the artifact db on his next message (still needs him to send something).
