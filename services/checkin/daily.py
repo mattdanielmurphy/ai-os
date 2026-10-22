@@ -222,6 +222,29 @@ def recent_notes(day, vault=VAULT, days=4, limit=3000):
     return (text[:limit] + "…") if len(text) > limit else (text or "(none yet)")
 
 
+def study_line(plan, day, data_dir=ladder.DATA_DIR, cfg=None):
+    """The afternoon study block: today's dose, and whether to ask about the last school day (Matt, 2026-10-22)."""
+    cfg = cfg or ladder.load_config()
+    if "study" not in cfg["habits"]:
+        return "none"
+    d, parts = date.fromisoformat(day), []
+    if "study" in plan["doses"]:
+        parts.append(f"today's lunch-then-study block is {plan['doses']['study']} minutes, right after lunch.")
+    last = d - timedelta(days=1)
+    while not ladder.scheduled(cfg, "study", last):
+        last -= timedelta(days=1)
+    done = next((r.get("study") for r in ladder.read_history(data_dir) if r["date"] == last.isoformat()), None)
+    extra = f" --data-dir {data_dir}" if Path(data_dir) != ladder.DATA_DIR else ""
+    when = "yesterday" if last == d - timedelta(days=1) else last.strftime("%A")
+    if done is not None:
+        parts.append(f"{when} he studied {done} minutes (already recorded; mention it in a few words if it fits).")
+    else:
+        parts.append(f"ask once, in a few words, how {when}'s lunch-then-study block went (minutes), then record it "
+                     f"silently: `python3 {HERE}/ladder.py{extra} record --date {last.isoformat()} study=<minutes>` "
+                     f"(0 if skipped, no guilt).")
+    return " ".join(parts)
+
+
 def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=None):
     """The talk thread's hidden system prompt, from checkin_prompt.md."""
     text = (HERE / "checkin_prompt.md").read_text().split("\n---\n", 1)[1].strip()
@@ -238,6 +261,7 @@ def thread_seed(plan, events, comic, day, data_dir=ladder.DATA_DIR, comic_image=
         "early_events": "; ".join(f"{e['when']} {e['what']}" for e in events if e.get("early")) or "none",
         "recent_notes": recent_notes(day),
         "reflection_minutes": plan["doses"].get("reflection", 1),
+        "study": study_line(plan, day, data_dir),
         "here": HERE,
         "ladder_args": extra_l,
         "vault": VAULT,

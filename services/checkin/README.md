@@ -22,7 +22,9 @@ A claude.ai chat that opens with "Morning check-in" calls the Mac connector's `c
 half in voice mode. Shell-only steps (reminders, sleep shift) go through `send_task`.
 
 ## Files
-- `ladder.json`: habits, their dose levels, and the queue of steps to add later. Edit freely.
+- `ladder.json`: habits, their dose levels, and the queue of steps to add later. Edit freely. `study` ("Lunch, then
+  study", 2026-10-22) is weekday-only, grows on its own weekly clock, and is asked about in the talk thread the next
+  morning rather than shown on the page.
 - `ladder.py`: the habit ladder. `plan` picks today's doses; `record` logs what was done. Rules are in its docstring.
 - `daily.py`: the daily job (`prepare`, `send`). See its docstring.
 - `build.py` + `template.html`: the page.

@@ -169,7 +169,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 const DATA = __DATA__;
 const PLAN = DATA.plan || { doses: { breaths: 3, cards: 3, gratitude: 1 }, steps: [], changes: [] };
 const BREATHS = PLAN.doses.breaths || 3;
-const EXTRAS = (PLAN.steps || []).filter(x => !["breaths", "gratitude", "cards", "reflection"].includes(x.habit));
+const EXTRAS = (PLAN.steps || []).filter(x => !x.when && !["breaths", "gratitude", "cards", "reflection"].includes(x.habit));
 const STEPS = [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
 const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
 const TARGET = PLAN.doses.cards || 3; // after this many cards the Done button becomes the main call to action
