@@ -60,3 +60,16 @@ in ARCHITECTURE.md to sage (#4F8A6C / #7FB89A); sage was already the house secon
 banned list. Added the ban to `.rules/core_safety.md` (compiled), `.rules/web_design.md` (which used to *recommend*
 terracotta `#c96442`) and `~/.claude/CLAUDE.md`. Not changed: the mixer's live accent `#C2502F` and the take-control
 banner orange; both are listed as drift to recolour. Undo: revert the commit.
+
+## 14:40 Ship-ready by default replaces "not an audience"
+
+Matt's comment on ARCHITECTURE.md section 8 reversed the 2026-10-21 rule. New rule, global: every build gets the
+cheap last 10% (self-contained, settings, onboarding, README, self-explanatory UI); agents judge per build whether
+it's just for Matt or for the world and say so in one line; only real-potential builds get heavy shipping work.
+Added "Discoverable by design" as its own rule (his bad memory + love of discovery): visible hints for every
+shortcut/gesture/modifier, clear empty states.
+
+Changed: ARCHITECTURE.md sections 8–9 + checklist + draft rule line; `.rules/core_safety.md` 1h/1i (compiled);
+`~/.claude/CLAUDE.md` (old line replaced); memory `software-for-matt-not-audience` trashed, `ship-ready-by-default`
+added. The project instructions still carry the old "software for HIM" lines; asked the coordinator to update them
+(only it can). Kept "flag features for imagined users" so the rabbit-hole guard survives.

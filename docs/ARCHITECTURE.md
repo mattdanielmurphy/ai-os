@@ -105,11 +105,22 @@ Until the palette thread's tokens exist, these are the house style (neutrals tak
 
 ---
 
-## 8. Built for Matt
+## 8. Ship-ready by default, polish by potential
 
-- Features serve Matt's current need. The shareable list in `suite.lua` (for Tyler) is a convenience, not an
-  audience: no settings, onboarding or polish for other people beyond what already exists.
+- Every app could become a public product, so each one gets the cheap last 10%: self-contained (no hard-coded
+  Matt paths, one-step setup), a settings screen (Matt uses them too), first-run onboarding, a README.
+- Each app's README says on line 1 whether it's **just for Matt** or **for the world**. Agents make that call;
+  only "for the world" apps get the heavy work (distribution, polish for strangers, support).
+- Ship-ready means finishing what's built, not adding features for imagined users.
 - Look for an existing app or library before building, and prefer the smallest step.
+
+---
+
+## 9. Discoverable by design
+
+- How it works must be self-apparent: visible controls over hidden gestures, a visible hint for every
+  shortcut, modifier or gesture (hover tips, labels, keycaps), clear empty states.
+- Nothing should only work if you already know it exists.
 
 ---
 
@@ -122,6 +133,7 @@ Until the palette thread's tokens exist, these are the house style (neutrals tak
 5. Feel knobs in `tweaks.json`.
 6. Colours by role from the palette; SF Symbols; light by default.
 7. Repo, `AG_CONTEXT.md`, `build.sh`, tests, `ca.mattmurphy.*`.
+8. Just for Matt or for the world? Settings, onboarding, README; every shortcut and gesture has a visible hint.
 
 ---
 
@@ -138,5 +150,5 @@ Until the palette thread's tokens exist, these are the house style (neutrals tak
 > **App constraints (Matt, 2026-10-22):** every app or utility built for Matt follows
 > `~/projects/ai-os/docs/ARCHITECTURE.md`: pick the platform by job (Hammerspoon glue, standalone Swift HUDs on
 > hud-kit), build shared behaviour once in hud-kit or the Lua modules, claim screen space/keys/input from the
-> shared registries, keep feel in tweaks, colour by role from the house palette, and name things from
-> `brand.lua`. Read it before starting or restructuring any app.
+> shared registries, keep feel in tweaks, colour by role from the house palette, name things from
+> `brand.lua`, ship-ready by default, and make every interface self-explanatory. Read it before starting or restructuring any app.
