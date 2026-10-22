@@ -27,3 +27,15 @@ TypeWhisper 1.7.1 ships a local HTTP API (Settings > Advanced > API server; off 
 ### Untested part
 
 Not tested end to end: the API server is off, and turning it on is a TypeWhisper setting Matt flips (I didn't toggle an app's security setting myself). Script syntax and the "API off" path are tested. Undo: delete the script and AG_CONTEXT line; turn the API server off.
+
+## 16:25 Does the API lose the live preview?
+
+Matt worried that starting dictation via the API would drop the text streaming in while he speaks.
+
+---
+
+### Same path as the hotkey
+
+No. In TypeWhisper's source (cloned to ai-os/tmp/typewhisper-src), `POST /v1/dictation/start` → `DictationViewModel.apiStartRecording` → the same private `startRecording(...)` the hotkey handler (`handleHotkeyDictationStart`) calls. So the overlay, live preview, engine and insertion are identical; only the trigger differs. Still to confirm on screen once the API server switch is on.
+
+The "best Mac dictation app / build my own" and clipboard-history asks went to their own threads (coordinator).
