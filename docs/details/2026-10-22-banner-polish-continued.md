@@ -25,3 +25,13 @@ Nothing changed in code yet; waiting for his pick.
 ### Summon banner command
 
 `~/.hammerspoon/bin/claude-control ask "demo banner" 3 --thread cmsg_01CUPXyY9oUwKVDFREVDpYDrUCSmGtvVpWokq7BSXKw8wz` shows the full banner for 3 s, with click-to-thread. Add `--light` for the pill. Matt running it himself is his own input, so no clearance needed. Click-to-thread is still untested.
+
+## 14:20 FOL Five page complaint
+
+Matt's screenshot (sent 14:05, landed in this thread) showed the habit gate's "FOL Five" page as a plain show-answer list.
+
+---
+
+### Already fixed elsewhere
+
+Commit 1472658b (14:08, after his message) already fixed it: the gate told agents to hand-write the page; now `services/checkin/practice.py` builds it from the check-in template's new practice mode (tap-to-pick multiple choice). Today's page was republished at the same link. Details: `docs/details/2026-10-22-fol-practice-flashcards.md`. I changed nothing here. Not tested by the fixer: tap saving on the published page.
