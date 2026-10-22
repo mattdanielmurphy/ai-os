@@ -49,3 +49,18 @@ Not listed: Wispr Flow (cloud, live text not confirmed), VoiceInk (Whisper-based
 MacWhisper (file-transcription focus). Spokenly is installed but its streaming wasn't confirmed.
 
 Undo: nothing changed on the Mac; the IDEAS.md entry can be deleted.
+
+## 10:30 A better Big Pun-style bar
+
+Matt shared a claude.ai chat where Claude tried to match the multi-layered rhyme of Big Pun's
+"Little Italy" bar and produced forced, filler-heavy lines ("wobblers", "Aristotle's quotes").
+He asked for a better one.
+
+What makes Pun's bar work: one two-syllable vowel pattern (short i + schwa) repeated on nearly every
+stressed beat, a place name split and reused as an ordinary phrase, and a real story with a twist
+in the payoff. The old attempt had the sound but no story and too many nonsense words.
+
+My bar uses "ah-uh" on every stressed beat; "Gotham" splits into "got 'em" (same move as Pun's split);
+the story is a heist that turns out to be empty, so the payoff is a punchline. "Stockin'" replaced
+"holdin'" because the long o broke the vowel chain. Rejected: copying Pun's plot (killing the wrong
+men) too closely.
