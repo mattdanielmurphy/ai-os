@@ -36,7 +36,9 @@ PROJECT_RE = re.compile(r'<project id=\\?"(chan_\w+)')
 
 
 def thread_url(project, thread):
-    return f"claude://claude.ai/epitaxy/project/{project or DEFAULT_PROJECT}?thread={thread}" if thread else None
+    # Path form: the desktop app keeps only the path of a claude://claude.ai/epitaxy link and
+    # drops ?thread=, which landed on the project's thread list. (project is implied by the id.)
+    return f"claude://claude.ai/epitaxy/project/thread/{thread}" if thread else None
 
 
 def clean_title(text):
