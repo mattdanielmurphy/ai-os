@@ -55,3 +55,21 @@ AA's site only lists media@ and critpt@ addresses. No general/API inbox found, s
 ### Mail not opened
 
 claude-control returned "hammerspoon unreachable", so I didn't open Mail (opening apps needs clearance). Draft also saved at model-charts/tmp/aa-email.txt (gitignored).
+
+## 22:50 Note on the public model-charts page
+
+Matt sent the AA email and asked for a note on the page saying the chart isn't cost per task (so not very useful) and he's waiting on AA.
+
+---
+
+### Note under description
+
+Added an optional `note` field to projects in mattmurphy.ca `src/data/projects.js`, rendered under the description in `src/pages/projects/[slug].js` as a muted paragraph with a thin left rule (existing `--muted` / `--card-border` vars, no new colours). Reusable for any project. Text: cost is price per 1M tokens, not cost per task; asked Artificial Analysis, waiting to hear back. Build passed and the static page contains the text. Pushed to main (Vercel deploys).
+
+Undo: delete the `note:` line in projects.js.
+
+---
+
+### Follow-up
+
+When AA replies, remove the note and implement per their answer (handoff 2026-10-22_relay-from-coordinator-session-cold.md).
