@@ -102,8 +102,16 @@ const unescape = (t: string) =>
 export const wakeParts = (text: string) => {
   const body = /<message trigger="true"[^>]*>([\s\S]*?)<\/message>/.exec(text)?.[1]
   const id = /<message trigger="true"[^>]*\bid="(cmsg_[A-Za-z0-9]+)"/.exec(text)?.[1]
-  return { body: unescape((body ?? text).trim()), id }
+  const thread = /<thread\b[^>]*\b(?:ts|id)="(cmsg_[A-Za-z0-9]+)"/.exec(text)?.[1]
+  return { body: unescape((body ?? text).trim()), id, thread }
 }
+
+/** The coordinator's note, after it started the fresh thread, naming that thread. The mod answers
+ *  it itself so this cold thread's model never runs. */
+export const handedOff = (text: string) =>
+  /^\s*<relay from="coordinator"/.test(text)
+    ? /context-alert handed-off:\s*(cmsg_[A-Za-z0-9]+)/.exec(text)?.[1]
+    : undefined
 
 /** Which project wake this is: mention, reactions, message-edited, ... */
 export const wakeReason = (text: string) => /^\s*<wake\b[^>]*\breason="([^"]+)"/.exec(text)?.[1] ?? ''
@@ -125,9 +133,9 @@ export const heldWake = (text: string, heldId?: string): 'answer' | 'edit' | 'ot
 const bareAnswer = (body: string) =>
   /^\W*(fresh|new( thread)?|yes|yep|yeah|ok(ay)?|sure|do it|go for it|sounds good|👍|fresh thread)?\W*$/iu.test(body)
 
-/** Matt's answer to a held message. A fresh thread from the handoff is the default (👍, "fresh" or
- *  any other reply); only ⏩ or "here"/"go" continues in this cold thread. 👍 always means the
- *  recommended action (Matt, 2026-10-21). */
+/** Matt's answer to a held message. A fresh thread from the handoff is the default (it starts on
+ *  its own once the handoff is written, Matt 2026-10-22; 👍, "fresh" or any other reply sends it
+ *  sooner); only ⏩ or "here"/"go" continues in this cold thread. */
 export const wantsFresh = (text: string) =>
   !(/⏩|fast_forward/.test(text) || /^\W*(here|go)\W*$/i.test(wakeParts(text).body))
 
@@ -139,22 +147,31 @@ export const heldReaction = (text: string): 'cancel' | 'wait' | null => {
   return null
 }
 
-/** The thread reply that tells Matt his message is on hold. */
+/** The thread reply that tells Matt his message is moving to a fresh thread. */
 export const heldReply = (expiredMs: number, tokens: number) =>
-  `⏸️ **Held, nothing sent yet.** This thread's cache expired ${ago(expiredMs)} ago, so answering ` +
-  `here would re-read ~${k(tokens)} tokens at full price. Haiku is writing a handoff now.\n\n` +
-  `- 👍 or any reply: start a new thread from the handoff (cheap, recommended)\n- ⏩ or reply **here**: continue in this thread anyway\n- ❌: drop it. Editing your message updates what gets sent.`
+  `❄️ **Cache expired ${ago(expiredMs)} ago, so this moves to a fresh thread.** Nothing sent here; ` +
+  `Sonnet is writing the handoff.\n\n⏩ continue here instead (re-reads ~${k(tokens)} tokens)\n\n❌ drop it`
 
-/** What the coordinator gets when Matt picks a fresh thread. */
-export const freshAsk = (held: string, heldId: string, prompt: string, followUp = '') =>
-  `Matt chose a fresh thread for a message he wrote into a cold thread (context-alert held it; that ` +
-  `thread never ran). Please start a new thread on his message ${heldId || '(no id)'} with a brief ` +
-  `that says: first do this, then answer him: ${prompt}\n\nHis held message: ${held}` +
-  (followUp ? `\n\nHe added, in the same thread while it was held: ${followUp}` : '')
+/** The line the old thread ends on, once the coordinator says where the work went. */
+export const handedOffReply = (thread: string) =>
+  `➡️ **Handed off to [the new thread](#${thread}) because the cache expired.**`
 
-/** Writes a handoff from the transcript file with Haiku; the thread itself is never re-sent. */
+/** What the coordinator gets when a held message moves to a fresh thread. */
+export const freshAsk = (held: string, heldId: string, prompt: string, followUp = '', parent = '') =>
+  `Matt chose a fresh thread for a message he wrote into a cold thread (context-alert held it and ` +
+  `moved it by default; that thread never ran). Please start a new thread on his message ` +
+  `${heldId || '(no id)'} with a brief that says: first do this, then answer him: ${prompt}\n\n` +
+  `His held message: ${held}` +
+  (followUp ? `\n\nHe added, in the same thread while it was held: ${followUp}` : '') +
+  (parent
+    ? `\n\nLinks: make the new thread's ack "Continued from [the old thread](#${parent}) because its ` +
+      `cache expired." Then message_thread the old thread (${parent}) with exactly: ` +
+      `context-alert handed-off: <the new thread's id>. The mod there posts the link without waking its model.`
+    : '')
+
+/** Writes a handoff from the transcript file with Sonnet; the thread itself is never re-sent. */
 const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> => {
-  await update($, handoff, () => ({ status: 'writing', text: 'Writing handoff with Haiku (about a minute)…' }))
+  await update($, handoff, () => ({ status: 'writing', text: 'Writing handoff with Sonnet (about a minute)…' }))
   const sid = await $.session.id()
   // Carry the message the person meant to send: the one held, else the draft in the box.
   const draft = (await $.prompt.read()).text.trim()
@@ -177,23 +194,69 @@ const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> 
   return result
 }
 
-/** /haiku-handoff (and its old name /fresh). */
-const haikuCommand = async ($: EngineInterface) => {
+/** /cold-handoff (and its old names /haiku-handoff and /fresh). */
+const coldCommand = async ($: EngineInterface) => {
   const result = await coldHandoff($, false)
   if (result.status === 'error') return { text: `Cold handoff failed: ${result.text}` }
   return { text: `Handoff written without reloading this thread. Click the link (press Enter there to start), or paste:\n\n${result.text}` }
 }
 
-/** The handoff Haiku starts writing as soon as a project message is held. */
-let backgroundHandoff: Promise<Handoff> | null = null
+type Held = { body: string; id?: string; thread?: string }
 
-/** Matt answered a held project message: send it on here, or hand off to a fresh thread. */
+/** The handoff Sonnet starts writing as soon as a project message is held. */
+let backgroundHandoff: Promise<Handoff> | null = null
+/** Bumped on every hold and every answer, so the automatic move only fires for its own hold. */
+let holdSeq = 0
+/** ✋ on the hold note: don't move it on its own, wait for Matt's next message. */
+let holdWaiting = false
+
+const startHandoff = ($: EngineInterface) => {
+  backgroundHandoff = coldHandoff($, false).catch((err): Handoff => ({ status: 'error', text: String(err) }))
+}
+
+/** Asks the coordinator for a fresh thread from the handoff. The old thread's last line, with the
+ *  link, comes when the coordinator answers (see handedOff). */
+const sendFresh = async ($: EngineInterface, h: Held, added = ''): Promise<boolean> => {
+  let job = await (backgroundHandoff ?? coldHandoff($, false))
+  backgroundHandoff = null
+  if (job.status !== 'done') job = await coldHandoff($, false)
+  if (job.status !== 'done') {
+    await $.tool.call({ tool: 'mcp__hearthbot__reply', text: `⚠️ **Handoff failed:** ${job.text}\n\n⏩ continue here, or send anything to retry.` })
+      .catch(() => undefined)
+    return false
+  }
+  await $.tool.call({
+    tool: 'mcp__claude-code-remote__send_message',
+    session_id: '@parent', visibility: 'sent_to_shared_agent',
+    message: freshAsk(h.body, h.id ?? '', job.prompt ?? job.text, added, h.thread ?? ''),
+  }).catch(() => undefined)
+  return true
+}
+
+/** The default: once the handoff is written, move the held message on its own (Matt, 2026-10-22:
+ *  no 👍 needed). Skipped if Matt answered, edited or said ✋ meanwhile. */
+const autoFresh = async ($: EngineInterface, seq: number) => {
+  await backgroundHandoff
+  if (seq !== holdSeq || holdWaiting) return
+  const pending = await read($, projectHeld)
+  if (!pending || seq !== holdSeq) return
+  holdSeq++
+  if (await sendFresh($, JSON.parse(pending) as Held)) await update($, projectHeld, () => '')
+  else holdSeq-- // keep it held so ⏩ or a retry still works
+}
+
+/** Matt answered a held project message: send it on here, or hand off to a fresh thread now. */
 const answerHeld = async (
   $: EngineInterface, e: PromptSubmitInput, next: (e: PromptSubmitInput) => Promise<PromptSubmitResult>,
-  w: { body: string; id?: string },
+  w: Held,
 ): Promise<PromptSubmitResult> => {
   const reaction = wakeReason(e.text) === 'reactions' ? heldReaction(e.text) : null
-  if (reaction === 'wait') return { drop: 'Still held: Matt reacted ✋/👀, waiting for his next message.' }
+  if (reaction === 'wait') {
+    holdWaiting = true
+    return { drop: 'Still held: Matt reacted ✋/👀, waiting for his next message.' }
+  }
+  holdSeq++
+  holdWaiting = false
   await update($, projectHeld, () => '')
   if (reaction === 'cancel') {
     await update($, held, () => '')
@@ -205,18 +268,11 @@ const answerHeld = async (
     await update($, held, () => '')
     return next({ ...e, context: [...(e.context ?? []), `[context-alert] Matt said go ahead. His message held while this thread was cold: ${w.body}`] })
   }
-  let job = await (backgroundHandoff ?? coldHandoff($, false))
-  backgroundHandoff = null
-  if (job.status !== 'done') job = await coldHandoff($, false)
-  const prompt = job.prompt ?? job.text
   const added = wakeReason(e.text) === 'reactions' ? '' : wakeParts(e.text).body
-  await $.tool.call({
-    tool: 'mcp__claude-code-remote__send_message',
-    session_id: '@parent', visibility: 'sent_to_shared_agent',
-    message: freshAsk(w.body, w.id ?? '', prompt, bareAnswer(added) ? '' : added),
-  }).catch(() => undefined)
-  await $.tool.call({ tool: 'mcp__hearthbot__reply', text: 'Starting a fresh thread from the Haiku handoff; it will show up in the project chat with your message.' })
-    .catch(() => undefined)
+  if (!(await sendFresh($, w, bareAnswer(added) ? '' : added))) {
+    await update($, projectHeld, () => JSON.stringify(w))
+    return { drop: 'Handoff failed; message still held.' }
+  }
   return { drop: 'Fresh thread requested from the coordinator; this thread stays cold.' }
 }
 
@@ -224,10 +280,11 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     await $.command.register({
-      name: 'haiku-handoff',
-      description: 'Haiku writes the handoff from the saved transcript; this thread is never re-sent',
+      name: 'cold-handoff',
+      description: 'Sonnet writes the handoff from the saved transcript; this thread is never re-sent',
     })
-    await $.command.register({ name: 'fresh', description: 'Old name for /haiku-handoff' })
+    await $.command.register({ name: 'haiku-handoff', description: 'Old name for /cold-handoff' })
+    await $.command.register({ name: 'fresh', description: 'Old name for /cold-handoff' })
     $.clock.every(60_000, () => {
       void $.clock.now().then(t => update($, now, () => t))
     })
@@ -276,6 +333,11 @@ export const register: Register = on => {
   // cold thread and say what it would cost. Sending again within 10 min goes through.
   on('prompt.submit', async ($, e, next) => {
     if (e.command !== undefined) return next(e)
+    const moved = handedOff(e.text)
+    if (moved !== undefined) {
+      await $.tool.call({ tool: 'mcp__hearthbot__reply', text: handedOffReply(moved) }).catch(() => undefined)
+      return { drop: `Handed off to ${moved}; the coordinator's note was answered by the mod.` }
+    }
     const isPerson = ['composer', 'bridge', 'sdk'].includes(e.origin.kind) && !e.isMeta
     // A project thread is known by any earlier <wake>, not only this message's: after the Mac
     // reconnects, a queued message can arrive without the envelope and was held the Code-tab
@@ -284,15 +346,16 @@ export const register: Register = on => {
     const project = isProjectMessage(e.text) || (await read($, inProject))
     const pending = project ? await read($, projectHeld) : ''
     if (pending) {
-      const h = JSON.parse(pending) as { body: string; id?: string }
+      const h = JSON.parse(pending) as Held
       const kind = isPerson ? 'answer' : heldWake(e.text, h.id)
       if (kind === 'answer') return answerHeld($, e, next, h)
       if (kind === 'edit') {
-        // Matt edited the held message: hold the new text instead, still waiting for his answer.
+        // Matt edited the held message: hold the new text instead and rewrite the handoff.
         const edited = { ...h, body: wakeParts(e.text).body }
         await update($, projectHeld, () => JSON.stringify(edited))
         await update($, held, () => edited.body)
-        backgroundHandoff = coldHandoff($, false).catch((err): Handoff => ({ status: 'error', text: String(err) }))
+        startHandoff($)
+        void autoFresh($, ++holdSeq)
         return { drop: 'Held message edited; still held with the new text.' }
       }
     }
@@ -305,7 +368,7 @@ export const register: Register = on => {
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
 
     // A Claude project thread: the Code tab's hold note never shows on the project page, so the
-    // mod says it in the thread itself and waits for Matt's go or fresh.
+    // mod says it in the thread itself and moves the message to a fresh thread unless Matt says ⏩.
     if (project) {
       await $.process.run(['mkdir', '-p', HELD_DIR]).catch(() => undefined)
       await $.process.run(['sh', '-c', `cat >> ${HELD_DIR}/holds.log`], { stdin: `${new Date(at).toISOString()} ${JSON.stringify(e.text.slice(0, 300))}\n` })
@@ -316,8 +379,10 @@ export const register: Register = on => {
       if (!posted) return next(e)
       await update($, projectHeld, () => JSON.stringify(w))
       await update($, held, () => w.body)
-      backgroundHandoff = coldHandoff($, false).catch((err): Handoff => ({ status: 'error', text: String(err) }))
-      return { drop: `Held (project thread): cache expired ${ago(-left)} ago, ~${k(tokens)} tokens. Asked Matt in the thread.` }
+      holdWaiting = false
+      startHandoff($)
+      void autoFresh($, ++holdSeq)
+      return { drop: `Held (project thread): cache expired ${ago(-left)} ago, ~${k(tokens)} tokens. Moving it to a fresh thread.` }
     }
 
     await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
@@ -330,13 +395,14 @@ export const register: Register = on => {
     return {
       drop:
         `Held: this thread's cache expired ${ago(-left)} ago, so this message would re-send ` +
-        `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /haiku-handoff ` +
+        `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /cold-handoff ` +
         `to hand off to a new thread cheaply (this message goes with it).` + extra,
     }
   })
 
-  on('command.run', { command: 'haiku-handoff' }, haikuCommand)
-  on('command.run', { command: 'fresh' }, haikuCommand)
+  on('command.run', { command: 'cold-handoff' }, coldCommand)
+  on('command.run', { command: 'haiku-handoff' }, coldCommand)
+  on('command.run', { command: 'fresh' }, coldCommand)
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
@@ -356,8 +422,8 @@ export const register: Register = on => {
     const isCold = left !== null && left <= 0
 
     const hint = isCold
-      ? `This agent would re-read ~${k(tokens)} at full price; Haiku reads the saved file instead.`
-      : 'This agent: best notes, cheap while the cache is warm. Haiku: faster, never re-sends the thread.'
+      ? `This agent would re-read ~${k(tokens)} at full price; Sonnet reads the saved file instead.`
+      : 'This agent: best notes, cheap while the cache is warm. Sonnet: never re-sends the thread.'
 
     return (
       <Box flexDirection="column">
@@ -384,8 +450,8 @@ export const register: Register = on => {
             />
             <Text> </Text>
             <Button
-              key="haiku"
-              label="Handoff by Haiku"
+              key="sonnet"
+              label="Handoff by Sonnet"
               variant={isCold ? 'primary' : 'secondary'}
               onPress={() => void coldHandoff($, true)}
             />
