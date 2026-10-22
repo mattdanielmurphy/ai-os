@@ -87,6 +87,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 .rate.chosen { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); opacity: 1; }
 .rate.chosen small { color: var(--accent-ink); }
 .rate.dim { opacity: .4; }
+.mistap { justify-self: start; font: 500 13px/1 var(--display); color: var(--muted); background: none; border: 0; padding: 10px 0; text-decoration: underline; cursor: pointer; }
 .tally { font: 500 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Done */
@@ -148,6 +149,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
       <p class="lede" id="elab"></p>
       <span class="eyebrow">How well did you know it?</span>
       <div class="rates" id="rates"></div>
+      <button class="mistap" id="mistap" type="button">Mistap · don't count this card</button>
     </div>
     <p class="lede" id="nextnote" hidden></p>
   </section>
@@ -173,7 +175,7 @@ const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
 const TARGET = PLAN.doses.cards || 3; // after this many cards the Done button becomes the main call to action
 const $ = id => document.getElementById(id);
 
-let state = { date: DATA.date, step: "breathe", reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], finishedAt: null };
+let state = { date: DATA.date, step: "breathe", reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], skipped: [], finishedAt: null };
 const stepIndex = k => STEPS.findIndex(([s]) => s === k);
 let cardIdx = 0, picked = null, rating = false, touched = false;
 const BUILD = "v6";
@@ -267,7 +269,7 @@ $("gnext").onclick = async () => { state.gratitude = $("grat").value.trim(); go(
 
 /* Recall */
 function nextUnreviewed(from) {
-  const done = new Set(state.reviews.map(r => r.card_id));
+  const done = new Set([...state.reviews.map(r => r.card_id), ...(state.skipped || [])]);
   for (let i = from; i < DATA.cards.length; i++) if (!done.has(DATA.cards[i].card_id)) return i;
   return DATA.cards.length;
 }
@@ -284,7 +286,7 @@ function renderCard() {
   if (!c) { go("done"); return; }
   picked = null;
   $("deck").textContent = deckLabel(c.card_id);
-  $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
+  $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length - state.skipped.length} due`;
   $("prompt").textContent = c.prompt;
   $("reveal").hidden = true; $("nextnote").hidden = true;
   $("todone").hidden = state.reviews.length === 0;
@@ -331,7 +333,7 @@ async function rate(v, ok, btn) {
   btn.classList.add("chosen");
   btn.querySelector("small").textContent = "saved";
   cardIdx++;
-  $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length} due`;
+  $("tally").textContent = `${state.reviews.length} reviewed · ${DATA.dueTotal - state.reviews.length - state.skipped.length} due`;
   const finished = nextUnreviewed(cardIdx) >= DATA.cards.length;
   $("nextnote").textContent = finished ? "Saved. That's all the cards." : "Saved. Next card…";
   $("nextnote").hidden = false;
@@ -343,6 +345,24 @@ async function rate(v, ok, btn) {
     else { renderCard(); $("s-recall").scrollIntoView({ behavior: "smooth", block: "start" }); }
   }, 900);
 }
+/* Mistap: drop this card's result (no rating, nothing sent to the deck); it stays due for another day. */
+$("mistap").onclick = () => {
+  const c = DATA.cards[cardIdx];
+  if (!c || rating || picked === null) return;
+  rating = true;
+  state.reviews = state.reviews.filter(r => r.card_id !== c.card_id);
+  if (!state.skipped.includes(c.card_id)) state.skipped.push(c.card_id);
+  cardIdx++;
+  const finished = nextUnreviewed(cardIdx) >= DATA.cards.length;
+  $("nextnote").textContent = finished ? "Not counted. That's all the cards." : "Not counted. Next card…";
+  $("nextnote").hidden = false;
+  save();
+  setTimeout(() => {
+    rating = false;
+    if (finished) go("done");
+    else { renderCard(); $("s-recall").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  }, 700);
+};
 $("todone").onclick = () => go("done");
 $("moreCards").onclick = () => go("recall");
 
@@ -381,7 +401,8 @@ function save() {
       const local = state.reviews.filter(r => !savedReviews.some(s => s.card_id === r.card_id));
       state = { ...state, ...d, step: touched ? state.step : d.step, reviews: [...savedReviews, ...local],
         gratitude: state.gratitude || d.gratitude || "", breaths: Math.max(state.breaths, d.breaths || 0) };
-      const doneIds = new Set(state.reviews.map(r => r.card_id));
+      state.skipped = Array.isArray(d.skipped) ? d.skipped : state.skipped;
+      const doneIds = new Set([...state.reviews.map(r => r.card_id), ...state.skipped]);
       if (!touched) { cardIdx = DATA.cards.findIndex(c => !doneIds.has(c.card_id));
       if (cardIdx < 0) cardIdx = DATA.cards.length; }
       const saved = Math.max(stepIndex(state.step), state.reached || 0,
