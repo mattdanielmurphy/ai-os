@@ -21,6 +21,8 @@ declare module 'claude-code' {
       projectHeld: string
       /** This session is a Claude project thread (it has had a <wake> message). */
       inProject: boolean
+      /** This project thread's root message id, learned from its first hearthbot reply. */
+      threadId: string
     }
   }
 }

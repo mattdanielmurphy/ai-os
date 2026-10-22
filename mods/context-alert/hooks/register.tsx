@@ -28,6 +28,7 @@ const sendAnywayUntil = atom({ plugin: 'context-alert', key: 'sendAnywayUntil' }
 const held = atom({ plugin: 'context-alert', key: 'held' } as const, '')
 const projectHeld = atom({ plugin: 'context-alert', key: 'projectHeld' } as const, '')
 const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
+const threadId = atom({ plugin: 'context-alert', key: 'threadId' } as const, '')
 
 export const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -112,6 +113,19 @@ export const handedOff = (text: string) =>
   /^\s*<relay from="coordinator"/.test(text)
     ? /context-alert handed-off:\s*(cmsg_[A-Za-z0-9]+)/.exec(text)?.[1]
     : undefined
+
+/** A project-chat message (a <wake> with no <thread>) that isn't this thread's own root. The
+ *  server hands a thread started on a coordinator post the latest project-chat mention as if it
+ *  were the root, so the thread answered Matt's unrelated message (2026-10-22). */
+export const isStrayWake = (text: string, thread: string) => {
+  if (!thread || !isProjectMessage(text)) return false
+  const w = wakeParts(text)
+  return w.thread === undefined && w.id !== undefined && w.id !== thread
+}
+
+/** This thread's id, out of a hearthbot reply's result. */
+export const replyThread = (result: unknown) =>
+  /thread_id\\?"\s*:\s*\\?"(cmsg_[A-Za-z0-9]+)/.exec(JSON.stringify(result ?? ''))?.[1]
 
 /** Which project wake this is: mention, reactions, message-edited, ... */
 export const wakeReason = (text: string) => /^\s*<wake\b[^>]*\breason="([^"]+)"/.exec(text)?.[1] ?? ''
@@ -333,6 +347,9 @@ export const register: Register = on => {
   // cold thread and say what it would cost. Sending again within 10 min goes through.
   on('prompt.submit', async ($, e, next) => {
     if (e.command !== undefined) return next(e)
+    if (isStrayWake(e.text, await read($, threadId))) {
+      return { drop: `Not this thread's message (${wakeParts(e.text).id}); the coordinator handles project-chat messages.` }
+    }
     const moved = handedOff(e.text)
     if (moved !== undefined) {
       await $.tool.call({ tool: 'mcp__hearthbot__reply', text: handedOffReply(moved) }).catch(() => undefined)
@@ -398,6 +415,14 @@ export const register: Register = on => {
         `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /cold-handoff ` +
         `to hand off to a new thread cheaply (this message goes with it).` + extra,
     }
+  })
+
+  // Learn this project thread's id from its first reply, for isStrayWake.
+  on('tool.call', { tool: 'mcp__hearthbot__reply' }, async ($, e, next) => {
+    const out = await next(e)
+    const id = out.isError ? undefined : replyThread(out.result)
+    if (id !== undefined && !(await read($, threadId))) await update($, threadId, () => id)
+    return out
   })
 
   on('command.run', { command: 'cold-handoff' }, coldCommand)

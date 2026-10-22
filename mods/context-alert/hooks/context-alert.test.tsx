@@ -337,3 +337,38 @@ test('a held message names attachments it could not save', async ($, on) => {
   const out = await $.prompt.submit({ ...phone('look at this'), attachments: [{ type: 'image', filename: 'shot.png' }] })
   expect(out.drop).toMatch(/1 attachment\(s\) can't be carried over/)
 })
+
+// A project-chat message, as the server hands it to a new thread: no <thread> element.
+const chatWake = (body: string, id: string) =>
+  '<wake reason="mention">\n  <project id="chan_1" type="project">\n' +
+  `    <message trigger="true" from="human" id="${id}" mention="true">${body}</message>\n` +
+  '  </project>\n</wake>'
+
+const replied = (thread: string) => [{ type: 'text', text: JSON.stringify({ message_id: 'cmsg_R1', thread_id: thread }) }]
+
+test("a project-chat message that isn't this thread's root never reaches the model", async ($, on) => {
+  const entered: string[] = []
+  on('prompt.submit', (_$, e) => { entered.push(e.text); return { text: e.text } })
+  on('tool.call', () => ({ result: replied('cmsg_T1') }))
+  await $.tool.call({ tool: 'mcp__hearthbot__reply', text: 'done' })
+
+  const out = await $.prompt.submit(system(chatWake('make me a better bar', 'cmsg_OTHER')))
+  expect(out.drop).toMatch(/Not this thread's message \(cmsg_OTHER\)/)
+  expect(entered).toHaveLength(0)
+})
+
+test("the thread's own root and in-thread messages still go through", async ($, on) => {
+  const entered: string[] = []
+  on('prompt.submit', (_$, e) => { entered.push(e.text); return { text: e.text } })
+  on('tool.call', () => ({ result: replied('cmsg_T1') }))
+  await $.tool.call({ tool: 'mcp__hearthbot__reply', text: 'done' })
+
+  expect((await $.prompt.submit(system(chatWake('fix it', 'cmsg_T1')))).drop).toBeUndefined()
+  expect((await $.prompt.submit(system(wake('and this', 'cmsg_M9')))).drop).toBeUndefined()
+  expect(entered).toHaveLength(2)
+})
+
+test('before the first reply the thread id is unknown, so nothing is dropped', async ($, on) => {
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  expect((await $.prompt.submit(system(chatWake('hi', 'cmsg_OTHER')))).drop).toBeUndefined()
+})
