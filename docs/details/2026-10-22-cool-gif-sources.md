@@ -73,3 +73,42 @@ Just for Matt, plus Tyler via the shared suite (added to `suite.SHAREABLE` and U
 
 ### Rule change
 `.rules/core_safety.md` rule 1 now says new utilities are welcome; flag only rabbit holes. 1a: found tools are ingredients, no Raycast/Alfred extensions. Same in `~/.claude/CLAUDE.md` and the existing-tools memory. Undo: `git revert` the rules commit.
+
+## 18:55 Picker rework after feedback
+
+**Asked:** no post text, no duplicates, less lag, better GIFs, search all time and beyond two subreddits, a real curated collection, and a window that stands out from white windows behind it with reliable resize edges.
+
+---
+
+### Curated source found
+
+**[Are.na](https://www.are.na)** channels: people with taste hand-collect GIFs there, and the public API needs no key. Default channels: gif-stash (Gif Stash), crazy-cool-gifs, gif-t, zoracle-gifs, gifs-for-future-viewing, another-gif-channel, gif-collection, reactions. Synced once a day (5 pages of 100 per channel), GIFs over 6 MB skipped, de-duplicated: ~2,300 unique GIFs. Dropped retro-gifs and old-web-gif after seeing them (GeoCities clip art). Are.na's Cloudflare returns 403 to browser-looking user agents from scripts, so the picker sends its own name.
+
+Checked and rejected: Are.na block search (403 without login), GitHub GIF repos (jglovier/gifs is small and its tree API returned nothing), replygif.net (no response), GIFCities (GeoCities clip art), Klipy/Giphy (keys + mainstream taste), Finer Gifs Club (The Office only).
+
+---
+
+### Rework what changed
+
+- **No text:** captions gone; hover shows only ☆ (star) and ↗ (go to the source).
+- **No duplicates:** same file URL or same byte size counts as one GIF, across all sources.
+- **Less lag:** uniform tiles, 24 added per scroll step, only 4 downloading at once, only GIFs near the viewport load, and GIFs scrolled far away unload (all three are knobs).
+- **Search:** Return searches the curated library (titles/filenames), stars, and 8 GIF subreddits, all time, by relevance. Imgur links dropped (many show imgur's "no longer available" image).
+- **Tabs:** Curated (default, shuffled daily, ⤮ Shuffle) · Reddit best (all-time top) · Starred.
+- **Window:** standard macOS window shadow on (Hammerspoon webviews have none by default, which is why it blended into Claude behind it) and a tinted toolbar.
+
+---
+
+### Rework tested and untested
+
+Tested: unit tests (parsers, dedupe, shuffle, search matching), library sync (2,375 GIFs before dropping two channels), screenshots of the Curated grid and a "dancing" search (35 results), window shadow visible.
+
+**Untested:** whether resize edges now feel reliable (needs Matt's hands), real lag on his machine, paste into Messages, dark mode.
+
+**Focus note:** during testing the window took keyboard focus each time it appeared; the search box showed "Oo", which may have been Matt's typing landing there.
+
+---
+
+### Audience areas idea
+
+Matt (2026-10-22): the GIF you'd send a good buddy is different from one you'd send your mom; separate "Areas" with different audiences and vibes. Recorded in IDEAS.md as a future enhancement, not built.

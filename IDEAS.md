@@ -70,3 +70,6 @@ Giphy/Tenor push. Existing tool first: [Raycast GIF Search](https://www.raycast.
 pulls top posts from r/HighQualityGifs, r/reactiongifs and Finer Gifs Club plus his own starred stash.
 Options: docs/details/2026-10-22-cool-gif-sources.md. Status: built 2026-10-22 as a suite utility
 (Matt: no Raycast extension), `~/.hammerspoon/modules/gif_picker.lua`, ⌃⌥⌘G.
+Next idea (Matt, 2026-10-22): audience "Areas". The GIF you'd send a good buddy differs from one you'd send
+your mom, so separate areas (e.g. Buddies, Family, Work) each with their own sources and vibe, and stars filed
+per area. Status: idea; build on Matt's 👍.
