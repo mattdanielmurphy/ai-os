@@ -42,3 +42,7 @@ Undo: git revert this commit.
 - New theme themes/calm.json (this reel only): same fonts and neutrals as panel, status colours and tints softened (pastel green/red tints, muted green/red/blue). Derived from panel, no new hues.
 - Costs now split: PER YEAR total plus ONE-TIME line per option. Box (Firestick) ~$50-100 is MY estimate; the yearly service range $150-400 is the brief. Real bundle price ($260-320 per brief) unchecked, so slide says check it.
 - Looked at slides 3 and 8 in headless screenshots; fit OK. Undo: git revert.
+
+## 00:20 Voice takes instead of a regen button
+- A published page cannot call Deepgram (no key in the page, no backend), and a regen done in a viewer's browser could never reach someone you share with. So: build.py now bakes N independent takes per voice (reel.json "takes": 3; pace nudged 1.15 / 1.18 / 1.12 so Deepgram does not return the same audio). The Voice button (V) cycles them.
+- Sharing is exact: the first take baked is the default for every viewer. build.py scores each take by how much of the script speech-to-text heard (all three ~97-98

@@ -88,7 +88,7 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
     tag = hashlib.sha1((f"{voice}|{pace}|" + "\n".join(lines)).encode()).hexdigest()[:12]
     clips = [folder / f"{tag}-{k + 1}.mp3" for k in range(len(lines))]
     if all(c.exists() for c in clips):
-        return clips
+        return clips, tag
     full = folder / f"{tag}-full.mp3"
     if not full.exists():
         speak(voice, "\n\n...\n...\n\n".join(lines), full, speed=pace)
@@ -104,6 +104,8 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
     for a, b, n in sm.get_matching_blocks():
         for j in range(n):
             beat_of[b + j] = owner[a + j]
+    # how faithfully did the voice say the script? (dropped or garbled words lower it) kept next to the clips
+    (folder / f"{tag}.score").write_text(f"{sum(o is not None for o in beat_of) / max(1, len(said)):.4f}")
     cuts, end = [0.0], duration(full)
     for k in range(1, len(lines)):
         last = max((w["end"] for w, o in zip(heard, beat_of) if o is not None and o < k), default=None)
@@ -115,7 +117,7 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
     for k, clip in enumerate(clips):
         subprocess.run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
                         "-c:a", "libmp3lame", "-b:a", "64k", str(clip)], check=True)
-    return clips
+    return clips, tag
 
 
 def music_bed(src: Path, seconds: float, folder: Path) -> Path:
@@ -144,11 +146,19 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
     # every voice in `voices` is baked in (one take each); the player's Voice button switches between them
     names = [voice] if voice_given else reel.get("voices") or [voice]
     voices = []
+    takes = int(reel.get("takes", 1))  # several independent takes per voice; the best-heard one goes first
     for name in names:
-        clips = one_take([b["say"] for b in reel["beats"]], name, pace, audio)
-        voices.append({"name": name.title(), "beats": [
-            {"dur": duration(mp3), "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
-            for mp3 in clips]})
+        made = []
+        for t in range(takes):
+            clips, tag = one_take([b["say"] for b in reel["beats"]], name, round(pace + (0.03 * ((t + 1) // 2) * (1 if t % 2 else -1)), 2), audio)
+            sc = audio / f"{tag}.score"
+            made.append((float(sc.read_text()) if sc.exists() else 0.0, t, clips))
+        made.sort(key=lambda m: (-m[0], m[1]))
+        for rank, (score, t, clips) in enumerate(made):
+            print(f"{name} take {t + 1}: heard {score:.1%} of the script" + (" (default)" if rank == 0 else ""))
+            voices.append({"name": name.title() + (f" take {rank + 1}" if takes > 1 else ""), "beats": [
+                {"dur": duration(mp3), "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
+                for mp3 in clips]})
     beats = [{"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": re.sub(r"\s*\.\.\.\s*", " ", b["say"])} for b in reel["beats"]]
     data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voices[0]["name"],
             "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None}
