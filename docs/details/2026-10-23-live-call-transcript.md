@@ -76,3 +76,23 @@ While recording, every 10 s the script checks: is FaceTime still running, and ha
 ### Auto start/stop next
 
 Not built: detecting a FaceTime call to Tyler starting/ending (likely via FaceTime's window title or call-state logs) and starting/stopping on its own with a small toast.
+
+## 13:30 Simpler setup + voice effects
+
+Asked: simplify using the FaceTime block's "Include audio input + Split between channels" (input left, app right); and add effects to his voice that Tyler hears, while the transcriber still gets the dry mic.
+
+---
+
+### Why not the one-block setup
+
+"Include audio input" records whatever FaceTime's microphone is. Once FaceTime's mic is the effects device, that channel would be wet, so the transcriber would get effected audio. Without effects, the one-block setup is fine (left = Matt, right = Tyler, matching the script's defaults, no flags needed).
+
+---
+
+### Effects routing
+
+- Loopback: new device "Mic FX" (default Pass-Thru, nothing else).
+- Audio Hijack FX session: Input Device (mic) → effects → Output Device "Mic FX".
+- FaceTime: Video menu → Microphone → Mic FX. Tyler hears the effects.
+- Transcription session: Input Device (dry mic) → left, FaceTime block (Include audio input OFF) → right → Output Device BlackHole 16ch (+ his Mono → speakers branch for listening). Then `call-transcript start` with no flags.
+Untested; from Audio Hijack/Loopback knowledge, not run on his Mac. FaceTime's own voice processing may soften some effects.
