@@ -14,8 +14,9 @@ import re
 import sys
 
 MAX_FG_MS = 300_000
+START = r"(?:^|[;&|(`]|\$\()\s*(?:\w+=\S+\s+)*(?:sudo\s+)?"
 LONG = [
-    (r"\b(ffmpeg|ffplay|afplay|mpv|say|screencapture\s+-v)\b", "encode/playback"),
+    (r"(ffmpeg|ffplay|afplay|mpv)\b", "encode/playback"),
     (r"\b(hyperframes|manim|remotion)\b[^\n]*\b(render|preview)\b", "video render"),
     (r"\b(bun|npm|npx|pnpm|yarn)\s+(run\s+)?(dev|start|serve|watch|render|preview)\b", "dev server / render"),
     (r"\b(next|vite|astro)\s+(dev|start|preview)\b", "dev server"),
@@ -71,7 +72,7 @@ def main():
         deny("`sleep` of 60s+ in the foreground. Use Monitor/ScheduleWakeup or run_in_background. " + fix)
         return 0
     for pat, label in LONG:
-        if label and re.search(pat, cmd, re.I | re.M):
+        if label and re.search(START + "(?:" + pat + ")", cmd, re.I | re.M):
             deny(f"Foreground {label} command. " + fix)
             return 0
     if bare_amp(cmd):
