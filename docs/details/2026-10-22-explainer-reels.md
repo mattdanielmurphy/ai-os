@@ -74,3 +74,42 @@ For the world, potentially: "turn any long AI answer into a 60-second explainer"
 for Matt; keep it self-contained so it can grow.
 
 Untested: everything; nothing built. Undo: remove the IDEAS.md entry.
+
+## 21:45 Read Aloud as the narrator
+
+What Matt asked: instead of a paid voice key, spawn a chat with the cheapest Claude model, prompt
+"repeat this back verbatim: <text>", press Read Aloud, and stream/record the audio, maybe on the VPS.
+Pitch only, no build.
+
+---
+
+### Terms of service risk
+
+Anthropic's consumer terms forbid accessing the Services "through automated or non-human means, whether
+through a bot, script, or otherwise", except via an API key. Driving claude.ai with a script (on the VPS
+or the Mac) to press Read Aloud and capture audio is exactly that. The risk is his **main** Claude account
+(the one all his threads, projects and connectors run on) getting flagged or suspended. That outweighs a
+few cents of TTS per reel. Not a lawyer's read; this is the plain wording of the consumer terms.
+
+---
+
+### Feasibility if ignored
+
+Technically doable: a headless browser logged in as Matt, send the message, click Read aloud, capture the
+audio network response (or record the tab's audio). Problems: needs his claude.ai session cookie on the
+VPS (a credential sitting on a server), every reel costs a chat message from his plan's usage, the UI and
+endpoint change without notice so it breaks silently, and "verbatim" isn't guaranteed (the model may tweak
+wording, so captions drift from audio). Read Aloud has no API and no auto-read setting (checked
+2026-10-17).
+
+---
+
+### Free voice instead
+
+[Kokoro](https://huggingface.co/hexgrad/Kokoro-82M): open-source TTS, near-ElevenLabs quality on short
+narration, runs locally on his Mac (Apple Silicon, faster than real time), free, no account, no ToS risk,
+and could also run on the VPS. Recommended default. Paid fallback when he wants the best voice:
+[ElevenLabs](https://elevenlabs.io). Cost check for scale: OpenAI TTS is about $15 per million characters,
+so a 2-minute reel (~2,000 characters) is about 3 cents.
+
+Not tested: Kokoro install and voice quality on his Mac. Undo: nothing built.
