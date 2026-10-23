@@ -76,3 +76,12 @@ same file with corrected gains (pad -6, air -7).
 - air: **Glassy Keys**, Timeless 3 longer ping-pong delay, -6 dB.
 - Pro-R 2: Vintage style, Space 0.85, darker (Brightness 0.3).
 4:16, -20 LUFS, 0 dropouts. Not listened to by me.
+
+## 08:15 Piece 4: piano-airports-04
+
+`pieces/airports_04.py`: D lydian, slower and sparser (piano loops 21.1-41.7 s, pad up to 59.9 s), 4:46.
+- piano: **Darker Pools** (granular piano), Pro-Q 4, Saturn 2 Clean Tube.
+- pad: **Fading Outward**, Pro-Q 4, Saturn 2 Warm Tape, -6 dB.
+- air: **Echo Dust** (slow attack), Timeless 3 ping-pong, +3 dB (it's quiet by nature).
+- Pro-R 2: Modern, biggest room so far (Space 0.9, longer decay).
+-20 LUFS, 0 dropouts. Not listened to by me.
