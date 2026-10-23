@@ -109,7 +109,7 @@ connect();
 
 // Hang-up reminder: a toast when FaceTime closes or nobody has spoken for a while.
 // (Starting/stopping on its own when a FaceTime call to Tyler begins/ends is the next step.)
-const SILENT_MS = Number(flag("silence", "90")) * 1000;
+const SILENT_MS = Number(flag("silence", "120")) * 1000;
 let lastSpeech = Date.now();
 let reminded = false;
 const notify = (title: string, body: string) =>

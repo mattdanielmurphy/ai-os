@@ -69,7 +69,7 @@ Asked: eventually start/stop on its own with a FaceTime call to Tyler (just a sm
 
 ### How the reminder works
 
-While recording, every 10 s the script checks: is FaceTime still running, and has anyone spoken in the last 90 s (`--silence <sec>` to change)? If either fails, one amber toast via `claude-notify`: "Call over? Stop the transcript". It re-arms when someone speaks again. Tested with a 5 s threshold (one test toast appeared on his screen). The FaceTime-closed path is untested; FaceTime usually stays open after hanging up, so silence is the main trigger. A quiet stretch mid-call also triggers it.
+While recording, every 10 s the script checks: is FaceTime still running, and has anyone spoken in the last 120 s (`--silence <sec>` to change)? If either fails, one amber toast via `claude-notify`: "Call over? Stop the transcript". It re-arms when someone speaks again. Tested with a 5 s threshold (one test toast appeared on his screen). The FaceTime-closed path is untested; FaceTime usually stays open after hanging up, so silence is the main trigger. A quiet stretch mid-call also triggers it.
 
 ---
 
