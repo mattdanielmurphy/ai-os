@@ -53,3 +53,26 @@ I can't listen. Only levels, peaks and dropouts are checked; whether the presets
 claude-control ask (light, ticket t2) granted, revealed the file in Finder, then `done t2`.
 
 Undo: move `out/piano-airports-02.m4a` to Trash; the two new files are isolated.
+
+## 08:05 Piece 3 + mixing fix
+
+---
+
+### Gain and send bug
+
+Per-track gain, pan and reverb send were silently ignored: AU effect nodes don't return a mixing
+destination, so every track went in at full level and full reverb send. Piece 2 v1 was therefore
+wetter and less balanced than planned. Fixed in `render_mix.swift` with a fader mixer per track and a
+send-fader mixer into the Pro-R bus; solo loudness now moves with gainDb. Piece 2 re-rendered over the
+same file with corrected gains (pad -6, air -7).
+
+---
+
+### Piece 3: piano-airports-03
+
+`pieces/airports_03.py`: A-flat major / F minor, 5 piano voices (loops 18.3-38.9 s).
+- piano: **Ice Piano**, Pro-Q 4 low cut, Saturn 2 Clean Tube.
+- pad: **Alpha Orionis** (slow attack ensemble), -9 dB.
+- air: **Glassy Keys**, Timeless 3 longer ping-pong delay, -6 dB.
+- Pro-R 2: Vintage style, Space 0.85, darker (Brightness 0.3).
+4:16, -20 LUFS, 0 dropouts. Not listened to by me.
