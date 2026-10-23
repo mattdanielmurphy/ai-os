@@ -1,5 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
+import { asksMatt, queueCommand } from './register'
+
 const BAND = {
   component: 'AbovePrompt',
   props: {
@@ -419,4 +421,101 @@ test("the thread's own root and in-thread messages still go through", async ($, 
 test('before the first reply the thread id is unknown, so nothing is dropped', async ($, on) => {
   on('prompt.submit', (_$, e) => ({ text: e.text }))
   expect((await $.prompt.submit(system(chatWake('hi', 'cmsg_OTHER')))).drop).toBeUndefined()
+})
+
+// ── Smart queue ────────────────────────────────────────────────────────────────
+
+const queueSetup = async ($: any, on: any, verdict = 'READY') => {
+  const entered: string[] = []
+  const calls: Record<string, unknown>[] = []
+  const files: string[] = []
+  const judged: string[] = []
+  mock.clock(on, { now: 1_000_000 })
+  on('session.id', () => ({ value: 's1' }))
+  on('turn.start', (_$: unknown, e: any) => ({ turnId: e.turnId }))
+  on('turn.complete', (_$: unknown, e: any) => ({ text: e.answer }))
+  on('prompt.submit', (_$: unknown, e: any) => { entered.push(e.text); return { text: e.text } })
+  on('tool.call', (_$: unknown, e: any) => { calls.push(e); return { result: '{"thread_id":"cmsg_T1"}' } })
+  on('model.complete', (_$: unknown, e: any) => { judged.push(String(e.prompt)); return { value: { isAnswered: true, text: verdict, usage: { inputTokens: 1, outputTokens: 1 } } } })
+  on('process.run', (_$: unknown, e: any) => { if (e.init?.stdin) files.push(e.init.stdin); return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false } } })
+  const settle = async () => { for (let i = 0; i < 50; i++) await new Promise(r => setTimeout(r, 0)) }
+  const turn = async (reply: string) => {
+    await $.turn.start({ turnId: 't', prompt: '' } as any)
+    await $.tool.call({ tool: 'mcp__hearthbot__reply', text: reply })
+    await $.turn.complete(answered)
+    await settle()
+  }
+  return { entered, calls, files, judged, settle, turn }
+}
+
+test('/q while the agent works waits for the turn to end, then goes out', async ($, on) => {
+  const { entered, calls, turn, settle } = await queueSetup($, on)
+  await $.turn.start({ turnId: 't0', prompt: '' } as any)
+  const out = await $.prompt.submit(phone(wake('/q also fix the README', 'cmsg_Q1')))
+  expect(out.drop).toMatch(/Queued/)
+  expect(entered).toHaveLength(0)
+  expect(calls.some(c => c.tool === 'mcp__hearthbot__react' && c.emoji === '⏳' && c.message_id === 'cmsg_Q1')).toBe(true)
+  await $.tool.call({ tool: 'mcp__hearthbot__reply', text: 'Done: the build is green.' })
+  await $.turn.complete(answered)
+  await settle()
+  expect(entered).toHaveLength(1)
+  expect(entered[0]).toMatch(/\[thread-queue\].*also fix the README/s)
+  expect(calls.some(c => c.tool === 'mcp__hearthbot__react' && c.emoji === '📨')).toBe(true)
+  void turn
+})
+
+test('a reply that asks Matt something keeps the queue until he answers', async ($, on) => {
+  const { entered, files, turn } = await queueSetup($, on, 'WAIT')
+  await turn('Should I use the blue one or the green one?')
+  await $.prompt.submit(phone(wake('/q then update the docs', 'cmsg_Q1')))
+  await new Promise(r => setTimeout(r, 0))
+  for (let i = 0; i < 50; i++) await new Promise(r => setTimeout(r, 0))
+  expect(entered).toHaveLength(0)
+  expect(files.at(-1)).toMatch(/"waiting":"the last reply asks you something"/)
+  // ⏩ on his queued message sends it anyway.
+  const r = '<wake reason="reactions" current-time="t">\n  <project id="chan_1" type="project">\n    <thread ts="cmsg_T1"></thread>\n  </project>\n' +
+    '  <reactions channel="chan_1" thread_ts="cmsg_T1">\n    <reaction emoji="⏩" count="1" message_ts="cmsg_Q1" message_from="Matt" reactors="user_M"></reaction>\n  </reactions>\n</wake>'
+  expect((await $.prompt.submit(system(r))).drop).toBeUndefined()
+  for (let i = 0; i < 50; i++) await new Promise(r => setTimeout(r, 0))
+  expect(entered).toHaveLength(1)
+  expect(entered[0]).toMatch(/then update the docs/)
+})
+
+test('/q while idle after a plain report sends straight away', async ($, on) => {
+  const { entered, turn, settle } = await queueSetup($, on, 'READY')
+  await turn('Pushed the fix.')
+  await $.prompt.submit(phone(wake('/q now do the tests', 'cmsg_Q1')))
+  await settle()
+  expect(entered).toEqual([expect.stringMatching(/now do the tests/)])
+})
+
+test("the coordinator's thread-queue note is queued without waking the model", async ($, on) => {
+  const { entered } = await queueSetup($, on)
+  await $.turn.start({ turnId: 't0', prompt: '' } as any)
+  const out = await $.prompt.submit(delivered('thread-queue add: rename the HUD'))
+  expect(out.drop).toMatch(/coordinator note/)
+  expect(entered).toHaveLength(0)
+})
+
+test('/q drop clears it; a stopped turn never releases the queue', async ($, on) => {
+  const { entered, settle } = await queueSetup($, on)
+  await $.turn.start({ turnId: 't0', prompt: '' } as any)
+  await $.prompt.submit(phone(wake('/q one', 'cmsg_Q1')))
+  await $.turn.complete({ ...answered, reason: 'aborted', isAborted: true })
+  await settle()
+  expect(entered).toHaveLength(0)
+  expect((await $.prompt.submit(phone(wake('/q drop', 'cmsg_Q2')))).drop).toMatch(/dropped/)
+  await $.turn.start({ turnId: 't1', prompt: '' } as any)
+  await $.turn.complete(answered)
+  await settle()
+  expect(entered).toHaveLength(0)
+})
+
+test('keyword fallback spots a question or a 👍 offer', async () => {
+  const m = { asksMatt, queueCommand }
+  expect(m.asksMatt('Done.\n\nWhich colour do you want?')).toBe(true)
+  expect(m.asksMatt('Reply 👍 to ship it.')).toBe(true)
+  expect(m.asksMatt('**Shipped.** Tested.\n\nDetails: [x](y#z?)')).toBe(false)
+  expect(m.queueCommand('/q fix it')).toEqual({ kind: 'add', text: 'fix it' })
+  expect(m.queueCommand('/quick note')).toBeUndefined()
 })
