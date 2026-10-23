@@ -34,3 +34,6 @@ Undo: git revert this commit.
 
 ## 23:45 Slide progress line
 - Added a thin line along the bottom of the stage that travels left to right over each slide (voice + pause + linger), so a lingering slide never looks finished. Pauses when paused, resets per slide, empty when not playing. In template.html (all reels). Untested by eye. Undo: git revert.
+
+## 23:52 Last slide wording and box
+- "Month to month, a backup for game nights" was unclear. Now: pay month to month (not for a year) and keep another way to watch hockey in case it stops working. Two lines, box resized so padding is even. Narration updated to match. Untested by eye.

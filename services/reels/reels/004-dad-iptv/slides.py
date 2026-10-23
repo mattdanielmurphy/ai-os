@@ -182,8 +182,9 @@ S[8] = svg(
          check(110, 400, "Pay for hockey only in season", .25),
          check(110, 460, "Drop overlapping subscriptions", .5),
          check(110, 520, "That alone gets near $620 a year", .75)),
-    g(4, box(104, 570, 1072, 80, "f-bad-bg", "s-bad", 6),
-         '<text x="132" y="622" class="tb f-ink" font-size="24">Still want the box? Month to month, a backup for game nights.</text>'),
+    g(4, box(104, 566, 1072, 92, "f-bad-bg", "s-bad", 6),
+         '<text x="132" y="604" class="tb f-ink" font-size="24">Still tempted by the box? Pay month to month, not for a year.</text>',
+         '<text x="132" y="638" class="tb f-ink" font-size="24">Keep another way to watch hockey in case it stops working.</text>'),
 )
 
 for n, body in S.items():
