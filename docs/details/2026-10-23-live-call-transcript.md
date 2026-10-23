@@ -31,3 +31,10 @@ Without headphones the mic hears Tyler from the speakers, so his words also land
 ### What is tested
 
 Tested: capture from BlackHole, WAV backup, file writing, start/stop wrapper, and line parsing against a mock Deepgram server. Not tested: the real Deepgram connection (no key) and the Audio Hijack session (needs Matt's screen).
+
+## 13:10 Review of Matt's Audio Hijack session
+
+His session: FaceTime → Kill Right (Tyler on left), mic → Kill Left (Matt on right), → Recorder → Channels Mono → Default System Output.
+- Channels are swapped versus my steps; no change needed, the script takes `--left Tyler --right Matt`.
+- Problems: the Mono block merges both channels (kills the speaker split), and the output goes to speakers, not BlackHole, so the script gets no audio. It also plays his own mic out loud.
+- Fix: Recorder → Output Device BlackHole 16ch (delete Mono). To still hear Tyler, add a second Output Device (his headphones/system output) wired straight from the FaceTime block, since Audio Hijack takes over the app's audio once it captures it (from memory, not checked on his Mac).
