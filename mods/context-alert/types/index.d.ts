@@ -25,6 +25,10 @@ declare module 'claude-code' {
       threadId: string
       /** This fresh thread already posted its "continued from" link. */
       backLinked: boolean
+      /** Messages Matt queued for when this thread's agent stops (smart queue). */
+      queued: { text: string; id?: string; at: number }[]
+      /** The agent's latest thread reply, which the queue reads to decide whether Matt goes first. */
+      lastReply: string
     }
   }
 }
