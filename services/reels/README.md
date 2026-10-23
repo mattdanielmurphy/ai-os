@@ -40,3 +40,8 @@ Pace button switches Normal / Quick / Gentle (gentle is for hard or unfamiliar t
 
 Space pause · ←/→ beats · R replay · S pace (Normal / Quick / Gentle) · F full screen · tap a segment.
 Captions brighten as the line is spoken. Lock-screen next/previous via Media Session.
+
+## Testing (agents)
+
+Always test with `reel.html?mute`: the browser pane plays through Matt's speakers, and hearing the
+script before it's ready spoils the reel (Matt, 2026-10-22). Check timing with `audio.currentTime`, not by ear.
