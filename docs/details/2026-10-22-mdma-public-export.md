@@ -45,3 +45,35 @@ Rejected: a per-module `public = true` field inside each module file. The centra
 - Tyler still sees "Hammerspoon" in ⌘-Tab and Bartender; renaming the app itself is option 2 in [Hammerspoon suite as its own app](#cmsg_01CUPXyY9oUwKVDFREVDpYDr3ESVFenmsZhBuro4Rgy8CU), still waiting on Matt.
 
 Commits: `b7a3f05` (tags + test), `95046d5` (ship-public fix), both pushed to ~/.hammerspoon main. Another thread's uncommitted GIF picker files were left untouched. Undo: `git revert` either commit.
+
+## 18:45 Best way to auto-update Tyler's copy
+
+Matt wants Tyler's copy to update automatically whenever he commits to prod, and asked whether the current setup is the best way.
+
+---
+
+### the gap today
+
+Tyler's Mac already pulls mac-utilities every hour. The gap is on Matt's side: the public repo only changes when someone runs `bin/ship-public` by hand, so commits to ~/.hammerspoon main never reach Tyler on their own.
+
+---
+
+### recommended: publish on every push
+
+A git `pre-push` hook in ~/.hammerspoon starts `ship-public` in the background a few seconds after any push to main. It runs the test plus the privacy scan first, so a failed check publishes nothing and pops a toast on Matt's Mac. Why this one: the privacy scan checks the export against `private/identity.md`, which only exists on Matt's Mac, and every agent pushes from his Mac anyway. Git has no post-push hook, so the pre-push hook just delays itself until the push lands.
+
+On Tyler's side: pull every 15 minutes and on wake instead of hourly, so a fix reaches him in minutes. Each pull is one tiny request to GitHub.
+
+---
+
+### rejected options
+
+- **GitHub Action on push** (runs in the cloud, works when Matt's Mac is off): it would lose the identity-file check unless that private data were uploaded to GitHub, and it needs a deploy key. Worth it only if pushes start coming from outside his Mac.
+- **A real .app with Sparkle updates**: the proper way for a store-style app, but it's a big build tied to option 2 (renamed app). Too early.
+- **Tyler pulls on a push notification (webhook)**: needs a server listening. Overkill for a 15-minute delay.
+
+---
+
+### risk
+
+Every push to main reaches Tyler within ~15 minutes, including half-finished work. If that bites, publish only from a `release` tag instead. Not built yet: waiting for Matt's 👍.
