@@ -24,6 +24,16 @@ def speak(voice, text, out, speed=1.0):
         Path(out).write_bytes(r.read())
     return out
 
+def words(mp3):
+    """Word timings for an mp3 via Deepgram speech-to-text: [{word, start, end}, …]."""
+    req = urllib.request.Request("https://api.deepgram.com/v1/listen?model=nova-3&punctuate=true",
+                                 data=Path(mp3).read_bytes(), method="POST",
+                                 headers={"Authorization": f"Token {key()}", "Content-Type": "audio/mpeg"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        res = json.load(r)
+    return res["results"]["channels"][0]["alternatives"][0]["words"]
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         sys.exit(__doc__.strip())

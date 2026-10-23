@@ -7,14 +7,14 @@ REEL_DIR holds reel.json ({title, eyebrow, voice, figma, beats: [{svg, say}]}) a
 exported from Figma (exportAsync SVG_STRING, svgOutlineText false, svgIdAttribute true). Layers named
 a1, a2, … reveal in that order while the beat plays. Colours are the page kit's light hexes; the build
 swaps them for kit roles so the slides follow light/dark. Voice lines go through Deepgram (tts.py) and
-are cached by text+voice in REEL_DIR/audio/, so re-builds only pay for changed lines.
+are read in one take and cut per beat (see one_take), cached in REEL_DIR/audio/.
 Output: REEL_DIR/reel.html (publish it with the Artifact tool).
 """
-import argparse, base64, hashlib, json, re, subprocess
+import argparse, base64, difflib, hashlib, json, re, subprocess, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-from tts import speak  # noqa: E402
+from tts import speak, words  # noqa: E402
 
 # Kit light-mode hex → role (services/pages/kit.css). Anything else is left alone.
 ROLES = {"#EEF2F6": "bg", "#FFFFFF": "surface", "WHITE": "surface", "#1D2A3A": "ink", "#5D6B7C": "muted",
@@ -44,16 +44,55 @@ def duration(mp3: Path) -> float:
     return round(float(out), 2)
 
 
+def norm(w: str) -> str:
+    return re.sub(r"[^a-z0-9']", "", w.lower())
+
+
+def one_take(lines: list[str], voice: str, folder: Path) -> list[Path]:
+    """Read the whole script in ONE TTS call (one consistent voice, no energy drop at every line end),
+    then cut it into per-beat clips. Cut points come from speech-to-text word timings: halfway between
+    the last word of one beat and the first word of the next. Cached by voice + full script."""
+    tag = hashlib.sha1((f"{voice}|" + "\n".join(lines)).encode()).hexdigest()[:12]
+    clips = [folder / f"{tag}-{k + 1}.mp3" for k in range(len(lines))]
+    if all(c.exists() for c in clips):
+        return clips
+    full = folder / f"{tag}-full.mp3"
+    if not full.exists():
+        speak(voice, "\n\n".join(lines), full)
+    heard = [w for w in words(full) if norm(w["word"])]
+    said, owner = [], []
+    for k, line in enumerate(lines):
+        for w in line.split():
+            if norm(w):
+                said.append(norm(w)); owner.append(k)
+    # map each heard word to the beat that owns the matching scripted word
+    beat_of = [None] * len(heard)
+    sm = difflib.SequenceMatcher(None, said, [norm(w["word"]) for w in heard], autojunk=False)
+    for a, b, n in sm.get_matching_blocks():
+        for j in range(n):
+            beat_of[b + j] = owner[a + j]
+    cuts, end = [0.0], duration(full)
+    for k in range(1, len(lines)):
+        last = max((w["end"] for w, o in zip(heard, beat_of) if o is not None and o < k), default=None)
+        first = min((w["start"] for w, o in zip(heard, beat_of) if o is not None and o >= k), default=None)
+        if last is None or first is None:
+            sys.exit(f"couldn't place the cut before beat {k + 1}; check the script against the audio")
+        cuts.append(round((last + first) / 2, 3))
+    cuts.append(end)
+    for k, clip in enumerate(clips):
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
+                        "-c:a", "libmp3lame", "-b:a", "64k", str(clip)], check=True)
+    return clips
+
+
 def build(reel_dir: Path, voice: str | None = None) -> Path:
     reel = json.loads((reel_dir / "reel.json").read_text())
     voice = voice or reel.get("voice", "maeve")
     audio = reel_dir / "audio"
     audio.mkdir(exist_ok=True)
+    clips = one_take([b["say"] for b in reel["beats"]], voice, audio)
     beats = []
-    for b in reel["beats"]:
-        mp3 = audio / (hashlib.sha1(f"{voice}|{b['say']}".encode()).hexdigest()[:12] + ".mp3")
-        if not mp3.exists():
-            speak(voice, b["say"], mp3)
+    for b, mp3 in zip(reel["beats"], clips):
         beats.append({"svg": themed((reel_dir / b["svg"]).read_text()), "say": b["say"], "dur": duration(mp3),
                       "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()})
     tweaks = {k: v["value"] for k, v in json.loads((HERE / "tweaks.json").read_text())["tweaks"].items()}

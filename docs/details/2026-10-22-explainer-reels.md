@@ -178,3 +178,37 @@ reel resets to Play, dark mode. Untested: actual sound (the browser pane can't b
 page on his iPhone, full screen on iPhone (Safari only allows video full screen, so ⛶ may do nothing
 there). Rejected: MP4 export for now (the page is enough to watch; ffmpeg export is a later add).
 Undo: delete the artifact and `services/reels/`.
+
+## 22:45 One-take voice
+
+Matt: the voice made small mistakes ("read" said as "red") and sounded like glued fragments; each call
+also winds down (softer, less energy) at its end, so per-slide calls make the whole reel sound tired.
+He suggested one long call with long pauses, split by silence. He also wanted the script on his
+clipboard to test voices, and dropped a clipboard-manager idea.
+
+---
+
+### One take, cut by words
+
+Tried his pause idea first: ellipses (on their own lines, or inline runs) do **not** make Flux pause
+noticeably longer than a normal sentence break (gaps 0.4–1.3 s either way), so splitting by silence alone
+would cut mid-beat. Instead: one TTS call for the whole script (paragraphs joined by blank lines), then
+Deepgram speech-to-text gives every word's timing, the script is aligned to it (difflib), and each cut
+sits halfway between the last word of one beat and the first of the next. Checked by transcribing every
+clip: each holds exactly its beat's line. Cost: one extra STT call per reel (cheap).
+Also reworded "and I read them to you" to "and I'll read them out to you", which can't be misread.
+
+---
+
+### Script on clipboard
+
+Copied the five lines (blank line between) with clearance from the take-control queue.
+
+---
+
+### Clipboard manager idea
+
+Filed in IDEAS.md and passed to the coordinator for its own thread; out of this thread's scope.
+
+Untested: how the one-take version sounds to a human ear. Undo: previous audio is in
+~/.Trash/reel-old-audio; artifact version 1 still exists in its history.

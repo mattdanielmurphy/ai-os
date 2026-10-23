@@ -89,3 +89,13 @@ and diagrams; reusable for learning and for presenting anything. Graphics made i
 Pitch: Claude writes 5–8 beats (one narration line + one visual each) → fills a Figma template file →
 voiceover per beat (Deepgram Aura TTS on Matt's existing credits; Kokoro free fallback; Read Aloud automation rejected: ToS risk) → plays as an Artifact player page (pause, replay a beat, captions), MP4 export to share.
 Full pitch: docs/details/2026-10-22-explainer-reels.md. Status: first reel BUILT 2026-10-22 (Matt 👍): `services/reels/`, voice Maeve; next: automatic reels for long replies.
+
+## Clipboard manager with agent integration (2026-10-22) — IDEA, NOT STARTED
+Matt (Explainer reels thread): his clipboard manager gets "a really sick integration with agents".
+1. A subtle animation whenever something lands on the clipboard.
+2. Every item shows its source: the app, and whether Matt copied it, an agent copied it on his behalf, or
+   something else did; a click opens the source thread an agent copy came from.
+3. Delete, pin and edit clipboard items.
+Related: `~/.hammerspoon/modules/clipboard.lua` (duplicate-line cleaner); agents already take the
+claude-control queue before clipboard writes, which is a natural place to record "agent copied, from
+thread X". Status: idea; build on Matt's 👍 (needs its own thread).
