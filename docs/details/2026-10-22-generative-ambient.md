@@ -102,3 +102,18 @@ oscillators. Not listened to by me.
 
 The coordinator relayed an Augmented/Pro-R preset request, then Matt cancelled it for this thread
 ("don't have them do it"). Stopped before any render; Finder was not opened.
+
+## 07:50 Matching YouTube video
+
+Omri Cohen, "One of the Best Free Synths is now in VCV Rack \ 3 Patches from Scratch with SurgeXT"
+(https://www.youtube.com/watch?v=8MavXLbI50A, Nov 2022). Chapters: Subtractive Voice 0:34, LFOxEG 10:18,
+Drone 17:31, Effects 24:52. The saved patch (MIDI-CV, two Surge oscillators, LFO, mixer, VCF, Reverb2,
+Delay, no envelope/VCA module) best fits Subtractive Voice + Effects; inferred from modules, not confirmed.
+
+---
+
+### Why it sounds strange
+
+The patch has no envelope or VCA, so it drones constantly and my score (piano-style notes, several at
+once) just yanks its pitch around. A MIDI-played voice fed my notes, not Omri's playing, so weirdness
+is expected even if the patch itself is fine.
