@@ -2,18 +2,29 @@
 """Reel 04 slides, written as SVG by hand (theme role classes, not hexes). Run: python3 slides.py
 Groups a1, a2, … reveal in order; inside them: draw, grow, flow, pulse, glow, spin, blink, data-count, data-type."""
 from pathlib import Path
+import re
 from html import escape as e
 
 HERE = Path(__file__).parent
 
 
 def svg(*parts):
+    body = "".join(parts)
+    k = iter(range(1, 99))
+    body = re.sub(r'id="aX"', lambda m: f'id="a{next(k)}"', body)
     return ('<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">'
-            '<rect width="1280" height="720" class="f-bg"/>' + "".join(parts) + "</svg>\n")
+            '<rect width="1280" height="720" class="f-bg"/>' + body + "</svg>\n")
 
 
 def g(n, *parts):
-    return f'<g id="a{n}">' + "".join(parts) + "</g>"
+    """One reveal group; a row() part starts its own group so each item arrives with the narration."""
+    groups, cur = [], []
+    for p in parts:
+        if p.startswith("\x00") and cur:
+            groups.append(cur); cur = []
+        cur.append(p.lstrip("\x00"))
+    groups.append(cur)
+    return "".join('<g id="aX">' + "".join(c) + "</g>" for c in groups)
 
 
 def chip(text, y=92):
@@ -81,7 +92,7 @@ def pill(x, y, w, text, cls="s-accent"):
 
 
 def row(x, y, w, head, sub, cls="s-line", fill="f-surface", h=96):
-    return (box(x, y, w, h, fill, cls, 6)
+    return ("\x00" + box(x, y, w, h, fill, cls, 6)
             + f'<text x="{x + 22}" y="{y + 42}" class="td f-ink" font-size="30">{e(head)}</text>'
             + "".join(f'<text x="{x + 22}" y="{y + 72 + k * 26}" class="tb f-muted" font-size="19">{e(t)}</text>'
                      for k, t in enumerate(sub.split("|"))))

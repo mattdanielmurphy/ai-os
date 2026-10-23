@@ -51,3 +51,8 @@ Undo: git revert this commit.
 - Sharing is exact: the first take baked is the default for every viewer. build.py scores each take by how much of the script speech-to-text heard (all three ~97-98 percent, so it barely separates them; glitches are likely audio artifacts it cannot hear).
 - To lock a take: tell me which; I rebuild with it first and republish the same link. A true in-page regen needs a small server holding the Deepgram key; not built.
 - File is ~7 MB. Undo: set takes back to 1.
+
+## 00:35 Reveal paced to the narration
+- Cause: parts appeared at most 0.9 s apart and over only 55 percent of the voice, and rows came in pairs, so slides filled in 1-2 s while the voice ran ~10 s.
+- Fix: tweaks reveal.spread 0.55 to 0.85 and reveal.maxGap 0.9 to 4 (all reels); in this reel each row/card is its own reveal group (slides.py g() splits at row()). Items now arrive evenly across ~85 percent of the narration.
+- Not synced to the exact words (no word-to-item mapping); even spacing only. Untested by eye/ear. Undo: revert tweaks.json values.
