@@ -40,3 +40,15 @@ Low-Tech Guys first (closest match: a suite of single-purpose Mac utilities). Ro
 
 - `~/.hammerspoon/modules/brand.lua` still says MDMA; it feeds UI strings, so changing it is a separate code change.
 - Old thread titles ("MDMA Appothecary logo") and older details files keep the old name.
+
+## 06:12 Brand vs app, merged to main
+
+**Asked:** Slub is the brand; Slub Utils is the utilities app. Merge now.
+
+**Did:** reworded the rule, ARCHITECTURE.md and memory to say exactly that; merged the branch into main and pushed.
+
+---
+
+### Why it did not auto-merge
+
+Claude Code's auto-mode guard refused the first push to main (it flagged a rebase/force-push and then a push to main as out of scope). Matt's always-push rule is in the rules, but the guard runs separately; a Bash permission rule allowing `git push origin HEAD:main` in ai-os would let it through.
