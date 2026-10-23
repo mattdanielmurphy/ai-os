@@ -53,12 +53,22 @@ connector is on, voice Claude should prefer `send_task` over email.
 - `save_call` (connector tool): voice Claude runs it at the end of a call. It writes
   `Voice calls/<date> <time> <title>.md` in the Obsidian vault (summary, new facts, to-dos, what Matt
   said), runs `qmd update`, and queues one coordinator task to file facts and act on to-dos.
-- `scripts/pull_voice_chats.py` (launchd `com.matt.agent.voice-chat-pull`, daily 3:30): copies every
+- `note_call` (connector tool, 2026-10-22): voice Claude calls it mid-call whenever Matt says a to-do or
+  fact (and every few minutes with what he said). Each call rewrites `Voice calls/<date> <time> Voice call
+  (live).md` at once (state in `tmp/voice-calls/draft.json`). `save_call` folds the draft in and trashes the
+  live note. If the call goes quiet for 20 min without save_call, the connector's 2-min timer sends the noted
+  facts/to-dos to the coordinator and runs the transcript pull early. So an abrupt hang-up loses nothing.
+- Leaving without save_call never lost the call itself: claude.ai keeps the chat, and the pull below copies it.
+- `scripts/pull_voice_chats.py` (launchd `com.matt.agent.voice-chat-pull`, daily 3:30, plus early runs from
+  the connector; skips chats touched in the last 15 min): copies every
   claude.ai voice chat (`platform == "VOICE"`) to `Voice calls/Transcripts/` via Matt's signed-in
   Chrome (browser-use CDP, claude.ai's internal API). Calls without a save_call go to the coordinator
   for review.
-- Line for claude.ai Settings → Profile → preferences: "In voice chats, at the end of every call (or
-  when I say bye / that's it), run the My Mac connector's save_call before you finish."
+- Line for claude.ai Settings → Profile → preferences: "In voice chats, call the My Mac connector's
+  note_call whenever I mention a to-do or a new fact, and at the end of every call (or when I say bye /
+  that's it) run its save_call before you finish."
+- The pull needs Chrome signed in to claude.ai. Signed out → it logs `not signed in to claude.ai` in
+  `tmp/voice-chats/pull.log` and copies nothing (seen 2026-10-22).
 
 ## Voice Claude speech quirks (tested 2026-10-21)
 

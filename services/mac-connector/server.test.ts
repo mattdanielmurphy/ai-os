@@ -45,3 +45,47 @@ test("practice-done runs the gate step, no note in the link", () => {
   expect(r.run).toBe("practice-done");
   expect(r.body).toBeUndefined();
 });
+
+import { noteCall, takeDraft, readDraft, flushStaleDraft, DRAFT_IDLE_MS } from "./server.ts";
+const tmpDirs = () => { const r = mkdtempSync(join(import.meta.dir, "..", "..", "tmp", "draft-")); return { dir: join(r, "state"), calls: join(r, "calls") }; };
+test("note_call builds one live note per call and dedupes", () => {
+  const { dir, calls } = tmpDirs();
+  const t = Date.UTC(2026, 9, 22, 20, 0);
+  noteCall({ todos: ["Call dentist Monday"], said: "I need the dentist" }, t, dir, calls);
+  const d = noteCall({ todos: ["Call dentist Monday"], facts: ["Plays pickleball"] }, t + 60_000, dir, calls);
+  expect(d.todos).toEqual(["Call dentist Monday"]);
+  expect(d.facts).toEqual(["Plays pickleball"]);
+  const note = readFileSync(join(calls, d.file), "utf8");
+  expect(note).toContain("- Call dentist Monday");
+  expect(note).toContain("I need the dentist");
+  // a note long after the last one starts a new call
+  expect(noteCall({ said: "hi" }, t + 60_000 + DRAFT_IDLE_MS + 1, dir, calls).started).not.toBe(d.started);
+});
+test("takeDraft closes the draft", () => {
+  const { dir, calls } = tmpDirs();
+  noteCall({ said: "x" }, Date.now(), dir, calls);
+  expect(takeDraft(dir)?.said).toEqual(["x"]);
+  expect(readDraft(dir)).toBeNull();
+});
+test("a quiet draft goes to the coordinator and pulls the transcript, once", () => {
+  const { dir, calls } = tmpDirs();
+  const t = Date.now();
+  const d = noteCall({ todos: ["Buy paddles"] }, t, dir, calls);
+  const sent: string[] = []; let pulls = 0;
+  const q = (title: string, body: string) => { sent.push(body); };
+  expect(flushStaleDraft(t + 60_000, dir, calls, q, () => pulls++)).toBe(false);
+  expect(flushStaleDraft(t + DRAFT_IDLE_MS + 1, dir, calls, q, () => pulls++)).toBe(true);
+  expect(sent[0]).toContain("- Buy paddles");
+  expect(pulls).toBe(1);
+  expect(readFileSync(join(calls, d.file), "utf8")).toContain("Ended without save_call");
+  expect(flushStaleDraft(t + 2 * DRAFT_IDLE_MS, dir, calls, q, () => pulls++)).toBe(false);
+});
+
+import { overlayResult } from "./server.ts";
+test("overlay maps claude-control exits", () => {
+  expect(overlayResult(0, "granted t12\n")).toMatchObject({ state: "granted", ticket: "t12" });
+  expect(overlayResult(3, "stopped: ...").state).toBe("stopped");
+  expect(overlayResult(1, "cancelled: Matt said not now").state).toBe("cancelled");
+  expect(overlayResult(1, "hammerspoon unreachable").message).toContain("hammerspoon unreachable");
+  expect(overlayResult(0, "").state).toBe("failed");
+});

@@ -91,7 +91,11 @@ function buildServer(): McpServer {
       "(instant) and tell Matt about any update first: it's how his Mac agents report back. If he says he'll wait for a " +
       "result, call wait_for_update. Use search_notes for anything about Matt, his projects, notes or past AI threads; " +
       "find_files / list_folder / read_file for files; send_task to hand real work to his project coordinator " +
-      "(it runs on his Mac with full access). For his morning check-in, call checkin_today first.",
+      "(it runs on his Mac with full access). For his morning check-in, call checkin_today first. During voice calls, " +
+      "call note_call whenever Matt mentions a to-do or new fact (and every few minutes with what he said), so an abrupt " +
+      "hang-up loses nothing; run save_call at the end. Before ANY action that moves or resizes windows, clicks, " +
+      "types or opens apps or dialogs on his Mac (any tool, e.g. Claude in Chrome), call overlay_on and wait for " +
+      "'granted'; call overlay_off right after.",
   });
 
   server.registerTool("check_updates", {
@@ -195,6 +199,23 @@ function buildServer(): McpServer {
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool("note_call", {
+    description: "Call this DURING a voice call, right away whenever Matt mentions a to-do, a reminder or a new fact " +
+      "about himself, and every few minutes with what he said since the last note. Saves it to his Mac at once, so " +
+      "nothing is lost if the call ends abruptly. Still run save_call at the end.",
+    inputSchema: {
+      facts: z.array(z.string()).optional().describe("New facts about Matt, his life, projects or setup"),
+      todos: z.array(z.string()).optional().describe("Reminders, calendar events, emails or tasks, with dates/times"),
+      said: z.string().optional().describe("What Matt said since the last note, as close to word for word as you can"),
+    },
+  }, async ({ facts, todos, said }) => {
+    try {
+      const d = noteCall({ facts, todos, said });
+      log(`call noted: ${d.file}`);
+      return text("Noted.");
+    } catch (e) { return fail(e); }
+  });
+
   server.registerTool("save_call", {
     description: "Run this at the END of every voice call with Matt. Saves the call as a searchable note on his Mac " +
       "(Obsidian vault, indexed for all his agents) and hands any new facts and to-dos to his project coordinator, " +
@@ -213,12 +234,18 @@ function buildServer(): McpServer {
       const hm = now.toLocaleTimeString("en-GB", { timeZone: "America/Edmonton", hour: "2-digit", minute: "2-digit" }).replace(":", "");
       const safeTitle = title.replace(/[\/:*?"<>|#^\[\]]/g, "").trim().slice(0, 60) || "Voice call";
       const list = (xs?: string[]) => (xs?.length ? xs.map((x) => `- ${x}`).join("\n") : "- (none)");
+      // Fold in anything noted live during the call (note_call), then retire the draft note.
+      const draft = takeDraft();
+      facts = uniq([...(draft?.facts ?? []), ...(facts ?? [])]);
+      todos = uniq([...(draft?.todos ?? []), ...(todos ?? [])]);
       mkdirSync(CALLS, { recursive: true });
       const name = `${day} ${hm} ${safeTitle}.md`;
       writeFileSync(join(CALLS, name), [
         "---", `title: ${JSON.stringify(safeTitle)}`, `created: ${day}`, `updated: ${day}`, "type: daily", "tags: [journal, ai-os]", "source: voice-chat", "---", "",
         `# ${safeTitle}`, "", "## Summary", summary, "", "## New facts", list(facts), "", "## To-dos", list(todos), "", "## What Matt said", matt_said, "",
+        ...(draft?.said.length ? ["## Noted live during the call", draft.said.join("\n\n"), ""] : []),
       ].join("\n"));
+      if (draft) trashDraftNote(draft);
       try { appendFileSync(join(VAULT, "log.md"), `\n- ${day}: Voice call saved: [[Voice calls/${name.replace(/\.md$/, "")}]]\n`); } catch {}
       Bun.spawn(["qmd", "update"], { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } }).unref();
       if (facts?.length || todos?.length) {
@@ -269,6 +296,33 @@ function buildServer(): McpServer {
     } catch (e) { return fail(e); }
   });
 
+  // The orange take-control overlay (~/.hammerspoon/bin/claude-control), so remote sessions warn Matt
+  // before touching his screen. Auto-releases after 60s on the Hammerspoon side if a session dies.
+  server.registerTool("overlay_on", {
+    description: "Call BEFORE doing anything that changes Matt's screen: moving or resizing windows, clicking, typing, " +
+      "opening apps, files or dialogs. Shows his orange 'hands off' overlay, waits ~3s (he can press Esc), and returns " +
+      "'granted' when you may go. If it says 'cancelled' or 'stopped', don't do the action; tell Matt. Turns itself off " +
+      "after 60s; call overlay_off as soon as you're done (or overlay_on again for another 60s).",
+    inputSchema: {
+      reason: z.string().describe("What you're about to do and why, in a few words, e.g. 'Resizing Chrome to test the layout'"),
+      light: z.boolean().optional().describe("true = small corner pill, no glow, for low-impact changes he can type " +
+        "through (open a file/app, focus a window, play/pause, volume). Default false = full glow: clicking, typing, resizing."),
+    },
+  }, async ({ reason, light }) => {
+    const r = await overlayOn(reason, light ?? false);
+    log(`overlay_on ${r.state}${light ? " light" : ""}: ${reason.slice(0, 80)}`);
+    return r.state === "granted" ? text("granted: overlay is on. Go ahead, then call overlay_off.") : fail(new Error(r.message));
+  });
+
+  server.registerTool("overlay_off", {
+    description: "Turn off Matt's orange overlay after your on-screen action is finished.",
+    inputSchema: {},
+  }, async () => {
+    const was = await overlayOff();
+    log(`overlay_off ${was ?? "none"}`);
+    return text(was ? "Overlay off." : "Overlay was already off.");
+  });
+
   // Called by Matt's review page (services/review) through the claude.ai "My Mac" connector, so the page
   // never opens a tab (a tab would steal focus from its comment box).
   server.registerTool("dictate", {
@@ -306,6 +360,46 @@ function buildServer(): McpServer {
   return server;
 }
 
+// One overlay ticket at a time for the whole connector. A fixed agent id means Matt's Stop blocks the
+// connector's overlay asks for 2h (claude-control's rule), and the ticket survives across tool calls.
+const CONTROL = join(HOME, ".hammerspoon", "bin", "claude-control");
+const CONTROL_AGENT = "my_mac_connector";
+let overlayTicket: string | null = null;
+
+export function overlayResult(code: number, out: string): { state: string; ticket?: string; message: string } {
+  const m = out.match(/granted (t\d+)/);
+  if (code === 0 && m) return { state: "granted", ticket: m[1], message: "granted" };
+  if (code === 3) return { state: "stopped", message: "stopped: Matt pressed Stop. Don't do the action or retry another way; tell him what you were about to do." };
+  if (/cancelled/.test(out)) return { state: "cancelled", message: "cancelled: Matt said not now. Don't do the action; tell him what you need and wait." };
+  return { state: "failed", message: `Overlay didn't turn on (${out.trim().split("\n").pop() || `exit ${code}`}). Don't touch his screen; tell Matt.` };
+}
+
+async function control(args: string[], timeoutMs: number): Promise<{ code: number; out: string }> {
+  const p = Bun.spawn([CONTROL, ...args], { stdout: "pipe", stderr: "pipe", cwd: HOME,
+    env: { ...process.env, PATH: PATH_ENV, CLAUDE_CODE_SESSION_ID: CONTROL_AGENT } });
+  const timer = setTimeout(() => p.kill(), timeoutMs);
+  const out = await new Response(p.stdout).text();
+  const code = await p.exited;
+  clearTimeout(timer);
+  return { code, out };
+}
+
+export async function overlayOn(reason: string, light: boolean) {
+  await overlayOff();  // re-asking while holding would queue behind ourselves
+  // Short queue wait: an MCP call shouldn't hang for claude-control's full 3 min.
+  const { code, out } = await control(["ask", reason.slice(0, 200), "3", ...(light ? ["--light"] : [])], 45_000);
+  const r = overlayResult(code, out);
+  if (r.ticket) overlayTicket = r.ticket;
+  return r;
+}
+
+export async function overlayOff(): Promise<string | null> {
+  const t = overlayTicket;
+  overlayTicket = null;
+  if (t) await control(["done", t], 8_000);
+  return t;
+}
+
 const CHECKIN = join(AIOS, "services", "checkin");
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
 
@@ -336,6 +430,90 @@ export function practiceDone(gate = join(CHECKIN, "habit_gate.py")): { threads: 
   if (r.threads.length) queueTask("Practice done", r.note);
   log(`practice_done threads=${r.threads.length}`);
   return r;
+}
+
+// Mid-call notes (note_call): written to the vault the moment voice Claude sends them, so a call that
+// ends abruptly (Matt hangs up, the app closes) still leaves its facts and to-dos on the Mac. save_call
+// folds the draft into the final note; a draft idle for DRAFT_IDLE_MS is handed to the coordinator by
+// flushStaleDraft (timer below), which also pulls the transcript early.
+type Draft = { file: string; started: number; last: number; facts: string[]; todos: string[]; said: string[] };
+const DRAFT_DIR = join(AIOS, "tmp", "voice-calls");
+export const DRAFT_IDLE_MS = 20 * 60_000;
+const uniq = (xs: string[]) => [...new Set(xs.map((x) => x.trim()).filter(Boolean))];
+const edm = (t: number) => {
+  const d = new Date(t);
+  return { day: d.toLocaleDateString("en-CA", { timeZone: "America/Edmonton" }),
+    hm: d.toLocaleTimeString("en-GB", { timeZone: "America/Edmonton", hour: "2-digit", minute: "2-digit" }) };
+};
+
+export function readDraft(dir = DRAFT_DIR): Draft | null {
+  try { return JSON.parse(readFileSync(join(dir, "draft.json"), "utf8")); } catch { return null; }
+}
+
+function renderDraft(d: Draft, ended = false): string {
+  const { day, hm } = edm(d.started);
+  const list = (xs: string[]) => (xs.length ? xs.map((x) => `- ${x}`).join("\n") : "- (none yet)");
+  return ["---", `title: "Voice call ${hm}"`, `created: ${day}`, `updated: ${edm(d.last).day}`, "type: daily",
+    "tags: [journal, ai-os]", "source: voice-chat-live", "---", "", `# Voice call ${hm}`, "",
+    ended ? `Ended without save_call (last note ${edm(d.last).hm}); facts and to-dos went to the coordinator, and the ` +
+      "full transcript lands in Voice calls/Transcripts/." : "Saved live during the call; save_call replaces this note when the call ends.",
+    "", "## New facts", list(d.facts), "", "## To-dos", list(d.todos), "", "## What Matt said", d.said.join("\n\n") || "(nothing yet)", ""].join("\n");
+}
+
+export function noteCall(add: { facts?: string[]; todos?: string[]; said?: string }, now = Date.now(), dir = DRAFT_DIR, calls = CALLS): Draft {
+  let d = readDraft(dir);
+  if (!d || now - d.last > DRAFT_IDLE_MS) {
+    const { day, hm } = edm(now);
+    d = { file: `${day} ${hm.replace(":", "")} Voice call (live).md`, started: now, last: now, facts: [], todos: [], said: [] };
+  }
+  d.facts = uniq([...d.facts, ...(add.facts ?? [])]);
+  d.todos = uniq([...d.todos, ...(add.todos ?? [])]);
+  if (add.said?.trim()) d.said.push(add.said.trim());
+  d.last = now;
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "draft.json"), JSON.stringify(d));
+  mkdirSync(calls, { recursive: true });
+  writeFileSync(join(calls, d.file), renderDraft(d));
+  return d;
+}
+
+// Close the open draft: its state moves to done/ (kept, never deleted) and the caller decides the note's fate.
+export function takeDraft(dir = DRAFT_DIR): Draft | null {
+  const d = readDraft(dir);
+  if (!d) return null;
+  mkdirSync(join(dir, "done"), { recursive: true });
+  renameSync(join(dir, "draft.json"), join(dir, "done", `${d.started}.json`));
+  return d;
+}
+
+function trashDraftNote(d: Draft, calls = CALLS) {
+  try { renameSync(join(calls, d.file), join(HOME, ".Trash", `${Date.now()} ${d.file}`)); } catch {}
+}
+
+// The call went quiet without save_call: hand the noted facts and to-dos to the coordinator now and pull
+// the transcript (scripts/pull_voice_chats.py flags it for review) instead of waiting for the 3:30 run.
+export function flushStaleDraft(now = Date.now(), dir = DRAFT_DIR, calls = CALLS, queue = queueTask, pull = pullTranscripts): boolean {
+  const d = readDraft(dir);
+  if (!d || now - d.last <= DRAFT_IDLE_MS) return false;
+  takeDraft(dir);
+  try { writeFileSync(join(calls, d.file), renderDraft(d, true)); } catch {}
+  const list = (xs: string[]) => xs.map((x) => `- ${x}`).join("\n");
+  if (d.facts.length || d.todos.length) {
+    queue(`File voice call: unsaved call ${edm(d.started).hm}`, [
+      `A voice call ended without save_call. What voice Claude noted live is at "Voice calls/${d.file}" in the Obsidian vault.`,
+      d.facts.length ? `New facts to file (memory / ABOUT_MATT / the right note):\n${list(d.facts)}` : "",
+      d.todos.length ? `To-dos to act on (reminders, calendar, email):\n${list(d.todos)}` : "",
+      "A \"Review unsaved voice calls\" task for the same call may follow with the full transcript; skip what's already handled here.",
+      "Urgent: no",
+    ].filter(Boolean).join("\n\n"));
+  }
+  pull();
+  return true;
+}
+
+function pullTranscripts() {
+  Bun.spawn(["/usr/bin/python3", join(AIOS, "scripts", "pull_voice_chats.py")],
+    { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } }).unref();
 }
 
 // Queue a task for the coordinator and kick the watcher so it's delivered right away.
@@ -388,6 +566,7 @@ if (!import.meta.main) {
   const token = envToken();
   if (!token) { console.error("MAC_CONNECTOR_TOKEN missing; run `bun server.ts --init`"); process.exit(1); }
   const secretPath = `/mcp/${token}`;
+  setInterval(() => { try { if (flushStaleDraft()) log("stale call draft flushed"); } catch (e) { log(`draft flush failed: ${e}`); } }, 2 * 60_000);
   Bun.serve({
     port: PORT,
     hostname: "127.0.0.1",

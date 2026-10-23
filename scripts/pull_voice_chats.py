@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Pull Matt's Claude voice-chat transcripts from claude.ai into his Obsidian vault, nightly.
 
-Safety net for the connector's save_call: voice Claude may forget to save a call, so this
+Safety net for the connector's save_call: voice Claude may forget to save a call (or Matt hangs up
+first), so this
 copies every voice conversation (claude.ai marks them platform == "VOICE") updated since the
 last run to `Voice calls/Transcripts/` in the vault, where QMD indexes them for every agent.
 Calls that never ran save_call are handed to the project coordinator to file facts and act on
-to-dos.
+to-dos. Besides the 3:30 run, the connector starts this ~20 min after a call with live notes
+(note_call) goes quiet without save_call.
 
 How: claude.ai has no public chat-history API, so this reads its internal one through Matt's
 signed-in Chrome via the browser-use CDP daemon (same as scripts/youtube.sh). Read-only. If
@@ -32,6 +34,7 @@ STATE = AIOS / "tmp" / "voice-chats" / "state.json"
 LOG = AIOS / "tmp" / "voice-chats" / "pull.log"
 QUEUE = AIOS / "tmp" / "voice-task-inbox" / "queue"
 WATCHER = AIOS / "scripts" / "voice_task_inbox.py"
+QUIET = 15  # minutes; see run()
 LABEL = "com.matt.agent.voice-chat-pull"
 PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 PATH = f"{Path.home()}/.bun/bin:{Path.home()}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -129,8 +132,10 @@ def run(since=None, dry_run=False):
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     if since is None:
         since = state.get("last_pull") or (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S")
-    started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    convs = fetch(since)
+    # The Mac connector also runs this soon after a call goes quiet, so leave calls touched in the last
+    # QUIET minutes for the next run: one may still be going, and flagging it now would be premature.
+    started = (datetime.now(timezone.utc) - timedelta(minutes=QUIET)).strftime("%Y-%m-%dT%H:%M:%S")
+    convs = [c for c in fetch(since) if c["updated_at"][:19] < started]
     saved_paths, unsaved = [], []
     seen = state.setdefault("reviewed", {})
     for c in convs:

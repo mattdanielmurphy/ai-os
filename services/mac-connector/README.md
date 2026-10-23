@@ -14,5 +14,7 @@ Everything project coordinator.
 - Morning check-in: `checkin_today` returns today's talk prompt (`services/checkin/data/checkin-<date>.md`, behind
   `services/checkin/chat_mode.md`) so a regular or voice chat that opens with "Morning check-in" runs it;
   `checkin_record` logs the minutes (ladder) and bullets (vault habit log).
+- `overlay_on(reason, light?)` / `overlay_off()`: the orange take-control overlay (`~/.hammerspoon/bin/claude-control`,
+  agent id `my_mac_connector`), so remote sessions warn Matt before touching his screen. Auto-off after 60s.
 - Install / remove: `./install.sh` / `./install.sh uninstall`. Logs: `~/Library/Logs/launch-agents/mac-connector.log`.
 - Add in claude.ai → Settings → Connectors → Add custom connector → paste the URL (no OAuth).
