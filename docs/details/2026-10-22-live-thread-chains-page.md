@@ -51,3 +51,39 @@ Categories were assigned by the subagent from titles and messages; Claude setup 
 Undo: delete the artifact from the gallery; cancel the cron (it dies with the session anyway). Orphaned docs: an earlier seed wrote 90 `chains/*` docs and `meta/state` that the page no longer reads; harmless, left in place.
 
 Queued next (from the coordinator, Matt's idea): real icons per row, an editable note per chain, a Resolved tab with notes, coordinator notes in a sparing orange accent.
+
+## 00:05 Icons, chain notes, Resolved tab
+
+Queued follow-up from Matt (via the coordinator): real icons instead of letter badges, a short editable note per chain, a Resolved tab with those notes, and coordinator/Claude notes in orange. The queueing-system part of his message belongs to another thread and was left out.
+
+---
+
+### Every row has its own icon
+
+A subagent picked an icon per thread (92 open, 80 resolved) from a set of ~60 line icons drawn for the page (clipboard, eye, pill, sliders, layers, quiz, film…). No icon is used more than 8 times. The title-keyword fallback stays for new threads until the refresh assigns one.
+
+---
+
+### Notes on chains
+
+Right-click → Add note (or press N on a focused row, or click an existing note to edit). Enter saves, Esc cancels, empty removes. Max 80 characters. Notes live in the artifact database (`notes/<oldest thread id in the chain>`), so a note survives when the chain grows a new thread. Your notes are a grey pill; notes with `by: "claude"` are an amber pill, the one sparing warm accent (not Claude orange or terracotta; the darkest step of a ramp far from #d97757). Claude/coordinator notes get written through this thread's database access; the coordinator has no direct write path yet, so it would ask this thread.
+
+---
+
+### Resolve with a note
+
+Resolve… now shows a small form: "Why it's done (optional)", Enter resolves. The note is saved and the thread moves to the Resolved tab at once (shown as "Resolving" until the refresh closes it). Resolved rows have Reopen in their menu, which also goes through the refresh.
+
+---
+
+### Resolved tab
+
+Two tabs above the list. Resolved is grouped by topic, newest first, with the resolve date and the note. 80 resolved threads loaded. Group-by-state is hidden on that tab.
+
+---
+
+### Untested
+
+Note saving and resolve/reopen against the real database (tested only against a mock in the local preview). The first real refresh runs at :13 or :43.
+
+Data quirk: "Mixer vs Audio Hijack" came back resolved in the second listing but not in the first; the script now keeps whichever event is newer.
