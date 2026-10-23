@@ -101,7 +101,7 @@ def col(x, k, head, lines, total, tcls="f-ink", cls="s-line"):
 
 
 S[1] = svg(
-    g(1, chip("REEL 04 — THE CHEAP TV BOX")),
+    g(1, chip("THE CHEAP TV BOX")),
     g(2, title(["WILL IT JUST", "WORK LIKE", "TELUS TV?"], y=190, size=88)),
     g(3, para(["A Firestick sold with a year of live TV for about $150–400.",
                "The savings are real. So are the catches."], y=480, size=26, lh=40)),

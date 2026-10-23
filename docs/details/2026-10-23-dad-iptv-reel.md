@@ -24,3 +24,10 @@ Undo: delete the reel folder and the artifact.
 - Pauses: build.py now joins beats with "..." lines and narration uses " ... " between phrases; captions strip them. Gaps measured at 0.4–0.6 s (Deepgram caps pauses), so cuts sit mid-gap with ~0.25 s margin each side. If word ends still clip, next step is cutting nearer the next word's start.
 - headless_test.cjs: skips the voice-switch check when only one voice.
 Undo: git revert this commit.
+
+## 23:30 Player fixes
+- Crawling last pixels: caused by the slow whole-slide "drift" zoom (scale 1.03 over the beat, linear). Removed it from template.html for all reels.
+- Linger on slide: new tweaks beat.holdBase (0.8 s) + beat.holdPerText (0.12 s per text line on the slide) added to the gap before advancing. Busy slides wait ~3-4 s. Tune in the Tweaks panel; rebuild to bake.
+- Back arrow while playing now pauses (no auto-advance) until Play is pressed. Next arrow unchanged.
+- "Reel 04" removed from eyebrow and slide 1.
+- Untested by ear/eye; headless test passes. Undo: git revert.

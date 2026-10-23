@@ -19,11 +19,9 @@ header { gap: 2px; } header h1 { font-size: clamp(18px, 2.6vw, 26px); }
 .rv { opacity: 0; transform: translateY(var(--rise, 18px)); transform-box: fill-box;
       transition: opacity var(--dur, .55s) ease, transform var(--dur, .55s) cubic-bezier(.2, .8, .2, 1); }
 .rv.in { opacity: 1; transform: none; }
-/* slide motion: whole slide drifts in slowly; parts can draw, flow, pulse, spin, grow, count and type */
+/* slide motion (no slow whole-slide drift: its last pixels crawled for seconds); parts can draw, flow, pulse, spin, grow, count and type */
 #slide.enter { animation: enter .35s ease both; }
 @keyframes enter { from { opacity: 0; } }
-.stage.live #slide svg { animation: drift var(--beat, 8s) linear both; }
-@keyframes drift { to { transform: scale(var(--drift, 1.03)); } }
 .draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.1s cubic-bezier(.4, 0, .2, 1); }
 .in .draw, .draw.in { stroke-dashoffset: 0; }
 .grow { transform: scaleX(0); transform-box: fill-box; transform-origin: left; transition: transform 1s cubic-bezier(.2, .8, .2, 1); }
@@ -38,7 +36,7 @@ header { gap: 2px; } header h1 { font-size: clamp(18px, 2.6vw, 26px); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .blink { animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .rv { transform: none; } .flow, .pulse, .glow, .spin, .blink, .stage.live #slide svg { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .rv { transform: none; } .flow, .pulse, .glow, .spin, .blink  }
 .stage .td { font-family: var(--display); font-weight: 800; } .stage .tb { font-family: var(--body); } .stage .tm { font-family: var(--mono); font-weight: 500; letter-spacing: .05em; }
 .caption { font: 15px/1.4 var(--body); margin: 0; text-wrap: pretty; } .caption[hidden] { display: none; }
 .caption .said { color: var(--ink); } .caption .unsaid { color: var(--muted); }
@@ -211,13 +209,15 @@ function setPlaying(on) {
 audio.addEventListener('timeupdate', () => audio.duration && caption(audio.currentTime / audio.duration));
 audio.addEventListener('ended', () => {
   caption(1);
-  if (i < D.beats.length - 1) later(() => show(i + 1), T['beat.gap']);
+  // linger on the finished slide: longer when more is on it
+  const hold = T['beat.holdBase'] + T['beat.holdPerText'] * document.querySelectorAll('#slide text').length;
+  if (i < D.beats.length - 1) later(() => show(i + 1), T['beat.gap'] + hold);
   else { playing = false; $('play').textContent = 'Play'; bedOff(T['music.outro']); marks(); document.querySelectorAll('.seg').forEach(s => s.classList.add('done')); }
 });
 function start() { $('start').hidden = true; graph(); playing = true; intro = true; bedOn(); $('play').textContent = 'Pause'; show(0, true); }
 $('go').onclick = start;
 $('play').onclick = () => { if (!$('start').hidden) return start(); if (playing) setPlaying(false); else { graph(); bedOn(); playing = true; $('play').textContent = 'Pause'; audio.ended || audio.currentTime === 0 ? show(i, true) : audio.play(); } };
-$('prev').onclick = () => { $('start').hidden = true; show(i - 1); };
+$('prev').onclick = () => { $('start').hidden = true; if (playing) { playing = false; $('play').textContent = 'Play'; bedOff(.6); } show(i - 1, false); }; // going back stops auto-advance until Play
 $('next').onclick = () => { $('start').hidden = true; show(i + 1); };
 $('replay').onclick = () => { $('start').hidden = true; graph(); bedOn(); playing = true; $('play').textContent = 'Pause'; show(i, true); };
 $('progress').onclick = e => { const s = e.target.closest('.seg'); if (s) { $('start').hidden = true; show(+s.dataset.k); } };
