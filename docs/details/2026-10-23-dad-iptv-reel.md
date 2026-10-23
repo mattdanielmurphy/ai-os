@@ -46,3 +46,8 @@ Undo: git revert this commit.
 ## 00:20 Voice takes instead of a regen button
 - A published page cannot call Deepgram (no key in the page, no backend), and a regen done in a viewer's browser could never reach someone you share with. So: build.py now bakes N independent takes per voice (reel.json "takes": 3; pace nudged 1.15 / 1.18 / 1.12 so Deepgram does not return the same audio). The Voice button (V) cycles them.
 - Sharing is exact: the first take baked is the default for every viewer. build.py scores each take by how much of the script speech-to-text heard (all three ~97-98
+## 00:20 Voice takes instead of a regen button
+- A published page cannot call Deepgram (no key, no backend), and a regen in a viewer's browser would never reach whoever it is shared with. So build.py now bakes N independent takes per voice (reel.json "takes": 3; pace nudged 1.15 / 1.18 / 1.12 so Deepgram returns different audio). The Voice button (V) cycles them.
+- Sharing is exact: the first take baked is the default for every viewer. build.py scores each take by how much of the script speech-to-text heard (all three ~97-98 percent, so it barely separates them; glitches are likely audio artifacts it cannot hear).
+- To lock a take: tell me which; I rebuild with it first and republish the same link. A true in-page regen needs a small server holding the Deepgram key; not built.
+- File is ~7 MB. Undo: set takes back to 1.
