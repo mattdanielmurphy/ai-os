@@ -121,3 +121,29 @@ Matt: add [tvresync](https://github.com/tylermurphysound/tvresync) to the utilit
 A real re-sync wasn't fired: it blanks the screen, and the lid is open. To try it: shut the lid with the TV on and press ⌃⌥R, or turn the TV off and on. If Tyler still runs his tvresync app, he should run its `uninstall.sh`, since both want ⌃⌥R.
 
 Published to mac-utilities automatically by the push hook.
+
+## 00:50 Sharing the Claude integrations
+
+Matt: could Tyler get the Claude integrations (take-control banner etc.)? Idea: the app ships a prompt Tyler gives his Claude to set them up.
+
+---
+
+### setup prompt is right
+
+The Hammerspoon side is the easy half; the other half is teaching Tyler's Claude to use it (e.g. "run claude-control ask before touching the mouse", "drop a toast when done"). That lives in Claude's rules and hooks, not in Hammerspoon, so a prompt is the natural installer: `CLAUDE_SETUP.md` in the app, Tyler says "set up MDMA's Claude tools", his Claude adds a short rules block to his `~/.claude/CLAUDE.md`, puts `~/.hammerspoon/bin` tools on his PATH, adds a Stop hook for "Claude finished" toasts, and turns the modules on. Re-running it updates the block in place (marked start/end), so it stays in sync with the app.
+
+---
+
+### what's ready vs tied to ai-os
+
+Checked each module's dependencies:
+- Take-control banner (`claude_control`, 660 lines): no Matt-specific paths. Ready.
+- Claude Cmd-K and Quote + dictate (`claude_cmd_k`, `quote_comment`): no Matt paths; Cmd-K's "project:" filter needs a setting for his project name.
+- Toasts (`claude_notify`): only its inbox lives in ai-os; moving it to `~/Library/Application Support/MDMA/notify` frees it.
+- Keep-warm nudges and Hey Claude: read ai-os transcripts/scripts and Matt's project id. Later, separate job.
+
+---
+
+### effort
+
+Phase 1 (first four above + CLAUDE_SETUP.md + a test on a blank home folder): a modest job, no new app. Phase 2 (keep-warm, Hey Claude): bigger, needs those decoupled from ai-os. Waiting on Matt's 👍 for phase 1.
