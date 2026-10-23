@@ -1,0 +1,17 @@
+const { chromium } = require('playwright-core');
+// Headless, muted check of a built reel: loads it, presses Play, prints the mix (music gain, voice time) each second.
+// Run via test.sh, never in the Claude browser pane (opening a reel there hung two sessions, 2026-10-23).
+const url = 'file://' + process.argv[2] + '?mute';
+(async () => {
+  const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+    args: ['--mute-audio', '--autoplay-policy=no-user-gesture-required', '--disable-extensions', '--no-first-run'] });
+  const p = await b.newPage();
+  const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
+  const t0 = Date.now(); await p.goto(url, { timeout: 30000 }); console.log('loaded ms', Date.now() - t0);
+  await p.waitForTimeout(500);
+  const btn = await p.$('#start'); console.log('start button', !!btn);
+  await p.evaluate(() => document.getElementById('play').click());
+  for (let k = 0; k < (+process.argv[3] || 20); k++) { await p.waitForTimeout(1000); console.log(k + 1, JSON.stringify(await p.evaluate(() => window.reelMix && window.reelMix()))); }
+  console.log('errors', JSON.stringify(errs));
+  await b.close();
+})().catch(e => { console.log('FAIL', e.message); process.exit(1); });

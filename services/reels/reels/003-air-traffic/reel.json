@@ -1,0 +1,19 @@
+{
+  "title": "Air traffic control",
+  "eyebrow": "Reel 03 · How agents take turns on your Mac",
+  "voice": "maeve",
+  "theme": "panel",
+  "music": "~/projects/claude-ambient/out/piano-airports-04.m4a",
+  "music_name": "Piano Airports 04",
+  "source": "claude-control (~/.hammerspoon/bin/claude-control) and the take-control rule in .rules/core_safety.md",
+  "beats": [
+    {"svg": "1.svg", "say": "Several Claude agents share your Mac at once. Air traffic control is the queue that keeps them from typing over each other, or over you."},
+    {"svg": "2.svg", "say": "The rule is simple. Before an agent touches anything you can see or hear, keys, clicks, apps, even the volume, it asks first and waits for a yes."},
+    {"svg": "3.svg", "say": "Asks line up in one queue. Only one agent holds control at a time. The rest wait their turn for up to three minutes, then give up politely."},
+    {"svg": "4.svg", "say": "There are two kinds of ask. Typing or clicking gets the full banner and a soft glow, so hands off. Small changes get a little corner pill you can type through."},
+    {"svg": "5.svg", "say": "You're always in charge. Escape means not now, and the agent waits for your go. Escape twice stops its whole task. Snooze just pushes it back."},
+    {"svg": "6.svg", "say": "Click any banner to jump straight to the thread that's asking. And the urgent flag, which skips the line, is only for stopping a runaway."},
+    {"svg": "7.svg", "say": "Your own automations take a number too, silently. Anything you trigger yourself runs instantly. Only things that run on their own wait in line."},
+    {"svg": "8.svg", "say": "So nothing fights over the keyboard, and you can always see who's flying. That's air traffic control."}
+  ]
+}

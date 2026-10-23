@@ -23,6 +23,7 @@ First reel's slides: https://www.figma.com/design/xg900viuh141OazDkdNbWF
 
 - 01 Explainer reels (stock kit look, kept as the before): https://claude.ai/artifact/LSFodxqvScqba6UcY5xUxg
 - 02 Your palette is waiting on you (panel theme): https://claude.ai/artifact/2oVcSYhSMspspNPSA3dWQR
+- 03 Air traffic control (animated slides, ducked piano bed): https://claude.ai/artifact/BnqUN9XerZsqF5sepZtdy7
 
 ## Voices
 
@@ -41,7 +42,15 @@ Pace button switches Normal / Quick / Gentle (gentle is for hard or unfamiliar t
 Space pause · ←/→ beats · R replay · S pace (Normal / Quick / Gentle) · F full screen · tap a segment.
 Captions brighten as the line is spoken. Lock-screen next/previous via Media Session.
 
+## Music bed
+
+`music` in reel.json (a loop path) plays under the voice, side-chain ducked in the player: knobs
+`music.level`, `duck.depth/threshold/attack/release`, `music.intro/fadeIn/outro` in tweaks.json.
+
 ## Testing (agents)
 
-Always test with `reel.html?mute`: the browser pane plays through Matt's speakers, and hearing the
-script before it's ready spoils the reel (Matt, 2026-10-22). Check timing with `audio.currentTime`, not by ear.
+**Never open a reel in the Claude browser pane**: it hung two sessions for 20+ min (2026-10-23).
+Run `./test.sh reels/<nnn-slug>` instead (backgrounded): headless Chrome, `?mute` plus `--mute-audio`,
+a hard 2-minute limit, and it prints the mix each second (music gain dips under the voice).
+`?mute` matters for any real browser too: hearing the script before it's ready spoils the reel
+(Matt, 2026-10-22). Check timing with `audio.currentTime`, not by ear.

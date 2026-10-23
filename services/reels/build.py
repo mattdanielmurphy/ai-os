@@ -3,7 +3,7 @@
 
 Usage: build.py REEL_DIR [--voice maeve]
 
-REEL_DIR holds reel.json ({title, eyebrow, voice, theme, pace, figma, beats: [{svg, say}]}) and one SVG
+REEL_DIR holds reel.json ({title, eyebrow, voice, theme, pace, figma, music, beats: [{svg, say}]}) and one SVG
 per beat, exported from Figma (exportAsync SVG_STRING, svgOutlineText false, svgIdAttribute true).
 Layers named a1, a2, … reveal in that order while the beat plays.
 
@@ -14,6 +14,8 @@ deliberate one; never the stock kit (No Claude-default look rule).
 
 Voice: the whole script is read in one Deepgram take at `pace` (default: tweak voice.pace), then cut per
 beat by word timings (see one_take), cached in REEL_DIR/audio/.
+Music: optional `music` (path to a loop) plays under the voice, side-chain ducked in the player. The build
+trims it to what the reel can use (Gentle pace included), evens its loudness and fades its ends.
 Output: REEL_DIR/reel.html (publish it with the Artifact tool).
 """
 import argparse, base64, difflib, hashlib, json, re, subprocess, sys
@@ -96,12 +98,26 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
         cuts.append(round((last + first) / 2, 3))
     cuts.append(end)
     for k, clip in enumerate(clips):
-        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
+        subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
                         "-c:a", "libmp3lame", "-b:a", "64k", str(clip)], check=True)
     return clips
 
 
-def build(reel_dir: Path, voice: str | None = None) -> Path:
+def music_bed(src: Path, seconds: float, folder: Path) -> Path:
+    """Trim a loop to `seconds`, even its loudness (so music.level means the same for every loop), fade
+    both ends, and encode small. Cached by source + length."""
+    seconds = min(seconds, duration(src))
+    tag = hashlib.sha1(f"{src.resolve()}|{src.stat().st_mtime}|{seconds:.0f}".encode()).hexdigest()[:12]
+    out = folder / f"music-{tag}.m4a"
+    if not out.exists():
+        fade = f"afade=t=in:d=1.5,afade=t=out:st={seconds - 6:.2f}:d=6"
+        subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(src), "-t", f"{seconds:.2f}",
+                        "-af", f"loudnorm=I=-20:TP=-2,{fade}", "-ar", "44100", "-c:a", "aac", "-b:a", "96k", str(out)],
+                       check=True)
+    return out
+
+
+def build(reel_dir: Path, voice: str | None = None, music: str | None = None) -> Path:
     reel = json.loads((reel_dir / "reel.json").read_text())
     tweaks = {k: v["value"] for k, v in json.loads((HERE / "tweaks.json").read_text())["tweaks"].items()}
     theme = json.loads((HERE / "themes" / f"{reel.get('theme', 'panel')}.json").read_text())
@@ -115,7 +131,14 @@ def build(reel_dir: Path, voice: str | None = None) -> Path:
         beats.append({"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": b["say"], "dur": duration(mp3),
                       "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()})
     data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voice.title(),
-            "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks}
+            "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None}
+    music = music or reel.get("music")
+    if music:
+        src = (reel_dir / Path(music).expanduser()).resolve()
+        talk = sum(b["dur"] for b in beats) + len(beats) * (tweaks["beat.gap"] + tweaks["beat.lead"])
+        bed = music_bed(src, talk / tweaks["pace.gentle"] + tweaks["music.intro"] + 20, audio)
+        data["music"] = {"name": reel.get("music_name") or src.stem,
+                         "audio": "data:audio/mp4;base64," + base64.b64encode(bed.read_bytes()).decode()}
     html = (HERE / "template.html").read_text()
     html = html.replace("/*__KIT_CSS__*/", (HERE.parent / "pages" / "kit.css").read_text())
     html = html.replace("/*__THEME_CSS__*/", theme_css(theme))
@@ -131,6 +154,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("reel_dir", type=Path)
     ap.add_argument("--voice")
+    ap.add_argument("--music", help="loop to play under the voice (overrides reel.json `music`)")
     a = ap.parse_args()
-    out = build(a.reel_dir.resolve(), a.voice)
+    out = build(a.reel_dir.resolve(), a.voice, a.music)
     print(f"{out} ({out.stat().st_size // 1024} KB)")

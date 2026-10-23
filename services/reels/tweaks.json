@@ -1,14 +1,141 @@
 {
   "app": "Explainer reels",
   "tweaks": {
-    "reveal.spread": { "value": 0.55, "default": 0.55, "min": 0.1, "max": 1, "step": 0.05, "note": "Share of each beat's narration over which its parts appear" },
-    "reveal.maxGap": { "value": 0.9, "default": 0.9, "min": 0.1, "max": 3, "step": 0.1, "note": "Longest wait (s) between two parts appearing" },
-    "reveal.duration": { "value": 0.55, "default": 0.55, "min": 0.1, "max": 2, "step": 0.05, "note": "Seconds each part takes to slide/fade in" },
-    "reveal.rise": { "value": 18, "default": 18, "min": 0, "max": 80, "step": 2, "note": "Pixels each part rises as it appears" },
-    "voice.pace": { "value": 1.15, "default": 1.15, "min": 0.7, "max": 1.5, "step": 0.05, "note": "Voice speed baked into new reels (Deepgram speed); 1 = the voice's natural pace" },
-    "pace.quick": { "value": 1.2, "default": 1.2, "min": 1, "max": 2, "step": 0.05, "note": "Player 'Quick' rate on top of the baked pace" },
-    "pace.gentle": { "value": 0.78, "default": 0.78, "min": 0.5, "max": 1, "step": 0.02, "note": "Player 'Gentle' rate for hard or unfamiliar topics" },
-    "beat.gap": { "value": 0.45, "default": 0.45, "min": 0, "max": 3, "step": 0.1, "note": "Pause (s) after a beat's voice ends before the next beat" },
-    "beat.lead": { "value": 0.15, "default": 0.15, "min": 0, "max": 2, "step": 0.05, "note": "Delay (s) between a slide appearing and the voice starting" }
+    "reveal.spread": {
+      "value": 0.55,
+      "default": 0.55,
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05,
+      "note": "Share of each beat's narration over which its parts appear"
+    },
+    "reveal.maxGap": {
+      "value": 0.9,
+      "default": 0.9,
+      "min": 0.1,
+      "max": 3,
+      "step": 0.1,
+      "note": "Longest wait (s) between two parts appearing"
+    },
+    "reveal.duration": {
+      "value": 0.55,
+      "default": 0.55,
+      "min": 0.1,
+      "max": 2,
+      "step": 0.05,
+      "note": "Seconds each part takes to slide/fade in"
+    },
+    "reveal.rise": {
+      "value": 18,
+      "default": 18,
+      "min": 0,
+      "max": 80,
+      "step": 2,
+      "note": "Pixels each part rises as it appears"
+    },
+    "voice.pace": {
+      "value": 1.15,
+      "default": 1.15,
+      "min": 0.7,
+      "max": 1.5,
+      "step": 0.05,
+      "note": "Voice speed baked into new reels (Deepgram speed); 1 = the voice's natural pace"
+    },
+    "pace.quick": {
+      "value": 1.2,
+      "default": 1.2,
+      "min": 1,
+      "max": 2,
+      "step": 0.05,
+      "note": "Player 'Quick' rate on top of the baked pace"
+    },
+    "pace.gentle": {
+      "value": 0.78,
+      "default": 0.78,
+      "min": 0.5,
+      "max": 1,
+      "step": 0.02,
+      "note": "Player 'Gentle' rate for hard or unfamiliar topics"
+    },
+    "beat.gap": {
+      "value": 0.45,
+      "default": 0.45,
+      "min": 0,
+      "max": 3,
+      "step": 0.1,
+      "note": "Pause (s) after a beat's voice ends before the next beat"
+    },
+    "beat.lead": {
+      "value": 0.15,
+      "default": 0.15,
+      "min": 0,
+      "max": 2,
+      "step": 0.05,
+      "note": "Delay (s) between a slide appearing and the voice starting"
+    },
+    "music.level": {
+      "value": 0.4,
+      "default": 0.4,
+      "min": 0,
+      "max": 1,
+      "step": 0.02,
+      "note": "Music bed volume when nobody is talking (0 = off)"
+    },
+    "duck.depth": {
+      "value": 0.45,
+      "default": 0.45,
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "note": "How far the music dips under the voice (0.45 = slight duck, 1 = silence)"
+    },
+    "duck.threshold": {
+      "value": 0.06,
+      "default": 0.06,
+      "min": 0.01,
+      "max": 0.3,
+      "step": 0.01,
+      "note": "Voice loudness (RMS) that gives the full dip; lower = ducks harder on quiet words"
+    },
+    "duck.attack": {
+      "value": 0.06,
+      "default": 0.06,
+      "min": 0.01,
+      "max": 0.5,
+      "step": 0.01,
+      "note": "How fast (s) the music dips when she starts talking"
+    },
+    "duck.release": {
+      "value": 0.45,
+      "default": 0.45,
+      "min": 0.05,
+      "max": 2,
+      "step": 0.05,
+      "note": "How slowly (s) the music swells back in the gaps; higher = less pumping"
+    },
+    "music.intro": {
+      "value": 2.5,
+      "default": 2.5,
+      "min": 0,
+      "max": 8,
+      "step": 0.5,
+      "note": "Seconds of music alone before the first line"
+    },
+    "music.fadeIn": {
+      "value": 1.2,
+      "default": 1.2,
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1,
+      "note": "Music fade-in (s) on play"
+    },
+    "music.outro": {
+      "value": 4,
+      "default": 4,
+      "min": 0.5,
+      "max": 10,
+      "step": 0.5,
+      "note": "Music fade-out (s) after the last line"
+    }
   }
 }
