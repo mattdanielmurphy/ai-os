@@ -147,3 +147,34 @@ Checked each module's dependencies:
 ### effort
 
 Phase 1 (first four above + CLAUDE_SETUP.md + a test on a blank home folder): a modest job, no new app. Phase 2 (keep-warm, Hey Claude): bigger, needs those decoupled from ai-os. Waiting on Matt's 👍 for phase 1.
+
+## 01:25 Claude tools shared (phase 1)
+
+---
+
+### four tools now public
+
+Take-control banner, Claude toasts, Cmd-K project filter and Quote + Dictate are in the public copy (published automatically by the push hook). On Matt's Mac nothing changes: same inbox, same behaviour, all four reloaded and running.
+
+Changes to make them portable:
+- Toast inbox: `~/projects/ai-os/tmp/notify` if ai-os exists (Matt), else `~/Library/Application Support/MDMA/notify`. `bin/claude-notify` makes the same choice.
+- `bin/claude-control`: no longer defaults to the Everything project id; Hammerspoon already reads the project from the thread id.
+- Cmd-K: the typed `project:` is now the `palette.filter` tweak; empty = plain Cmd-K.
+- Export now also ships `claude_links.lua`, `claude-control`, `claude-notify`, `mic-users.swift` and `CLAUDE_SETUP.md`.
+
+---
+
+### claude setup prompt
+
+`~/.hammerspoon/CLAUDE_SETUP.md` (top of UTILITIES.md points to it). Tyler says "Read ~/.hammerspoon/CLAUDE_SETUP.md and do it." His Claude adds a marked MDMA block to his `~/.claude/CLAUDE.md` (ask before input via claude-control; toast when done/blocked), turns the four tools on, and shows a test banner with his OK. Re-running replaces the block, so it stays current.
+
+Rejected: a Stop hook that toasts after every Claude turn (too noisy; Matt's own Mac uses toasts by rule, not by hook).
+
+---
+
+### untested claude tools
+
+- Not run on a real second Mac: tested by installing the export into a blank home folder (installer, tests, every require and bin tool present, no Matt ids).
+- The `hs` command line tool may not exist on a fresh Hammerspoon; the setup prompt falls back to ticking them in the menu.
+- Quote + Dictate needs Xcode command line tools once to build its mic helper.
+- Phase 2 (keep-warm nudges, Hey Claude) not started.
