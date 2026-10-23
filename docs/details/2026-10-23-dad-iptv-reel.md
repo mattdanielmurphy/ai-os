@@ -14,3 +14,13 @@ Sportsnet+ Standard $34.99/mo or $269.99/yr; Crave $11.99 with ads, $22 premium;
 - Domain age, refund policy, channel count labelled unverified. No setup/upstream info included.
 - Not eyeballed slide by slide; text widths checked by script only.
 Undo: delete the reel folder and the artifact.
+
+## 23:40 Rebuilt after Matt's feedback
+- Dropped: legal/grey-area slide, quality talk, antenna and generic free apps, any mention of "Dad". Pandora only.
+- Added: before-costs breakdown (Telus $900, Sportsnet+ $350, others ~$750 estimate = ~$2,000, ~$1,100 now), four options with totals (A keep ~$1,100; B box+apps $900–1,150; C box only $150–400; D trim+Plex ~$620), "will it just work / you are tech support" slides, Plex slide.
+- The ~$750 "everything else" and D's ~$375 (half of it dropped) are my estimates from Matt's "$2k"; slide says so.
+- Plex facts (free, ads, hundreds of live channels, tens of thousands on demand, Bell Media's CTV News and TSN The Ocho, no NHL) come from secondary sources; channel count varies 250–600+. "Runs on Fire TV, Roku, smart TVs" is general knowledge, not searched.
+- Still mentions in one line that the streams are unlicensed (it explains why it can vanish). Remove if unwanted.
+- Pauses: build.py now joins beats with "..." lines and narration uses " ... " between phrases; captions strip them. Gaps measured at 0.4–0.6 s (Deepgram caps pauses), so cuts sit mid-gap with ~0.25 s margin each side. If word ends still clip, next step is cutting nearer the next word's start.
+- headless_test.cjs: skips the voice-switch check when only one voice.
+Undo: git revert this commit.

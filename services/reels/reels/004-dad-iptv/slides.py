@@ -87,102 +87,103 @@ def row(x, y, w, head, sub, cls="s-line", fill="f-surface", h=96):
                      for k, t in enumerate(sub.split("|"))))
 
 
+
+def col(x, k, head, lines, total, tcls="f-ink", cls="s-line"):
+    out = box(x, 250, 260, 360, "f-surface", cls, 6) + label(x + 20, 286, k, 14)
+    out += f'<text x="{x + 20}" y="324" class="td f-ink" font-size="26">{e(head)}</text>'
+    for n, (a, b) in enumerate(lines):
+        yy = 372 + n * 52
+        out += (f'<text x="{x + 20}" y="{yy}" class="tb f-muted" font-size="17">{e(a)}</text>'
+                f'<text x="{x + 240}" y="{yy}" class="tm f-ink" font-size="17" text-anchor="end">{e(b)}</text>'
+                f'<line x1="{x + 20}" y1="{yy + 14}" x2="{x + 240}" y2="{yy + 14}" class="s-line" stroke-width="1"/>')
+    out += f'<text x="{x + 20}" y="568" class="td {tcls}" font-size="36">{e(total)}</text>'
+    return out
+
+
 S[1] = svg(
-    g(1, chip("REEL 04 — FOR DAD")),
-    g(2, title(["IS THE CHEAP", "TV BOX WORTH IT?"], y=200, size=92)),
-    g(3, para(["A Firestick that streams 15,000 channels for about",
-               "$150–400 a year. A friend vouches for it.",
-               "Here is the honest upside, the downside, and the safer options."], y=370, size=25, lh=38)),
-    g(4, box(104, 520, 1072, 110, "f-surface", "s-line", 6),
-         label(132, 560, "THE SHORT VERSION", 15),
-         '<text x="132" y="606" class="td f-ink" font-size="36">Cheap, but legally risky and could vanish any day.</text>'),
+    g(1, chip("REEL 04 — THE CHEAP TV BOX")),
+    g(2, title(["WILL IT JUST", "WORK LIKE", "TELUS TV?"], y=190, size=88)),
+    g(3, para(["A Firestick sold with a year of live TV for about $150–400.",
+               "The savings are real. So are the catches."], y=480, size=26, lh=40)),
+    g(4, box(104, 570, 1072, 80, "f-surface", "s-line", 6),
+         '<text x="132" y="622" class="td f-ink" font-size="30">Short answer: cheaper, but not hands-off.</text>'),
 )
 
 S[2] = svg(
-    g(1, chip("CH 01 — THE MONEY")),
-    g(2, title(["WHAT TV COSTS A YEAR"])),
-    g(3, para(["Rough yearly costs. The first two are what Dad paid, then what he cut."], y=236)),
-    g(4, bar(310, "TELUS TV  (CANCELLED)", "$900", 640, "f-line", "$75 a month", 0)),
-    g(5, bar(398, "NOW: SPORTSNET+, APPLE ONE, NETFLIX, PRIME", "$350", 250, "f-sky", "Dad's own count", .2)),
-    g(6, bar(486, "THE IPTV BOX", "$150–400", 260, "f-bad", "unverified", .4)),
-    g(7, bar(574, "FREE LOCAL TV + FREE APPS", "$0–100", 40, "f-good", "one-off antenna", .6)),
-    g(8, para(["Only the box saves real money against what he has now, and only if it keeps working."],
-              y=662, size=20, cls="f-muted")),
+    g(1, chip("CH 01 — WHAT TV COSTS A YEAR NOW")),
+    g(2, title(["BEFORE: ABOUT $2,000"])),
+    g(3, bar(290, "TELUS TV  (CANCELLED)", "$900", 630, "f-line", "$75 a month", 0)),
+    g(4, bar(380, "SPORTSNET+ ALONE", "$350", 245, "f-sky", "per year", .2)),
+    g(5, bar(470, "EVERYTHING ELSE: APPLE ONE, NETFLIX, PRIME…", "~$750", 525, "f-sky", "estimate", .4)),
+    g(6, box(104, 560, 1072, 90, "f-ink", "s-ink", 6),
+         '<text x="132" y="618" class="td f-bg" font-size="34">With Telus gone: about $1,100 a year.</text>'),
 )
 
 S[3] = svg(
-    g(1, chip("CH 02 — THE UPSIDE")),
-    g(2, title(["WHY PEOPLE LIKE IT"])),
-    g(3, row(104, 260, 520, "BIG SAVING", "Often a fraction of cable or Telus TV.", "s-good", "f-good-bg")),
-    g(4, row(656, 260, 520, "LOTS OF CHANNELS", "Live sports, news, movies. Count unverified.", "s-good", "f-good-bg")),
-    g(5, row(104, 380, 520, "EASY SETUP", "Arrives as a plug-in Firestick.", "s-good", "f-good-bg")),
-    g(6, row(656, 380, 520, "TRY BEFORE YOU COMMIT", "Trials and monthly plans cap the risk.", "s-good", "f-good-bg")),
-    g(7, box(104, 520, 1072, 100, "f-surface", "s-line", 6),
-         '<text x="132" y="580" class="tb f-ink" font-size="25">A real friend uses it, and Dad does not care about 720p versus 4K.</text>'),
+    g(1, chip("CH 02 — FOUR WAYS FORWARD")),
+    g(2, title(["WHAT EACH ONE COSTS"], size=54)),
+    g(3, col(104, "A", "KEEP AS IS", [("Sportsnet+", "$350"), ("Everything else", "~$750")], "~$1,100")),
+    g(4, col(380, "B", "BOX + KEEP APPS", [("The box", "$150–400"), ("Sportsnet+", "dropped"), ("Everything else", "~$750")], "$900–1,150", "f-bad", "s-bad")),
+    g(5, col(656, "C", "BOX ONLY", [("The box", "$150–400"), ("Everything else", "dropped")], "$150–400", "f-bad", "s-bad")),
+    g(6, col(932, "D", "TRIM + PLEX", [("Sportsnet+, 7 mo", "~$245"), ("Plex", "free"), ("Others, trimmed", "~$375")], "~$620", "f-good", "s-good")),
+    g(7, label(104, 650, "Everything else ~$750 is an estimate from the ~$2,000 total; trimmed assumes half of it is dropped.", 14)),
 )
 
 S[4] = svg(
-    g(1, chip("CH 03 — THE BIG ONE: LEGAL")),
-    g(2, title(["IT SELLS STREAMS NOBODY LICENSED"], size=54)),
-    g(3, row(104, 250, 340, "SELLING", "Clearly illegal|in Canada.", "s-bad", "f-bad-bg", 130)),
-    g(4, row(470, 250, 340, "BLOCKING", "Courts made ISPs|block these sites.", "s-bad", "f-bad-bg", 130)),
-    g(5, row(836, 250, 340, "WATCHING", "Grey zone.|Not clearly safe.", "s-accent", "f-surface", 130)),
-    g(6, para(["Court blocking began with a 2019 order against GoldTV and was upheld on appeal in 2021."],
-              y=440, size=22, cls="f-muted"),
-         box(104, 490, 1072, 130, "f-ink", "s-ink", 6),
-         '<text x="132" y="545" class="td f-bg" font-size="34">Do not assume nobody will come after you.</text>',
-         '<text x="132" y="588" class="tb f-bg" font-size="22">For a firm answer about Dad personally, ask a lawyer.</text>'),
+    g(1, chip("CH 03 — THE UPSIDE")),
+    g(2, title(["WHY IT'S TEMPTING"])),
+    g(3, row(104, 260, 520, "BIG SAVING", "Often well under cable or Telus TV.", "s-good", "f-good-bg"),
+         row(656, 260, 520, "LOTS OF CHANNELS", "Live sports, news, movies. Count unverified.", "s-good", "f-good-bg")),
+    g(4, row(104, 380, 520, "EASY TO START", "Arrives as a plug-in Firestick.", "s-good", "f-good-bg"),
+         row(656, 380, 520, "LOW-RISK TRIAL", "Trials and monthly plans cap the cost.", "s-good", "f-good-bg")),
+    g(5, box(104, 520, 1072, 100, "f-surface", "s-line", 6),
+         '<text x="132" y="580" class="tb f-ink" font-size="25">A coworker uses it and vouches for it. That counts, but it is one user.</text>'),
 )
 
 S[5] = svg(
-    g(1, chip("CH 04 — WHAT CAN GO WRONG")),
-    g(2, title(["THE EVERYDAY RISKS"])),
-    g(3, row(104, 230, 520, "IT CAN VANISH", "Mid-term, no refund (unverified).", "s-bad", "f-bad-bg", 84)),
-    g(4, row(656, 230, 520, "HOCKEY NIGHT BUFFERING", "Peak hours strain these services.", "s-bad", "f-bad-bg", 84)),
-    g(5, row(104, 334, 520, "SITES GET BLOCKED", "Your ISP may block it; a VPN may be needed.", "s-bad", "f-bad-bg", 84)),
-    g(6, row(656, 334, 520, "NO WAY TO GET MONEY BACK", "E-transfer has no chargeback.", "s-bad", "f-bad-bg", 84)),
-    g(7, row(104, 438, 520, "ONE PERSON FOR HELP", "Support is a single WhatsApp contact.", "s-line", "f-surface", 84)),
-    g(8, row(656, 438, 520, "SAFETY OF THE APP", "Side-loaded apps can carry malware.", "s-line", "f-surface", 84)),
-    g(9, para(["Also: payment details go to a seller no one holds accountable,",
-               "and it is nothing like Netflix: no profiles, 15,000 channels to dig through."],
-              x=104, y=584, size=20, lh=30)),
+    g(1, chip("CH 04 — WILL IT JUST WORK?")),
+    g(2, title(["NOT LIKE TELUS TV"])),
+    g(3, para(["Telus is a company with a phone number.", "This is a reseller of streams the channels never licensed."], y=236, size=22, lh=32)),
+    g(4, row(104, 290, 520, "IT CAN VANISH", "Mid-term, with no refund (unverified).", "s-bad", "f-bad-bg", 84),
+         row(656, 290, 520, "PEAK-HOUR BUFFERING", "Hockey night is when it strains.", "s-bad", "f-bad-bg", 84)),
+    g(5, row(104, 394, 520, "SITES GET BLOCKED", "An ISP block may need a VPN.", "s-bad", "f-bad-bg", 84),
+         row(656, 394, 520, "NO MONEY BACK", "E-transfer has no chargeback.", "s-bad", "f-bad-bg", 84)),
+    g(6, para(["Plus payment details go to a seller no one holds accountable."], y=540, size=21, cls="f-muted")),
 )
 
 S[6] = svg(
-    g(1, chip("CH 05 — THINGS WE COULD NOT CHECK")),
-    g(2, title(["UNVERIFIED"])),
-    g(3, para(["Nothing here was independently confirmed. Ask the seller before paying:"], y=236)),
-    g(4, "".join(pill(104 + (k % 2) * 560, 290 + (k // 2) * 76, 512, t, "s-line")
-                 for k, t in enumerate(["How old is the business?", "Is there any refund policy?",
-                                        "Do the 15,000 channels really work?", "Does it hold up on game night?"]))),
-    g(5, box(104, 470, 1072, 120, "f-surface", "s-accent", 6),
-         label(132, 508, "WHAT HELPS", 15),
-         '<text x="132" y="556" class="td f-ink" font-size="32">Ask the friend: how long, how many outages, how hockey runs.</text>'),
+    g(1, chip("CH 05 — WHO FIXES IT?")),
+    g(2, title(["YOU ARE TECH SUPPORT"])),
+    g(3, para(["Telus fixed problems. Here the only help is one person on WhatsApp."], y=236, size=23)),
+    g(4, row(104, 290, 520, "IT BREAKS AT THE WORST TIME", "Game night, and the call comes to you.", "s-accent", "f-surface", 84),
+         row(656, 290, 520, "NO NETFLIX-STYLE APP", "No profiles; 15,000 channels to dig through.", "s-accent", "f-surface", 84)),
+    g(5, row(104, 394, 520, "SIDE-LOADED APPS", "Outside the app store; malware risk.", "s-accent", "f-surface", 84),
+         row(656, 394, 520, "NOTHING IS CHECKED", "Age, refunds, channel count: unverified.", "s-accent", "f-surface", 84)),
+    g(6, box(104, 520, 1072, 100, "f-ink", "s-ink", 6),
+         '<text x="132" y="582" class="td f-bg" font-size="32">Expect a few calls a month, and some outages.</text>'),
 )
 
 S[7] = svg(
-    g(1, chip("CH 06 — LEGAL OPTIONS")),
-    g(2, title(["SAFER WAYS TO SAVE"])),
-    g(3, row(104, 230, 520, "FREE LOCAL TV", "Antenna: one-off, about $0–100.", "s-good", "f-good-bg", 84),
-         row(656, 230, 520, "FREE APPS", "CBC Gem and others. Check which games.", "s-good", "f-good-bg", 84)),
-    g(4, row(104, 334, 520, "SPORTSNET+", "$34.99 a month, $269.99 a year.", "s-line", "f-surface", 84),
-         row(656, 334, 520, "CRAVE", "$11.99 a month with ads, $22 without.", "s-line", "f-surface", 84)),
-    g(5, row(104, 438, 520, "ONLY IN SEASON", "Pay by the month for hockey, then stop.", "s-sky", "f-surface", 84),
-         row(656, 438, 520, "TRIM OVERLAPS", "Keep only what you actually watch.", "s-sky", "f-surface", 84)),
-    g(6, para(["List prices from this month; check each site before signing up.",
-               "Netflix with ads $7.99, Prime $99 a year, Apple One from $22.95 a month."],
-              x=104, y=584, size=19, lh=28)),
+    g(1, chip("CH 06 — THE FREE ONE")),
+    g(2, title(["PLEX: FREE, WITH ADS"])),
+    g(3, para(["Not cable, but a lot of watching for $0."], y=236, size=24)),
+    g(4, row(104, 290, 520, "LIVE CHANNELS", "Hundreds: news, movies, kids, some sports.", "s-good", "f-good-bg", 84),
+         row(656, 290, 520, "ON-DEMAND LIBRARY", "Tens of thousands of movies and shows.", "s-good", "f-good-bg", 84)),
+    g(5, row(104, 394, 520, "CANADIAN CHANNELS", "Bell Media's CTV News and TSN The Ocho.", "s-good", "f-good-bg", 84),
+         row(656, 394, 520, "RUNS ON YOUR TV", "App for Fire TV, Roku and most smart TVs.", "s-good", "f-good-bg", 84)),
+    g(6, para(["No NHL or premium cable channels.", "Channel counts vary by source (about 250–600+); check Plex's guide."],
+              x=104, y=540, size=20, lh=30, cls="f-muted")),
 )
 
 S[8] = svg(
-    g(1, chip("SO WHAT SHOULD DAD DO?")),
-    g(2, title(["START WITH THE", "SAFE SAVINGS"], y=190, size=76)),
-    g(3, check(110, 340, "Add an antenna and free apps first", .0),
-         check(110, 400, "Pay for hockey only while it's in season", .25),
+    g(1, chip("THE TAKEAWAY")),
+    g(2, title(["TRIM FIRST,", "THEN DECIDE"], y=190, size=76)),
+    g(3, check(110, 340, "Add Plex; it's free", .0),
+         check(110, 400, "Pay for hockey only in season", .25),
          check(110, 460, "Drop overlapping subscriptions", .5),
-         check(110, 520, "Tempted by the box? Ask a lawyer first", .75)),
+         check(110, 520, "That alone gets near $620 a year", .75)),
     g(4, box(104, 570, 1072, 80, "f-bad-bg", "s-bad", 6),
-         '<text x="132" y="622" class="tb f-ink" font-size="24">If he still goes ahead: month-to-month only, and expect it to stop working.</text>'),
+         '<text x="132" y="622" class="tb f-ink" font-size="24">Still want the box? Month to month, a backup for game nights.</text>'),
 )
 
 for n, body in S.items():

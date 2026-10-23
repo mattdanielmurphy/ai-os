@@ -91,7 +91,7 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
         return clips
     full = folder / f"{tag}-full.mp3"
     if not full.exists():
-        speak(voice, "\n\n".join(lines), full, speed=pace)
+        speak(voice, "\n\n...\n...\n\n".join(lines), full, speed=pace)
     heard = [w for w in words(full) if norm(w["word"])]
     said, owner = [], []
     for k, line in enumerate(lines):
@@ -149,7 +149,7 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
         voices.append({"name": name.title(), "beats": [
             {"dur": duration(mp3), "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
             for mp3 in clips]})
-    beats = [{"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": b["say"]} for b in reel["beats"]]
+    beats = [{"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": re.sub(r"\s*\.\.\.\s*", " ", b["say"])} for b in reel["beats"]]
     data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voices[0]["name"],
             "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None}
     music = music or reel.get("music")

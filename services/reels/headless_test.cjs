@@ -25,7 +25,7 @@ const url = 'file://' + process.argv[2] + '?mute';
     (function f() { seen.push(+getComputedStyle(last).opacity); performance.now() - t0 < 300 ? requestAnimationFrame(f) : done({ maxOpacity: Math.max(...seen), frames: seen.length }); })();
   }))));
   const v = await p.$('#voice');
-  if (v) { const names = []; for (let k = 0; k < 3; k++) { await v.click(); names.push(await v.textContent()); } console.log('voices', JSON.stringify(names)); }
+  if (v && await v.isVisible()) { const names = []; for (let k = 0; k < 3; k++) { await v.click(); names.push(await v.textContent()); } console.log('voices', JSON.stringify(names)); }
   console.log('fits', JSON.stringify(await p.evaluate(() => ({ page: document.documentElement.scrollHeight, viewport: innerHeight }))));
   console.log('errors', JSON.stringify(errs));
   await Promise.race([b.close(), new Promise(r => setTimeout(r, 3000))]); // close can stall; never let it hold the run

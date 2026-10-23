@@ -2,19 +2,45 @@
   "title": "Is the cheap TV box worth it?",
   "eyebrow": "Reel 04 · For Dad: the pros, cons and safer options",
   "voice": "pandora",
-  "voices": ["pandora", "gemma", "maeve"],
+  "voices": [
+    "pandora"
+  ],
   "theme": "panel",
   "music": "~/projects/claude-ambient/out/piano-airports-04.m4a",
   "music_name": "Piano Airports 04",
   "source": "Matt's brief; Canadian prices checked October 2026 via news and provider sites; legal context from the 2019 GoldTV Federal Court order. Not legal advice.",
   "beats": [
-    {"svg": "1.svg", "say": "Dad, here's a quick look at that cheap Firestick TV service your work friend uses. It's real money saved, but there are real risks, so let's go through both."},
-    {"svg": "2.svg", "say": "Telus TV was about nine hundred dollars a year, and you've already cancelled it. The box would run roughly one fifty to four hundred. Free local TV and free apps cost almost nothing."},
-    {"svg": "3.svg", "say": "The upside is real. It's much cheaper than cable, it has a huge number of channels, setup is easy, and you can try it before committing. Trials and monthly plans keep your downside small."},
-    {"svg": "4.svg", "say": "Now the big one. These services sell streams nobody licensed. Selling them is clearly illegal in Canada, and courts have made internet companies block such sites. Watching is murkier, but not clearly safe. A lawyer can give you a real answer."},
-    {"svg": "5.svg", "say": "In daily life, it can disappear mid-term with no refund. It may buffer on hockey night, your internet company might block it, and you can't dispute an e-transfer. Support is one person on WhatsApp, and side-loaded apps can carry malware."},
-    {"svg": "6.svg", "say": "We couldn't verify how old the business is, whether there's a refund policy, or whether those fifteen thousand channels really work. Ask your friend how long he's had it, and how it holds up on game night."},
-    {"svg": "7.svg", "say": "Safer ways to save. An antenna gives free local channels, and free apps like CBC Gem show some games. Sportsnet plus is about thirty-five a month, so pay only in season. And trim the subscriptions that overlap."},
-    {"svg": "8.svg", "say": "My suggestion: try the safe savings first. If the box still tempts you, talk to a lawyer, go month to month, and expect it could stop working any day. Your call, Dad."}
+    {
+      "svg": "1.svg",
+      "say": "Will the cheap TV box just work, the way Telus TV does? ... Short answer, not quite. ... It saves real money, but it comes with catches."
+    },
+    {
+      "svg": "2.svg",
+      "say": "Before, TV cost about two thousand dollars a year. ... Telus was nine hundred, Sportsnet plus alone is three fifty, and the other subscriptions are roughly seven fifty. ... With Telus gone, that's about eleven hundred."
+    },
+    {
+      "svg": "3.svg",
+      "say": "Here are four ways forward. ... Keep everything as is, about eleven hundred. ... The box plus the other subscriptions, around a thousand. ... The box alone, one fifty to four hundred. ... Or trim and use Plex, about six hundred and twenty."
+    },
+    {
+      "svg": "4.svg",
+      "say": "The appeal is easy to see. ... It's cheaper than cable, with a huge number of channels. ... Setup is simple, and trials or monthly plans cap the risk. ... A coworker vouches for it, though that's one person."
+    },
+    {
+      "svg": "5.svg",
+      "say": "But it isn't Telus. ... This is a reseller of streams the channels never licensed, so it can vanish mid-term with no refund. ... Expect buffering at peak times like hockey night, possible blocking by your internet company, and no way to dispute an e-transfer."
+    },
+    {
+      "svg": "6.svg",
+      "say": "Tech support lands on you. ... Help is one person on WhatsApp. ... Apps are side-loaded, there are no profiles, and fifteen thousand channels are hard to dig through. ... Expect a few calls a month, and some outages."
+    },
+    {
+      "svg": "7.svg",
+      "say": "Plex is the free option worth knowing. ... Hundreds of live channels, tens of thousands of free movies and shows, with ads, plus some Canadian channels. ... It runs on most TVs, but there's no NHL."
+    },
+    {
+      "svg": "8.svg",
+      "say": "So, trim first. ... Add Plex, pay for hockey only in season, and drop overlapping subscriptions. ... That gets close to six hundred twenty a year. ... If you still want the box, go month to month and keep a backup for game nights."
+    }
   ]
 }

@@ -1,0 +1,26 @@
+loaded ms 962
+start button true
+1 {"bed":0.8547499999900658,"music":0.207,"musicTime":1.004263,"voiceTime":0}
+2 {"bed":1,"music":0.378,"musicTime":2.011429,"voiceTime":0}
+3 {"bed":1,"music":0.398,"musicTime":3.015692,"voiceTime":0}
+4 {"bed":1,"music":0.229,"musicTime":4.017052,"voiceTime":0.847932}
+5 {"bed":1,"music":0.252,"musicTime":5.024525,"voiceTime":1.850987}
+6 {"bed":1,"music":0.252,"musicTime":6.026567,"voiceTime":2.854318}
+7 {"bed":1,"music":0.284,"musicTime":7.031011,"voiceTime":3.857168}
+8 {"bed":1,"music":0.23,"musicTime":8.032082,"voiceTime":4.859544}
+9 {"bed":1,"music":0.317,"musicTime":9.033336,"voiceTime":5.862092}
+10 {"bed":1,"music":0.226,"musicTime":10.037669,"voiceTime":6.86484}
+11 {"bed":1,"music":0.26,"musicTime":11.039118,"voiceTime":7.867589}
+12 {"bed":1,"music":0.333,"musicTime":12.044821,"voiceTime":8.871701}
+13 {"bed":1,"music":0.391,"musicTime":13.046286,"voiceTime":0}
+14 {"bed":1,"music":0.235,"musicTime":14.050112,"voiceTime":0.471396}
+15 {"bed":1,"music":0.221,"musicTime":15.052181,"voiceTime":1.474743}
+16 {"bed":1,"music":0.301,"musicTime":16.056599,"voiceTime":2.479516}
+17 {"bed":1,"music":0.231,"musicTime":17.057959,"voiceTime":3.481935}
+18 {"bed":1,"music":0.328,"musicTime":18.062222,"voiceTime":4.483749}
+19 {"bed":1,"music":0.229,"musicTime":19.063583,"voiceTime":5.48769}
+20 {"bed":1,"music":0.246,"musicTime":20.068112,"voiceTime":6.490929}
+flash {"maxOpacity":0,"frames":20}
+voices ["Voice: Gemma","Voice: Maeve","Voice: Pandora"]
+fits {"page":900,"viewport":900}
+errors []
