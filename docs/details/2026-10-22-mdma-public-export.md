@@ -77,3 +77,19 @@ On Tyler's side: pull every 15 minutes and on wake instead of hourly, so a fix r
 ### risk
 
 Every push to main reaches Tyler within ~15 minutes, including half-finished work. If that bites, publish only from a `release` tag instead. Not built yet: waiting for Matt's 👍.
+
+## 00:36 Auto-update built and live
+
+---
+
+### any mac updates itself
+
+Correction to the earlier "Tyler already pulls hourly": that meant any install made with install.sh pulls on its own. The updater lives in the public code (suite.lua, shared mode), so it works on any Mac without setup. Now: checks every 15 minutes and 20 s after every wake; Hammerspoon starts at login.
+
+---
+
+### pushes auto-publish
+
+`bin/hooks/pre-push` (enabled with `git config core.hooksPath bin/hooks`) waits until origin/main has the push, then runs ship-public (test + privacy scan). On failure: a macOS notification, log in `~/.hammerspoon/tmp/ship-public.log`. Tested for real: my push published to mac-utilities 30 s later, and the public suite.lua has the new updater.
+
+Untested: the wake trigger itself (needs a sleep/wake cycle). The hooks path is per-clone, so a fresh clone of ~/.hammerspoon needs that git config line again.
