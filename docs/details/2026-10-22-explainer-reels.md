@@ -113,3 +113,17 @@ and could also run on the VPS. Recommended default. Paid fallback when he wants 
 so a 2-minute reel (~2,000 characters) is about 3 cents.
 
 Not tested: Kokoro install and voice quality on his Mac. Undo: nothing built.
+
+## 21:50 Voice: Deepgram
+
+Matt: Kokoro sounds incredible for 82M params but isn't quite there; he has lots of Deepgram credits.
+Decision: Deepgram's TTS (Aura) is the reel voice. Kokoro stays the free offline fallback (yes, it runs
+fine on a Mac or phone CPU, faster than real time).
+
+---
+
+### Voice picker exists
+
+`tools/voice-agent-tester` already lists Deepgram's 138-voice catalog with starred favourites, so the reel
+voice can be one he stars there. The tester's key wasn't found by `aios-env list` in that folder; where it
+lives is unchecked (not hunted, to avoid reading secret files). Untested: Aura voice quality for narration.
