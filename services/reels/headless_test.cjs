@@ -13,5 +13,6 @@ const url = 'file://' + process.argv[2] + '?mute';
   await p.evaluate(() => document.getElementById('play').click());
   for (let k = 0; k < (+process.argv[3] || 20); k++) { await p.waitForTimeout(1000); console.log(k + 1, JSON.stringify(await p.evaluate(() => window.reelMix && window.reelMix()))); }
   console.log('errors', JSON.stringify(errs));
-  await b.close();
+  await Promise.race([b.close(), new Promise(r => setTimeout(r, 3000))]); // close can stall; never let it hold the run
+  process.exit(0);
 })().catch(e => { console.log('FAIL', e.message); process.exit(1); });
