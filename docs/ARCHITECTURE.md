@@ -139,6 +139,7 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
 6. Colours by role from the palette; SF Symbols; designed and checked in light and dark.
 7. Repo, `AG_CONTEXT.md`, `build.sh`, tests, `ca.mattmurphy.*`.
 8. Just for Matt or for the world? Settings, onboarding, README; every shortcut and gesture has a visible hint.
+9. Checked against [EXEMPLARS.md](EXEMPLARS.md) (Low-Tech Guys, Rogue Amoeba, Panic and others): name what it misses.
 
 ---
 
