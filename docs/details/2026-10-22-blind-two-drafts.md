@@ -57,3 +57,9 @@ explain the benefit.
 
 Not tested in a live design task yet; the first real open-ended design thread will show whether agents pick it up.
 Undo: revert this commit and remove the two lines from ~/.claude/CLAUDE.md.
+
+---
+
+### Live status
+
+Pushed to origin/main. Your global ~/.claude/CLAUDE.md has it now, so every new Claude session sees it. The main ai-os checkout on the Mac is 3 commits behind because another session has uncommitted edits there; I didn't touch those. It catches up on its next pull.
