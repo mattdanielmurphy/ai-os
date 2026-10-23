@@ -85,3 +85,61 @@ same file with corrected gains (pad -6, air -7).
 - air: **Echo Dust** (slow attack), Timeless 3 ping-pong, +3 dB (it's quiet by nature).
 - Pro-R 2: Modern, biggest room so far (Space 0.9, longer decay).
 -20 LUFS, 0 dropouts. Not listened to by me.
+
+## 08:30 Long morphing loops
+
+Matt liked all four pieces and asked for long (~20 min) loops that morph a lot but loop cleanly, at an
+interval with a mathematical or biological meaning.
+
+---
+
+### How the loops stay seamless
+
+Every voice repeats a whole number of times per loop (period = L / count, same jitter each pass) and
+every automation is a sine with whole cycles per loop, so the score at t and t + L is identical.
+The renderer plays two loops plus 20 s; `loop_finish.sh` keeps the second loop (it already carries the
+first loop's reverb and delay tails) and cross-fades its first 6 s with the audio just after 2L, so the
+end flows into the start. Gain is one static value (to -20 LUFS, capped at -1 dBFS peak); a limiter was
+rejected because its state at the file start broke the seam (measured: seam jump 20x a normal sample
+step with it, equal to a normal step without). Output is 24-bit FLAC (gapless; AAC adds padding).
+
+---
+
+### Morphing
+
+`render_mix.swift` gained periodic automation: Augmented macros (Morph, Color, Motion), Saturn drive,
+Timeless feedback, track gain and reverb send, and Pro-R Brightness/Decay/Space. Two pianos cross-fade
+over each loop; harmony moves through 6 or 8 chords per loop.
+
+---
+
+### Loop 1: Cicada (22:06)
+
+L = 13 x 17 x 6 = 1326 s. Periodical cicadas emerge every 13 or 17 years; prime cycles keep predators
+from syncing. Voices repeat 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59 times per loop (all primes).
+Presets: Intima + Ice Piano (cross-fading), Breath of Light pad, Cotton Wool Worlds, Glassy Keys + Timeless 3.
+D-flat major, 6 chords of 221 s (13 x 17) each.
+
+---
+
+### Loop 2: Sunflower (21:00)
+
+L = 21 min. Sunflower seed spirals come in neighbouring Fibonacci numbers; voices repeat 8, 13, 21, 34,
+55, 89 times per loop; tracks are panned a golden angle apart; 8 chords. Presets: Firefly Felt + Darker
+Pools (cross-fading), Alpha Orionis pad, Honey Mist, Echo Dust + Timeless 3. A major, leaning lydian.
+
+---
+
+### Untested
+
+Not listened to by me. Morph/Color macros do different things per preset, so some passages may get odd.
+
+## 08:20 Loop: Breath (piece 4 as a loop)
+
+Matt liked piece 4's sparseness and asked for a loop of it, fast. `pieces/loop_breath.py`: L = 1200 s =
+120 breaths at 6/min (0.1 Hz coherent breathing, the baroreflex resonance). Same presets/FX/room as
+piece 4 (Darker Pools, Fading Outward + Saturn tape, Echo Dust + Timeless 3, big Pro-R), D lydian over
+5 chords of 240 s, voices repeating 13-59 (prime) times per loop, macros/gains/Pro-R drifting.
+Rendered alongside the Cicada loop to save time (9 min). Seam checked: jump at the wrap equals a normal
+sample step. -20 LUFS, 24-bit FLAC, 167 MB. Revealed in Finder after claude-control (ticket t4).
+Skipped the per-track balance test for speed (gains taken from piece 4). Not listened to by me.
