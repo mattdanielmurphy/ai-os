@@ -225,6 +225,21 @@ test('the wrapped handed-off note posts the forward link and resolves the old th
   expect(calls.find(c => c.tool === 'mcp__hearthbot__set_thread_resolved')?.resolved).toBe(true)
 })
 
+test('the new thread opens on the Mac behind the light pill', async ($, on) => {
+  const runs: string[][] = []
+  on('tool.call', () => ({ result: 'ok' }))
+  on('process.run', (_$: unknown, e: any) => {
+    runs.push(e.argv)
+    return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false } }
+  })
+  const id = 'cmsg_01CUPXyY9oUwKVDFREVDpYDrBzsyKb2XkAhavByAdGw1cD'
+  await $.prompt.submit(delivered(`context-alert handed-off: ${id}`))
+  for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+  const argv = runs.find(r => r[3] === 'open-thread')
+  expect(argv?.[2]).toMatch(/ask .* --light --thread "\$1"\) \|\| exit 0; open "\$2"; .* done/)
+  expect(argv?.slice(4)).toEqual([id, `claude://code/project/chan_01CUPXyY9oUwKVDFREVDpYDr?thread=${id}`])
+})
+
 test('a fresh thread from a cold handoff opens with a link back, once', async ($, on) => {
   const calls: Record<string, unknown>[] = []
   const entered: string[] = []

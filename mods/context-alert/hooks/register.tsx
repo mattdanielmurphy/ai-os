@@ -182,6 +182,19 @@ export const heldReply = (expiredMs: number, tokens: number) =>
 export const handedOffReply = (thread: string) =>
   `➡️ **Handed off to [the new thread](#${thread}) because the cache expired.**`
 
+/** The Claude app link that opens a project thread; its project id is the root id's prefix. */
+export const threadLink = (thread: string) =>
+  `claude://code/project/chan_${thread.slice(5, 29)}?thread=${thread}`
+
+/** Opens the new thread on the Mac once the handoff has begun, behind a light take-control
+ *  pill (Esc skips it; clicking the pill opens it too). */
+export const openThreadArgv = (thread: string) => [
+  'sh', '-c',
+  'cc=$HOME/.hammerspoon/bin/claude-control; t=$("$cc" ask "Open the new thread this one handed off to" 3 --light --thread "$1") || exit 0; ' +
+  'open "$2"; "$cc" done "${t#granted }"',
+  'open-thread', thread, threadLink(thread),
+]
+
 /** The line a fresh thread opens with, linking back to the thread it continues. */
 export const continuedReply = (thread: string) =>
   `⬅️ **Continued from [the old thread](#${thread})** because its cache expired.`
@@ -375,6 +388,7 @@ export const register: Register = on => {
       await $.tool.call({ tool: 'mcp__hearthbot__reply', text: handedOffReply(moved) }).catch(() => undefined)
       // The note reopens a resolved thread; a handed-off thread is done, so close it again.
       await $.tool.call({ tool: 'mcp__hearthbot__set_thread_resolved', resolved: true }).catch(() => undefined)
+      void $.process.run(openThreadArgv(moved), { timeoutMs: 300_000 }).catch(() => undefined)
       return { drop: `Handed off to ${moved}; the coordinator's note was answered by the mod.` }
     }
     // A fresh thread from a cold handoff: its first line links back to the thread it continues.

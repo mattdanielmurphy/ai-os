@@ -44,3 +44,19 @@ Each hop links its neighbour both ways, so A↔B↔C works hop by hop. Untested 
 ### How to undo
 
 Revert the commit "context-alert 0.4.2", then `claude plugin marketplace update ai-os-mods` and `claude plugin update context-alert@ai-os-mods` with the app's bundled binary, then restart the app.
+
+## 00:25 New thread opens by itself
+
+Matt asked whether the new thread can open automatically.
+
+---
+
+### Opens on the Mac
+
+When the old thread's mod gets "handed off" from the coordinator (so the new thread exists), it asks for the light take-control pill (`claude-control ask … --light --thread <new>`), then runs `open claude://code/project/<chan>?thread=<new>` and releases the pill. Esc on the pill skips it; clicking the pill also opens the thread. Runs in the background, so the hook doesn't wait.
+
+---
+
+### Not on the phone
+
+The phone app has no link handler the Mac can drive, so on iPhone the ➡️ link line in the old thread is the way across. Untested live: the real open (would have taken over Matt's screen during testing); the link format is the one in `~/.hammerspoon/modules/claude_links.lua`, which was verified 2026-10-22.
