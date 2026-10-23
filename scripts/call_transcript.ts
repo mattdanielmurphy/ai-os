@@ -93,6 +93,8 @@ function connect() {
     const line = `[${clock()}] ${names[ch] ?? `Channel ${ch}`}: ${text}`;
     write(line);
     console.log(line);
+    lastSpeech = Date.now();
+    reminded = false;
   };
   ws.onerror = (e: any) => console.error("deepgram error:", e?.message ?? e);
   ws.onclose = (e) => {
@@ -104,6 +106,25 @@ function connect() {
   };
 }
 connect();
+
+// Hang-up reminder: a toast when FaceTime closes or nobody has spoken for a while.
+// (Starting/stopping on its own when a FaceTime call to Tyler begins/ends is the next step.)
+const SILENT_MS = Number(flag("silence", "90")) * 1000;
+let lastSpeech = Date.now();
+let reminded = false;
+const notify = (title: string, body: string) =>
+  Bun.spawn([join(homedir(), ".hammerspoon/bin/claude-notify"), title, body, "--kind", "needs"], { stdout: "ignore", stderr: "ignore" });
+setInterval(async () => {
+  if (stopping || reminded) return;
+  const p = Bun.spawn(["pgrep", "-x", "FaceTime"], { stdout: "ignore" });
+  const facetime = (await p.exited) === 0;
+  const quiet = Date.now() - lastSpeech > SILENT_MS;
+  if (!facetime || quiet) {
+    reminded = true;
+    notify("Call over? Stop the transcript", `${!facetime ? "FaceTime closed" : `No one has spoken for ${SILENT_MS / 1000}s`}. Run: call-transcript stop`);
+    console.log(`reminder sent (${!facetime ? "FaceTime closed" : "silence"})`);
+  }
+}, 10000);
 
 async function stop() {
   if (stopping) return;

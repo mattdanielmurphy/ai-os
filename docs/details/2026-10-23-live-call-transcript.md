@@ -60,3 +60,19 @@ New UserPromptSubmit hook `scripts/hooks/live_call.py` (installed copy in `~/.lo
 ### Coordinator gap
 
 The project coordinator runs in the cloud and can't read `~/calls`; it would need to hand the question to a thread on the Mac. Voice Claude can read the file through the Mac connector.
+
+## 13:20 Hang-up reminder
+
+Asked: eventually start/stop on its own with a FaceTime call to Tyler (just a small notification); for now, remind him to stop it when he hangs up.
+
+---
+
+### How the reminder works
+
+While recording, every 10 s the script checks: is FaceTime still running, and has anyone spoken in the last 90 s (`--silence <sec>` to change)? If either fails, one amber toast via `claude-notify`: "Call over? Stop the transcript". It re-arms when someone speaks again. Tested with a 5 s threshold (one test toast appeared on his screen). The FaceTime-closed path is untested; FaceTime usually stays open after hanging up, so silence is the main trigger. A quiet stretch mid-call also triggers it.
+
+---
+
+### Auto start/stop next
+
+Not built: detecting a FaceTime call to Tyler starting/ending (likely via FaceTime's window title or call-state logs) and starting/stopping on its own with a small toast.
