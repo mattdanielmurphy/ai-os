@@ -5,7 +5,10 @@ Voice Claude (Claude app voice chat) can't reach the Everything project directly
 only send email from Matt's Gmail. So it emails Matt's own address with the subject
 `[Claude task] <title>`. This script, run every minute by launchd, finds those emails in
 Gmail over IMAP, pastes them into the project chat (where the coordinator picks them up)
-with the same Hammerspoon path Hey Claude uses, then moves the emails to Gmail Trash.
+then moves the emails to Gmail Trash. Delivery goes straight into the coordinator's cloud
+session with `claude -p --cloud <id>` (no screen takeover, works while locked); the old
+Hammerspoon paste (Hey Claude's path) is the fallback when that fails, e.g. after the
+coordinator is recycled and its id in COORD_FILE goes stale.
 
 Only mail that Matt's own account SENT counts (Gmail "in:sent", re-checked through the
 \\Sent label), so a stranger emailing him a "[Claude task]" subject can't inject tasks. The
@@ -39,6 +42,7 @@ STATE = STATE_DIR / "state.json"
 QUEUE = STATE_DIR / "queue"          # tasks from the Mac connector (services/mac-connector)
 QUEUE_DONE = STATE_DIR / "delivered"
 LOG = STATE_DIR / "watcher.log"
+COORD_FILE = AIOS / "config" / "coordinator_session.txt"  # Everything coordinator's cse_ id
 LABEL = "com.matt.agent.voice-task-inbox"
 PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 LAUNCH_LOG = Path.home() / "Library" / "Logs" / "launch-agents" / "voice-task-inbox.log"
@@ -157,7 +161,33 @@ def screen_locked():
     return "CGSSessionScreenIsLocked" in out
 
 
-def deliver(text):
+def coordinator_id():
+    try:
+        sid = COORD_FILE.read_text().strip()
+    except OSError:
+        return ""
+    return sid if re.fullmatch(r"(cse|session)_[A-Za-z0-9]+", sid) else ""
+
+
+def deliver_cloud(text):
+    """Queue the task into the coordinator's cloud session; no screen input. True on success."""
+    sid = coordinator_id()
+    if not sid:
+        return False
+    try:
+        r = subprocess.run(["claude", "-p", "--cloud", sid, "--output-format", "json"],
+                           input=text, capture_output=True, text=True, timeout=90)
+        out = (r.stdout.strip().splitlines() or [""])[-1]
+        if json.loads(out).get("ok") is True:
+            return True
+        why = (r.stderr or r.stdout).strip()
+    except (OSError, subprocess.TimeoutExpired, ValueError) as e:
+        why = f"{type(e).__name__}: {e}"
+    log(f"  -> cloud send to {sid} failed: {why[:200]}")
+    return False
+
+
+def deliver_paste(text):
     """Paste into the Everything project chat via Hey Claude's Hammerspoon path."""
     hey = SourceFileLoader("hey_claude", str(AIOS / "bin" / "hey-claude")).load_module()
     shown = hey.notify
@@ -207,12 +237,19 @@ def run(dry_run=False):
             return 0
         if not tasks or time.time() - state.get("last_failure", 0) < RETRY_AFTER:
             return 0
-        if screen_locked():
-            return 0  # the paste needs an unlocked screen; retry next minute
-        # No idle wait (Matt, 2026-10-21): the take-control banner warns him first (Esc cancels) and
-        # hey_claude never pastes into a project chat box that holds his draft.
         log(f"delivering {len(tasks)} task(s): {[t[1] for t in tasks]}")
-        if not deliver(compose(tasks)):
+        text = compose(tasks)
+        if deliver_cloud(text):
+            route = "coordinator's cloud session"
+        elif screen_locked():
+            return 0  # the paste fallback needs an unlocked screen; retry next minute
+        else:
+            # No idle wait (Matt, 2026-10-21): the take-control banner warns him first (Esc cancels) and
+            # hey_claude never pastes into a project chat box that holds his draft.
+            route = "project chat (paste fallback)"
+            if not deliver_paste(text):
+                route = ""
+        if not route:
             state["last_failure"] = time.time()
             save_state(state)
             log("  -> delivery failed or cancelled; retrying in 5 min")
@@ -226,7 +263,7 @@ def run(dry_run=False):
             typ, _ = imap.uid("MOVE", uid, trash)
             if typ != "OK":
                 log(f"  -> couldn't trash uid {uid.decode()}")
-        log("  -> sent to the project chat; emails moved to Trash")
+        log(f"  -> sent to the {route}; emails moved to Trash")
         return 0
     finally:
         if imap:

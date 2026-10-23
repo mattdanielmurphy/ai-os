@@ -1,0 +1,135 @@
+<title>MDMA Palette Picker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;700&family=Martian+Mono:wght@400&display=swap">
+<style>
+/* Round 3: no orange. Each direction opens with a Mac utility window (light + dark) using the tapped hue as accent. */
+:root{--bg:#f7f7f6;--fg:#1d1c1a;--muted:#5f5d59;--line:#d9d7d3;--panel:#efeeec;--warn:#8a5a00;
+--sans:"Schibsted Grotesk",-apple-system,system-ui,sans-serif;--mono:"Martian Mono",ui-monospace,Menlo,monospace;
+--sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#191918;--fg:#ecebe8;--muted:#a3a19c;--line:#3a3936;--panel:#232321;--warn:#e7b04a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#191918;--fg:#ecebe8;--muted:#a3a19c;--line:#3a3936;--panel:#232321;--warn:#e7b04a;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 130px}
+.wrap{max-width:1100px;margin:0 auto;display:grid;gap:28px}
+h1{font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:-.01em}h2{font-size:1.3rem;margin:0}
+p{margin:0;color:var(--muted);max-width:65ch;line-height:1.5}
+section{display:grid;gap:12px;padding-top:20px;border-top:2px solid var(--fg)}
+section.on h2::after{content:"  ✓ picked";font-size:.8rem;font-weight:600;color:var(--muted)}
+.dhead{display:flex;gap:12px;align-items:end;flex-wrap:wrap;justify-content:space-between}
+.pickdir{font:600 13px var(--sans);padding:7px 12px;border-radius:999px;border:1px solid var(--fg);background:transparent;color:var(--fg);cursor:pointer}
+section.on .pickdir{background:var(--fg);color:var(--bg)}
+.hint{font:11px var(--mono);color:var(--muted)}
+.samples{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* Mac utility window mock */
+.win{border-radius:11px;overflow:hidden;font:13px/1.3 var(--sys);min-width:0;position:relative}
+.tb{display:flex;align-items:center;gap:7px;padding:9px 12px;font-weight:600;font-size:12px}
+.tb i{width:11px;height:11px;border-radius:50%;display:block}
+.tb span{flex:1;text-align:center;margin-right:44px}
+.wb{display:grid;grid-template-columns:38% 1fr;min-height:250px}
+.side{padding:8px 6px;display:grid;align-content:start;gap:1px}
+.side .lab{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px 4px}
+.side .it{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side .it i{width:8px;height:8px;border-radius:50%;flex:none}
+.main{padding:12px;display:grid;gap:10px;align-content:start;min-width:0}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mh b{font-size:15px}
+.seg{display:flex;border-radius:7px;padding:2px;font-size:11px}
+.seg span{padding:2px 8px;border-radius:5px}
+.meter{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10px}
+.legend span{display:flex;align-items:center;gap:4px}.legend i{width:7px;height:7px;border-radius:2px}
+.rows{display:grid;border-radius:8px;overflow:hidden}
+.r{display:flex;align-items:center;gap:8px;padding:7px 9px;min-width:0}
+.r .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.tog{width:26px;height:15px;border-radius:999px;position:relative;flex:none}
+.tog::after{content:"";position:absolute;top:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+.tog.on::after{right:2px}.tog:not(.on)::after{left:2px}
+.sl{height:4px;border-radius:2px;position:relative}
+.sl b{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.sl u{position:absolute;top:-5px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+.act{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.act a{margin-right:auto;font-size:12px;text-decoration:underline;text-underline-offset:2px}
+.bt{padding:4px 11px;border-radius:6px;font-size:12px;font-weight:500}
+.hud{position:absolute;left:12px;bottom:-1px;transform:translateY(-10px);display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:11px;opacity:.94}
+.hud i{width:7px;height:7px;border-radius:50%}
+/* hue rows */
+.head{display:grid;grid-template-columns:190px 1fr 1fr;gap:12px;font:11px var(--mono);color:var(--muted)}
+.row{display:grid;grid-template-columns:190px 1fr 1fr;gap:12px;align-items:center;padding:8px;border:1px solid transparent;border-radius:10px;cursor:pointer}
+.row:hover{border-color:var(--line)}.row.on{border-color:var(--fg);background:var(--panel)}
+.row.acc .name .k::after{content:"accent";font:10px var(--mono);color:var(--muted);margin-left:4px}
+.row:focus-visible,.pickdir:focus-visible,.bar button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.name{display:grid;gap:2px;font-weight:600}
+.name .k{display:flex;gap:6px;align-items:center}
+.name small{font:10px var(--mono);color:var(--muted);font-weight:400}
+.name .close{color:var(--warn)}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+.mode{border-radius:8px;padding:6px}
+.scale{display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.scale i{aspect-ratio:1;border-radius:3px}
+.scale i.key{outline:2px solid currentColor;outline-offset:-2px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bar code{font:12px var(--mono);flex:1;min-width:0;overflow-wrap:anywhere}
+.bar button{font:600 13px var(--sans);padding:8px 14px;border-radius:999px;border:1px solid var(--fg);background:var(--fg);color:var(--bg);cursor:pointer}
+@media (max-width:760px){.samples,.row,.head{grid-template-columns:1fr}.head{display:none}}
+</style>
+<div class="wrap">
+  <div style="display:grid;gap:10px">
+    <h1>MDMA master palette, round 3: no orange</h1>
+    <p>Same three directions, with every orange gone: tincture is now camphor, sunset is spruce, panel orange is cable magenta. Orange is now blocked in the generator, along with terracotta and Claude orange. Every hue is still checked against all <span id="n"></span> Tailwind and Radix colours.</p>
+    <p>The preview is now a Mac utility window, the kind of app the suite is made of. Tap any hue to make it the window's accent and add it to your picks.</p>
+  </div>
+  <div id="dirs" class="wrap" style="gap:36px"></div>
+</div>
+<div class="bar"><code id="out">Nothing picked yet.</code><button id="copy" type="button">Copy picks</button></div>
+<script>
+/*DATA*/
+const $=s=>document.querySelector(s);$('#n').textContent=D.stockCount;
+function lum(h){const n=parseInt(h.slice(1),16),f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(n>>16)+.7152*f(n>>8&255)+.0722*f(n&255)}
+const on=h=>lum(h)>0.36?'#151413':'#ffffff';
+const dirPick=new Set(),huePick=new Map(),accent={};
+function win(dir,dark,ai){
+  const N=dark?dir.neutral.dark:dir.neutral.light,bg=dark?dir.neutral.bgDark:dir.neutral.bgLight,H=dir.hues,S=h=>dark?h.dark:h.light;
+  const A=H[ai],As=S(A),k=A.key;
+  const side=H.slice(0,6).map((h,i)=>`<div class="it" style="${i===ai?`background:${As[3]};color:${As[11]};font-weight:600`:''}"><i style="background:${h.key}"></i>${h.name}</div>`).join('');
+  const w=[18,9,14,7,16,11,13,12];
+  const meter=H.map((h,i)=>`<i style="flex:${w[i]};background:${h.key}"></i>`).join('');
+  const legend=H.map(h=>`<span style="color:${N[10]}"><i style="background:${h.key}"></i>${h.name}</span>`).join('');
+  const rowsData=[[1,'Sync practice notes',true],[3,'Nightly restart',false],[5,'Reset audio on wake',true]];
+  const rows=rowsData.map(([hi,t,o],i)=>{const hs=S(H[hi]);return `<div class="r" style="background:${N[1]};${i?`border-top:1px solid ${N[4]}`:''}"><span class="chip" style="background:${hs[2]};color:${hs[10]}">${H[hi].name}</span><span class="t">${t}</span><span class="tog${o?' on':''}" style="background:${o?k:N[5]}"></span></div>`}).join('');
+  return `<div class="win" style="background:${bg};color:${N[11]};border:1px solid ${N[5]}">
+  <div class="tb" style="background:${N[1]};border-bottom:1px solid ${N[4]}"><i style="background:${N[6]}"></i><i style="background:${N[6]}"></i><i style="background:${N[6]}"></i><span>${dark?'Dark':'Light'} · ${dir.title}</span></div>
+  <div class="wb"><div class="side" style="background:${N[1]};border-right:1px solid ${N[4]}"><div class="lab" style="color:${N[9]}">Projects</div>${side}</div>
+  <div class="main"><div class="mh"><b>Tonight</b><div class="seg" style="background:${N[2]}"><span style="background:${k};color:${on(k)}">Day</span><span style="color:${N[10]}">Week</span><span style="color:${N[10]}">Month</span></div></div>
+  <div class="meter">${meter}</div><div class="legend">${legend}</div>
+  <div class="rows" style="border:1px solid ${N[4]}">${rows}</div>
+  <div class="sl" style="background:${N[4]}"><b style="width:62%;background:${k}"></b><u style="left:calc(62% - 7px)"></u></div>
+  <div class="act"><a style="color:${As[10]}">Open settings</a><span class="bt" style="background:${N[2]};color:${N[11]};border:1px solid ${N[6]}">Cancel</span><span class="bt" style="background:${k};color:${on(k)}">Save</span></div>
+  </div></div>
+  <div class="hud" style="background:${N[11]};color:${N[0]}"><i style="background:${k}"></i>Synced</div></div>`;
+}
+function scale(s,bg){return `<div class="mode" style="background:${bg};color:${lum(bg)>.5?'#000':'#fff'}"><div class="scale">${s.map((c,i)=>`<i${i===8?' class="key"':''} style="background:${c}" title="step ${i+1} ${c}"></i>`).join('')}</div></div>`}
+function render(){
+  const parts=[];
+  if(dirPick.size)parts.push('Direction: '+[...dirPick].map(id=>D.directions[id].title).join(' + '));
+  if(huePick.size)parts.push('Hues: '+[...huePick.values()].join(', '));
+  $('#out').textContent=parts.length?parts.join('. ')+'.':'Nothing picked yet.';
+}
+for(const [id,dir] of Object.entries(D.directions)){
+  accent[id]=0;
+  const sec=document.createElement('section');
+  sec.innerHTML=`<div class="dhead"><div style="display:grid;gap:4px"><h2>${dir.title}</h2><p>${dir.blurb}</p></div><button class="pickdir" type="button">Pick this direction</button></div>
+  <div class="samples"></div><div class="hint">Tap a hue below to preview it as the accent.</div><div class="head"><span></span><span>Light mode</span><span>Dark mode</span></div>`;
+  const samples=sec.querySelector('.samples'),draw=()=>{samples.innerHTML=win(dir,false,accent[id])+win(dir,true,accent[id]);sec.querySelectorAll('.row').forEach((r,i)=>r.classList.toggle('acc',i===accent[id]))};
+  sec.querySelector('.pickdir').onclick=()=>{dirPick.has(id)?dirPick.delete(id):dirPick.add(id);sec.classList.toggle('on');render()};
+  dir.hues.forEach((h,i)=>{
+    const r=document.createElement('div');r.className='row';r.tabIndex=0;r.setAttribute('role','checkbox');r.setAttribute('aria-checked','false');
+    const close=h.distance<D.minDE;
+    r.innerHTML=`<div class="name"><span class="k"><span class="dot" style="background:${h.key}"></span>${h.name}</span><small>${h.key}</small><small class="${close?'close':''}">${close?'close to ':'nearest: '}${h.nearest} · ${h.distance}</small></div>${scale(h.light,dir.neutral.bgLight)}${scale(h.dark,dir.neutral.bgDark)}`;
+    const key=id+':'+h.name,t=()=>{huePick.has(key)?huePick.delete(key):huePick.set(key,`${h.name} (${dir.title})`);r.classList.toggle('on');r.setAttribute('aria-checked',huePick.has(key));accent[id]=i;draw();render()};
+    r.onclick=t;r.onkeydown=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();t()}};
+    sec.appendChild(r);
+  });
+  $('#dirs').appendChild(sec);draw();
+}
+$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText($('#out').textContent);$('#copy').textContent='Copied'}catch(e){const s=getSelection(),g=document.createRange();g.selectNodeContents($('#out'));s.removeAllRanges();s.addRange(g)}};
+</script>

@@ -16,3 +16,4 @@ _to_delete/
 # never commit installed packages or caches (each worktree checkout copied them: ~300 MB per thread)
 node_modules/
 skills/.hub/index-cache/
+config/coordinator_session.txt

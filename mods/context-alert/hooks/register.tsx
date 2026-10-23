@@ -30,6 +30,8 @@ const projectHeld = atom({ plugin: 'context-alert', key: 'projectHeld' } as cons
 const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
 const threadId = atom({ plugin: 'context-alert', key: 'threadId' } as const, '')
 const backLinked = atom({ plugin: 'context-alert', key: 'backLinked' } as const, false)
+const queued = atom({ plugin: 'context-alert', key: 'queued' } as const, [])
+const lastReply = atom({ plugin: 'context-alert', key: 'lastReply' } as const, '')
 
 export const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -323,7 +325,179 @@ const answerHeld = async (
   return { drop: 'Fresh thread requested from the coordinator; this thread stays cold.' }
 }
 
+// ── Smart queue (Matt, 2026-10-22) ─────────────────────────────────────────────
+// Matt queues a message for this thread ("/q …" in the thread, or the coordinator's
+// "thread-queue add: …" note). It waits until the agent stops; then Haiku reads the agent's
+// last reply and sends the queued text on, unless that reply asks Matt something first.
+// ⏩ on the queued message sends it now, ❌ drops it. The HUD pill reads QUEUE_DIR.
+
+const QUEUE_DIR = `${AIOS}/tmp/thread-queue`
+
+/** "/q text" or "⏳ text" in the thread: the text to queue. "/q send" and "/q drop" act on the queue. */
+export const queueCommand = (body: string): { kind: 'add'; text: string } | { kind: 'send' | 'drop' | 'list' } | undefined => {
+  const m = /^\s*(?:\/q(?:ueue)?\b|⏳)\s*([\s\S]*)$/u.exec(body)
+  if (!m) return undefined
+  const rest = m[1].trim()
+  if (/^(send|now|go)$/i.test(rest)) return { kind: 'send' }
+  if (/^(drop|clear|cancel)$/i.test(rest)) return { kind: 'drop' }
+  if (!rest || /^list$/i.test(rest)) return { kind: 'list' }
+  return { kind: 'add', text: rest }
+}
+
+/** The coordinator's note that queues a message here without waking this thread's model. */
+export const queueNote = (text: string) =>
+  isCoordinatorRelay(text)
+    ? /thread-queue add:\s*([\s\S]*?)\s*(?:<\/note>|$)/.exec(text)?.[1]?.trim() || undefined
+    : undefined
+
+/** The keyword fallback when Haiku can't answer: does the reply ask Matt something? */
+export const asksMatt = (reply: string) => {
+  const lines = reply.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('>') && !/^Details:/i.test(l))
+  return lines.some(l => /\?(\**|\)|_)*$/.test(l)) ||
+    /👍|❓|\b(reply|react)\b.*\b(to|with)\b|\btry (it|this|that)\b|\b(test|review|check) (it|this|that)\b|let me know|want me to|should I\b|which (one|do you)/i.test(reply)
+}
+
+export const judgePrompt = (reply: string, queuedText: string) =>
+  `An agent working for Matt just finished its turn. Its last message to Matt:\n<reply>\n${reply.slice(-4000)}\n</reply>\n\n` +
+  `Matt queued this message to send once the agent stopped:\n<queued>\n${queuedText.slice(0, 2000)}\n</queued>\n\n` +
+  `Answer WAIT if the agent's message needs Matt first: it asks him a question, offers a choice or a 👍 action, ` +
+  `or asks him to test, try or review something, AND the queued message doesn't answer that. Otherwise answer READY. ` +
+  `Reply with the one word only.`
+
+type Queued = { text: string; id?: string; at: number }
+
+/** True while this session's main agent is mid-turn. */
+let agentRunning = false
+
+const queueFile = async ($: EngineInterface, items: readonly Queued[], waiting: string) => {
+  const thread = (await read($, threadId)) || (await $.session.id())
+  const at = await $.clock.now()
+  const body = JSON.stringify({ thread, items, waiting, updatedAt: at, link: thread.startsWith('cmsg_') ? threadLink(thread) : '' })
+  await $.process.run(['sh', '-c', 'mkdir -p "$1" && cat > "$1/$2.json"', 'thread-queue', QUEUE_DIR, thread], { stdin: body })
+    .catch(() => undefined)
+}
+
+const react = ($: EngineInterface, id: string | undefined, emoji: string, off = false) =>
+  id ? $.tool.call({ tool: off ? 'mcp__hearthbot__unreact' : 'mcp__hearthbot__react', message_id: id, emoji }).catch(() => undefined) : undefined
+
+/** WAIT (with why) or READY for the queued text, from the agent's last reply. */
+const judge = async ($: EngineInterface, items: readonly Queued[]): Promise<string> => {
+  const reply = await read($, lastReply)
+  if (!reply.trim()) return ''
+  const text = items.map(i => i.text).join('\n\n')
+  const r = await $.model.complete({ model: 'haiku', prompt: judgePrompt(reply, text), maxTokens: 5, effort: 'low' })
+    .catch(() => undefined)
+  const word = r && r.isAnswered ? r.text.trim().toUpperCase() : ''
+  const wait = word.startsWith('WAIT') || (!word.startsWith('READY') && asksMatt(reply))
+  return wait ? 'the last reply asks you something' : ''
+}
+
+/** What the agent reads when the queue goes out. */
+export const releasedText = (items: readonly Queued[]) =>
+  `[thread-queue] Matt queued ${items.length === 1 ? 'this message' : 'these messages'} while you were working; ` +
+  `sent now that you've stopped. Treat it as his next message.\n\n` + items.map(i => i.text).join('\n\n---\n\n')
+
+/** Empties the queue and returns the text to send, swapping ⏳ for 📨 on Matt's messages. */
+const takeQueue = async ($: EngineInterface) => {
+  const items = await read($, queued)
+  if (!items.length) return ''
+  await update($, queued, () => [])
+  await queueFile($, [], '')
+  for (const i of items) { await react($, i.id, '⏳', true); await react($, i.id, '📨') }
+  return releasedText(items)
+}
+
+/** Re-checks the queue once the agent stopped (from turn.complete): send it, or keep it and say why. */
+const checkQueue = async ($: EngineInterface) => {
+  const items = await read($, queued)
+  if (!items.length || agentRunning) return
+  const waiting = await judge($, items)
+  if (agentRunning || (await read($, queued)).length !== items.length) return
+  if (waiting) { await queueFile($, items, waiting); return }
+  const text = await takeQueue($)
+  if (text) void $.prompt.submit({ text, wait: false })
+}
+
+/** Queues an item. While the agent is idle it's judged at once: the text to send now, or ''. */
+const addToQueue = async ($: EngineInterface, item: Queued): Promise<string> => {
+  await update($, queued, q => [...q, item])
+  await react($, item.id, '⏳')
+  const items = await read($, queued)
+  if (agentRunning) { await queueFile($, items, ''); return '' }
+  const waiting = await judge($, items)
+  if (waiting) { await queueFile($, items, waiting); return '' }
+  return takeQueue($)
+}
+
+/** Handles queue messages; undefined means the message isn't one. */
+const queueSubmit = async (
+  $: EngineInterface, e: PromptSubmitInput, next: (e: PromptSubmitInput) => Promise<PromptSubmitResult>,
+): Promise<PromptSubmitResult | undefined> => {
+  if (e.origin.kind === 'plugin') return undefined
+  const note = queueNote(e.text)
+  if (note !== undefined) {
+    const id = /<cited author="user"[^>]*\bid="(cmsg_[A-Za-z0-9]+)"/.exec(e.text)?.[1]
+    const now = await addToQueue($, { text: note, id, at: await $.clock.now() })
+    if (now) return next({ ...e, text: now })
+    return { drop: 'Queued for when this thread stops (coordinator note); the model never saw it.' }
+  }
+  if (!isProjectMessage(e.text)) return undefined
+  const items = await read($, queued)
+  if (wakeReason(e.text) === 'reactions' && items.length) {
+    const on = (emoji: RegExp) => [...e.text.matchAll(/<reaction\b[^>]*\bemoji="([^"]+)"[^>]*\bmessage_ts="(cmsg_[A-Za-z0-9]+)"[^>]*\breactors="user_/g)]
+      .some(m => emoji.test(m[1]) && items.some(i => i.id === m[2]))
+    if (on(/❌|✖/)) {
+      await update($, queued, () => [])
+      await queueFile($, [], '')
+      for (const i of items) await react($, i.id, '⏳', true)
+      return { drop: 'Queue dropped (Matt reacted ❌).' }
+    }
+    if (on(/⏩|fast_forward/)) {
+      if (agentRunning) { await update($, lastReply, () => ''); return { drop: 'Queue sends when this turn ends (Matt reacted ⏩).' } }
+      return next({ ...e, text: await takeQueue($) })
+    }
+    return undefined
+  }
+  if (wakeReason(e.text) !== 'mention') return undefined
+  const w = wakeParts(e.text)
+  const cmd = queueCommand(w.body)
+  if (cmd === undefined) return undefined
+  if (cmd.kind === 'add') {
+    const now = await addToQueue($, { text: cmd.text, id: w.id, at: await $.clock.now() })
+    if (now) return next({ ...e, text: now })
+    return { drop: 'Queued for when this thread stops.' }
+  }
+  if (cmd.kind === 'drop') {
+    await update($, queued, () => [])
+    await queueFile($, [], '')
+    for (const i of items) await react($, i.id, '⏳', true)
+    await react($, w.id, '👍')
+    return { drop: 'Queue dropped (/q drop).' }
+  }
+  if (cmd.kind === 'send') {
+    await react($, w.id, '👍')
+    if (!agentRunning && items.length) return next({ ...e, text: await takeQueue($) })
+    await update($, lastReply, () => '') // nothing to wait for: it goes when the turn ends
+    return { drop: 'Queue sends when this turn ends (/q send).' }
+  }
+  const list = items.length ? items.map((i, n) => `${n + 1}. ${i.text.slice(0, 80)}`).join('\n\n') : 'Nothing queued.'
+  await $.tool.call({ tool: 'mcp__hearthbot__reply', text: `⏳ **Queued here:**\n\n${list}` }).catch(() => undefined)
+  return { drop: 'Listed the queue (/q).' }
+}
+
 export const register: Register = on => {
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) agentRunning = true
+    return next(e)
+  })
+
+  // A decision card always needs Matt.
+  on('tool.call', { tool: 'mcp__hearthbot__ask_decision' }, async ($, e, next) => {
+    const out = await next(e)
+    if (!out.isError) await update($, lastReply, () => `${JSON.stringify(e).slice(0, 1500)}\n\nWhich option? 👍`)
+    return out
+  })
+
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     await $.command.register({
@@ -367,19 +541,26 @@ export const register: Register = on => {
   })
 
   on('turn.complete', async ($, e, next) => {
-    if (e.agentId === undefined) {
-      const at = await $.clock.now()
-      const tokens = (await read($, fill))?.tokens ?? 0
-      await update($, cache, c => ({ lastAt: at, ttlMs: c?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
-      await update($, now, () => at)
-    }
-    return next(e)
+    if (e.agentId !== undefined) return next(e)
+    const at = await $.clock.now()
+    const tokens = (await read($, fill))?.tokens ?? 0
+    await update($, cache, c => ({ lastAt: at, ttlMs: c?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
+    await update($, now, () => at)
+    const out = await next(e)
+    agentRunning = false
+    // Smart queue: a stopped or failed turn never releases it; Matt looks first.
+    if (e.reason === 'answer') void checkQueue($)
+    else if ((await read($, queued)).length) await queueFile($, await read($, queued), 'the agent stopped or failed')
+    return out
   })
 
   // Phone fallback: the band doesn't draw on mobile, so hold the first message sent into a
   // cold thread and say what it would cost. Sending again within 10 min goes through.
   on('prompt.submit', async ($, e, next) => {
     if (e.command !== undefined) return next(e)
+    // The smart queue goes first, so a queued message is never held as "cold" or seen by the model.
+    const queuedOut = await queueSubmit($, e, next)
+    if (queuedOut !== undefined) return queuedOut
     if (isStrayWake(e.text, await read($, threadId))) {
       return { drop: `Not this thread's message (${wakeParts(e.text).id}); the coordinator handles project-chat messages.` }
     }
@@ -468,6 +649,9 @@ export const register: Register = on => {
     const out = await next(e)
     const id = out.isError ? undefined : replyThread(out.result)
     if (id !== undefined && !(await read($, threadId))) await update($, threadId, () => id)
+    // The smart queue reads the agent's latest reply to decide whether Matt goes first.
+    const text = String((e as { text?: unknown }).text ?? '')
+    if (!out.isError && e.agentId === undefined && !text.startsWith('⏳ **Queued here')) await update($, lastReply, () => text)
     return out
   })
 

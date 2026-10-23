@@ -3,7 +3,7 @@
 Status: **DRAFT (2026-10-22), not yet a rule.** Matt's 👍 adopts it everywhere; the rule line at the bottom then
 goes into `.rules/core_safety.md`.
 
-Covers every app and utility agents build for Matt on his Mac: the MDMA Appothecary Hammerspoon modules
+Covers every app and utility agents build for Matt on his Mac: Slub Utils, the utilities app under the Slub brand (Matt 2026-10-23; formerly MDMA): Hammerspoon modules
 (`~/.hammerspoon`, public copy `mac-utilities`), trackpad-mixer, lidstay, hud-kit, the launcher, and the planned
 Utilities app. Goal: they feel like one suite, share code instead of copying it, and never fight each other for
 screen space, keys or input.
@@ -102,7 +102,7 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
 
 ## 7. One suite, one name
 
-- The suite's name comes from `~/.hammerspoon/modules/brand.lua` (MDMA, "Matt Daniel Murphy's Appothecary").
+- **Slub** is the brand; **Slub Utils** is the utilities app (Matt, 2026-10-23). `~/.hammerspoon/modules/brand.lua` still says MDMA and needs updating.
   Standalone apps use it in About text and alerts; nothing hard-codes the name.
 - Bundle ids and launchd labels: `ca.mattmurphy.<app>`.
 - Each app is its own private repo in `~/projects/<app>` with `README.md`, `AG_CONTEXT.md`, `build.sh`, a test
@@ -139,6 +139,7 @@ design system and palette" and "MDMA Appothecary logo" threads. What is fixed is
 6. Colours by role from the palette; SF Symbols; designed and checked in light and dark.
 7. Repo, `AG_CONTEXT.md`, `build.sh`, tests, `ca.mattmurphy.*`.
 8. Just for Matt or for the world? Settings, onboarding, README; every shortcut and gesture has a visible hint.
+9. Checked against [EXEMPLARS.md](EXEMPLARS.md) (Low-Tech Guys, Rogue Amoeba, Panic and others): name what it misses.
 
 ---
 

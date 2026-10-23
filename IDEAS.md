@@ -107,3 +107,12 @@ Cardinal (he has it instead of VCV Rack) with a good creative control scheme. Wa
 his Mac: a minimal Ableton set (his default set idles at ~2.1 GB; the big one is only for Launchkey
 jams), or a headless/scriptable host (Reaper? Cardinal?). Separate project that reels will use.
 Ties into Slub (company with his brother, audio software). Status: idea; needs its own thread.
+
+## Reels: fresh generated music every reel (Matt, 2026-10-23) — IDEA
+Matt: "I want to have different music every time, always generated." Each reel gets its own newly made
+ambient bed (from the claude-ambient project) instead of a reused loop. Not built yet.
+
+## Reels: leaner slide authoring (Matt, 2026-10-23) — IDEA
+Overhead today is mostly the slides (~15 KB of hand-written SVG ≈ 4–5k output tokens per reel vs ~300
+for a text reply). Streamline: a shared slide kit of layouts (title+points, queue/flow, stat row,
+compare, timeline) so an agent writes a short JSON spec per beat and the kit draws it (~1k tokens).

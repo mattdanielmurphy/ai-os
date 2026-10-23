@@ -5,19 +5,22 @@ self-contained player page (light/dark, phone-friendly, keyboard hints on screen
 
 **Just for Matt for now**, built self-contained so it can go public later.
 
-## Make a reel
+## Make a reel (agents: this is the default for big replies)
 
-1. Write `reels/<nnn-slug>/reel.json`: `title`, `eyebrow`, `voice`, `figma`, and 5–8 `beats`
-   (`say`: one spoken line, ~15 words; `svg`: that beat's slide).
-2. Pick or make a theme in `themes/` (fonts + colour roles, light/dark). Never the stock kit look
-   (rule: No Claude-default look); `kit.json` exists only so reel 01 still builds. Design the slides in
-   Figma (1280×720) with the theme's LIGHT role hexes and fonts. Name layers `a1`, `a2`, … in reveal order.
-3. Export each frame with the Figma connector:
-   `exportAsync({ format: 'SVG_STRING', svgOutlineText: false, svgIdAttribute: true })` → `<n>.svg`.
-4. `python3 build.py reels/<nnn-slug>` → `reel.html` (voice lines cached in `audio/`).
-5. Publish `reel.html` with the Artifact tool.
+1. Copy `reels/003-air-traffic/` to `reels/<nnn-slug>/`; keep `slides.py`'s helpers (chip, title, para,
+   cards…), rewrite the slides. Slides are hand-written SVG (1280×720) using theme role classes
+   (`f-ink`, `f-accent`…), never hexes. Groups `a1`, `a2`, … reveal in order; inside them `draw`, `grow`,
+   `flow`, `pulse`, `glow`, `spin`, `blink`, `data-count`, `data-type` animate. `python3 slides.py` writes `<n>.svg`.
+   (Figma also works: export frames with `exportAsync({format:'SVG_STRING', svgOutlineText:false, svgIdAttribute:true})`.)
+2. `reel.json`: `title`, `eyebrow`, `voice` + `voices` (default `pandora`, `gemma`, `maeve`), `theme` (`panel`),
+   `music` (a loop path), and 5–8 `beats` (`say`: one spoken line, ~15–30 words; `svg`). The slide shows
+   the facts; the voice says them conversationally. Don't repeat the narration as slide text word for word.
+3. `python3 build.py reels/<nnn-slug>` (run it backgrounded; first build calls Deepgram once per voice).
+4. `./test.sh reels/<nnn-slug>` (backgrounded): headless, muted, checks errors, ducking, flash, fit.
+   Never open a reel in the Claude browser pane.
+5. Publish `reel.html` with the Artifact tool; reply with the link plus the usual ≤ 50-word summary.
 
-First reel's slides: https://www.figma.com/design/xg900viuh141OazDkdNbWF
+Never the stock kit look (rule: No Claude-default look); `kit.json` exists only so reel 01 still builds.
 
 ## Reels
 
