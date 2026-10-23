@@ -38,3 +38,25 @@ His session: FaceTime → Kill Right (Tyler on left), mic → Kill Left (Matt on
 - Channels are swapped versus my steps; no change needed, the script takes `--left Tyler --right Matt`.
 - Problems: the Mono block merges both channels (kills the speaker split), and the output goes to speakers, not BlackHole, so the script gets no audio. It also plays his own mic out loud.
 - Fix: Recorder → Output Device BlackHole 16ch (delete Mono). To still hear Tyler, add a second Output Device (his headphones/system output) wired straight from the FaceTime block, since Audio Hijack takes over the app's audio once it captures it (from memory, not checked on his Mac).
+
+## 13:16 Every Claude knows about the call
+
+Asked: any Claude he asks mid-call should know a transcript is live, weigh recent lines most, and the transcript should be saved after the call.
+
+---
+
+### Hook on every prompt
+
+New UserPromptSubmit hook `scripts/hooks/live_call.py` (installed copy in `~/.local/share/call-transcript/`, registered first in `~/.claude/settings.json`). While `call-transcript` runs, every prompt in any Claude Code session or project thread on the Mac gets: "LIVE CALL IN PROGRESS", the transcript path, an instruction to assume the question is about the call, and the last 60 lines. For 3 h after a call it points at the saved copy. Tested by running it directly; not yet seen firing inside a live session (hooks may only load in sessions started after the change).
+
+---
+
+### Saved after the call
+
+`call-transcript stop` copies the transcript to Obsidian `Calls/` (QMD indexes the vault, so later searches find it).
+
+---
+
+### Coordinator gap
+
+The project coordinator runs in the cloud and can't read `~/calls`; it would need to hand the question to a thread on the Mac. Voice Claude can read the file through the Mac connector.
