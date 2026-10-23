@@ -210,7 +210,7 @@
 - **`/coord` prefix**: a thread message from Matt starting with `/coord` is for the project coordinator, not the thread agent. Don't act on it or reply.
 - **Long threads**: after a compaction or ~40 messages, finish the current step, write `HANDOFF.md` (state, every rule Matt gave, done, open, quirks) in the working repo, commit, push, and tell Matt in one line.
 - **Studying Logic (PHIL 120)**: he's discouraged and behind, so any struggle is harmful. Start every practice ladder at the symbol definitions and ramp in tiny winnable steps.
-- **School code is hands-off (Matt, 2026-10-23: AI-written code can get him expelled)**: agents never write, edit, fix, clean up or copy code in course files (labs, assignments, skeletons). Allowed: hints, explanations, skeleton comments and running his code to compare output. For mechanical tasks (copying, renaming, cleanup), give him the steps instead. Why: an agent cleaned up and copied his Lab 4 code; he had to ask for it to be put back.
+- **School code: no coding by agents (Matt, 2026-10-23: AI-written code can get him expelled)**: agents never write, fix or change logic in course files (labs, assignments, skeletons). Allowed only when he asks (his words, 2026-10-23): hints and explanations; running his code to compare output; adding comments that are instructions only (no code samples); removing comments, rearranging lines, minor cleanup; creating skeleton files; copying things between files. Never: new or altered code, even small fixes, and no code samples in comments or replies. Why: an agent cleaned up and copied his Lab 4 code unasked; he had to ask for it to be put back.
 
 # Git Protocol Rules
 
