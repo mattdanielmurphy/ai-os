@@ -86,4 +86,32 @@ Two tabs above the list. Resolved is grouped by topic, newest first, with the re
 
 Note saving and resolve/reopen against the real database (tested only against a mock in the local preview). The first real refresh runs at :13 or :43.
 
-Data quirk: "Mixer vs Audio Hijack" came back resolved in the second listing but not in the first; the script now keeps whichever event is newer.
+Data quirk (00:05 section): "Mixer vs Audio Hijack" came back resolved in the second listing but not in the first; the script now keeps whichever event is newer.
+
+## 02:40 Limits, hover Resolve, hover preview
+
+Matt: the UI is promising, but Open lands on an unrelated web page; each topic shows too many threads (wants a limit and a More button); on hover he wants a prominent Resolve button and a preview of the last message. The Open bug he wants explored in a separate thread via the coordinator.
+
+---
+
+### Six per topic
+
+Each group shows its first 6 rows (Blocked first, then Ready, Working, Idle, newest first within each). "Show N more" under the group reveals the rest and turns into "Show fewer". Expanded state lasts for the visit only.
+
+---
+
+### Resolve on hover
+
+Hovering (or keyboard-focusing) a row swaps the time for a "✓ Resolve" pill; clicking it shows the same resolve-with-note form. On touch screens the pill is always visible as a bare check icon.
+
+---
+
+### Message preview
+
+Hold the pointer on a row for about half a second: a card shows who wrote last, how long ago, the message start (the stored ~180 characters, with an ellipsis when cut) and the chain's note. Desktop only. The full message would need the refresh to store more text; not done.
+
+---
+
+### Open is still broken
+
+Not touched here: the coordinator is taking "make Open work" to its own thread, per Matt.

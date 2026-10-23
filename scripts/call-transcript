@@ -1,0 +1,22 @@
+#!/bin/zsh
+# call-transcript start [who] | stop | status | tail
+# Runs scripts/call_transcript.ts in the background; transcript lands in ~/calls/YYYY-MM-DD-<who>.md
+here="${0:A:h}"
+pidf="$HOME/calls/.transcript.pid"
+logf="$HOME/calls/.transcript.log"
+mkdir -p "$HOME/calls"
+running() { [[ -f $pidf ]] && kill -0 "$(cat $pidf)" 2>/dev/null; }
+case "${1:-start}" in
+  start)
+    if running; then echo "already running (pid $(cat $pidf))"; exit 0; fi
+    who="${2:-tyler}"; shift $(( $# > 1 ? 2 : 1 ))
+    nohup bun "$here/call_transcript.ts" "$who" "$@" >"$logf" 2>&1 &
+    echo $! >"$pidf"; sleep 3
+    if running; then echo "recording → ~/calls/$(date +%F)-$who.md"; tail -3 "$logf"
+    else echo "failed:"; cat "$logf"; exit 1; fi ;;
+  stop)
+    if running; then kill -INT "$(cat $pidf)"; sleep 3; rm -f "$pidf"; echo stopped; else echo "not running"; fi ;;
+  status) running && echo "running (pid $(cat $pidf))" || echo "not running"; tail -5 "$logf" 2>/dev/null ;;
+  tail) tail -f "$HOME/calls/$(date +%F)-${2:-tyler}.md" ;;
+  *) echo "usage: call-transcript start [who] | stop | status | tail [who]"; exit 2 ;;
+esac
