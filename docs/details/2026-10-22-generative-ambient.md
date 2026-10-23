@@ -74,3 +74,31 @@ Saved as `~/projects/claude-ambient/out/omri-beginner-cardinal-01.m4a` (normalis
 `out/` is gitignored). Nobody has listened yet; only levels checked. A harmless assertion about
 MIDI output being unsupported in the AU shows in the log. Did not open Cardinal's GUI (no screen
 input needed). README updated with the working command.
+
+## 07:45 Second Cardinal patch
+
+Matt found the first render artifacty and asked whether that was a patch he'd edited. Yes: "Omri
+Cohen Beginner Fixed Rack.vcv" from his Rack2 patches folder (saved May 2023), plus my module swaps.
+
+---
+
+### Render dropouts found
+
+The first render has 92 fully silent 512-sample blocks out of 6375 (and ~900 hard jumps), so
+part of the artifacting is dropouts in my offline render, not his edits. Plain sine render: 0 of each.
+
+---
+
+### Untouched Omri patch
+
+`Rack2/patches/tutorials/omri cohen/SurgeXT.vcv` (Omri's Surge XT tutorial, April 2023) only lacked a
+cosmetic cable-colour key, so nothing was swapped. Rendered dry (no extra Apple reverb, the patch has
+its own) to `out/omri-surgext-tutorial-01.m4a`: 0 dropouts. Many sample jumps, likely just its saw
+oscillators. Not listened to by me.
+
+---
+
+### Ambient preset request cancelled
+
+The coordinator relayed an Augmented/Pro-R preset request, then Matt cancelled it for this thread
+("don't have them do it"). Stopped before any render; Finder was not opened.
