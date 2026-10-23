@@ -90,3 +90,41 @@ to Trash; pf falls back to Spotlight automatically.
 2. Fuzzy matching and recents-on-empty-query in findd.
 3. iCloud via mdfind in pf.
 4. Ranking weights into tweaks.json.
+
+## 00:55 Palette window v0 is live on ⌥Space
+
+**Asked:** Matt 👍'd "build the palette window on top of it".
+
+---
+
+### Palette on Option-Space
+
+`~/projects/claude-palette/app` (Swift/AppKit, compiles hud-kit in), installed as login agent
+`ca.mattmurphy.palette`. ⌥Space toggles a centred search window: files from findd (~50 ms), threads and
+notes from QMD (~120 ms warm) in a second section. Footer shows every key: ↩ open, ⌘↩ Finder, ⌘Y Quick
+Look, ⇧⌘C copy path, ⇥ ask Haiku (runs `pf --ai`), esc close. Drag background to move, edges to resize;
+position remembered. Knobs in `claude-palette/tweaks.json` (⌃⌥⌘T panel).
+
+Why ⌥Space: Raycast holds ⌘Space; nothing in Hammerspoon or macOS shortcuts uses ⌥Space.
+
+---
+
+### Kept deliberately plain
+
+System materials and label colours only: the suite palette isn't picked, so no colours of its own. The
+look and interaction are open design, so per the think-alone rule Matt should sketch his own version
+before anything is styled; this v0 only proves the plumbing.
+
+hud-kit change: `HUDWindow.canMove` lets a panel say where a press may start a window move, so selecting
+text or scrolling the list doesn't drag the window. hud-kit tests pass.
+
+---
+
+### Palette untested parts
+
+- The ⌥Space hotkey itself: I didn't press keys on Matt's Mac. The agent runs and logged no hotkey clash.
+- Typing, arrows, Quick Look and ⇥ Haiku by hand: untested. Tested: launching with `--query "phil 120"`
+  showed both syllabus PDFs (screenshot below in the thread).
+- First search after a cold launch took ~4 s (QMD/bun warm-up); warm searches are fast.
+
+Undo: `launchctl bootout gui/$(id -u)/ca.mattmurphy.palette`.
