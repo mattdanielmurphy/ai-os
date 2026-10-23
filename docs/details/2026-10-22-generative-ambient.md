@@ -58,3 +58,19 @@ state didn't load a patch, but pointing HOME at a temp folder whose
 VCO-to-output patch renders silence in the offline host, so something in Cardinal's AU
 doesn't process there. Also noted: `/Library/Application Support/Cardinal` is missing (the AU
 complains about the install). Next tries: host Cardinal in Element or Ableton, or debug the AU.
+
+## 07:15 Cardinal works after reinstall
+
+Matt reinstalled Cardinal. `/Library/Application Support/Cardinal` now exists, and that was the
+cause of the silence: the same plain sine patch that rendered silent now peaks at 0.58.
+
+---
+
+### Omri patch renders
+
+`patches/omri-beginner-cardinal.vcv` (converted) loads every module (Bogaudio, Surge XT LFOs,
+Surge XT Delay swap) and renders 68 s at -24 LUFS raw, peak 0.21, driven by the 60 s note score.
+Saved as `~/projects/claude-ambient/out/omri-beginner-cardinal-01.m4a` (normalised to -20 LUFS;
+`out/` is gitignored). Nobody has listened yet; only levels checked. A harmless assertion about
+MIDI output being unsupported in the AU shows in the log. Did not open Cardinal's GUI (no screen
+input needed). README updated with the working command.
