@@ -37,3 +37,8 @@ Undo: git revert this commit.
 
 ## 23:52 Last slide wording and box
 - "Month to month, a backup for game nights" was unclear. Now: pay month to month (not for a year) and keep another way to watch hockey in case it stops working. Two lines, box resized so padding is even. Narration updated to match. Untested by eye.
+
+## 00:05 Softer colours, one-time vs yearly
+- New theme themes/calm.json (this reel only): same fonts and neutrals as panel, status colours and tints softened (pastel green/red tints, muted green/red/blue). Derived from panel, no new hues.
+- Costs now split: PER YEAR total plus ONE-TIME line per option. Box (Firestick) ~$50-100 is MY estimate; the yearly service range $150-400 is the brief. Real bundle price ($260-320 per brief) unchecked, so slide says check it.
+- Looked at slides 3 and 8 in headless screenshots; fit OK. Undo: git revert.

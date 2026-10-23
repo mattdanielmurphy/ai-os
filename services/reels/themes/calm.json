@@ -1,0 +1,73 @@
+{
+  "note": "Calm variant of the synth-panel look for a broad audience: same fonts and neutrals, softened status colours and pastel tints (derived from panel, not new hues).",
+  "fonts": {
+    "display": "Big Shoulders Display",
+    "body": "Hanken Grotesk",
+    "mono": "Martian Mono"
+  },
+  "google": "family=Big+Shoulders+Display:wght@700;800&family=Hanken+Grotesk:wght@400;500;700&family=Martian+Mono:wght@400;500",
+  "roles": {
+    "bg": [
+      "#e7e8e9",
+      "#1b1d1e"
+    ],
+    "surface": [
+      "#f7f8f8",
+      "#282a2c"
+    ],
+    "ink": [
+      "#1b1d1e",
+      "#f2f3f3"
+    ],
+    "muted": [
+      "#616467",
+      "#8f9195"
+    ],
+    "line": [
+      "#cfd0d2",
+      "#383a3d"
+    ],
+    "accent": [
+      "#4fc3c0",
+      "#4fc3c0"
+    ],
+    "accent-ink": [
+      "#003030",
+      "#003030"
+    ],
+    "deep": [
+      "#006f6e",
+      "#2bd8d5"
+    ],
+    "warm": [
+      "#dcc300",
+      "#dcc300"
+    ],
+    "warm-ink": [
+      "#3b3200",
+      "#3b3200"
+    ],
+    "sky": [
+      "#5b83b8",
+      "#6d94c9"
+    ],
+    "good": [
+      "#2f7a46",
+      "#5bb877"
+    ],
+    "bad": [
+      "#b3443c",
+      "#e8756c"
+    ],
+    "good-bg": [
+      "#dff0e3",
+      "#183222"
+    ],
+    "bad-bg": [
+      "#f7e3e0",
+      "#3d1f1e"
+    ]
+  },
+  "aliases": {},
+  "css": "h1{font-weight:800;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(34px,8vw,52px)} .eyebrow,.seg,.hint,.meta{font-family:var(--mono)} .stage{border-radius:6px;border-width:2px} .btn{border-radius:4px;font-family:var(--mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase} .seg::before{height:6px;border-radius:1px} .seg.on::before{box-shadow:0 0 10px var(--accent)} .caption{font-size:21px} .btn.primary{color:var(--accent-ink)}"
+}

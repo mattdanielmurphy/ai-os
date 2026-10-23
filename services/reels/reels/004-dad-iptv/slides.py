@@ -88,7 +88,7 @@ def row(x, y, w, head, sub, cls="s-line", fill="f-surface", h=96):
 
 
 
-def col(x, k, head, lines, total, tcls="f-ink", cls="s-line"):
+def col(x, k, head, lines, total, tcls="f-ink", cls="s-line", once="none"):
     out = box(x, 250, 260, 360, "f-surface", cls, 6) + label(x + 20, 286, k, 14)
     out += f'<text x="{x + 20}" y="324" class="td f-ink" font-size="26">{e(head)}</text>'
     for n, (a, b) in enumerate(lines):
@@ -96,15 +96,17 @@ def col(x, k, head, lines, total, tcls="f-ink", cls="s-line"):
         out += (f'<text x="{x + 20}" y="{yy}" class="tb f-muted" font-size="17">{e(a)}</text>'
                 f'<text x="{x + 240}" y="{yy}" class="tm f-ink" font-size="17" text-anchor="end">{e(b)}</text>'
                 f'<line x1="{x + 20}" y1="{yy + 14}" x2="{x + 240}" y2="{yy + 14}" class="s-line" stroke-width="1"/>')
-    out += f'<text x="{x + 20}" y="568" class="td {tcls}" font-size="36">{e(total)}</text>'
+    out += (label(x + 20, 520, "PER YEAR", 13) + f'<text x="{x + 20}" y="562" class="td {tcls}" font-size="36">{e(total)}</text>'
+            + f'<line x1="{x + 20}" y1="576" x2="{x + 240}" y2="576" class="s-line" stroke-width="1"/>'
+            + label(x + 20, 598, "ONE-TIME: " + once, 13, "f-ink"))
     return out
 
 
 S[1] = svg(
     g(1, chip("THE CHEAP TV BOX")),
     g(2, title(["WILL IT JUST", "WORK LIKE", "TELUS TV?"], y=190, size=88)),
-    g(3, para(["A Firestick sold with a year of live TV for about $150–400.",
-               "The savings are real. So are the catches."], y=480, size=26, lh=40)),
+    g(3, para(["A Firestick plus a live-TV service, about $150–400 a year",
+               "after a one-time box. The savings are real. So are the catches."], y=480, size=26, lh=40)),
     g(4, box(104, 570, 1072, 80, "f-surface", "s-line", 6),
          '<text x="132" y="622" class="td f-ink" font-size="30">Short answer: cheaper, but not hands-off.</text>'),
 )
@@ -123,10 +125,10 @@ S[3] = svg(
     g(1, chip("CH 02 — FOUR WAYS FORWARD")),
     g(2, title(["WHAT EACH ONE COSTS"], size=54)),
     g(3, col(104, "A", "KEEP AS IS", [("Sportsnet+", "$350"), ("Everything else", "~$750")], "~$1,100")),
-    g(4, col(380, "B", "BOX + KEEP APPS", [("The box", "$150–400"), ("Sportsnet+", "dropped"), ("Everything else", "~$750")], "$900–1,150", "f-bad", "s-bad")),
-    g(5, col(656, "C", "BOX ONLY", [("The box", "$150–400"), ("Everything else", "dropped")], "$150–400", "f-bad", "s-bad")),
+    g(4, col(380, "B", "BOX + KEEP APPS", [("Box service", "$150–400"), ("Sportsnet+", "dropped"), ("Everything else", "~$750")], "$900–1,150", "f-bad", "s-bad", "box ~$50–100")),
+    g(5, col(656, "C", "BOX ONLY", [("Box service", "$150–400"), ("Everything else", "dropped")], "$150–400", "f-bad", "s-bad", "box ~$50–100")),
     g(6, col(932, "D", "TRIM + PLEX", [("Sportsnet+, 7 mo", "~$245"), ("Plex", "free"), ("Others, trimmed", "~$375")], "~$620", "f-good", "s-good")),
-    g(7, label(104, 650, "Everything else ~$750 is an estimate from the ~$2,000 total; trimmed assumes half of it is dropped.", 14)),
+    g(7, label(104, 642, "Estimates: everything else ~$750 (from the ~$2,000 total); trimmed = half dropped;", 14), label(104, 664, "box ~$50–100. Check the real bundle price.", 14)),
 )
 
 S[4] = svg(

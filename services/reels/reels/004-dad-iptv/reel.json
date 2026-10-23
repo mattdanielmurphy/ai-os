@@ -5,7 +5,7 @@
   "voices": [
     "pandora"
   ],
-  "theme": "panel",
+  "theme": "calm",
   "music": "~/projects/claude-ambient/out/piano-airports-04.m4a",
   "music_name": "Piano Airports 04",
   "source": "Matt's brief; Canadian prices checked October 2026 via news and provider sites; legal context from the 2019 GoldTV Federal Court order. Not legal advice.",
@@ -20,7 +20,7 @@
     },
     {
       "svg": "3.svg",
-      "say": "Here are four ways forward. ... Keep everything as is, about eleven hundred. ... The box plus the other subscriptions, around a thousand. ... The box alone, one fifty to four hundred. ... Or trim and use Plex, about six hundred and twenty."
+      "say": "Here are four ways forward, in yearly costs. ... Keep everything as is, about eleven hundred. ... The box service plus the other subscriptions, around a thousand. ... The box service alone, one fifty to four hundred. ... Or trim and use Plex, about six hundred and twenty. ... The box itself is a one-time purchase on top, roughly fifty to a hundred dollars."
     },
     {
       "svg": "4.svg",
