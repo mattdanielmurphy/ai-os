@@ -61,4 +61,4 @@ Keep Matt's design ideas un-anchored while still working with Claude: Matt jots 
 into a sealed file; a separate Claude session drafts its own from a one-line problem statement without
 opening it; then both go side by side and get merged. Competitor research comes last, only as a
 "did we miss anything?" check. Born in the Claude vision HUD thread, split out 2026-10-22.
-Details: docs/details/2026-10-22-blind-two-drafts.md. Status: idea; build on Matt's 👍.
+Details: docs/details/2026-10-22-blind-two-drafts.md. Status: now a standing rule (core_safety 1j): agents suggest it on open design tasks; no skill.

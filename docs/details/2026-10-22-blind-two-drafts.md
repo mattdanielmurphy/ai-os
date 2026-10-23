@@ -39,3 +39,21 @@ Now recorded in ai-os IDEAS.md.
 
 Why hand-trial first: Matt rabbit-holes into builds; the method only needs two sessions and a file,
 so test whether the comparison is actually useful before automating.
+
+## 18:12 Made it a standing rule, not a skill
+
+Matt: skills are a bad pattern for him because he has to remember they exist. Instead, agents should
+suggest the think-alone-first step themselves whenever we design UI/UX with room for innovation, and
+explain the benefit.
+
+---
+
+### Where the rule lives
+
+- `.rules/core_safety.md` 1j "Think Alone First on Open UI/UX Design", compiled into ai-os CLAUDE.md / GEMINI.md via build_rules.py.
+- 1k "Proactive Behaviour Over Skills He Must Remember": the general lesson behind it.
+- One line each added to `~/.claude/CLAUDE.md`, plus a memory file `think-alone-first-design.md`.
+- IDEAS.md entry marked as done-as-rule.
+
+Not tested in a live design task yet; the first real open-ended design thread will show whether agents pick it up.
+Undo: revert this commit and remove the two lines from ~/.claude/CLAUDE.md.
