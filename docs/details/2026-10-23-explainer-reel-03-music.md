@@ -80,3 +80,28 @@ Measured on reel 03: slides are ~15 KB of SVG-writing Python (≈ 4–5k output 
 ### Rule added
 
 `.rules/core_safety.md` under "Every Word Costs Matt" (compiled into CLAUDE.md, GEMINI.md, AGENTS.md, LEAF.md), a line in `~/.claude/CLAUDE.md`, and memory `explainer-reels-for-big-replies.md`. Short answers stay text.
+
+## 17:00 Reels in cloud sessions
+
+Matt: "fix this" (cloud sessions couldn't make reels).
+
+---
+
+### Cloud key fix
+
+Cloud environments support **network secrets**: the key is stored on the environment, never enters the VM, and Anthropic's proxy attaches it to requests for the listed host (docs: code.claude.com/docs/en/cloud-environments#add-network-secrets). Matt adds one: host `api.deepgram.com`, header `Authorization`, prefix `Token`, value = his Deepgram key. I can't add it (his secret, his settings). Rejected: a plain env var (readable by anything in the VM) and a VPS proxy (more moving parts, still needs a token in the cloud).
+
+---
+
+### Code changes
+
+- `tts.py`: no key + `CLAUDE_CODE_REMOTE=true` → send no Authorization header (proxy adds it); a 401/403 then explains the missing network secret.
+- `build.py`: ffmpeg from PATH or pip `imageio-ffmpeg`; durations parsed from ffmpeg (no ffprobe); missing music → `music/default.m4a` (3.5 MB, 96k copy of Piano Airports 04).
+- `test.sh`/`headless_test.cjs`: `package.json` pins playwright-core 1.61.1; installs with bun on Mac, npm in cloud; Chromium from Playwright in cloud.
+- Rule + README updated.
+
+---
+
+### Cloud tested how
+
+Simulated on the Mac (fake HOME, `CLAUDE_CODE_REMOTE=true`, ffmpeg hidden in a venv): no-key request gets the network-secret message; pip ffmpeg reads durations; build falls back to the bundled loop. **Not run in a real cloud session yet** (needs the secret first); Playwright's Chromium and npm install there are untested.

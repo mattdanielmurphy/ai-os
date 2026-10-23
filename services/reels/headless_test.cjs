@@ -3,8 +3,13 @@ const { chromium } = require('playwright-core');
 // Run via test.sh, never in the Claude browser pane (opening a reel there hung two sessions, 2026-10-23).
 const url = 'file://' + process.argv[2] + '?mute';
 (async () => {
-  const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
-    args: ['--mute-audio', '--autoplay-policy=no-user-gesture-required', '--disable-extensions', '--no-first-run'] });
+  // Mac: system Chrome. Cloud: Playwright's own Chromium (PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers).
+  const fs = require('fs'), mac = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  const args = ['--mute-audio', '--autoplay-policy=no-user-gesture-required', '--disable-extensions', '--no-first-run'];
+  const tries = fs.existsSync(mac) ? [mac] : [undefined, '/opt/pw-browsers/chromium'];
+  let b, last;
+  for (const executablePath of tries) { try { b = await chromium.launch({ executablePath, headless: true, args }); break; } catch (e) { last = e; } }
+  if (!b) throw last;
   const p = await b.newPage({ viewport: { width: 1100, height: 900 } });
   const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
   const t0 = Date.now(); await p.goto(url, { timeout: 30000 }); console.log('loaded ms', Date.now() - t0);

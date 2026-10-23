@@ -28,6 +28,16 @@ Never the stock kit look (rule: No Claude-default look); `kit.json` exists only 
 - 02 Your palette is waiting on you (panel theme): https://claude.ai/artifact/2oVcSYhSMspspNPSA3dWQR
 - 03 Air traffic control (animated slides, ducked piano bed): https://claude.ai/artifact/BnqUN9XerZsqF5sepZtdy7
 
+## Cloud sessions
+
+Cloud sessions build reels too. The Deepgram key never enters the VM: the cloud environment holds it as a
+**network secret** (claude.ai/code → edit environment → Network secrets → Add secret: host
+`api.deepgram.com`, header `Authorization`, prefix `Token`, value = the key), and Anthropic's proxy attaches
+it. `tts.py` sends no key when `CLAUDE_CODE_REMOTE=true` and none is set. No system ffmpeg there:
+`build.py` pip-installs `imageio-ffmpeg`. Missing music loop → `music/default.m4a`. `test.sh` installs
+playwright-core with npm (bun can't fetch through the cloud proxy) and uses Playwright's Chromium.
+Then publish with the Artifact tool as usual.
+
 ## Voices
 
 `tts.py <voice> "<text>" out.mp3` uses Deepgram Flux TTS (`flux-<voice>-en`, key `DEEPGRAM_API_KEY`

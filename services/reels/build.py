@@ -18,7 +18,7 @@ Music: optional `music` (path to a loop) plays under the voice, side-chain ducke
 trims it to what the reel can use (Gentle pace included), evens its loudness and fades its ends.
 Output: REEL_DIR/reel.html (publish it with the Artifact tool).
 """
-import argparse, base64, difflib, hashlib, json, re, subprocess, sys
+import argparse, base64, difflib, hashlib, json, re, shutil, subprocess, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -56,10 +56,25 @@ def themed(svg: str, theme: dict) -> str:
     return re.sub(r'^<svg width="\d+" height="\d+"', "<svg", svg.strip())  # scale to its container
 
 
+def ffmpeg() -> str:
+    """System ffmpeg, or the static one from pip's imageio-ffmpeg (cloud sessions have no ffmpeg)."""
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "imageio-ffmpeg"], check=True, stdin=subprocess.DEVNULL)
+        import imageio_ffmpeg
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
 def duration(mp3: Path) -> float:
-    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(mp3)],
-                         capture_output=True, text=True, check=True).stdout
-    return round(float(out), 2)
+    """Seconds, read from ffmpeg's own header line (no ffprobe needed)."""
+    err = subprocess.run([ffmpeg(), "-nostdin", "-hide_banner", "-i", str(mp3)], capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL).stderr
+    h, m, sec = re.search(r"Duration: (\d+):(\d+):([\d.]+)", err).groups()
+    return round(int(h) * 3600 + int(m) * 60 + float(sec), 2)
 
 
 def norm(w: str) -> str:
@@ -98,7 +113,7 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
         cuts.append(round((last + first) / 2, 3))
     cuts.append(end)
     for k, clip in enumerate(clips):
-        subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
+        subprocess.run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
                         "-c:a", "libmp3lame", "-b:a", "64k", str(clip)], check=True)
     return clips
 
@@ -111,7 +126,7 @@ def music_bed(src: Path, seconds: float, folder: Path) -> Path:
     out = folder / f"music-{tag}.m4a"
     if not out.exists():
         fade = f"afade=t=in:d=1.5,afade=t=out:st={seconds - 6:.2f}:d=6"
-        subprocess.run(["ffmpeg", "-nostdin", "-y", "-v", "error", "-i", str(src), "-t", f"{seconds:.2f}",
+        subprocess.run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(src), "-t", f"{seconds:.2f}",
                         "-af", f"loudnorm=I=-20:TP=-2,{fade}", "-ar", "44100", "-c:a", "aac", "-b:a", "96k", str(out)],
                        check=True)
     return out
@@ -140,6 +155,9 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
     music = music or reel.get("music")
     if music:
         src = (reel_dir / Path(music).expanduser()).resolve()
+        if not src.exists():  # e.g. a cloud session without ~/projects/claude-ambient
+            print(f"music {src} not found; using music/default.m4a", file=sys.stderr)
+            src = HERE / "music" / "default.m4a"
         talk = max(sum(b["dur"] for b in v["beats"]) for v in voices) + len(beats) * (tweaks["beat.gap"] + tweaks["beat.lead"])
         bed = music_bed(src, talk / tweaks["pace.gentle"] + tweaks["music.intro"] + 20, audio)
         data["music"] = {"name": reel.get("music_name") or src.stem,
