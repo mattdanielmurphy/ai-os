@@ -99,3 +99,11 @@ Matt (Explainer reels thread): his clipboard manager gets "a really sick integra
 Related: `~/.hammerspoon/modules/clipboard.lua` (duplicate-line cleaner); agents already take the
 claude-control queue before clipboard writes, which is a natural place to record "agent copied, from
 thread X". Status: idea; build on Matt's 👍 (needs its own thread).
+
+## Claude-made generative ambient music (2026-10-22) — IDEA, NOT STARTED
+Matt (Explainer reels thread): ambient background music for reels, and in general, made by Claude
+driving real instruments, not "AI music": e.g. Arturia Augmented GRAND PIANO, or generative patches in
+Cardinal (he has it instead of VCV Rack) with a good creative control scheme. Wants the lightest way on
+his Mac: a minimal Ableton set (his default set idles at ~2.1 GB; the big one is only for Launchkey
+jams), or a headless/scriptable host (Reaper? Cardinal?). Separate project that reels will use.
+Ties into Slub (company with his brother, audio software). Status: idea; needs its own thread.

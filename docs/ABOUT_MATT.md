@@ -22,6 +22,7 @@ Ask him only if all of these come up empty, and say what you searched.
 - **Sport**: plays in the U of A pickleball league as a free agent (paid $110, Fall 2026); games are at 9 pm.
 - **Main projects**: ai-os (this repo, his agent setup), qwerty MIDI plugin, daily mini crossword (mattmurphy.ca). Decided Oct 22 to build an anti-sycophancy AI therapist harness (not started; idea in `IDEAS.md`).
 - **Brother**: one of his brothers also builds software with Claude; they work well together. Family notes: vault `Family Relationships & Dynamics.md`.
+- **Slub** (2026-10-22): software company Matt is starting with his brother, focused on audio. The brother is strong in audio engineering and plugins and is building Ableton plugins that do multimodal sample analysis for very accurate categorisation. Shared goal: make generative synthesis more accessible, with great interfaces and sound.
 - **Working style**: procrastinates and rabbit-holes into big builds; keep steps small, but new projects are no longer flagged (Oct 22). Tends to feel he has to let people off the hook, then regrets it, and wants to change that. Full preferences: `~/.claude/CLAUDE.md`.
 
 ## Where things live
