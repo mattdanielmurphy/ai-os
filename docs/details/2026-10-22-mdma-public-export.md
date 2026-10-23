@@ -93,3 +93,31 @@ Correction to the earlier "Tyler already pulls hourly": that meant any install m
 `bin/hooks/pre-push` (enabled with `git config core.hooksPath bin/hooks`) waits until origin/main has the push, then runs ship-public (test + privacy scan). On failure: a macOS notification, log in `~/.hammerspoon/tmp/ship-public.log`. Tested for real: my push published to mac-utilities 30 s later, and the public suite.lua has the new updater.
 
 Untested: the wake trigger itself (needs a sleep/wake cycle). The hooks path is per-clone, so a fresh clone of ~/.hammerspoon needs that git config line again.
+
+## 00:45 tvresync added as TV Re-sync
+
+Matt: add [tvresync](https://github.com/tylermurphysound/tvresync) to the utilities, fit it to the Hammerspoon way, no backwards compatibility.
+
+---
+
+### what it does now
+
+`modules/tv_resync.lua`, public, in Mac & Devices, on by default on Matt's Mac (off by default on public installs, like every module). Same triggers as Tyler's app: display vanished (retry every 10 s up to 30 min), first touch after 10 min idle, after wake, all only with the lid shut; ⌃⌥R any time. Re-sync = `pmset displaysleepnow`, wait 4 s, `hs.caffeinate.declareUserActivity()` (same as his IOPM assertion). Live and running; toggling off/on cleans up its timers and hotkey.
+
+---
+
+### what changed from tyler's
+
+- Settings moved to the tweaks file (`tweaks/tv_resync.json`, shows in the Tweaks panel): the three triggers, the three timings, and `display.nameContains`.
+- Dropped "Approved displays" (vendor/model ticks) for a name filter: simpler, same job. Dropped scheduled re-syncs: the three automatic triggers cover it.
+- Lid detection: "no built-in screen online" instead of polling ioreg every 2 s, so it never stalls typing.
+- Its own menu bar icon is gone; it's a toggle in the ⚙︎ menu.
+- Decision logic is a pure function with tests (`tests/tv_resync_test.lua`, 12 checks).
+
+---
+
+### untested tv resync
+
+A real re-sync wasn't fired: it blanks the screen, and the lid is open. To try it: shut the lid with the TV on and press ⌃⌥R, or turn the TV off and on. If Tyler still runs his tvresync app, he should run its `uninstall.sh`, since both want ⌃⌥R.
+
+Published to mac-utilities automatically by the push hook.
