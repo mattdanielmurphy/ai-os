@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deepgram Flux TTS: text -> mp3. Key comes from ai-os .env (DEEPGRAM_API_KEY), never printed.
 
-  tts.py <voice> "<text>" <out.mp3>      voice = maeve, gemma, sharon ... (flux-<voice>-en)
+  tts.py <voice> "<text>" <out.mp3>      voice = maeve, gemma, sharon ... (flux-<voice>-en), or pandora (aura-2)
 """
 import json, os, sys, urllib.request
 from pathlib import Path
@@ -16,8 +16,12 @@ def key():
             return line.split("=", 1)[1].strip().strip('"').strip("'")
     sys.exit("DEEPGRAM_API_KEY missing from ai-os .env")
 
+# Flux has one British woman (gemma); Aura-2 voices fill the gaps (Aura is v1/speak only)
+AURA = {"pandora": "aura-2-pandora-en"}
+
 def speak(voice, text, out, speed=1.0):
-    url = f"https://api.deepgram.com/v2/speak?model=flux-{voice}-en&encoding=mp3&bit_rate=48000&speed={speed}"
+    model, ver = (AURA[voice], "v1") if voice in AURA else (f"flux-{voice}-en", "v2")
+    url = f"https://api.deepgram.com/{ver}/speak?model={model}&encoding=mp3&bit_rate=48000&speed={speed}"
     req = urllib.request.Request(url, data=json.dumps({"text": text}).encode(), method="POST",
                                  headers={"Authorization": f"Token {key()}", "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=60) as r:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build an explainer reel: Figma slides + a narrated voice, as one self-contained player page.
 
-Usage: build.py REEL_DIR [--voice maeve]
+Usage: build.py REEL_DIR [--voice maeve]   (--voice bakes just that voice; else reel.json `voices`)
 
 REEL_DIR holds reel.json ({title, eyebrow, voice, theme, pace, figma, music, beats: [{svg, say}]}) and one SVG
 per beat, exported from Figma (exportAsync SVG_STRING, svgOutlineText false, svgIdAttribute true).
@@ -121,21 +121,26 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
     reel = json.loads((reel_dir / "reel.json").read_text())
     tweaks = {k: v["value"] for k, v in json.loads((HERE / "tweaks.json").read_text())["tweaks"].items()}
     theme = json.loads((HERE / "themes" / f"{reel.get('theme', 'panel')}.json").read_text())
+    voice_given = bool(voice)
     voice = voice or reel.get("voice", "maeve")
     pace = reel.get("pace", tweaks["voice.pace"])
     audio = reel_dir / "audio"
     audio.mkdir(exist_ok=True)
-    clips = one_take([b["say"] for b in reel["beats"]], voice, pace, audio)
-    beats = []
-    for b, mp3 in zip(reel["beats"], clips):
-        beats.append({"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": b["say"], "dur": duration(mp3),
-                      "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()})
-    data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voice.title(),
-            "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None}
+    # every voice in `voices` is baked in (one take each); the player's Voice button switches between them
+    names = [voice] if voice_given else reel.get("voices") or [voice]
+    voices = []
+    for name in names:
+        clips = one_take([b["say"] for b in reel["beats"]], name, pace, audio)
+        voices.append({"name": name.title(), "beats": [
+            {"dur": duration(mp3), "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
+            for mp3 in clips]})
+    beats = [{"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": b["say"]} for b in reel["beats"]]
+    data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voices[0]["name"],
+            "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None}
     music = music or reel.get("music")
     if music:
         src = (reel_dir / Path(music).expanduser()).resolve()
-        talk = sum(b["dur"] for b in beats) + len(beats) * (tweaks["beat.gap"] + tweaks["beat.lead"])
+        talk = max(sum(b["dur"] for b in v["beats"]) for v in voices) + len(beats) * (tweaks["beat.gap"] + tweaks["beat.lead"])
         bed = music_bed(src, talk / tweaks["pace.gentle"] + tweaks["music.intro"] + 20, audio)
         data["music"] = {"name": reel.get("music_name") or src.stem,
                          "audio": "data:audio/mp4;base64," + base64.b64encode(bed.read_bytes()).decode()}

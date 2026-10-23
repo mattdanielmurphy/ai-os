@@ -1,7 +1,8 @@
 {
   "title": "Air traffic control",
   "eyebrow": "Reel 03 · How agents take turns on your Mac",
-  "voice": "maeve",
+  "voice": "pandora",
+  "voices": ["pandora", "gemma", "maeve"],
   "theme": "panel",
   "music": "~/projects/claude-ambient/out/piano-airports-04.m4a",
   "music_name": "Piano Airports 04",

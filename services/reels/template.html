@@ -9,7 +9,10 @@
 <style>
 /*__KIT_CSS__*/
 /*__THEME_CSS__*/
-.wrap { max-width: 64rem; }
+/* compact player: everything fits one viewport; the slide takes what's left (Matt, 2026-10-23) */
+.wrap { max-width: 72rem; padding-block: 12px; gap: 8px; }
+header { gap: 2px; } header h1 { font-size: clamp(18px, 2.6vw, 26px); }
+.stage { width: min(100%, calc((100dvh - 150px) * 16 / 9)); justify-self: center; }
 .stage { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
 .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .stage:fullscreen { border: 0; border-radius: 0; }
@@ -37,13 +40,15 @@
 @keyframes blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rv { transform: none; } .flow, .pulse, .glow, .spin, .blink, .stage.live #slide svg { animation: none; } }
 .stage .td { font-family: var(--display); font-weight: 800; } .stage .tb { font-family: var(--body); } .stage .tm { font-family: var(--mono); font-weight: 500; letter-spacing: .05em; }
-.caption { font: 20px/1.45 var(--body); min-height: 3em; margin: 0; text-wrap: pretty; }
+.caption { font: 15px/1.4 var(--body); margin: 0; text-wrap: pretty; } .caption[hidden] { display: none; }
 .caption .said { color: var(--ink); } .caption .unsaid { color: var(--muted); }
-.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.controls .btn { min-width: 48px; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.controls .btn { font-size: 12px; padding: 6px 10px; min-height: 30px; min-width: 30px; border-radius: 7px; }
+.controls .btn[aria-pressed="true"] { border-color: var(--ink); }
+.progress { gap: 4px; } .seg { font-size: 10px; gap: 3px; } .seg::before { height: 3px; }
 .controls .grow { flex: 1 1 auto; }
-.hint { font: 500 12px/1.4 var(--mono); color: var(--muted); }
-kbd { font: 500 11px/1 var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 2px 5px; background: var(--surface); color: var(--ink); }
+.hint { font: 500 10.5px/1.4 var(--mono); color: var(--muted); margin: 0; }
+kbd { font: 500 10px/1 var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 2px 5px; background: var(--surface); color: var(--ink); }
 .start { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center;
          background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(2px); padding: 16px; }
 .start .btn { font-size: 20px; padding: 18px 28px; }
@@ -64,7 +69,7 @@ a.quiet { color: var(--muted); }
       <span class="meta" id="meta"></span>
     </div>
   </div>
-  <p class="caption" id="caption"></p>
+  <p class="caption" id="caption" hidden></p>
   <nav class="progress" id="progress" aria-label="Beats"></nav>
   <div class="controls">
     <button class="btn" id="prev" type="button" title="Previous beat (←)">←</button>
@@ -73,9 +78,11 @@ a.quiet { color: var(--muted); }
     <button class="btn" id="replay" type="button" title="Replay this beat (R)">↺ Replay</button>
     <span class="grow"></span>
     <button class="btn" id="speed" type="button" title="Pace (S): normal, quick, or gentle for hard topics">Normal</button>
+    <button class="btn" id="voice" type="button" title="Voice (V): switch narrator">Voice</button>
+    <button class="btn" id="cc" type="button" title="Captions (C): show the narrator's words" aria-pressed="false">CC</button>
     <button class="btn" id="full" type="button" title="Full screen for presenting (F)">⛶</button>
   </div>
-  <p class="hint"><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> beats · <kbd>R</kbd> replay · <kbd>S</kbd> pace (normal / quick / gentle) · <kbd>F</kbd> full screen · tap a segment to jump</p>
+  <p class="hint"><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> beats · <kbd>R</kbd> replay · <kbd>S</kbd> pace (normal / quick / gentle) · <kbd>V</kbd> voice · <kbd>C</kbd> captions · <kbd>F</kbd> full screen · tap a segment to jump</p>
   <p class="hint" id="credit"></p>
 </main>
 <script>
@@ -89,7 +96,11 @@ function blobUrl(uri) {
   for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
   return URL.createObjectURL(new Blob([bytes], { type: head.slice(5, head.indexOf(';')) }));
 }
-D.beats.forEach(b => b.audio = blobUrl(b.audio));
+D.voices.forEach(v => v.beats.forEach(b => b.audio = blobUrl(b.audio)));
+let voiceIx = 0;
+try { voiceIx = Math.max(0, D.voices.findIndex(v => v.name === localStorage.getItem('reel.voice'))); } catch {}
+function applyVoice() { D.voice = D.voices[voiceIx].name; D.beats.forEach((b, k) => Object.assign(b, D.voices[voiceIx].beats[k])); }
+applyVoice();
 const audio = new Audio();
 const music = D.music ? Object.assign(new Audio(blobUrl(D.music.audio)), { loop: true, preload: 'auto' }) : null;
 
@@ -135,9 +146,14 @@ try { speed = +localStorage.getItem('reel.speed') || 1; } catch {}
 
 $('title').textContent = D.title;
 $('eyebrow').textContent = D.eyebrow;
+function labels() {
 const total = D.beats.reduce((s, b) => s + b.dur + T['beat.gap'] + T['beat.lead'], 0);
 $('meta').textContent = `${D.beats.length} beats · ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')} · voice: ${D.voice}` + (D.music ? ' · with music' : '');
 $('credit').innerHTML = (D.figma ? `Slides made in <a class="quiet" href="${D.figma}" target="_blank" rel="noopener">Figma</a> · ` : '') + `voice by Deepgram (${D.voice})` + (D.music ? ` · music: ${D.music.name}` : '');
+$('voice').textContent = 'Voice: ' + D.voice; $('voice').hidden = D.voices.length < 2;
+if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: D.title, artist: D.voice });
+}
+labels();
 $('progress').innerHTML = D.beats.map((_, k) => `<button class="seg" type="button" data-k="${k}" aria-label="Beat ${k + 1}">${k + 1}</button>`).join('');
 document.documentElement.style.setProperty('--dur', T['reveal.duration'] + 's');
 document.documentElement.style.setProperty('--rise', T['reveal.rise'] + 'px');
@@ -172,9 +188,9 @@ function show(k, autoplay = playing) {
   i = Math.max(0, Math.min(D.beats.length - 1, k));
   const b = D.beats[i];
   $('slide').innerHTML = b.svg;
-  $('slide').classList.remove('enter'); void $('slide').offsetWidth; $('slide').classList.add('enter');
   const ps = parts();
-  ps.forEach(p => p.classList.add('rv'));
+  ps.forEach(p => p.classList.add('rv')); // before the reflow below, or parts show, fade out, then reveal
+  $('slide').classList.remove('enter'); void $('slide').offsetWidth; $('slide').classList.add('enter');
   marks(); caption(0);
   audio.src = b.audio; audio.playbackRate = speed;
   $('stage').classList.toggle('live', autoplay);
@@ -206,15 +222,22 @@ $('next').onclick = () => { $('start').hidden = true; show(i + 1); };
 $('replay').onclick = () => { $('start').hidden = true; graph(); bedOn(); playing = true; $('play').textContent = 'Pause'; show(i, true); };
 $('progress').onclick = e => { const s = e.target.closest('.seg'); if (s) { $('start').hidden = true; show(+s.dataset.k); } };
 function setSpeed(v) { speed = v; audio.playbackRate = v; $('speed').textContent = PACE_NAMES[SPEEDS.indexOf(v)] || v + '×'; try { localStorage.setItem('reel.speed', v); } catch {} }
+$('voice').onclick = () => {
+  voiceIx = (voiceIx + 1) % D.voices.length; applyVoice(); labels();
+  try { localStorage.setItem('reel.voice', D.voice); } catch {}
+  if ($('start').hidden) show(i, playing); // same beat, new narrator
+};
+function setCC(on) { $('caption').hidden = !on; $('cc').setAttribute('aria-pressed', on); try { localStorage.setItem('reel.cc', on ? 1 : 0); } catch {} }
+$('cc').onclick = () => setCC($('caption').hidden);
+try { setCC(localStorage.getItem('reel.cc') === '1'); } catch {}
 $('speed').onclick = () => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]);
 $('full').onclick = () => document.fullscreenElement ? document.exitFullscreen() : $('stage').requestFullscreen?.();
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = { ' ': 'play', ArrowLeft: 'prev', ArrowRight: 'next', r: 'replay', s: 'speed', f: 'full' }[e.key];
+  const k = { ' ': 'play', ArrowLeft: 'prev', ArrowRight: 'next', r: 'replay', s: 'speed', v: 'voice', c: 'cc', f: 'full' }[e.key];
   if (k) { e.preventDefault(); $(k).click(); }
 });
 if ('mediaSession' in navigator) {
-  navigator.mediaSession.metadata = new MediaMetadata({ title: D.title, artist: D.voice });
   navigator.mediaSession.setActionHandler('previoustrack', () => $('prev').click());
   navigator.mediaSession.setActionHandler('nexttrack', () => $('next').click());
 }

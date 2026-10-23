@@ -32,3 +32,29 @@ Muted headless run, 20 s: music fades in over ~1 s to 0.38 (level 0.4), voice st
 
 - Not listened to: the duck depth (0.45) may want tuning by ear; knob `duck.depth` in tweaks.
 - Published as https://claude.ai/artifact/BnqUN9XerZsqF5sepZtdy7. Undo: delete the artifact; revert this commit.
+
+## 16:45 Voice picker, timing, flash, compact layout
+
+Matt asked: pick the voice in the player (and pick another British woman), let the slide fade in before the voice, fix slides flashing full then re-revealing, drop the duplicate narrator caption, shrink the UI so it fits without scrolling.
+
+---
+
+### Slide flash cause
+
+`show()` forced a reflow (to restart the slide fade) before adding the hidden `.rv` class to parts, so the browser had already painted them visible; adding `.rv` then *transitioned* them to hidden, and the reveal faded them back. Fix: add `.rv` before the reflow. Headless check: the last part's opacity stays 0 for the first 300 ms of a new slide.
+
+---
+
+### New British voice
+
+Deepgram Flux has only one British woman (Gemma). Aura-2 has Pandora (British, calm, smooth); `tts.py` now routes `pandora` to Aura-2 on `/v1/speak` (speed works there too). Reel 03 bakes Pandora (default), Gemma and Maeve; Voice button / V key cycles and remembers the pick. Rejected: Aura-1 Athena (older model). Cost: one take + one transcript per voice.
+
+---
+
+### Timing and layout
+
+- `beat.lead` 0.15 → 0.7 s, so the voice starts after the slide's fade.
+- Captions hidden by default (CC button / C key), since the slide already has its own text.
+- Controls ~half size; title smaller; the slide sizes to `100dvh - 150px`, so at 1100×900 the page is exactly one screen.
+- Untested: very short windows (under ~600 px tall) and phones; the voices weren't heard by ear.
+- Reel is 4.5 MB now (three voices).
