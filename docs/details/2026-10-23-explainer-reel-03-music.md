@@ -58,3 +58,25 @@ Deepgram Flux has only one British woman (Gemma). Aura-2 has Pandora (British, c
 - Controls ~half size; title smaller; the slide sizes to `100dvh - 150px`, so at 1100×900 the page is exactly one screen.
 - Untested: very short windows (under ~600 px tall) and phones; the voices weren't heard by ear.
 - Reel is 4.5 MB now (three voices).
+
+## 16:55 Reels for every agent
+
+Matt: reel 03 is "good enough for primetime"; agents with a lot of info should use reels. Asked: overhead vs text, can he just tell an agent to use it, and add a global rule. Future ideas: fresh generated music every reel; streamline the graphics.
+
+---
+
+### Can agents use it now
+
+Yes, on his Mac. The reels branch was never on `main`, so other agents couldn't find it. I merged main into it (one rules conflict: kept both the "No Claude-default look" and "exemplars" lines; LEAF.md regenerated), pushed to `main`, and fast-forwarded `~/projects/ai-os`. The README's "Make a reel" now describes the hand-written `slides.py` route (no Figma needed). Cloud sessions without the Mac's Deepgram key can't build reels.
+
+---
+
+### Overhead vs text
+
+Measured on reel 03: slides are ~15 KB of SVG-writing Python (≈ 4–5k output tokens), the script ~200 words, build ~1 min per new voice (Deepgram: a few cents per voice), test ~15 s. A text reply of the same content is ~300 tokens. So a reel costs roughly 10–15× the tokens of a text reply, nearly all of it the slides. The streamlining idea (shared layout kit + short JSON per beat, ~1k tokens) is in IDEAS.md.
+
+---
+
+### Rule added
+
+`.rules/core_safety.md` under "Every Word Costs Matt" (compiled into CLAUDE.md, GEMINI.md, AGENTS.md, LEAF.md), a line in `~/.claude/CLAUDE.md`, and memory `explainer-reels-for-big-replies.md`. Short answers stay text.
