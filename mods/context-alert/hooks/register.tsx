@@ -29,6 +29,7 @@ const held = atom({ plugin: 'context-alert', key: 'held' } as const, '')
 const projectHeld = atom({ plugin: 'context-alert', key: 'projectHeld' } as const, '')
 const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
 const threadId = atom({ plugin: 'context-alert', key: 'threadId' } as const, '')
+const backLinked = atom({ plugin: 'context-alert', key: 'backLinked' } as const, false)
 
 export const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -110,9 +111,20 @@ export const wakeParts = (text: string) => {
 /** The coordinator's note, after it started the fresh thread, naming that thread. The mod answers
  *  it itself so this cold thread's model never runs. */
 export const handedOff = (text: string) =>
-  /^\s*<relay from="coordinator"/.test(text)
-    ? /context-alert handed-off:\s*(cmsg_[A-Za-z0-9]+)/.exec(text)?.[1]
-    : undefined
+  isCoordinatorRelay(text) ? /context-alert handed-off:\s*(cmsg_[A-Za-z0-9]+)/.exec(text)?.[1] : undefined
+
+/** A coordinator relay. Remote Control delivers it as a task notification wrapped in
+ *  <project_claude_message>; checking for a bare <relay> missed that, so the old thread never got
+ *  its "handed off" line (2026-10-22). */
+export const isCoordinatorRelay = (text: string) =>
+  /^\s*(?:<project_claude_message\b[^>]*>\s*)?<relay from="coordinator"/.test(text)
+
+/** The cold handoff file a fresh thread's brief tells it to read. */
+export const handoffPath = (text: string) =>
+  isCoordinatorRelay(text) ? /(\/[^\s"'`<>]*\/docs\/handoffs\/[^\s"'`<>]*-cold(?:_\d+)?\.md)/.exec(text)?.[1] : undefined
+
+/** The marker cold_handoff.py writes at the top of a project thread's handoff, naming the old thread. */
+export const parentThread = (file: string) => /context-alert parent-thread:\s*(cmsg_[A-Za-z0-9]+)/.exec(file)?.[1]
 
 /** A project-chat message (a <wake> with no <thread>) that isn't this thread's own root. The
  *  server hands a thread started on a coordinator post the latest project-chat mention as if it
@@ -170,6 +182,10 @@ export const heldReply = (expiredMs: number, tokens: number) =>
 export const handedOffReply = (thread: string) =>
   `➡️ **Handed off to [the new thread](#${thread}) because the cache expired.**`
 
+/** The line a fresh thread opens with, linking back to the thread it continues. */
+export const continuedReply = (thread: string) =>
+  `⬅️ **Continued from [the old thread](#${thread})** because its cache expired.`
+
 /** What the coordinator gets when a held message moves to a fresh thread. */
 export const freshAsk = (held: string, heldId: string, prompt: string, followUp = '', parent = '') =>
   `Matt chose a fresh thread for a message he wrote into a cold thread (context-alert held it and ` +
@@ -178,9 +194,10 @@ export const freshAsk = (held: string, heldId: string, prompt: string, followUp 
   `His held message: ${held}` +
   (followUp ? `\n\nHe added, in the same thread while it was held: ${followUp}` : '') +
   (parent
-    ? `\n\nLinks: make the new thread's ack "Continued from [the old thread](#${parent}) because its ` +
-      `cache expired." Then message_thread the old thread (${parent}) with exactly: ` +
-      `context-alert handed-off: <the new thread's id>. The mod there posts the link without waking its model.`
+    ? `\n\nLinks: keep the handoff file's path in the brief word for word; the mod in the new thread ` +
+      `reads it and posts the link back to ${parent} itself. After starting it, message_thread the old ` +
+      `thread (${parent}) with exactly: context-alert handed-off: <the new thread's id>, even if it is ` +
+      `resolved. The mod there posts the forward link without waking its model, then resolves it again.`
     : '')
 
 /** Writes a handoff from the transcript file with Sonnet; the thread itself is never re-sent. */
@@ -190,7 +207,10 @@ const coldHandoff = async ($: EngineInterface, open: boolean): Promise<Handoff> 
   // Carry the message the person meant to send: the one held, else the draft in the box.
   const draft = (await $.prompt.read()).text.trim()
   const carry = (await read($, held)) || (draft.startsWith('/') ? '' : draft)
-  const argv = ['python3', script($), 'write', sid, ...(open ? ['--open'] : []), ...(carry ? ['--then', carry] : [])]
+  const pending = await read($, projectHeld)
+  const parent = pending ? (JSON.parse(pending) as Held).thread ?? '' : ''
+  const argv = ['python3', script($), 'write', sid, ...(open ? ['--open'] : []), ...(carry ? ['--then', carry] : []),
+    ...(parent ? ['--thread', parent] : [])]
   let result: Handoff
   try {
     const run = await $.process.run(argv, { timeoutMs: 600_000 })
@@ -353,7 +373,19 @@ export const register: Register = on => {
     const moved = handedOff(e.text)
     if (moved !== undefined) {
       await $.tool.call({ tool: 'mcp__hearthbot__reply', text: handedOffReply(moved) }).catch(() => undefined)
+      // The note reopens a resolved thread; a handed-off thread is done, so close it again.
+      await $.tool.call({ tool: 'mcp__hearthbot__set_thread_resolved', resolved: true }).catch(() => undefined)
       return { drop: `Handed off to ${moved}; the coordinator's note was answered by the mod.` }
+    }
+    // A fresh thread from a cold handoff: its first line links back to the thread it continues.
+    const path = handoffPath(e.text)
+    if (path !== undefined && !(await read($, backLinked))) {
+      await update($, backLinked, () => true)
+      const grep = await $.process.run(['grep', '-m1', 'context-alert parent-thread:', path]).catch(() => undefined)
+      const parent = parentThread(grep?.stdout ?? '')
+      if (parent !== undefined) {
+        await $.tool.call({ tool: 'mcp__hearthbot__reply', text: continuedReply(parent) }).catch(() => undefined)
+      }
     }
     const isPerson = ['composer', 'bridge', 'sdk'].includes(e.origin.kind) && !e.isMeta
     // A project thread is known by any earlier <wake>, not only this message's: after the Mac

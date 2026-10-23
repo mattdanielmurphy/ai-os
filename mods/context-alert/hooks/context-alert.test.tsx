@@ -176,7 +176,7 @@ test('with no answer, the held message moves to a fresh thread once the handoff 
   await settle()
   const asks = calls.filter(c => c.tool === 'mcp__claude-code-remote__send_message')
   expect(asks).toHaveLength(1)
-  expect(String(asks[0].message)).toMatch(/His held message: is it done\?.*#cmsg_T1.*context-alert handed-off:/s)
+  expect(String(asks[0].message)).toMatch(/His held message: is it done\?.*cmsg_T1.*context-alert handed-off:/s)
   expect(entered).toHaveLength(0)
   // Answered and cleared: a later message is not treated as an answer to it.
   expect((await $.prompt.submit(system(reacted('👍')))).drop).toBeUndefined()
@@ -208,6 +208,39 @@ test("the coordinator's handed-off note gets the link line, and never reaches th
   expect(entered).toHaveLength(0)
   const line = calls.find(c => c.tool === 'mcp__hearthbot__reply')
   expect(String(line?.text)).toMatch(/Handed off to \[the new thread\]\(#cmsg_NEW1\) because the cache expired/)
+})
+
+// How Remote Control really delivers it (seen 2026-10-22): a task notification, wrapped.
+const delivered = (note: string) => ({
+  text: `<project_claude_message session="s" thread_id="cmsg_OLD">\n<relay from="coordinator" session="s" current-time="t">\n  <note>\n      ${note}\n  </note>\n</relay>\n</project_claude_message>\n`,
+  wait: false, origin: { kind: 'task-notification' as const },
+})
+
+test('the wrapped handed-off note posts the forward link and resolves the old thread again', async ($, on) => {
+  const { calls, entered } = await projectSetup($, on)
+  const out = await $.prompt.submit(delivered('context-alert handed-off: cmsg_NEW2'))
+  expect(out.drop).toMatch(/Handed off to cmsg_NEW2/)
+  expect(entered).toHaveLength(0)
+  expect(String(calls.find(c => c.tool === 'mcp__hearthbot__reply')?.text)).toMatch(/\(#cmsg_NEW2\)/)
+  expect(calls.find(c => c.tool === 'mcp__hearthbot__set_thread_resolved')?.resolved).toBe(true)
+})
+
+test('a fresh thread from a cold handoff opens with a link back, once', async ($, on) => {
+  const calls: Record<string, unknown>[] = []
+  const entered: string[] = []
+  on('prompt.submit', (_$: unknown, e: any) => { entered.push(e.text); return { text: e.text } })
+  on('tool.call', (_$: unknown, e: any) => { calls.push(e); return { result: 'ok' } })
+  on('process.run', (_$: unknown, e: any) => {
+    const stdout = e.argv[0] === 'grep' ? '<!-- context-alert parent-thread: cmsg_OLD9 -->\n' : ''
+    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
+  })
+  const brief = 'First: Read /Users/matt/projects/ai-os/docs/handoffs/2026-10-22_mixer-cold_2.md and continue.'
+  await $.prompt.submit(delivered(brief))
+  await $.prompt.submit(delivered(brief))
+  const links = calls.filter(c => c.tool === 'mcp__hearthbot__reply')
+  expect(links).toHaveLength(1)
+  expect(String(links[0].text)).toMatch(/Continued from \[the old thread\]\(#cmsg_OLD9\)/)
+  expect(entered).toHaveLength(2)
 })
 
 test('a 👍 reaction on the hold note starts the fresh thread', async ($, on) => {

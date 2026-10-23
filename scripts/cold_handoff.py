@@ -114,7 +114,7 @@ def project_root(cwd):
     return Path.home() / "projects" / "ai-os"
 
 
-def write(path, sid, open_app, then=""):
+def write(path, sid, open_app, then="", thread=""):
     result = export(path)
     if not result:
         sys.exit("Transcript has no conversation to hand off")
@@ -144,7 +144,9 @@ def write(path, sid, open_app, then=""):
     paste = f"Read {dest} and continue."
     if then:
         paste += f" Then: {then}"
-    dest.write_text(f"{brief}\n\nPaste into a new thread: \"{paste}\"\n", encoding="utf-8")
+    # The context-alert mod in the new project thread reads this to post its link back.
+    marker = f"<!-- context-alert parent-thread: {thread} -->\n" if thread else ""
+    dest.write_text(f"{marker}{brief}\n\nPaste into a new thread: \"{paste}\"\n", encoding="utf-8")
 
     # The desktop app's new-thread link fills the prompt box (it never sends on its own).
     link = "claude://code/new?" + urllib.parse.urlencode({"q": paste}, quote_via=urllib.parse.quote)
@@ -160,9 +162,10 @@ def main():
     ap.add_argument("session_id")
     ap.add_argument("--open", action="store_true", help="copy the paste prompt, open a new thread")
     ap.add_argument("--then", default="", help="the message to send after the handoff is read")
+    ap.add_argument("--thread", default="", help="the old project thread's root cmsg id, for the link back")
     a = ap.parse_args()
     path = find_transcript(a.session_id)
-    out = status(path) if a.action == "status" else write(path, a.session_id, a.open, a.then.strip())
+    out = status(path) if a.action == "status" else write(path, a.session_id, a.open, a.then.strip(), a.thread)
     print(json.dumps(out))
 
 

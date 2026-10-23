@@ -23,6 +23,8 @@ declare module 'claude-code' {
       inProject: boolean
       /** This project thread's root message id, learned from its first hearthbot reply. */
       threadId: string
+      /** This fresh thread already posted its "continued from" link. */
+      backLinked: boolean
     }
   }
 }
