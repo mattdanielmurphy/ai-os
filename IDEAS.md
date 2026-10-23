@@ -82,3 +82,10 @@ abstracted to agree/disagree symbols; and a reliable sycophancy test set. Open q
 top model beat a lesser one for therapy-style talk? A handoff doc was written during the voice call.
 Source: vault `Voice calls/2026-10-22 2016 Pickleball partner, anti-sycophancy harness idea.md`.
 Status: filed only; build on Matt's 👍.
+
+## Explainer reels: long update → short animated narrated slideshow (2026-10-22) — PITCHED, NOT STARTED
+Matt (via coordinator): Claude turns a long update into a short animated slideshow with a good voiceover
+and diagrams; reusable for learning and for presenting anything. Graphics made in Figma.
+Pitch: Claude writes 5–8 beats (one narration line + one visual each) → fills a Figma template file →
+voiceover per beat → plays as an Artifact player page (pause, replay a beat, captions), MP4 export to share.
+Full pitch: docs/details/2026-10-22-explainer-reels.md. Status: pitched; build on Matt's 👍.
