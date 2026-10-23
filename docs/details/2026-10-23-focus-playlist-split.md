@@ -1,0 +1,2 @@
+## 21:30 Focus playlist split
+Read "Focus" (1412 tracks, 213 albums) via AppleScript, grouped by album genre tag with artist overrides (Eno/Hecker/drone → Ambient, noise/metal/Boris → Metal & Noise, etc.), built 8 playlists "Focus · <genre>" inside new folder "Focus" by `duplicate track i of playlist id 164964`. Albums kept whole in disc/track order; original untouched. Note: a folder named "Focus" now shadows the original by name — scripts must use the user playlist id 164964. Undo: delete the "Focus" folder in Music. Build script: tmp/split.py (scratch).
