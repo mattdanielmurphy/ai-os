@@ -57,3 +57,34 @@ Small, on top of `services/mac-connector` (already an MCP server on his Mac):
 ### Recommendation
 
 Keep Projects as the main coordinator for now. Build the 4 tools as a side experiment, mainly to replace the screen-takeover `send_task`. Switch over only if a week of use shows the hook wake-ups are reliable. Rejected: chat-only coordinator (can't be woken); full rewrite now (big, and loses cloud threads + phone cards).
+
+## 07:35 Start sessions in sync with the Project, no takeover
+
+Matt: wants to start sessions without taking over his Mac while still using the Project (the takeover was the reason he forgot).
+
+---
+
+### One CLI command does it
+
+Docs (claude-code-on-the-web, "Send follow-ups from the CLI"): `claude -p "message" --cloud <session-id>` queues one message into any running cloud session from any logged-in machine and exits. `--output-format json` gives `{ok, session_id, url}`. No window, no paste, no take-control queue.
+
+The project coordinator and cloud threads are cloud sessions (the coordinator relay names `session_0175dX...`), so `send_task` in `services/mac-connector` could call this instead of `scripts/voice_task_inbox.py` pasting into the chat.
+
+---
+
+### What's unknown until tested
+
+- Whether a message queued this way shows in the project chat as Matt's message, and whether the coordinator treats it with his authority or as a relay.
+- The coordinator's session id changes when it's recycled, so the connector needs a lookup (e.g. the coordinator's own `get_channel_session_id` written to a file, or a list of sessions).
+- Installed CLI is 2.1.212 and has no `--cloud` flag yet; needs `claude update`.
+- Errors if archived: `cloud session <id> is archived`.
+
+---
+
+### Test plan
+
+1. `claude update`.
+2. Send one harmless message: `claude -p "test from Mac CLI, ignore" --cloud <coordinator id> --output-format json`.
+3. Check how it appears in the project and how the coordinator reacts.
+4. If good: swap `send_task` to use it, keep the paste route as fallback.
+Undo: revert the `send_task` change; the CLI update is harmless.
