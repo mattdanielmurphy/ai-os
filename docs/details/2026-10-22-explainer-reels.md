@@ -127,3 +127,54 @@ fine on a Mac or phone CPU, faster than real time).
 `tools/voice-agent-tester` already lists Deepgram's 138-voice catalog with starred favourites, so the reel
 voice can be one he stars there. The tester's key wasn't found by `aios-env list` in that folder; where it
 lives is unchecked (not hunted, to avoid reading secret files). Untested: Aura voice quality for narration.
+
+## 22:05 First reel built
+
+Matt 👍'd "build a first reel" and asked for Deepgram's best voices, British/Australian/UK feminine
+options, Maeve first.
+
+---
+
+### Voices found
+
+Deepgram's newest voices are Flux TTS (`flux-<name>-en`, `POST /v2/speak`). Non-American feminine ones:
+Maeve (Irish: upbeat, confident, gentle), Gemma (British: warm, cheerful, featured), Sharon (Australian:
+calm, relaxed). Meena and Priya are Indian. Older Aura-2 also has Pandora (British) and Theia
+(Australian); not sampled. Samples: `services/reels/samples/`. Matt added `DEEPGRAM_API_KEY` to ai-os
+`.env` (I opened it in VS Code with clearance; never read it). The voice tester keeps its key in browser
+storage, which is why it couldn't be reused.
+
+---
+
+### How the reel works
+
+- **Slides**: built with the Figma connector in a new file "Explainer reels"
+  (https://www.figma.com/design/xg900viuh141OazDkdNbWF), five 1280×720 frames, page-kit colours and fonts.
+  Layers named a1…aN reveal in order. Exported as SVG with live text (`svgOutlineText: false`), ~1–5 KB each.
+- **Light/dark**: `build.py` swaps the kit's light hexes for classes bound to kit CSS variables, so the
+  same Figma slides follow the system theme. Checked both modes in the browser.
+- **Voice**: one Deepgram clip per beat, cached by voice+text; beat length = clip length, so the
+  animation spreads its reveals over the first ~55% of the line (tweakable).
+- **Player**: one self-contained Artifact page (327 KB with audio inline). Play overlay (browsers need a
+  tap before sound), caption that brightens as words are spoken (estimated by time, not true word
+  timing), segment strip to jump, ← → R S F keys with visible hints, speed 0.85–1.5×, full screen for
+  presenting, lock-screen next/previous.
+- **Tweaks**: `services/reels/tweaks.json`, registered in the Tweaks panel; values apply on rebuild
+  (the page is static, so not live).
+
+---
+
+### Figma limits
+
+Starter plan, full seat: Figma's docs list no MCP limit for that seat, and writes are exempt anyway.
+This reel used ~6 connector calls. Not a blocker so far.
+
+---
+
+### Tested and untested
+
+Tested in the built-in browser: auto-advance across all 5 beats, staggered reveals, captions, end of
+reel resets to Play, dark mode. Untested: actual sound (the browser pane can't be heard by me), the
+page on his iPhone, full screen on iPhone (Safari only allows video full screen, so ⛶ may do nothing
+there). Rejected: MP4 export for now (the page is enough to watch; ffmpeg export is a later add).
+Undo: delete the artifact and `services/reels/`.

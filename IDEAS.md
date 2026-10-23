@@ -88,4 +88,4 @@ Matt (via coordinator): Claude turns a long update into a short animated slidesh
 and diagrams; reusable for learning and for presenting anything. Graphics made in Figma.
 Pitch: Claude writes 5–8 beats (one narration line + one visual each) → fills a Figma template file →
 voiceover per beat (Deepgram Aura TTS on Matt's existing credits; Kokoro free fallback; Read Aloud automation rejected: ToS risk) → plays as an Artifact player page (pause, replay a beat, captions), MP4 export to share.
-Full pitch: docs/details/2026-10-22-explainer-reels.md. Status: pitched; build on Matt's 👍.
+Full pitch: docs/details/2026-10-22-explainer-reels.md. Status: first reel BUILT 2026-10-22 (Matt 👍): `services/reels/`, voice Maeve; next: automatic reels for long replies.

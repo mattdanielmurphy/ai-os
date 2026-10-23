@@ -1,0 +1,26 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1280" height="720" fill="#EEF2F6"/>
+<text id="a1" fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="64" font-weight="bold"><tspan x="96" y="212.62">One player, many jobs</tspan></text>
+<g id="a2">
+<rect x="97" y="277.5" width="336" height="202" rx="17" fill="white"/>
+<rect x="97" y="277.5" width="336" height="202" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<circle cx="137" cy="317.5" r="9" fill="#D9822B"/>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="128" y="369.38">Thread updates</tspan></text>
+<text fill="#5D6B7C" font-family="Source Serif 4" font-size="26"><tspan x="128" y="412.613">Long replies become </tspan><tspan x="128" y="442.613">reels</tspan></text>
+</g>
+<g id="a3">
+<rect x="459" y="277.5" width="336" height="202" rx="17" fill="white"/>
+<rect x="459" y="277.5" width="336" height="202" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<circle cx="499" cy="317.5" r="9" fill="#2F7D5B"/>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="490" y="369.38">Studying</tspan></text>
+<text fill="#5D6B7C" font-family="Source Serif 4" font-size="26"><tspan x="490" y="412.613">Courses, one beat at a </tspan><tspan x="490" y="442.613">time</tspan></text>
+</g>
+<g id="a4">
+<rect x="821" y="277.5" width="336" height="202" rx="17" fill="white"/>
+<rect x="821" y="277.5" width="336" height="202" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<circle cx="861" cy="317.5" r="9" fill="#9FB8D4"/>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="852" y="369.38">Presenting</tspan></text>
+<text fill="#5D6B7C" font-family="Source Serif 4" font-size="26"><tspan x="852" y="412.613">Show anything to </tspan><tspan x="852" y="442.613">anyone</tspan></text>
+</g>
+<text id="a5" fill="#D9822B" font-family="Source Serif 4" font-size="32"><tspan x="96" y="558.216">Tell me what to change.</tspan></text>
+</svg>

@@ -1,0 +1,26 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1280" height="720" fill="#EEF2F6"/>
+<text id="a1" fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="64" font-weight="bold"><tspan x="96" y="200.62">Nothing important hides</tspan></text>
+<g id="a2">
+<rect x="96" y="256.5" width="528" height="321" rx="18" fill="#F8E4E2"/>
+<text fill="#B3443C" font-family="JetBrains Mono" font-size="20" font-weight="500" letter-spacing="0.08em"><tspan x="132" y="307.2">BEFORE</tspan></text>
+<rect x="132" y="327.5" width="440" height="14" rx="7" fill="#D6DEE8"/>
+<rect x="132" y="357.5" width="456" height="14" rx="7" fill="#D6DEE8"/>
+<rect x="132" y="387.5" width="400" height="14" rx="7" fill="#D6DEE8"/>
+<rect x="132" y="417.5" width="448" height="14" rx="7" fill="#D6DEE8"/>
+<rect x="132" y="447.5" width="300" height="14" rx="7" fill="#D6DEE8"/>
+<text fill="#1D2A3A" font-family="Source Serif 4" font-size="30"><tspan x="132" y="505.015">Paragraphs. Skimmed. Stuff </tspan><tspan x="132" y="539.015">missed.</tspan></text>
+</g>
+<g id="a3">
+<rect x="656" y="256.5" width="528" height="217" rx="18" fill="#E3F2EA"/>
+<text fill="#2F7D5B" font-family="JetBrains Mono" font-size="20" font-weight="500" letter-spacing="0.08em"><tspan x="692" y="307.2">AFTER</tspan></text>
+<circle cx="724" cy="359.5" r="32" fill="#2F7D5B"/>
+<path d="M718 347.5L738 359.5L718 371.5V347.5Z" fill="white"/>
+<rect x="774" y="354.5" width="56" height="10" rx="5" fill="#9FB8D4"/>
+<rect x="838" y="354.5" width="56" height="10" rx="5" fill="#9FB8D4"/>
+<rect x="902" y="354.5" width="56" height="10" rx="5" fill="#D9822B"/>
+<rect x="966" y="354.5" width="56" height="10" rx="5" fill="#D6DEE8"/>
+<rect x="1030" y="354.5" width="56" height="10" rx="5" fill="#D6DEE8"/>
+<text fill="#1D2A3A" font-family="Source Serif 4" font-size="30"><tspan x="692" y="435.015">Press play. Listen while you work.</tspan></text>
+</g>
+</svg>

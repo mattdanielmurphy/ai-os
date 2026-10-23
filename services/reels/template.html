@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=JetBrains+Mono:wght@500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+/*__KIT_CSS__*/
+.wrap { max-width: 64rem; }
+.stage { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+.stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage:fullscreen { border: 0; border-radius: 0; }
+.f-bg { fill: var(--bg) } .f-surface { fill: var(--surface) } .f-ink { fill: var(--ink) } .f-muted { fill: var(--muted) }
+.f-line { fill: var(--line) } .f-accent { fill: var(--accent) } .f-sky { fill: var(--sky) } .f-good { fill: var(--good) }
+.f-bad { fill: var(--bad) } .f-good-bg { fill: var(--good-bg) } .f-bad-bg { fill: var(--bad-bg) }
+.s-line { stroke: var(--line) } .s-ink { stroke: var(--ink) } .s-accent { stroke: var(--accent) } .s-sky { stroke: var(--sky) }
+.rv { opacity: 0; transform: translateY(var(--rise, 18px)); transform-box: fill-box;
+      transition: opacity var(--dur, .55s) ease, transform var(--dur, .55s) cubic-bezier(.2, .8, .2, 1); }
+.rv.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .rv { transform: none; } }
+.caption { font: 20px/1.45 var(--body); min-height: 3em; margin: 0; text-wrap: pretty; }
+.caption .said { color: var(--ink); } .caption .unsaid { color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls .btn { min-width: 48px; }
+.controls .grow { flex: 1 1 auto; }
+.hint { font: 500 12px/1.4 var(--mono); color: var(--muted); }
+kbd { font: 500 11px/1 var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 2px 5px; background: var(--surface); color: var(--ink); }
+.start { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center;
+         background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(2px); padding: 16px; }
+.start .btn { font-size: 20px; padding: 18px 28px; }
+.meta { font: 500 13px/1.4 var(--mono); color: var(--muted); }
+a.quiet { color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="title"></h1>
+  </header>
+  <div class="stage" id="stage" aria-live="polite">
+    <div id="slide"></div>
+    <div class="start" id="start">
+      <button class="btn primary" id="go" type="button">▶ Play reel</button>
+      <span class="meta" id="meta"></span>
+    </div>
+  </div>
+  <p class="caption" id="caption"></p>
+  <nav class="progress" id="progress" aria-label="Beats"></nav>
+  <div class="controls">
+    <button class="btn" id="prev" type="button" title="Previous beat (←)">←</button>
+    <button class="btn primary" id="play" type="button" title="Play / pause (Space)">Play</button>
+    <button class="btn" id="next" type="button" title="Next beat (→)">→</button>
+    <button class="btn" id="replay" type="button" title="Replay this beat (R)">↺ Replay</button>
+    <span class="grow"></span>
+    <button class="btn" id="speed" type="button" title="Speed (S)">1×</button>
+    <button class="btn" id="full" type="button" title="Full screen for presenting (F)">⛶</button>
+  </div>
+  <p class="hint"><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> beats · <kbd>R</kbd> replay · <kbd>S</kbd> speed · <kbd>F</kbd> full screen · tap a segment to jump</p>
+  <p class="hint" id="credit"></p>
+</main>
+<script>
+const D = __DATA__;
+const T = D.tweaks;
+const $ = id => document.getElementById(id);
+const audio = new Audio();
+const SPEEDS = [1, 1.25, 1.5, 0.85];
+let i = 0, playing = false, timers = [], speed = 1;
+try { speed = +localStorage.getItem('reel.speed') || 1; } catch {}
+
+$('title').textContent = D.title;
+$('eyebrow').textContent = D.eyebrow;
+const total = D.beats.reduce((s, b) => s + b.dur + T['beat.gap'] + T['beat.lead'], 0);
+$('meta').textContent = `${D.beats.length} beats · ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')} · voice: ${D.voice}`;
+$('credit').innerHTML = D.figma ? `Slides made in <a class="quiet" href="${D.figma}" target="_blank" rel="noopener">Figma</a> · voice by Deepgram (${D.voice})` : '';
+$('progress').innerHTML = D.beats.map((_, k) => `<button class="seg" type="button" data-k="${k}" aria-label="Beat ${k + 1}">${k + 1}</button>`).join('');
+document.documentElement.style.setProperty('--dur', T['reveal.duration'] + 's');
+document.documentElement.style.setProperty('--rise', T['reveal.rise'] + 'px');
+
+function clear() { timers.forEach(clearTimeout); timers = []; }
+function later(fn, s) { timers.push(setTimeout(fn, s * 1000 / speed)); }
+function parts() { return [...$('slide').querySelectorAll('[id]')].filter(n => /^a\d+$/.test(n.id)).sort((a, b) => a.id.slice(1) - b.id.slice(1)); }
+function caption(frac) {
+  const words = D.beats[i].say.split(' '), n = Math.round(words.length * frac);
+  $('caption').innerHTML = `<span class="said">${words.slice(0, n).join(' ')}</span> <span class="unsaid">${words.slice(n).join(' ')}</span>`;
+}
+function marks() {
+  document.querySelectorAll('.seg').forEach((s, k) => { s.classList.toggle('on', k === i); s.classList.toggle('done', k < i); });
+}
+function show(k, autoplay = playing) {
+  clear(); audio.pause();
+  i = Math.max(0, Math.min(D.beats.length - 1, k));
+  const b = D.beats[i];
+  $('slide').innerHTML = b.svg;
+  const ps = parts();
+  ps.forEach(p => p.classList.add('rv'));
+  marks(); caption(0);
+  audio.src = b.audio; audio.playbackRate = speed;
+  if (!autoplay) { ps.forEach(p => p.classList.add('in')); caption(1); return; }
+  const gap = Math.min(T['reveal.maxGap'], (b.dur * T['reveal.spread']) / Math.max(1, ps.length - 1));
+  requestAnimationFrame(() => ps.forEach((p, n) => later(() => p.classList.add('in'), n === 0 ? 0 : n * gap)));
+  later(() => audio.play().catch(() => setPlaying(false)), T['beat.lead']);
+}
+function setPlaying(on) {
+  playing = on;
+  $('play').textContent = on ? 'Pause' : 'Play';
+  if (on) audio.play().catch(() => {});
+  else { audio.pause(); clear(); parts().forEach(p => p.classList.add('in')); }
+}
+audio.addEventListener('timeupdate', () => audio.duration && caption(audio.currentTime / audio.duration));
+audio.addEventListener('ended', () => {
+  caption(1);
+  if (i < D.beats.length - 1) later(() => show(i + 1), T['beat.gap']);
+  else { setPlaying(false); marks(); document.querySelectorAll('.seg').forEach(s => s.classList.add('done')); }
+});
+function start() { $('start').hidden = true; playing = true; $('play').textContent = 'Pause'; show(0, true); }
+$('go').onclick = start;
+$('play').onclick = () => { if (!$('start').hidden) return start(); if (playing) setPlaying(false); else { playing = true; $('play').textContent = 'Pause'; audio.ended || audio.currentTime === 0 ? show(i, true) : audio.play(); } };
+$('prev').onclick = () => { $('start').hidden = true; show(i - 1); };
+$('next').onclick = () => { $('start').hidden = true; show(i + 1); };
+$('replay').onclick = () => { $('start').hidden = true; playing = true; $('play').textContent = 'Pause'; show(i, true); };
+$('progress').onclick = e => { const s = e.target.closest('.seg'); if (s) { $('start').hidden = true; show(+s.dataset.k); } };
+function setSpeed(v) { speed = v; audio.playbackRate = v; $('speed').textContent = v + '×'; try { localStorage.setItem('reel.speed', v); } catch {} }
+$('speed').onclick = () => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]);
+$('full').onclick = () => document.fullscreenElement ? document.exitFullscreen() : $('stage').requestFullscreen?.();
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = { ' ': 'play', ArrowLeft: 'prev', ArrowRight: 'next', r: 'replay', s: 'speed', f: 'full' }[e.key];
+  if (k) { e.preventDefault(); $(k).click(); }
+});
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.metadata = new MediaMetadata({ title: D.title, artist: D.voice });
+  navigator.mediaSession.setActionHandler('previoustrack', () => $('prev').click());
+  navigator.mediaSession.setActionHandler('nexttrack', () => $('next').click());
+}
+setSpeed(SPEEDS.includes(speed) ? speed : 1);
+show(0, false);
+</script>
+</body>
+</html>

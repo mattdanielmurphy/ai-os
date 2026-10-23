@@ -1,0 +1,37 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1280" height="720" fill="#EEF2F6"/>
+<text id="a1" fill="#1D2A3A" style="white-space: pre" xml:space="preserve" font-family="Bricolage Grotesque" font-size="64" font-weight="bold"><tspan x="96" y="282.62">How a reel gets made</tspan></text>
+<g id="a2">
+<rect x="97" y="355.5" width="174" height="139" rx="17" fill="white"/>
+<rect x="97" y="355.5" width="174" height="139" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<text fill="#5D6B7C" font-family="JetBrains Mono" font-size="18" font-weight="500"><tspan x="120" y="397.48">01</tspan></text>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="28" font-weight="bold"><tspan x="120" y="435.24">Your </tspan><tspan x="120" y="464.24">update</tspan></text>
+</g>
+<text id="a3" fill="#9FB8D4" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="286" y="436.88">&#x2192;</tspan></text>
+<g id="a4">
+<rect x="324" y="355.5" width="174" height="139" rx="17" fill="white"/>
+<rect x="324" y="355.5" width="174" height="139" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<text fill="#5D6B7C" font-family="JetBrains Mono" font-size="18" font-weight="500"><tspan x="347" y="397.48">02</tspan></text>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="28" font-weight="bold"><tspan x="347" y="435.24">5&#x2013;8 </tspan><tspan x="347" y="464.24">beats</tspan></text>
+</g>
+<text id="a5" fill="#9FB8D4" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="513" y="436.88">&#x2192;</tspan></text>
+<g id="a6">
+<rect x="551" y="355.5" width="174" height="139" rx="17" fill="white"/>
+<rect x="551" y="355.5" width="174" height="139" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<text fill="#5D6B7C" font-family="JetBrains Mono" font-size="18" font-weight="500"><tspan x="574" y="397.48">03</tspan></text>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="28" font-weight="bold"><tspan x="574" y="435.24">Figma </tspan><tspan x="574" y="464.24">slides</tspan></text>
+</g>
+<text id="a7" fill="#9FB8D4" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="740" y="436.88">&#x2192;</tspan></text>
+<g id="a8">
+<rect x="778" y="355.5" width="174" height="139" rx="17" fill="white"/>
+<rect x="778" y="355.5" width="174" height="139" rx="17" stroke="#D6DEE8" stroke-width="2"/>
+<text fill="#5D6B7C" font-family="JetBrains Mono" font-size="18" font-weight="500"><tspan x="801" y="397.48">04</tspan></text>
+<text fill="#1D2A3A" font-family="Bricolage Grotesque" font-size="28" font-weight="bold"><tspan x="801" y="435.24">Maeve&#39;s </tspan><tspan x="801" y="464.24">voice</tspan></text>
+</g>
+<text id="a9" fill="#9FB8D4" font-family="Bricolage Grotesque" font-size="36" font-weight="bold"><tspan x="967" y="436.88">&#x2192;</tspan></text>
+<g id="a10">
+<rect x="1004" y="355.5" width="176" height="139" rx="18" fill="#D9822B"/>
+<text fill="white" font-family="JetBrains Mono" font-size="18" font-weight="500"><tspan x="1026" y="397.48">05</tspan></text>
+<text fill="white" font-family="Bricolage Grotesque" font-size="28" font-weight="bold"><tspan x="1026" y="435.24">Player</tspan></text>
+</g>
+</svg>
