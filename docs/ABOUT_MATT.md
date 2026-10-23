@@ -19,8 +19,10 @@ Ask him only if all of these come up empty, and say what you searched.
 - **Home/desk**: apartment in Edmonton; MacBook on a riser + external monitor, Logitech ergonomic keyboard and mouse, AirPods. Has a bike and a kettlebell.
 - **Car**: no CarPlay/Android Auto, uses his phone; has an old iPad mini he might mount as a dash screen. Buys gas around Edmonton / Fort Saskatchewan.
 - **Voice chat**: likes claude.ai voice for thinking out loud, then hands building to the project coordinator (`docs/VOICE_TASKS.md`). Calls are reviewed with the `_review-voice-calls` skill.
-- **Main projects**: ai-os (this repo, his agent setup), qwerty MIDI plugin, daily mini crossword (mattmurphy.ca).
-- **Working style**: procrastinates and rabbit-holes into big builds; keep steps small. Full preferences: `~/.claude/CLAUDE.md`.
+- **Sport**: plays in the U of A pickleball league as a free agent (paid $110, Fall 2026); games are at 9 pm.
+- **Main projects**: ai-os (this repo, his agent setup), qwerty MIDI plugin, daily mini crossword (mattmurphy.ca). Decided Oct 22 to build an anti-sycophancy AI therapist harness (not started; idea in `IDEAS.md`).
+- **Brother**: one of his brothers also builds software with Claude; they work well together. Family notes: vault `Family Relationships & Dynamics.md`.
+- **Working style**: procrastinates and rabbit-holes into big builds; keep steps small, but new projects are no longer flagged (Oct 22). Tends to feel he has to let people off the hook, then regrets it, and wants to change that. Full preferences: `~/.claude/CLAUDE.md`.
 
 ## Where things live
 | What | Where |

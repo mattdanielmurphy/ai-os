@@ -73,3 +73,12 @@ Options: docs/details/2026-10-22-cool-gif-sources.md. Status: built 2026-10-22 a
 Next idea (Matt, 2026-10-22): audience "Areas". The GIF you'd send a good buddy differs from one you'd send
 your mom, so separate areas (e.g. Buddies, Family, Work) each with their own sources and vibe, and stars filed
 per area. Status: idea; build on Matt's 👍.
+
+## Anti-sycophancy AI therapist harness (2026-10-22) — DECIDED, NOT STARTED
+From a voice call: Matt uses Claude as a pseudo-therapist (no filter with it, maybe better than a therapist
+he could get) but wants a harness that fights sycophancy. Pieces he named: multiple passes, possibly across
+different models; invert his argument and combine both answers; a blind judge that only sees the reply
+abstracted to agree/disagree symbols; and a reliable sycophancy test set. Open question he raised: does a
+top model beat a lesser one for therapy-style talk? A handoff doc was written during the voice call.
+Source: vault `Voice calls/2026-10-22 2016 Pickleball partner, anti-sycophancy harness idea.md`.
+Status: filed only; build on Matt's 👍.
