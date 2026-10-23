@@ -11,11 +11,19 @@ case "${1:-start}" in
     if running; then echo "already running (pid $(cat $pidf))"; exit 0; fi
     who="${2:-tyler}"; shift $(( $# > 1 ? 2 : 1 ))
     nohup bun "$here/call_transcript.ts" "$who" "$@" >"$logf" 2>&1 &
-    echo $! >"$pidf"; sleep 3
+    echo $! >"$pidf"; echo "$HOME/calls/$(date +%F)-$who.md" >"$HOME/calls/.transcript.current"; sleep 3
     if running; then echo "recording → ~/calls/$(date +%F)-$who.md"; tail -3 "$logf"
     else echo "failed:"; cat "$logf"; exit 1; fi ;;
   stop)
-    if running; then kill -INT "$(cat $pidf)"; sleep 3; rm -f "$pidf"; echo stopped; else echo "not running"; fi ;;
+    if running; then kill -INT "$(cat $pidf)"; sleep 3; rm -f "$pidf"; echo stopped; else echo "not running"; fi
+    # Save a copy to the Obsidian vault (QMD indexes it) and leave a pointer for the live_call hook.
+    md="$(cat "$HOME/calls/.transcript.current" 2>/dev/null)"
+    if [[ -f $md ]]; then
+      vault="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Personal/Calls"
+      mkdir -p "$vault"; cp "$md" "$vault/${md:t}"
+      echo "$vault/${md:t}" >"$HOME/calls/.transcript.last"
+      echo "saved → Obsidian Calls/${md:t}"
+    fi ;;
   status) running && echo "running (pid $(cat $pidf))" || echo "not running"; tail -5 "$logf" 2>/dev/null ;;
   tail) tail -f "$HOME/calls/$(date +%F)-${2:-tyler}.md" ;;
   *) echo "usage: call-transcript start [who] | stop | status | tail [who]"; exit 2 ;;
