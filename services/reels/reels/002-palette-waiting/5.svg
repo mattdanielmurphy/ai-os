@@ -1,0 +1,15 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1280" height="720" fill="#E1E2E3"/>
+<g id="a1"><circle cx="111" cy="231" r="7" fill="#2BD8D5"/><text fill="#616467" font-family="Martian Mono" font-size="18" font-weight="500" letter-spacing="0.06em"><tspan x="132" y="238.2">CH 05 &#x2014; Your move</tspan></text></g>
+<g id="a2"><rect x="105" y="282" width="250" height="174" rx="3" fill="#F7F8F8"/><rect x="105" y="282" width="250" height="174" rx="3" stroke="#C8C9CB" stroke-width="2"/>
+<text fill="#616467" font-family="Martian Mono" font-size="20" font-weight="500"><tspan x="128" y="324">01</tspan></text>
+<text fill="#1B1D1E" font-family="Big Shoulders Display" font-size="48" font-weight="800"><tspan x="128" y="382.504">OPEN THE</tspan><tspan x="128" y="428.504">BOARD</tspan></text></g>
+<g id="a3"><rect x="373" y="282" width="250" height="174" rx="3" fill="#F7F8F8"/><rect x="373" y="282" width="250" height="174" rx="3" stroke="#C8C9CB" stroke-width="2"/>
+<text fill="#616467" font-family="Martian Mono" font-size="20" font-weight="500"><tspan x="396" y="324">02</tspan></text>
+<text fill="#1B1D1E" font-family="Big Shoulders Display" font-size="48" font-weight="800"><tspan x="396" y="382.504">PICK A</tspan><tspan x="396" y="428.504">DIRECTION</tspan></text></g>
+<g id="a4"><rect x="641" y="282" width="250" height="174" rx="3" fill="#F7F8F8"/><rect x="641" y="282" width="250" height="174" rx="3" stroke="#C8C9CB" stroke-width="2"/>
+<text fill="#616467" font-family="Martian Mono" font-size="20" font-weight="500"><tspan x="664" y="324">03</tspan></text>
+<text fill="#1B1D1E" font-family="Big Shoulders Display" font-size="48" font-weight="800"><tspan x="664" y="382.504">TAP ~7</tspan><tspan x="664" y="428.504">HUES</tspan></text></g>
+<g id="a5"><rect x="908" y="282" width="252" height="174" rx="4" fill="#2BD8D5"/><text fill="#003030" font-family="Martian Mono" font-size="20" font-weight="500"><tspan x="930" y="324">04</tspan></text>
+<text fill="#003030" font-family="Big Shoulders Display" font-size="48" font-weight="800"><tspan x="930" y="382.504">PASTE YOUR</tspan><tspan x="930" y="428.504">PICKS</tspan></text></g>
+</svg>

@@ -1,0 +1,41 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1280" height="720" fill="#E1E2E3"/>
+<g id="a1"><circle cx="111" cy="171.5" r="7" fill="#2BD8D5"/><text fill="#616467" font-family="Martian Mono" font-size="18" font-weight="500" letter-spacing="0.06em"><tspan x="132" y="178.7">CH 03 &#x2014; New board</tspan></text></g>
+<text id="a2" fill="#1B1D1E" font-family="Big Shoulders Display" font-size="64" font-weight="800"><tspan x="104" y="258.672">THREE DIRECTIONS, SEEDED FROM REAL THINGS</tspan></text>
+<g id="a3">
+<rect x="105" y="287.5" width="996" height="74" rx="3" fill="#F7F8F8"/><rect x="105" y="287.5" width="996" height="74" rx="3" stroke="#C8C9CB" stroke-width="2"/>
+<text fill="#1B1D1E" font-family="Martian Mono" font-size="20" font-weight="500" letter-spacing="0.02em"><tspan x="124" y="332.5">APOTHECARY GLASS</tspan></text>
+<rect x="432" y="302.5" width="76" height="44" rx="2" fill="#1251B4"/>
+<rect x="514" y="302.5" width="76" height="44" rx="2" fill="#EB8900"/>
+<rect x="596" y="302.5" width="76" height="44" rx="2" fill="#ADCD4A"/>
+<rect x="678" y="302.5" width="76" height="44" rx="2" fill="#60A192"/>
+<rect x="760" y="302.5" width="76" height="44" rx="2" fill="#7A001D"/>
+<rect x="842" y="302.5" width="76" height="44" rx="2" fill="#A58AC5"/>
+<rect x="924" y="302.5" width="76" height="44" rx="2" fill="#DBE237"/>
+<rect x="1006" y="302.5" width="76" height="44" rx="2" fill="#825172"/>
+</g>
+<g id="a4">
+<rect x="105" y="385.5" width="996" height="74" rx="3" fill="#F7F8F8"/><rect x="105" y="385.5" width="996" height="74" rx="3" stroke="#C8C9CB" stroke-width="2"/>
+<text fill="#1B1D1E" font-family="Martian Mono" font-size="20" font-weight="500" letter-spacing="0.02em"><tspan x="124" y="430.5">PRAIRIE LIGHT</tspan></text>
+<rect x="432" y="400.5" width="76" height="44" rx="2" fill="#DAC814"/>
+<rect x="514" y="400.5" width="76" height="44" rx="2" fill="#619CC8"/>
+<rect x="596" y="400.5" width="76" height="44" rx="2" fill="#625C89"/>
+<rect x="678" y="400.5" width="76" height="44" rx="2" fill="#73A164"/>
+<rect x="760" y="400.5" width="76" height="44" rx="2" fill="#FF9564"/>
+<rect x="842" y="400.5" width="76" height="44" rx="2" fill="#92C1C6"/>
+<rect x="924" y="400.5" width="76" height="44" rx="2" fill="#36C277"/>
+<rect x="1006" y="400.5" width="76" height="44" rx="2" fill="#CF6EB6"/>
+</g>
+<g id="a5">
+<rect x="105" y="483.5" width="996" height="74" rx="3" fill="#F7F8F8"/><rect x="105" y="483.5" width="996" height="74" rx="3" stroke="#C8C9CB" stroke-width="2"/>
+<text fill="#1B1D1E" font-family="Martian Mono" font-size="20" font-weight="500" letter-spacing="0.02em"><tspan x="124" y="528.5">SYNTH PANEL</tspan></text>
+<rect x="432" y="498.5" width="76" height="44" rx="2" fill="#E10738"/>
+<rect x="514" y="498.5" width="76" height="44" rx="2" fill="#FF864E"/>
+<rect x="596" y="498.5" width="76" height="44" rx="2" fill="#DCC300"/>
+<rect x="678" y="498.5" width="76" height="44" rx="2" fill="#3BD951"/>
+<rect x="760" y="498.5" width="76" height="44" rx="2" fill="#2BD8D5"/>
+<rect x="842" y="498.5" width="76" height="44" rx="2" fill="#4A7EC3"/>
+<rect x="924" y="498.5" width="76" height="44" rx="2" fill="#9E6BBC"/>
+<rect x="1006" y="498.5" width="76" height="44" rx="2" fill="#DED2A6"/>
+</g>
+</svg>

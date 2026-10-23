@@ -1,0 +1,15 @@
+{
+  "note": "Synth-panel look: brushed-aluminium neutrals, VFD-teal and panel-orange from the 'Synth panel' palette candidate (design/candidates/directions.json). Condensed signage headings, mono labels, near-square corners.",
+  "fonts": {"display": "Big Shoulders Display", "body": "Hanken Grotesk", "mono": "Martian Mono"},
+  "google": "family=Big+Shoulders+Display:wght@700;800&family=Hanken+Grotesk:wght@400;500;700&family=Martian+Mono:wght@400;500",
+  "roles": {
+    "bg": ["#e1e2e3", "#1b1d1e"], "surface": ["#f7f8f8", "#282a2c"], "ink": ["#1b1d1e", "#f2f3f3"],
+    "muted": ["#616467", "#8f9195"], "line": ["#c8c9cb", "#383a3d"],
+    "accent": ["#2bd8d5", "#2bd8d5"], "accent-ink": ["#003030", "#003030"], "deep": ["#006f6e", "#2bd8d5"],
+    "warm": ["#ff864e", "#ff864e"], "warm-ink": ["#4a1d07", "#4a1d07"], "sky": ["#4a7ec3", "#6193d7"],
+    "good": ["#007418", "#05a82f"], "bad": ["#c90029", "#ff545f"],
+    "good-bg": ["#88fa8f", "#003205"], "bad-bg": ["#ffd8d6", "#5d0006"]
+  },
+  "aliases": {},
+  "css": "h1{font-weight:800;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(34px,8vw,52px)} .eyebrow,.seg,.hint,.meta{font-family:var(--mono)} .stage{border-radius:6px;border-width:2px} .btn{border-radius:4px;font-family:var(--mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase} .seg::before{height:6px;border-radius:1px} .seg.on::before{box-shadow:0 0 10px var(--accent)} .caption{font-size:21px} .btn.primary{color:var(--accent-ink)}"
+}

@@ -4,10 +4,27 @@
   "voice": "maeve",
   "figma": "https://www.figma.com/design/xg900viuh141OazDkdNbWF",
   "beats": [
-    {"svg": "1.svg", "say": "Hey Matt, it's Maeve. This is your first explainer reel. Instead of reading walls of text, you just press play."},
-    {"svg": "2.svg", "say": "Here's how one gets made. Claude cuts a long update into a few short beats, draws each one in Figma, and I'll read them out to you."},
-    {"svg": "3.svg", "say": "Each reel is five to eight beats, about fifteen words each. So it's over in a minute or two."},
-    {"svg": "4.svg", "say": "Before, you skimmed paragraphs and stuff slipped past. Now you press play and listen while you keep working."},
-    {"svg": "5.svg", "say": "The same player works for thread updates, studying, and presenting anything to anyone. Tell me what you'd change."}
-  ]
+    {
+      "svg": "1.svg",
+      "say": "Hey Matt, it's Maeve. This is your first explainer reel. Instead of reading walls of text, you just press play."
+    },
+    {
+      "svg": "2.svg",
+      "say": "Here's how one gets made. Claude cuts a long update into a few short beats, draws each one in Figma, and I'll read them out to you."
+    },
+    {
+      "svg": "3.svg",
+      "say": "Each reel is five to eight beats, about fifteen words each. So it's over in a minute or two."
+    },
+    {
+      "svg": "4.svg",
+      "say": "Before, you skimmed paragraphs and stuff slipped past. Now you press play and listen while you keep working."
+    },
+    {
+      "svg": "5.svg",
+      "say": "The same player works for thread updates, studying, and presenting anything to anyone. Tell me what you'd change."
+    }
+  ],
+  "theme": "kit",
+  "pace": 1.0
 }

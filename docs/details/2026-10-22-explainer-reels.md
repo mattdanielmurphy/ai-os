@@ -212,3 +212,60 @@ Filed in IDEAS.md and passed to the coordinator for its own thread; out of this 
 
 Untested: how the one-take version sounds to a human ear. Undo: previous audio is in
 ~/.Trash/reel-old-audio; artifact version 1 still exists in its history.
+
+## 23:00 Reel 2, de-Claude, faster
+
+Matt: reel 1 looks stock ("screams AI-generated"); wants a rule against Claude-default design, a
+de-Claude'd look with different fonts and colours, faster narration by default (slow feels
+condescending) with slow still available for hard topics, and a new reel about an unrelated thread
+that's waiting on him.
+
+---
+
+### New design rule
+
+Saved as "No Claude-default look" in `.rules/core_safety.md` (compiled), `~/.claude/CLAUDE.md` and
+memory. Bans the stock kit (Bricolage / Source Serif / JetBrains Mono / Inter, cream backgrounds, lone
+orange accent, serif+grotesque pairing, generic card grids); every app gets its own fonts and quirks;
+colours by role from the palette candidates until the master palette is picked. Tension: the older
+"never invent a colour" rule says no new colours until the palette is picked. I resolved it by taking
+every reel-2 colour from the existing "Synth panel" candidate in `design/candidates/directions.json`,
+not inventing any.
+
+---
+
+### New look
+
+Theme `panel`: brushed-aluminium neutrals, VFD-teal accent (#2bd8d5) with dark-teal ink, panel-orange
+warning chips, Big Shoulders Display (condensed signage headlines), Hanken Grotesk body, Martian Mono
+labels; "CH 01 —" channel labels with an LED dot, near-square corners, uppercase mono buttons. Reels are
+now themeable (`themes/*.json`: fonts + [light, dark] per role); the build maps the theme's light hexes
+in Figma's SVG to role classes. Reel 1 stays on the old kit theme as the "before". Untested choice:
+whether the synth-panel candidate biases his palette pick (it's one of the three options he's choosing
+between).
+
+---
+
+### Pace
+
+The voice take is now generated at Deepgram speed 1.15 by default (tweak `voice.pace`), gaps between
+beats are shorter (0.45 s). The player's Pace button cycles Normal / Quick (×1.2) / Gentle (×0.78),
+remembered per device.
+
+---
+
+### Which thread
+
+Waiting-on-Matt threads (status need_input): Suite master palette, Shared app architecture
+constraints, Live chord and bass display, Open threads roundup, Voice-friendly morning check-in, and
+two reply-review threads. Picked **Suite master palette**: its last message asks him to pick a direction
+on the palette board, it's unrelated to reels, and it pairs with the de-Claude rule. "Unread" isn't
+visible to me; I picked by "waiting on him".
+
+---
+
+### Reel 2
+
+https://claude.ai/artifact/2oVcSYhSMspspNPSA3dWQR, 6 beats, ~44 s. Slides on Figma page
+"Reel 02 · Palette". Checked: each clip transcribes to exactly its line; light and dark render; one
+card label overflowed and was shortened in both Figma and the SVG. Untested: sound by ear, iPhone.

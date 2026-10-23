@@ -1,0 +1,15 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1280" height="720" fill="#E1E2E3"/>
+<g id="a1"><circle cx="111" cy="204" r="7" fill="#2BD8D5"/>
+<text fill="#616467" font-family="Martian Mono" font-size="18" font-weight="500" letter-spacing="0.06em"><tspan x="132" y="211.2">CH 02 &#x2014; What went wrong</tspan></text></g>
+<text id="a2" fill="#1B1D1E" font-family="Big Shoulders Display" font-size="84" font-weight="800"><tspan x="104" y="316.382">ROUND 1 USED THE STOCK RECIPE</tspan></text>
+<g id="a3">
+<rect x="104" y="354" width="78" height="64" rx="2" fill="#D74242"/><rect x="188" y="354" width="78" height="64" rx="2" fill="#D78C42"/>
+<rect x="272" y="354" width="78" height="64" rx="2" fill="#D7D742"/><rect x="356" y="354" width="78" height="64" rx="2" fill="#8CD742"/>
+<rect x="440" y="354" width="78" height="64" rx="2" fill="#42D742"/><rect x="524" y="354" width="78" height="64" rx="2" fill="#42D78C"/>
+<rect x="608" y="354" width="78" height="64" rx="2" fill="#42D7D7"/><rect x="692" y="354" width="78" height="64" rx="2" fill="#428CD7"/>
+<rect x="776" y="354" width="78" height="64" rx="2" fill="#4242D7"/><rect x="860" y="354" width="78" height="64" rx="2" fill="#8C42D7"/>
+<rect x="944" y="354" width="78" height="64" rx="2" fill="#D742D7"/><rect x="1028" y="354" width="78" height="64" rx="2" fill="#D7428C"/>
+</g>
+<text id="a4" fill="#616467" font-family="Hanken Grotesk" font-size="30" font-weight="500"><tspan x="104" y="477.955">Hues spaced evenly round the wheel = how Tailwind does it. So it looked </tspan><tspan x="104" y="516.955">like everyone else.</tspan></text>
+</svg>

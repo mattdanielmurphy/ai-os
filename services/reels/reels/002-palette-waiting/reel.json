@@ -1,0 +1,16 @@
+{
+  "title": "Your palette is waiting on you",
+  "eyebrow": "Reel 02 · Suite master palette",
+  "voice": "maeve",
+  "theme": "panel",
+  "figma": "https://www.figma.com/design/xg900viuh141OazDkdNbWF",
+  "source": "Suite master palette thread (cmsg_01CUPXyY9oUwKVDFREVDpYDr5AXhLP72UfH8xJEcN1433W)",
+  "beats": [
+    {"svg": "1.svg", "say": "Quick one. The suite's colour palette is stuck on a single decision, and it's yours."},
+    {"svg": "2.svg", "say": "Round one spaced its hues evenly around the colour wheel. That's Tailwind's recipe, so it looked like everyone else's."},
+    {"svg": "3.svg", "say": "So the new board has three directions, each seeded from something real: apothecary glass, prairie light, and a synth panel."},
+    {"svg": "4.svg", "say": "Every hue was checked against nine hundred and eighty-six stock colours. Five strong reds and blues are still close, and they're flagged."},
+    {"svg": "5.svg", "say": "Your move: open the board, pick a direction, tap about seven hues, and paste your picks into the palette thread."},
+    {"svg": "6.svg", "say": "Once you pick, every app pulls its colours from that one palette. This reel included. No more stock look."}
+  ]
+}
