@@ -1,4 +1,4 @@
-# Exemplars: the bar for the MDMA suite
+# Exemplars: the bar for Slub Utils
 
 Indie Mac developers whose work sets the standard for Matt's suite of utilities. Before calling an app,
 HUD, website or onboarding flow done, check it against the "Steal this" lines below.
@@ -25,7 +25,7 @@ Researched 2026-10-22 from each developer's own site.
 ## The Low-Tech Guys: [lowtechguys.com](https://lowtechguys.com)
 
 Two developers in Romania ("guy #1" and "guy #2") with paid apps (rcmd, Clop, Lunar, Cling, Keylume, Pipiri, Crank)
-and many tiny free ones (Barglider, Grila, IsThereNet, YellowDot, Music Decoy). Closest match to MDMA:
+and many tiny free ones (Barglider, Grila, IsThereNet, YellowDot, Music Decoy). Closest match to Slub Utils:
 a suite of sharp, single-purpose Mac utilities.
 
 - **Site:** a plain card grid, icon + bold name + two-line tagline, grouped Paid / Free / Extensions.

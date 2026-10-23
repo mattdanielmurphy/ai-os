@@ -1,4 +1,4 @@
-# MDMA exemplars reference
+# Slub Utils exemplars reference
 
 ## 23:55 Exemplars doc written
 
@@ -27,3 +27,16 @@ Low-Tech Guys first (closest match: a suite of single-purpose Mac utilities). Ro
 - `ARCHITECTURE.md` §6 still says "orange in general is fine", which contradicts the 2026-10-23 orange ban. Left for the palette thread.
 
 **Undo:** revert the commit.
+
+## 06:10 Suite renamed to Slub Utils
+
+**Asked:** stop saying "MDMA"; the new working name is Slub Utils.
+
+**Did:** renamed it in EXEMPLARS.md, ARCHITECTURE.md (intro + brand line) and the suite rule in `.rules/core_safety.md` (rebuilt), renamed this details file, saved a memory (`suite-name-slub-utils`).
+
+---
+
+### Not changed yet
+
+- `~/.hammerspoon/modules/brand.lua` still says MDMA; it feeds UI strings, so changing it is a separate code change.
+- Old thread titles ("MDMA Appothecary logo") and older details files keep the old name.
