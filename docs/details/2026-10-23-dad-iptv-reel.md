@@ -31,3 +31,6 @@ Undo: git revert this commit.
 - Back arrow while playing now pauses (no auto-advance) until Play is pressed. Next arrow unchanged.
 - "Reel 04" removed from eyebrow and slide 1.
 - Untested by ear/eye; headless test passes. Undo: git revert.
+
+## 23:45 Slide progress line
+- Added a thin line along the bottom of the stage that travels left to right over each slide (voice + pause + linger), so a lingering slide never looks finished. Pauses when paused, resets per slide, empty when not playing. In template.html (all reels). Untested by eye. Undo: git revert.
