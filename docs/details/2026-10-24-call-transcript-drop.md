@@ -40,6 +40,26 @@ Tested with a stub transcriber in a scratch HOME: kill -> restart + alert; crash
 
 ### Live swap and lost audio
 
-At 16:17:39 the live transcript was restarted under the supervisor (gap ~3 s). The 15:10-16:13 hour has no audio backup either (the recorder stopped with the transcriber), so that part of the call is lost.
+At 16:17:39 the live transcript was restarted under the supervisor (gap ~3 s). (Corrected below: the hour was not lost; Audio Hijack had it.)
 
 Undo: revert the commits in ai-os (scripts/call-transcript, scripts/call_transcript.ts) and ~/.hammerspoon, then copy the scripts back into ~/.local/share/call-transcript/.
+
+## 16:35 Lost hour recovered from Audio Hijack
+
+Matt pointed out Audio Hijack was recording the whole call (`~/Music/Audio Hijack/20261024 1303 Recording.mp3`, started 13:03:58). I was wrong that the hour was lost.
+
+---
+
+### Transcribing the gap
+
+Cut 15:09:30-16:14:15 from the recording (`~/calls/recovery/seg.mp3`) and sent it to Deepgram prerecorded (nova-3, multichannel, utterances) with the new `scripts/call_recover.ts`. Left channel = Tyler, right = Matt, confirmed against the overlapping live lines. 1006 lines for 15:10:36-16:13:45.
+
+Clock alignment: matching phrases in the overlap ("incentivize community members", "cross compatible") showed the recording's utterance starts ~15 s earlier than the live stamps (live stamps when a phrase is finalised, near its end). Shifted by +15 s; good to about ±5 s, noted in the inserted marker.
+
+---
+
+### Merge when the call ends
+
+Splicing now would race the live transcriber appending to the same file, so a detached waiter (`~/calls/recovery/splice.sh`, log `splice.log`) polls every 30 s. When the transcript stops it inserts `gap.md` just before the `session started 16:13:45` marker (backup at `.md.bak`), refreshes the Obsidian copy, and sends a toast. Tested the insert on a copy.
+
+Risk: if the transcript is never stopped (e.g. Mac sleeps with it running), the merge waits up to 12 h then runs anyway.
