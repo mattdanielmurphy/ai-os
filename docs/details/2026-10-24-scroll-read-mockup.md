@@ -49,3 +49,35 @@ What Matt asked (via the coordinator): a quick interactive mockup of the scroll-
 ### Undo
 
 - `pages` has no delete; move `~/projects/pages/site/scroll-read` to the Trash and `pages deploy` again.
+
+## 11:50 Drag scroll, list fix, Speechify voice
+
+Matt asked: middle-button drag to scroll on desktop (not Windows-style autoscroll; maybe a "third stage" later), fix the squashed numbered list in his screenshot, and swap the device voice for the new Speechify TTS.
+
+---
+
+### List words fix
+
+The numbered list items are a 2-column grid (number, text). Wrapping each word in a span made every word its own grid cell, so words stacked in two columns. Fix: the text now sits in one `<span data-read>` inside each `<li>`, so the grid has just the number and that span.
+
+---
+
+### Middle drag scroll
+
+Middle button down → the page follows the mouse like a finger (drag up = page moves up). It counts as a scroll gesture, so a big drag still makes the highlight let go and fly to the centre, and releasing resumes reading there. Default autoscroll and middle-click paste are blocked; the cursor shows a grabbing hand and text selection is off while dragging, so left-drag highlighting is untouched. Hint added to the desktop hint line. The "keep holding to keep scrolling" third stage is recorded in services/reels/IDEAS.md, not built.
+
+---
+
+### Speechify narration
+
+The page can't call the API (key would be public), so `site/scroll-read/build_audio.py` renders one mp3 per readable block with ai-os `services/reels/tts.py` (simba-3.2, beatrice_32) and writes `public/audio/manifest.json` with each page word's start time, aligned to Speechify's word marks (all 16 blocks matched in order). The page plays the clip for the current block from the current word and drives the highlight from the audio clock; at the end of a block it moves to the next clip. Jumping (tap a word, or the big-scroll snap) seeks within the clip. The speed slider changes playback rate (230 wpm = 1×). Rebuilds only re-render blocks whose text changed. ~770 KB of audio.
+
+Rejected: calling Speechify live from the page (exposes the key); one long clip for the whole page (simpler seeking per block, cheaper re-renders).
+
+---
+
+### Tested and untested
+
+Tested headless (Chrome, muted) locally and on the deployed link: list items have one text child, middle drag scrolls 300 px, voice loads the Speechify clip and the highlight advances with it. Not tested: real iPhone audio (iOS sometimes blocks the next clip's autoplay after a block ends), and how it sounds. The orphan checker flags "Space" in the desktop hint; that's a false positive from the key-cap box sitting at a different height than the text.
+
+Undo: `git revert 3dad30f` in ~/projects/pages, then `pages deploy`.

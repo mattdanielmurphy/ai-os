@@ -13,3 +13,5 @@ Matt's ideas for reels, recorded as he gave them. Nothing here is built until he
 - **Ambient music generator script**: background music from a random seed, no or truly minimal inference. (Real-musician rule doesn't block this: it's procedural, not AI-generated music.)
 - **Small sound effects** for text appearing and transitions.
 - **Auto read-aloud can be turned off**; if the device is muted, narration isn't generated automatically.
+
+- **Scroll-to-read: middle-drag "third stage" (Matt, 2026-10-24).** Middle-button drag now moves the page like a finger. Maybe later: keep holding past a point and it keeps scrolling on its own (Windows-style autoscroll). Deferred to keep it simple.
