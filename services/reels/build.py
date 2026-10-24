@@ -12,7 +12,7 @@ with the roles' LIGHT hexes; the build swaps them for role classes so slides fol
 colours (e.g. swatches shown as content) are left alone. Every reel should get its own theme or a
 deliberate one; never the stock kit (No Claude-default look rule).
 
-Voice: the whole script is read in one Deepgram take at `pace` (default: tweak voice.pace), then cut per
+Voice: the whole script is read in one Speechify take at `pace` (default: tweak voice.pace), then cut per
 beat by word timings (see one_take), cached in REEL_DIR/audio/.
 Music: optional `music` (path to a loop) plays under the voice, side-chain ducked in the player. The build
 trims it to what the reel can use (Gentle pace included), evens its loudness and fades its ends.

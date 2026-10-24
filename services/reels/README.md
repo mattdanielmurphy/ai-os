@@ -1,6 +1,6 @@
 # Explainer reels
 
-Turns a long update into a short narrated, animated slideshow: Figma slides, a Deepgram voice, one
+Turns a long update into a short narrated, animated slideshow: Figma slides, a Speechify voice, one
 self-contained player page (light/dark, phone-friendly, keyboard hints on screen).
 
 **Just for Matt for now**, built self-contained so it can go public later.
@@ -15,7 +15,7 @@ self-contained player page (light/dark, phone-friendly, keyboard hints on screen
 2. `reel.json`: `title`, `eyebrow`, `voice` + `voices` (default `pandora`, `gemma`, `maeve`), `theme` (`panel`),
    `music` (a loop path), and 5–8 `beats` (`say`: one spoken line, ~15–30 words; `svg`). The slide shows
    the facts; the voice says them conversationally. Don't repeat the narration as slide text word for word.
-3. `python3 build.py reels/<nnn-slug>` (run it backgrounded; first build calls Deepgram once per voice).
+3. `python3 build.py reels/<nnn-slug>` (run it backgrounded; first build calls Speechify once per voice).
 4. `./test.sh reels/<nnn-slug>` (backgrounded): headless, muted, checks errors, ducking, flash, fit.
    Never open a reel in the Claude browser pane.
 5. Publish `reel.html` with the Artifact tool; reply with the link plus the usual ≤ 50-word summary.
@@ -30,9 +30,9 @@ Never the stock kit look (rule: No Claude-default look); `kit.json` exists only 
 
 ## Cloud sessions
 
-Cloud sessions build reels too. The Deepgram key never enters the VM: the cloud environment holds it as a
+Cloud sessions build reels too. The Speechify key never enters the VM: the cloud environment holds it as a
 **network secret** (claude.ai/code → edit environment → Network secrets → Add secret: host
-`api.deepgram.com`, header `Authorization`, prefix `Token`, value = the key), and Anthropic's proxy attaches
+`api.speechify.ai`, header `Authorization`, prefix `Bearer`, value = the key), and Anthropic's proxy attaches
 it. `tts.py` sends no key when `CLAUDE_CODE_REMOTE=true` and none is set. No system ffmpeg there:
 `build.py` pip-installs `imageio-ffmpeg`. Missing music loop → `music/default.m4a`. `test.sh` installs
 playwright-core with npm (bun can't fetch through the cloud proxy) and uses Playwright's Chromium.
@@ -40,9 +40,10 @@ Then publish with the Artifact tool as usual.
 
 ## Voices
 
-`tts.py <voice> "<text>" out.mp3` uses Deepgram Flux TTS (`flux-<voice>-en`, key `DEEPGRAM_API_KEY`
-in ai-os `.env`). Non-American feminine voices: **maeve** (Irish), **gemma** (British), **sharon**
-(Australian). Samples in `samples/`.
+`tts.py <voice> "text" out.mp3` uses Speechify (model `simba-3.2`, default voice `beatrice_32`, text
+normalization off, key `SPEECHIFY_API_KEY` in ai-os `.env`). The API returns word timings, so there is no
+speech-to-text pass. Pauses are SSML `<break>`s (beats are joined by one), pace is SSML prosody rate.
+Old Deepgram samples in `samples/` are history.
 
 ## Feel knobs
 
