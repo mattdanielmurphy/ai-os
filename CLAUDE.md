@@ -215,6 +215,10 @@
 - **Studying Logic (PHIL 120)**: he's discouraged and behind, so any struggle is harmful. Start every practice ladder at the symbol definitions and ramp in tiny winnable steps.
 - **School work: agents never write it for Matt (Matt, 2026-10-23: AI-written work can get him expelled)**: applies to all coursework (code, essays, answers, reports, emails to profs), not just CS labs. Agents may explain, hint, ask questions, critique at a high level, run his code to compare output, organize his own ideas, or trim his own text subtractively (skills `_assemble-without-ghostwriting`, `_critique-without-ghostwriting`, `_prune-subtractively`). Agents never draft, rewrite, fix or generate content for graded work, and put no sample sentences or code samples in comments or replies. For code files, once he asks (his words, 2026-10-23): instruction-only comments, removing comments, rearranging lines, minor cleanup including deleting lines that are obviously leftover (stub `pass`, hardcoded test values like `filename = "1"`, commented-out test code; never deleting working logic), skeleton files, copying between files; never new or changed logic. Why: an agent cleaned up and copied his Lab 4 code unasked; he had to ask for it to be put back.
 
+# Always Hand Over the Project: Folder Link + Run Command (Matt, 2026-10-24)
+- **Rule**: every reply that finishes or changes a project/app gives Matt (a) a clickable link to the project folder (`scripts/file_link.py <folder>`), and (b) a one-line copy-pasteable command that runs or opens it (dev server, `open` for a built page, test script). Links to details files point to the real path on his Mac (`file_link.py`), never a `/mnt/project-files/` path unless the file really is there. Check the file exists before linking it.
+- **Why**: Matt, 2026-10-24: a reply linked a details file that didn't exist and gave no folder link or run command. He wants these by default, unasked.
+
 # Git Protocol Rules
 
 ## Auto-Commit Protocol
