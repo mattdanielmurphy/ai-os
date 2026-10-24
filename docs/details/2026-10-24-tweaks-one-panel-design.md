@@ -63,3 +63,45 @@ Added balance/pretty + two `&nbsp;` bindings to the design page, redeployed. New
 In ai-os `IDEAS.md`. Order of defences: CSS first (free), then &nbsp; binding, then detect leftovers with orphans.cjs and have a cheap model (Haiku) rephrase only that line. The LLM step is cheap per line but needs a build step that knows the copy source; it suits static pages, not live text. Shrinking text rejected (Matt's own point: mixed heading sizes look bad).
 
 Undo: revert the rule commit; remove the CSS lines from the page.
+
+## 07:45 Step 1 built: Tweaks panel runs on Knobs
+
+**Asked:** Matt 👍'd option A. Step 1 = the Knobs component, and the panel switches to it with likely set, folds, search, copy name.
+
+---
+
+### What is live
+
+- `~/projects/ui-mixer/knobs/knobs.js` + `knobs.css`: dependency-free component. Knob kind follows the value (number → slider + number field, bool → switch, hex → colour, `choices` → chips, else text). Key `fade.hold` → section "Fade", label "Hold".
+- Tweaks panel (`~/.hammerspoon/modules/tweaks_panel.html/.lua`) now inlines Knobs instead of Tweakpane (moved to Trash). All old features kept: follow focus/pin, Apply (+ rebuild), Reset all, presets, open project/file, notes, Esc closes.
+- New: Likely set, summarised folds, per-section Reset, search, copy name, ⌘Z/⇧⌘Z.
+
+---
+
+### How Likely works
+
+Only for apps with more than 8 knobs (small apps just show every section open). Up to 6 knobs: those marked `likely` in the file (future), moved before, or changed from default; most-moved first. Moves are counted in `hs.settings` `tweaksPanel.usage`, one count per drag (2 s debounce). The set is decided when the panel renders, so knobs don't jump while you drag. Likely rows show their section name in the note.
+
+---
+
+### How search works
+
+Offline fuzzy match over label, key, note, tags, section and app; every typed word must match. A small plain-word map helps ("slow"/"fast" → timings, "big" → sizes, "faint" → opacity). "/" or ⌘F focuses it; Esc clears it (a second Esc closes the panel). No AI fallback yet (step 4).
+
+---
+
+### Shared module
+
+Source of truth is `ui-mixer/knobs/`; `knobs/sync.sh` copies it into `~/.hammerspoon/vendor/knobs/` (Hammerspoon pages load through `wv:html()`, so files are inlined, and the public Hammerspoon export can't depend on `~/projects`). Rejected: reading straight from `~/projects/ui-mixer` (breaks the export).
+
+---
+
+### Tested
+
+Headless WebKit test with the real reels (20 knobs) and reload-indicator files: 21 checks pass (likely order, folds, summaries, slider → set, undo, in-place update, search, Esc, copy, Apply, presets, picker, no sideways scroll at 360 px, no errors light/dark). Lua tests pass; Hammerspoon reloaded and the inlining checked inside it.
+
+**Not tested:** the real window on screen (I didn't open it; it would change your screen). Clipboard copy inside the real webview (headless used the fallback path).
+
+**Not done yet:** the UI Mixer's own rail still uses the old shell; moving it onto Knobs is next. Steps 2–4 (agent rule + scanner, picker, ask-an-agent/AI search) wait.
+
+**Undo:** `git revert` 01c9a10 in ~/.hammerspoon (restores Tweakpane from git history).
