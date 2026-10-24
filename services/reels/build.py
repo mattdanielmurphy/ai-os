@@ -12,7 +12,7 @@ with the roles' LIGHT hexes; the build swaps them for role classes so slides fol
 colours (e.g. swatches shown as content) are left alone. Every reel should get its own theme or a
 deliberate one; never the stock kit (No Claude-default look rule).
 
-Voice: the whole script is read in one Speechify take at `pace` (default: tweak voice.pace), then cut per
+Voice: the whole script is read in one Speechify take at `pace` (default: tweak voice.rate), then cut per
 beat by word timings (see one_take), cached in REEL_DIR/audio/.
 Music: optional `music` (path to a loop) plays under the voice, side-chain ducked in the player. The build
 trims it to what the reel can use (Gentle pace included), evens its loudness and fades its ends.
@@ -22,7 +22,7 @@ import argparse, base64, difflib, hashlib, json, re, shutil, subprocess, sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-from tts import speak, words  # noqa: E402
+from tts import OLD_VOICES, OPTS, speak, words  # noqa: E402
 
 
 def theme_css(theme: dict) -> str:
@@ -81,17 +81,24 @@ def norm(w: str) -> str:
     return re.sub(r"[^a-z0-9']", "", w.lower())
 
 
-def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Path]:
+def voice_opts(tweaks: dict) -> dict:
+    """Speechify settings from the voice.* knobs (tts.OPTS lists them); voice.rate is passed as `pace`."""
+    return {k: tweaks[f"voice.{k}"] for k in OPTS if k != "rate" and f"voice.{k}" in tweaks}
+
+
+def one_take(lines: list[str], voice: str, pace: float, folder: Path, opts: dict | None = None):
     """Read the whole script in ONE TTS call (one consistent voice, no energy drop at every line end),
-    then cut it into per-beat clips. Cut points come from speech-to-text word timings: halfway between
-    the last word of one beat and the first word of the next. Cached by voice + pace + full script."""
-    tag = hashlib.sha1((f"speechify-v2|{voice}|{pace}|" + "\n".join(lines)).encode()).hexdigest()[:12]
+    then cut it into per-beat clips. Cut points come from the API's word timings: halfway between
+    the last word of one beat and the first word of the next. Cached by voice + every Speechify setting + script.
+    Returns (clips, tag, timings): timings[k] = that beat's words [[start, end], …] in seconds from the clip start."""
+    opts = opts or {}
+    # v3: v2 sent rate="115%", which Speechify reads as +115% (more than double speed)
+    key = f"speechify-v3|{voice}|{pace}|" + json.dumps(opts, sort_keys=True) + "|"
+    tag = hashlib.sha1((key + "\n".join(lines)).encode()).hexdigest()[:12]
     clips = [folder / f"{tag}-{k + 1}.mp3" for k in range(len(lines))]
-    if all(c.exists() for c in clips):
-        return clips, tag
     full = folder / f"{tag}-full.mp3"
     if not full.exists():
-        speak(voice, "\n\n...\n...\n\n".join(lines), full, speed=pace)
+        speak(voice, "\n\n...\n...\n\n".join(lines), full, speed=pace, **opts)
     heard = [w for w in words(full) if norm(w["word"])]
     said, owner = [], []
     for k, line in enumerate(lines):
@@ -114,10 +121,14 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
             sys.exit(f"couldn't place the cut before beat {k + 1}; check the script against the audio")
         cuts.append(round((last + first) / 2, 3))
     cuts.append(end)
+    timings = [[[round(w["start"] - cuts[k], 3), round(w["end"] - cuts[k], 3)]
+                for w, o in zip(heard, beat_of) if cuts[k] <= w["start"] < cuts[k + 1]] for k in range(len(lines))]
+    if all(c.exists() for c in clips):
+        return clips, tag, timings
     for k, clip in enumerate(clips):
         subprocess.run([ffmpeg(), "-nostdin", "-y", "-v", "error", "-i", str(full), "-ss", str(cuts[k]), "-to", str(cuts[k + 1]),
                         "-c:a", "libmp3lame", "-b:a", "64k", str(clip)], check=True)
-    return clips, tag
+    return clips, tag, timings
 
 
 def music_bed(src: Path, seconds: float, folder: Path) -> Path:
@@ -139,8 +150,9 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
     tweaks = {k: v["value"] for k, v in json.loads((HERE / "tweaks.json").read_text())["tweaks"].items()}
     theme = json.loads((HERE / "themes" / f"{reel.get('theme', 'panel')}.json").read_text())
     voice_given = bool(voice)
-    voice = voice or reel.get("voice", "maeve")
-    pace = reel.get("pace", tweaks["voice.pace"])
+    voice = voice or reel.get("voice") or tweaks.get("voice.id")
+    pace = reel.get("pace", tweaks["voice.rate"])
+    opts = voice_opts(tweaks)
     audio = reel_dir / "audio"
     audio.mkdir(exist_ok=True)
     # every voice in `voices` is baked in (one take each); the player's Voice button switches between them
@@ -150,15 +162,17 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
     for name in names:
         made = []
         for t in range(takes):
-            clips, tag = one_take([b["say"] for b in reel["beats"]], name, round(pace + (0.03 * ((t + 1) // 2) * (1 if t % 2 else -1)), 2), audio)
+            sid = tweaks.get("voice.id") or name if name in OLD_VOICES else name  # old Deepgram names → the Speechify default
+            clips, tag, timings = one_take([b["say"] for b in reel["beats"]], sid, round(pace + (0.03 * ((t + 1) // 2) * (1 if t % 2 else -1)), 2), audio, opts)
             sc = audio / f"{tag}.score"
-            made.append((float(sc.read_text()) if sc.exists() else 0.0, t, clips))
+            made.append((float(sc.read_text()) if sc.exists() else 0.0, t, clips, timings))
         made.sort(key=lambda m: (-m[0], m[1]))
-        for rank, (score, t, clips) in enumerate(made):
+        for rank, (score, t, clips, timings) in enumerate(made):
             print(f"{name} take {t + 1}: heard {score:.1%} of the script" + (" (default)" if rank == 0 else ""))
             voices.append({"name": name.title() + (f" take {rank + 1}" if takes > 1 else ""), "beats": [
-                {"dur": duration(mp3), "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
-                for mp3 in clips]})
+                {"dur": duration(mp3), "words": timings[k],
+                 "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
+                for k, mp3 in enumerate(clips)]})
     page = any("slide" in b for b in reel["beats"])  # new player: the page is the slide, laid out from JSON
     beats = []
     for b in reel["beats"]:
@@ -172,7 +186,8 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
             beats.append({"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": say})
     data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voices[0]["name"],
             "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None,
-            "built": __import__("datetime").datetime.now().strftime("%b %d %H:%M")}
+            "built": __import__("datetime").datetime.now().strftime("%b %d %H:%M"),
+            "baked": {"rate": pace, **opts}}
     music = music or reel.get("music")
     if music:
         src = (reel_dir / Path(music).expanduser()).resolve()
@@ -196,10 +211,20 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
     return out
 
 
+# tweaks.json knob -> look key (look.json holds palette and fonts; these feel knobs live in Tweaks)
+LOOK_KNOBS = {"subtitle.size": "sub", "subtitle.gap": "subGap", "subtitle.mode": "subMode", "layout.width": "width",
+              "layout.tableWidth": "tableWide", "layout.lower": "lower", "layout.space": "space", "text.title": "title",
+              "text.size": "text", "bars.length": "barLen", "bars.thickness": "thickness", "bars.dot": "dot",
+              "bars.lineFade": "lineFade", "controls.size": "ctlSize", "controls.fade": "ctlFade",
+              "controls.progress": "progress"}
+
+
 def write_page(reel: dict, reel_dir: Path, data: dict) -> Path:
     """The page-is-the-slide player (player.html), styled by look.json (picked in the UI Mixer) + reel.json `look`."""
     look = json.loads((HERE / "look.json").read_text())
+    look.update({k: data["tweaks"][t] for t, k in LOOK_KNOBS.items() if t in data["tweaks"]})
     look.update(reel.get("look", {}))
+    data["lookKnobs"] = LOOK_KNOBS  # the player re-reads these live from the Tweaks panel on pages.test
     pal, font = look["palettes"][look["palette"]], look["fonts"][look["font"]]
     data["look"] = {k: v for k, v in look.items() if k not in ("palettes", "fonts", "note")} | {"pal": pal}
     roles = ("bg", "ink", "muted", "accent", "g1", "g2")

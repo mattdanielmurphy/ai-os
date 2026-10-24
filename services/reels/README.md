@@ -56,21 +56,31 @@ Then publish it with `pages` as usual (on Matt's Mac; a cloud session without hi
 
 ## Voices
 
-`tts.py <voice> "text" out.mp3` uses Speechify (model `simba-3.2`, default voice `beatrice_32`, text
-normalization off, key `SPEECHIFY_API_KEY` in ai-os `.env`). The API returns word timings, so there is no
-speech-to-text pass. Pauses are SSML `<break>`s (beats are joined by one), pace is SSML prosody rate.
+`tts.py <voice> "text" out.mp3 [speed]` uses Speechify (key `SPEECHIFY_API_KEY` in ai-os `.env`). Every
+Speechify setting is a `voice.*` knob in Tweaks: rate, pitch, volume, voice id, model, loudness/text
+normalization, the two pause lengths, audio format. The API returns word timings (used to cut beats and to
+time the subtitles). Pauses are SSML `<break>`s.
+**Speechify reads prosody percentages as a change**: `rate="100%"` doubles the speed, so rate is always sent
+signed (`+10%`, `-5%`). Before 2026-10-24 reels sent `rate="115%"` (2.15× speed); `voice.rate` 1 = natural.
 Old Deepgram samples in `samples/` are history.
 
 ## Feel knobs
 
-`tweaks.json` (shows in the ⌃⌥⌘T Tweaks panel): reveal spread/gap/duration/rise, beat gap and lead.
-Rebuild after changing them. `voice.pace` (default 1.15) is baked into new takes; the player's
-Pace button switches Normal / Quick / Gentle (gentle is for hard or unfamiliar topics).
+`tweaks.json` (the ⌃⌥⌘T Tweaks panel, app "Explainer reels"; pin it there while the browser has focus):
+timings, layout and subtitle knobs, bars, controls, music, and every Speechify setting.
+
+- **Live:** open the reel's page on pages.test (e.g. http://pages.test/tv-box/). It polls
+  `/__pages/tweaks` and redraws within half a second of a change. Rate and volume preview live against
+  the recorded take; pitch, voice, model, normalization and pauses are heard after Apply.
+- **Apply:** makes the values the defaults (commits tweaks.json), then `apply.sh` rebuilds every reel whose
+  reel.json names a `page` (re-recording the voice if a voice knob changed), copies it to that page,
+  republishes its mattmurphy.ca copy and deploys.
+- The player's Pace button still switches Normal / Quick / Gentle on top.
 
 ## Player
 
-Space pause · ←/→ beats · R replay · S pace (Normal / Quick / Gentle) · F full screen · tap a segment.
-Captions brighten as the line is spoken. Lock-screen next/previous via Media Session.
+Space pause (really pauses: nothing more appears until Play) · ←/→ beats · R replay · S pace (Normal / Quick / Gentle) · F full screen · tap a segment.
+Subtitles show the sentence being spoken (`subtitle.mode`), words brightening on Speechify's timings. Lock-screen next/previous via Media Session.
 
 ## Music bed
 

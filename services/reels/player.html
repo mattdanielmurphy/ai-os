@@ -16,6 +16,8 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; }
 #page { position: fixed; inset: 0; background: var(--bg); }
 #content { position: absolute; left: 50%; width: var(--cw); transform-origin: 50% 0; display: flex; flex-direction: column; }
+/* tables and cards may run wider than the text column (layout.tableWidth), centred on it */
+.wide { width: var(--tw); margin-left: calc((var(--cw) - var(--tw)) / 2); }
 .hl { background: linear-gradient(90deg, var(--g1), var(--g2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .label { font: 300 calc(11px * var(--T))/1.3 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: calc(18px * var(--sp)); }
 .title { font-weight: 500; font-size: var(--title); line-height: 1.02; letter-spacing: -0.02em; margin: 0 0 calc(40px * var(--sp)); text-wrap: balance; }
@@ -30,12 +32,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .total { border-top: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); padding-top: calc(16px * var(--sp)); font-size: calc(24px * var(--T)); font-weight: 500; line-height: 1.25; text-wrap: pretty; }
 .total + .total { border-top: 0; padding-top: calc(4px * var(--sp)); }
 .small { font-size: calc(13px * var(--T)); color: var(--muted); line-height: 1.45; margin-top: calc(14px * var(--sp)); }
-.cols { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); margin-bottom: calc(26px * var(--sp)); }
+.cols { box-sizing: border-box; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); margin-bottom: calc(26px * var(--sp)); }
 .col { padding: 0 calc(16px * var(--sp)); border-left: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); display: flex; flex-direction: column; gap: calc(6px * var(--sp)); }
 .col:first-child { border-left: 0; padding-left: 0; }
 .col .key { font: 300 calc(10px * var(--T))/1.2 var(--mono); letter-spacing: .08em; color: var(--muted); }
 .col .head { font-size: calc(16px * var(--T)); font-weight: 500; line-height: 1.2; min-height: 2.4em; }
-.col .line { display: flex; justify-content: space-between; gap: 8px; font-size: calc(12px * var(--T)); color: var(--muted); padding: calc(5px * var(--sp)) 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+.col .line { display: flex; justify-content: space-between; gap: 12px; white-space: nowrap; font-size: calc(12px * var(--T)); color: var(--muted); padding: calc(5px * var(--sp)) 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
 .col .line b { color: var(--ink); font-weight: 500; white-space: nowrap; }
 .col .sum { font-size: calc(22px * var(--T)); font-weight: 500; margin-top: calc(8px * var(--sp)); }
 .col .once { font: 300 calc(10px * var(--T))/1.3 var(--mono); letter-spacing: .06em; color: var(--muted); }
@@ -50,7 +52,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .check { display: flex; align-items: center; gap: calc(14px * var(--sp)); font-size: calc(20px * var(--T)); }
 .check svg { flex: none; width: calc(22px * var(--T)); height: calc(22px * var(--T)); }
 .asset svg { width: 100%; height: auto; max-height: 46vh; display: block; margin-bottom: calc(24px * var(--sp)); }
-#sub { margin-top: calc(var(--subgap) * var(--sp)); font-size: var(--sub); line-height: 1.4; color: var(--muted); max-width: 100%; text-wrap: pretty; }
+#sub { position: absolute; left: 50%; transform: translateX(-50%); width: var(--cw); font-size: var(--sub); line-height: 1.4; color: var(--muted); text-wrap: pretty; transition: opacity .25s; }
+#sub.sentence { min-height: 2.8em; }
 #sub .said { color: var(--ink); }
 /* reveal: parts rise in while the narration reaches them */
 .rv { opacity: 0; transform: translateY(var(--rise, 18px)); transition: opacity var(--dur, .55s) ease, transform var(--dur, .55s) cubic-bezier(.2, .8, .2, 1); }
@@ -84,15 +87,14 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 #go svg { width: 40%; height: 40%; margin-left: 6%; }
 #start .t1 { font-size: calc(var(--title) * .8); font-weight: 500; letter-spacing: -0.02em; max-width: 20ch; text-wrap: balance; }
 #start .t2 { font: 300 calc(11px * var(--T))/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.tune { position: fixed; top: 16px; right: 16px; display: grid; gap: 6px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); border-radius: 8px; background: var(--bg); font: 12px var(--font); z-index: 3; }
-.tune[hidden] { display: none; } .tune label { display: flex; gap: 8px; align-items: center; } .tune button { font: inherit; }
 @media (max-width: 699px) { .items { grid-template-columns: 1fr; } .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: calc(18px * var(--sp)); } .col:nth-child(odd) { border-left: 0; padding-left: 0; } }
 @media (prefers-reduced-motion: reduce) { .rv, .grow, .draw { transition: none; transform: none; } }
 </style>
 </head>
 <body>
 <div id="page">
-  <div id="content" aria-live="polite"></div>
+  <div id="content"></div>
+  <div id="sub" aria-live="polite"></div>
 </div>
 <div id="ctl">
   <button class="word" id="playbtn" type="button" title="Play / pause (Space)"></button>
@@ -104,12 +106,6 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
   <button id="go" type="button" aria-label="Play reel"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></button>
   <div class="t1" id="t1"></div>
   <div class="t2" id="t2"></div>
-</div>
-<div class="tune" id="tunepanel" hidden>
-  <label>Visuals earlier than voice <input type="range" id="t-advance" min="-2" max="2" step="0.05"><output></output>s</label>
-  <label>Spread across narration <input type="range" id="t-spread" min="0.2" max="1" step="0.05"><output></output></label>
-  <label>Linger after slide <input type="range" id="t-hold" min="0" max="5" step="0.1"><output></output>s</label>
-  <span><button id="t-copy" type="button">Copy for tweaks.json</button> <button id="t-reset" type="button">Reset</button></span>
 </div>
 <script>
 const D = __DATA__;
@@ -132,26 +128,32 @@ const hl = s => esc(s).replace(/\*([^*]+)\*/g, L.highlight === 'none' ? '$1' : '
 function sizes() {
   const W = innerWidth, H = innerHeight, phone = W < 700, r = document.documentElement.style;
   const k = phone ? Math.min(1.25, Math.max(.85, W / 390)) : Math.min(2.2, Math.max(.7, Math.min(W / 1440, H / 900)));
+  const cw = phone ? W - 48 : Math.min(L.width * k, W - 128);
   r.setProperty('--k', k);
   r.setProperty('--T', L.text * (phone ? .8 : 1) * k);
   r.setProperty('--sp', L.space * (phone ? .8 : 1) * k);
   r.setProperty('--cs', L.ctlSize * (phone ? .9 : 1) * k);
   r.setProperty('--title', L.title * (phone ? .68 : 1) * k + 'px');
-  r.setProperty('--sub', L.sub * (phone ? .75 : 1) * k + 'px');
-  r.setProperty('--subgap', L.subGap + 'px');
-  r.setProperty('--cw', (phone ? W - 48 : Math.min(L.width * k, W - 128)) + 'px');
+  r.setProperty('--sub', L.sub * (phone ? .8 : 1) * k + 'px');
+  r.setProperty('--cw', cw + 'px');
+  r.setProperty('--tw', Math.max(cw, Math.min(cw * (L.tableWide || 1), W - (phone ? 24 : 64))) + 'px');
   r.setProperty('--progress', Math.max(3, L.progress * (phone ? .8 : 1) * k) + 'px');
   r.setProperty('--fade', L.ctlFade);
   return { W, H, phone, k };
 }
-// centre the content above the controls; if it can't fit, shrink it so it never overlaps
+// The slide is centred on its own (nudged down by layout.lower); the subtitle sits subtitle.gap below it.
+// If slide + subtitle can't fit above the controls, the slide shrinks so nothing overlaps.
 function place() {
-  const { H, phone, k } = sizes(), c = $('content');
+  const { H, phone, k } = sizes(), c = $('content'), sub = $('sub');
   c.style.transform = 'translateX(-50%)';
-  const top = (phone ? 56 : 48) * k, bottom = H - (phone ? 84 : 92) * L.ctlSize * k, avail = bottom - top, h = c.offsetHeight;
-  const s = h > avail ? avail / h : 1;
+  const top = (phone ? 56 : 48) * k, bottom = H - (phone ? 84 : 92) * L.ctlSize * k, avail = bottom - top;
+  const gap = L.subGap * (phone ? .6 : 1) * k, sh = sub.offsetHeight, h = c.offsetHeight;
+  const room = avail - gap - sh, s = h > room ? Math.max(.3, room / h) : 1;
   c.style.transform = `translateX(-50%) scale(${s})`;
-  c.style.top = Math.round(top + Math.max(0, (avail - h * s) / 2)) + 'px';
+  const centred = top + (avail - h * s) / 2 + (L.lower || 0) * k;
+  const y = Math.max(top, Math.min(centred, bottom - sh - gap - h * s));
+  c.style.top = Math.round(y) + 'px';
+  sub.style.top = Math.round(y + h * s + gap) + 'px';
   barTicks();
 }
 addEventListener('resize', place);
@@ -175,7 +177,7 @@ function barsHTML(rows) {
 const LAYOUTS = {
   cover: s => (s.lede ? P(`<p class="lede">${hl(s.lede)}</p>`) : ''),
   bars: s => barsHTML(s.rows),
-  compare: s => `<div class="cols" style="--n:${s.cards.length}">` + s.cards.map(c => P(
+  compare: s => `<div class="cols wide" style="--n:${s.cards.length}">` + s.cards.map(c => P(
       `<span class="key">${esc(c.key || '')}</span><span class="head">${hl(c.head)}</span>` +
       (c.lines || []).map(([a, b]) => `<span class="line"><span>${esc(a)}</span><b>${esc(b)}</b></span>`).join('') +
       `<span class="sum">${c.tone === 'good' ? `<span class="hl">${esc(c.total)}</span>` : esc(c.total)}</span>` +
@@ -194,7 +196,7 @@ function slideHTML(b) {
   h += (LAYOUTS[s.layout] || LAYOUTS.cover)(s);
   for (const t of [].concat(s.total || [])) h += P(`<div class="total">${hl(t)}</div>`);
   if (s.small) h += P(`<div class="small">${hl(s.small)}</div>`);
-  return `<div class="${s.layout === 'cover' ? 'cover' : ''}">${h}</div><div id="sub"></div>`;
+  return `<div class="${s.layout === 'cover' ? 'cover' : ''}">${h}</div>`;
 }
 function palette() { const dark = document.documentElement.dataset.theme === 'dark' || (document.documentElement.dataset.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); return L.pal[dark ? 'dark' : 'light']; }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => show(i, playing, true));
@@ -212,7 +214,7 @@ function applyVoice() { D.voice = D.voices[voiceIx].name; D.beats.forEach((b, k)
 applyVoice();
 const audio = new Audio();
 const music = D.music ? Object.assign(new Audio(blobUrl(D.music.audio)), { loop: true, preload: 'auto' }) : null;
-let ctx = null, musicGain = null, analyser = null, buf = null, bed = 0, bedTo = 0, bedFade = 1;
+let ctx = null, voiceGain = null, musicGain = null, analyser = null, buf = null, bed = 0, bedTo = 0, bedFade = 1;
 function graph() {
   if (ctx) return ctx.resume();
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -223,7 +225,8 @@ function graph() {
   master.connect(ctx.destination);
   const voice = ctx.createMediaElementSource(audio);
   analyser = ctx.createAnalyser(); analyser.fftSize = 1024; buf = new Float32Array(analyser.fftSize);
-  voice.connect(analyser); voice.connect(master);
+  voiceGain = ctx.createGain(); voiceGain.gain.value = liveVolume();
+  voice.connect(analyser); voice.connect(voiceGain).connect(master);
   if (music) { musicGain = ctx.createGain(); musicGain.gain.value = 0; ctx.createMediaElementSource(music).connect(musicGain).connect(master); }
   let last = performance.now();
   setInterval(() => {
@@ -243,19 +246,68 @@ function bedOn() { if (!music) return; bedTo = 1; bedFade = T['music.fadeIn']; m
 function bedOff(fade) { bedTo = 0; bedFade = fade; if (!ctx && music) music.pause(); }
 window.reelMix = () => ({ bed, music: musicGain ? +musicGain.gain.value.toFixed(3) : null, musicTime: music && music.currentTime, voiceTime: audio.currentTime }); // for agents' tests
 
-/* ---------- playback ---------- */
+/* ---------- live tweaks: voice.rate and voice.volume preview against the baked take until Apply re-records ---------- */
+const BAKED = D.baked || { rate: T['voice.rate'] || 1, volume: 0 };
+const liveRate = () => (T['voice.rate'] || BAKED.rate) / BAKED.rate;
+const liveVolume = () => Math.pow(10, ((T['voice.volume'] || 0) - (BAKED.volume || 0)) / 20);
+
+/* ---------- playback: one clock per slide that only runs while playing, so pause really pauses ---------- */
 const SPEEDS = [1, T['pace.quick'], T['pace.gentle']], PACE = ['Normal', 'Quick', 'Gentle'];
-let i = 0, playing = false, timers = [], speed = 1, intro = false;
+let i = 0, playing = false, speed = 1, intro = false;
+let clock = 0, events = [], audioAt = null, audioDone = false; // clock: seconds into this slide (pre-roll + voice + hold)
 try { speed = +localStorage.getItem('reel.speed') || 1; } catch {}
-document.documentElement.style.setProperty('--dur', T['reveal.duration'] + 's');
-document.documentElement.style.setProperty('--rise', T['reveal.rise'] + 'px');
+function cssTweaks() {
+  document.documentElement.style.setProperty('--dur', T['reveal.duration'] + 's');
+  document.documentElement.style.setProperty('--rise', T['reveal.rise'] + 'px');
+}
+cssTweaks();
 const totalDur = () => D.beats.reduce((s, b) => s + b.dur, 0);
-function clear() { timers.forEach(clearTimeout); timers = []; }
-function later(fn, s) { timers.push(setTimeout(fn, s * 1000 / speed)); }
+function clear() { events = []; }
+function later(fn, s) { events.push({ t: clock + s, fn }); }
+function rateNow() { return speed * liveRate(); }
+let lastTick = performance.now();
+function tick(now) {
+  const dt = Math.min(.25, (now - lastTick) / 1000); lastTick = now;
+  if (playing) {
+    if (audioAt !== null && !audio.paused && !audioDone) clock = audioAt + audio.currentTime / liveRate();
+    else clock += dt * speed;
+    const due = events.filter(e => e.t <= clock); events = events.filter(e => e.t > clock);
+    due.sort((a, b) => a.t - b.t).forEach(e => e.fn());
+  }
+  caption();
+  progress();
+  requestAnimationFrame(tick);
+}
 function parts() { return [...$('content').querySelectorAll('[data-part]')].sort((a, b) => a.dataset.part - b.dataset.part); }
-function caption(frac) {
-  const words = D.beats[i].say.split(' '), n = Math.round(words.length * frac), s = $('sub');
-  if (s) s.innerHTML = `<span class="said">${esc(words.slice(0, n).join(' '))}</span> ${esc(words.slice(n).join(' '))}`;
+
+/* captions: the current sentence (subtitle.mode), its spoken words brightening, timed by Speechify's word marks */
+function spokenIndex(b, t) { // how many of the line's words have been said at voice time t
+  const said = b.say.split(' ').length;
+  if (b.words && b.words.length) {
+    let n = 0; while (n < b.words.length && b.words[n][0] <= t) n++;
+    return Math.round(n * said / b.words.length);
+  }
+  return Math.round(said * Math.min(1, t / (b.dur || 1)));
+}
+let capKey = '';
+function caption() {
+  const b = D.beats[i], sub = $('sub'), words = b.say.split(' ');
+  const started = audioAt !== null, t = audioDone ? Infinity : started ? audio.currentTime : 0;
+  const n = started ? spokenIndex(b, t) : (playing ? 0 : -1);
+  let from = 0, to = words.length;
+  if (L.subMode !== 'paragraph') {
+    // sentences end at . ? ! (not decimals); show the one being spoken (or about to be)
+    const ends = []; words.forEach((w, j) => { if (/[.?!]["”')]*$/.test(w) || j === words.length - 1) ends.push(j + 1); });
+    const at = Math.min(Math.max(0, n), words.length - 1);
+    to = ends.find(e => e > at) || words.length; from = ends.filter(e => e <= at).pop() || 0;
+    if (n >= words.length) { from = ends.length > 1 ? ends[ends.length - 2] : 0; to = words.length; }
+  }
+  const key = `${i}|${L.subMode}|${from}|${to}|${n}`;
+  if (key === capKey) return; capKey = key;
+  sub.className = L.subMode === 'paragraph' ? '' : 'sentence';
+  if (n < 0 && L.subMode !== 'paragraph') { sub.innerHTML = ''; return; }
+  const said = Math.max(from, Math.min(to, n < 0 ? to : n));
+  sub.innerHTML = `<span class="said">${esc(words.slice(from, said).join(' '))}</span> ${esc(words.slice(said, to).join(' '))}`;
 }
 let toastT;
 function toast(t) { $('toast').textContent = t; $('toast').classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => $('toast').classList.remove('on'), 1400); }
@@ -265,46 +317,50 @@ function barTicks() {
   D.beats.slice(0, -1).forEach(b => { acc += b.dur; const t = document.createElement('div'); t.className = 'tick'; t.style.left = (acc / tot * 100) + '%'; bar.append(t); });
 }
 function progress() {
-  const before = D.beats.slice(0, i).reduce((s, b) => s + b.dur, 0), cur = Math.min(D.beats[i].dur, audio.currentTime || 0);
-  $('bar').querySelector('.f').style.width = ((before + (playing || audio.currentTime ? cur : 0)) / totalDur() * 100) + '%';
+  const before = D.beats.slice(0, i).reduce((s, b) => s + b.dur, 0), cur = audioDone ? D.beats[i].dur : Math.min(D.beats[i].dur, audioAt !== null ? audio.currentTime || 0 : 0);
+  $('bar').querySelector('.f').style.width = ((before + cur) / totalDur() * 100) + '%';
   $('bar').setAttribute('aria-valuenow', i + 1); $('bar').setAttribute('aria-valuemax', D.beats.length);
-  requestAnimationFrame(progress);
 }
+// redraw: re-lay out the current slide in place (theme or live tweak change), keeping what has appeared so far
 function show(k, autoplay = playing, redraw = false) {
-  if (!redraw) { clear(); audio.pause(); }
+  const shown = redraw ? new Set(parts().filter(p => p.classList.contains('in')).map(p => p.dataset.part)) : null;
+  if (!redraw) { clear(); audio.pause(); clock = 0; audioAt = null; audioDone = false; }
   i = Math.max(0, Math.min(D.beats.length - 1, k));
   const b = D.beats[i], c = $('content');
   c.innerHTML = slideHTML(b);
-  caption(redraw && audio.duration ? audio.currentTime / audio.duration : 0); // the subtitle's height counts when fitting
+  capKey = ''; caption();
   place();
   const ps = parts();
-  if (redraw) { ps.forEach(p => p.classList.add('rv', 'in')); caption(audio.duration ? audio.currentTime / audio.duration : 1); return; }
+  if (redraw) { ps.forEach(p => shown.has(p.dataset.part) && p.classList.add('in')); return; }
   c.classList.remove('enter'); void c.offsetWidth; c.classList.add('enter');
-  audio.src = b.audio; audio.playbackRate = speed;
-  if (!autoplay) { ps.forEach(p => p.classList.add('in')); caption(1); return; }
+  audio.src = b.audio; audio.playbackRate = rateNow();
+  if (!autoplay) { ps.forEach(p => p.classList.add('in')); return; }
   const lead = T['beat.lead'] + (intro && music ? T['music.intro'] : 0);
   intro = false;
   // label + title appear at once; the content parts then spread across the narration, a little early
-  const chrome = Math.min(2, ps.length), content = Math.max(1, ps.length - chrome);
-  const gap = Math.min(T['reveal.maxGap'], (b.dur * T['reveal.spread']) / content);
-  requestAnimationFrame(() => ps.forEach((p, n) => later(() => p.classList.add('in'), n < chrome ? 0 : Math.max(0, lead - T['beat.lead'] + (n - chrome) * gap - T['reveal.advance']))));
-  later(() => audio.play().catch(() => setPlaying(false)), lead);
+  const chrome = Math.min(2, ps.length), content = Math.max(1, ps.length - chrome), dur = b.dur / liveRate();
+  const gap = Math.min(T['reveal.maxGap'], (dur * T['reveal.spread']) / content);
+  ps.forEach((p, n) => later(() => p.classList.add('in'), n < chrome ? 0 : Math.max(0, lead - T['beat.lead'] + (n - chrome) * gap - T['reveal.advance'])));
+  later(() => { audioAt = clock; audio.playbackRate = rateNow(); audio.play().catch(() => setPlaying(false)); }, lead);
 }
 function setBtn() { $('playbtn').innerHTML = (playing ? ICON.pause : ICON.play) + (playing ? 'Pause' : 'Play'); }
 function setPlaying(on) {
   playing = on; setBtn();
-  if (on) { graph(); bedOn(); audio.ended || !audio.currentTime ? show(i, true) : audio.play().catch(() => {}); }
-  else { audio.pause(); bedOff(.6); clear(); parts().forEach(p => p.classList.add('in')); }
+  if (on) {
+    graph(); bedOn();
+    if (!events.length && (audioAt === null || audioDone) && !holding) show(audioDone && i < D.beats.length - 1 ? i + 1 : i, true);
+    else if (audioAt !== null && !audioDone) audio.play().catch(() => {});
+  } else { audio.pause(); bedOff(.6); } // the clock stops: nothing more appears until Play
 }
-audio.addEventListener('timeupdate', () => audio.duration && caption(audio.currentTime / audio.duration));
+let holding = false;
 audio.addEventListener('ended', () => {
-  caption(1);
+  audioDone = true;
   const hold = T['beat.holdBase'] + T['beat.holdPerText'] * parts().length;
-  if (i < D.beats.length - 1) later(() => show(i + 1), T['beat.gap'] + hold);
+  if (i < D.beats.length - 1) { holding = true; later(() => { holding = false; show(i + 1); }, T['beat.gap'] + hold); }
   else { playing = false; setBtn(); bedOff(T['music.outro']); }
 });
 function start() { $('start').hidden = true; graph(); playing = true; intro = true; setBtn(); bedOn(); show(0, true); }
-const go = k => { $('start').hidden = true; show(k); };
+const go = k => { $('start').hidden = true; holding = false; show(k); };
 $('go').onclick = start;
 $('playbtn').onclick = () => $('start').hidden ? setPlaying(!playing) : start();
 $('bar').onclick = e => {
@@ -317,13 +373,12 @@ if (document.fullscreenEnabled) {
   $('fullbtn').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {});
   document.addEventListener('fullscreenchange', () => { full(); place(); }); full();
 } else $('fullbtn').hidden = true; // iPhone Safari: no full screen for pages; the page already fills the screen
-function setSpeed(v, say) { speed = v; audio.playbackRate = v; try { localStorage.setItem('reel.speed', v); } catch {} if (say) toast('Pace: ' + (PACE[SPEEDS.indexOf(v)] || v + '×')); }
+function setSpeed(v, say) { speed = v; audio.playbackRate = rateNow(); try { localStorage.setItem('reel.speed', v); } catch {} if (say) toast('Pace: ' + (PACE[SPEEDS.indexOf(v)] || v + '×')); }
 const KEYS = {
   ' ': () => $('playbtn').click(), ArrowLeft: () => { if (playing) { playing = false; setBtn(); bedOff(.6); } go(i - 1); }, ArrowRight: () => go(i + 1),
   r: () => { $('start').hidden = true; graph(); bedOn(); playing = true; setBtn(); show(i, true); },
   s: () => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length], true),
   v: () => { if (D.voices.length < 2) return; voiceIx = (voiceIx + 1) % D.voices.length; applyVoice(); try { localStorage.setItem('reel.voice', D.voice); } catch {} toast('Voice: ' + D.voice); if ($('start').hidden) show(i, playing); },
-  t: () => { const h = $('tunepanel').hidden; $('tunepanel').hidden = !h; tuneShow(); },
   f: () => $('fullbtn').click(),
 };
 document.addEventListener('keydown', e => {
@@ -343,20 +398,41 @@ if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('previoustrack', KEYS.ArrowLeft);
   navigator.mediaSession.setActionHandler('nexttrack', KEYS.ArrowRight);
 }
-// live timing panel (T): values apply to the next slide, kept in this browser, copyable into tweaks.json
-const TUNE = { advance: 'reveal.advance', spread: 'reveal.spread', hold: 'beat.holdBase' };
-try { Object.assign(T, JSON.parse(localStorage.getItem('reel.tune') || '{}')); } catch {}
-const tuneShow = () => Object.entries(TUNE).forEach(([k, key]) => { const el = $('t-' + k); el.value = T[key]; el.nextElementSibling.textContent = (+T[key]).toFixed(2); });
-Object.entries(TUNE).forEach(([k, key]) => $('t-' + k).oninput = e => { T[key] = +e.target.value; tuneShow();
-  try { localStorage.setItem('reel.tune', JSON.stringify(Object.fromEntries(Object.values(TUNE).map(x => [x, T[x]])))); } catch {} });
-$('t-copy').onclick = () => navigator.clipboard?.writeText(JSON.stringify(Object.fromEntries(Object.values(TUNE).map(x => [x, +T[x].toFixed(2)])), null, 1)).catch(() => {});
-$('t-reset').onclick = () => { try { localStorage.removeItem('reel.tune'); } catch {} Object.entries(TUNE).forEach(([, key]) => T[key] = D.tweaks0[key]); tuneShow(); };
+
+/* ---------- live Tweaks (⌃⌥⌘T) on pages.test: the panel writes tweaks.json, this page follows it within half a second.
+   Apply in the panel makes the values the defaults and rebuilds + republishes the reel. Public copies never poll. ---------- */
+const DEV = /(^|\.)test$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+if (DEV) {
+  let lastText = '';
+  const poll = async () => {
+    try {
+      const text = await fetch('/__pages/tweaks?app=' + encodeURIComponent('Explainer reels'), { cache: 'no-store' }).then(r => r.ok ? r.text() : '');
+      if (text && text !== lastText) {
+        const first = !lastText; lastText = text;
+        const doc = JSON.parse(text).tweaks || {}, changed = [];
+        for (const [key, knob] of Object.entries(doc)) {
+          if (T[key] === knob.value) continue;
+          T[key] = knob.value; changed.push(key);
+          const lk = (D.lookKnobs || {})[key]; if (lk) L[lk] = knob.value;
+        }
+        if (changed.length) {
+          cssTweaks(); audio.playbackRate = rateNow(); if (voiceGain) voiceGain.gain.value = liveVolume();
+          show(i, playing, true);
+          const later_ = changed.filter(k => /^voice\.(pitch|id|model|loudness|textNorm|paraBreak|dotsBreak|format)$/.test(k));
+          if (!first) toast(later_.length ? 'Heard after Apply: ' + later_.join(', ') : 'Tweaks: ' + changed.join(', '));
+        }
+      }
+    } catch {}
+    setTimeout(poll, 400);
+  };
+  poll();
+}
 
 const mins = D.beats.reduce((s, b) => s + b.dur + T['beat.gap'] + T['beat.lead'], 0);
 $('t1').textContent = D.title;
 $('t2').textContent = `${D.eyebrow ? D.eyebrow + ' · ' : ''}${Math.floor(mins / 60)}:${String(Math.round(mins % 60)).padStart(2, '0')}`;
 setSpeed(SPEEDS.includes(speed) ? speed : 1);
-setBtn(); show(0, false); progress();
+setBtn(); show(0, false); requestAnimationFrame(tick);
 document.fonts?.ready.then(place);
 </script>
 </body>

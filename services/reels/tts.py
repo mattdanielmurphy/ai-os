@@ -1,6 +1,7 @@
 """Speechify TTS: text -> mp3 plus word timings. Key: SPEECHIFY_API_KEY (env or ai-os .env), never printed.
 
-  tts.py <voice> "<text>" <out.mp3>      voice = a Speechify voice id (default beatrice_32); model simba-3.2
+  tts.py <voice> "<text>" <out.mp3> [speed]   voice = a Speechify voice id (default beatrice_32); model simba-3.2
+                                              speed: 1 = natural pace, 1.1 = 10% faster
 
 Uses /v1/audio/stream/with-timestamps (20,000 spoken chars per call), so the API returns the word timings
 and the old speech-to-text pass is gone. Timings are cached next to the mp3 as <out>.marks.json.
@@ -45,13 +46,27 @@ def call(req, timeout):
         raise
 
 
-def ssml(text, speed):
-    """Plain text -> SSML. Blank lines and `...` lines become real pauses (<break>); `speed` is prosody rate."""
+# Every Speechify setting the reels use, with its default. tweaks.json `voice.*` knobs override them (build.py).
+OPTS = {"rate": 1.0, "pitch": 0, "volume": 0, "model": MODEL, "loudness": False, "textNorm": False,
+        "paraBreak": 500, "dotsBreak": 400, "format": "mp3_24000_96"}
+
+
+def signed(n, unit):
+    return f"{'+' if n >= 0 else '-'}{abs(n)}{unit}"
+
+
+def ssml(text, speed, pitch=0, volume=0, para_ms=500, dots_ms=400):
+    """Plain text -> SSML. Blank lines and `...` lines become real pauses (<break>).
+    speed is a multiplier (1 = the voice's natural pace). Speechify reads prosody percentages as a CHANGE,
+    so rate="100%" doubles the speed: it must be signed ("+15%", "-10%"). pitch is % change, volume dB."""
     paras = [" ".join(p.split()) for p in re.split(r"\n\s*\n", text)]
     def para(p):  # a `...` inside a line is a short real pause, not text for the voice to read
-        return '<break time="400ms"/>'.join(escape(x) for x in re.split(r"\s*\.\.\.\s*", p) if x.strip())
-    body = '<break time="500ms"/>'.join(para(p) for p in paras if p.strip(". "))
-    return f"<speak><prosody rate=\"{round(speed * 100)}%\">{body}</prosody></speak>"
+        return f'<break time="{int(dots_ms)}ms"/>'.join(escape(x) for x in re.split(r"\s*\.\.\.\s*", p) if x.strip())
+    body = f'<break time="{int(para_ms)}ms"/>'.join(para(p) for p in paras if p.strip(". "))
+    attrs = {"rate": signed(round((speed - 1) * 100), "%"), "pitch": signed(round(pitch), "%"),
+             "volume": signed(round(volume, 1), "dB")}
+    attrs = " ".join(f'{k}="{v}"' for k, v in attrs.items() if v not in ("+0%", "+0dB", "+0.0dB"))
+    return f"<speak><prosody {attrs}>{body}</prosody></speak>" if attrs else f"<speak>{body}</speak>"
 
 
 def leaves(marks):
@@ -63,11 +78,14 @@ def leaves(marks):
             yield m
 
 
-def speak(voice, text, out, speed=1.0):
+def speak(voice, text, out, speed=1.0, **opts):
+    """opts: any OPTS key except rate (pitch, volume, model, loudness, textNorm, paraBreak, dotsBreak, format)."""
+    o = {**OPTS, **opts}
     if not voice or voice in OLD_VOICES:
         voice = DEFAULT_VOICE
-    body = {"input": ssml(text, speed), "voice_id": voice, "model": MODEL, "output_format": "mp3_24000_96",
-            "options": {"text_normalization": False}}
+    body = {"input": ssml(text, speed, o["pitch"], o["volume"], o["paraBreak"], o["dotsBreak"]), "voice_id": voice,
+            "model": o["model"], "output_format": o["format"],
+            "options": {"text_normalization": bool(o["textNorm"]), "loudness_normalization": bool(o["loudness"])}}
     req = urllib.request.Request(f"https://{HOST}/v1/audio/stream/with-timestamps", data=json.dumps(body).encode(),
                                  method="POST", headers={**auth(), "Content-Type": "application/json"})
     audio, marks = bytearray(), []
@@ -97,4 +115,4 @@ def words(mp3):
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         sys.exit(__doc__.strip())
-    print(speak(sys.argv[1], sys.argv[2], sys.argv[3]))
+    print(speak(sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4]) if len(sys.argv) > 4 else 1.0))

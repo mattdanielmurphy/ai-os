@@ -33,14 +33,6 @@
       "step": 2,
       "note": "Pixels each part rises as it appears"
     },
-    "voice.pace": {
-      "value": 1.15,
-      "default": 1.15,
-      "min": 0.7,
-      "max": 1.5,
-      "step": 0.05,
-      "note": "Voice speed baked into new reels (Deepgram speed); 1 = the voice's natural pace"
-    },
     "pace.quick": {
       "value": 1.2,
       "default": 1.2,
@@ -139,7 +131,7 @@
     },
     "beat.holdBase": {
       "value": 0.6,
-      "default": 0.8,
+      "default": 0.6,
       "min": 0,
       "max": 5,
       "step": 0.1,
@@ -155,11 +147,215 @@
     },
     "reveal.advance": {
       "value": -1.65,
-      "default": 0,
+      "default": -1.65,
       "min": -2,
       "max": 2,
       "step": 0.05,
       "note": "Seconds each slide part appears EARLIER than an even spread would (the voice was leading the visuals)"
+    },
+    "voice.rate": {
+      "value": 1.0,
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2,
+      "step": 0.05,
+      "note": "Speechify speed: 1 = the voice's natural pace (was effectively 2.15 before the fix). Previews live; Apply re-records"
+    },
+    "voice.pitch": {
+      "value": 0,
+      "default": 0,
+      "min": -30,
+      "max": 30,
+      "step": 1,
+      "note": "Speechify pitch change in % (0 = natural). Heard after Apply (re-records)"
+    },
+    "voice.volume": {
+      "value": 0,
+      "default": 0,
+      "min": -12,
+      "max": 12,
+      "step": 0.5,
+      "note": "Speechify volume change in dB. Previews live; Apply re-records"
+    },
+    "voice.id": {
+      "value": "beatrice_32",
+      "default": "beatrice_32",
+      "note": "Speechify voice id, used when a reel names no Speechify voice. Apply re-records"
+    },
+    "voice.model": {
+      "value": "simba-3.2",
+      "default": "simba-3.2",
+      "note": "Speechify model. Apply re-records",
+      "choices": {
+        "simba-3.0": "3.0",
+        "simba-3.2": "3.2 (English)",
+        "simba-3.5": "3.5 (newest)"
+      }
+    },
+    "voice.loudness": {
+      "value": false,
+      "default": false,
+      "note": "Speechify loudness normalization. Apply re-records"
+    },
+    "voice.textNorm": {
+      "value": false,
+      "default": false,
+      "note": "Speechify text normalization (reads numbers/symbols for you; off because scripts are written as spoken)"
+    },
+    "voice.paraBreak": {
+      "value": 500,
+      "default": 500,
+      "min": 0,
+      "max": 2000,
+      "step": 50,
+      "note": "Pause (ms) between beats in the take. Apply re-records"
+    },
+    "voice.dotsBreak": {
+      "value": 400,
+      "default": 400,
+      "min": 0,
+      "max": 2000,
+      "step": 50,
+      "note": "Pause (ms) for a ... inside a line. Apply re-records"
+    },
+    "voice.format": {
+      "value": "mp3_24000_96",
+      "default": "mp3_24000_96",
+      "note": "Speechify audio format",
+      "choices": {
+        "mp3_24000_64": "64k",
+        "mp3_24000_96": "96k",
+        "mp3_24000_128": "128k"
+      }
+    },
+    "subtitle.size": {
+      "value": 20,
+      "default": 20,
+      "min": 10,
+      "max": 40,
+      "step": 1,
+      "note": "Subtitle text size (px at 1440×900; phones scale down)"
+    },
+    "subtitle.gap": {
+      "value": 88,
+      "default": 88,
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "note": "Space (px) between the slide and the subtitle"
+    },
+    "subtitle.mode": {
+      "value": "sentence",
+      "default": "sentence",
+      "note": "What the subtitle shows",
+      "choices": {
+        "sentence": "Current sentence",
+        "paragraph": "Whole line"
+      }
+    },
+    "layout.width": {
+      "value": 760,
+      "default": 760,
+      "min": 480,
+      "max": 1200,
+      "step": 10,
+      "note": "Text column width (px at 1440×900)"
+    },
+    "layout.tableWidth": {
+      "value": 1.45,
+      "default": 1.45,
+      "min": 1,
+      "max": 2,
+      "step": 0.05,
+      "note": "Tables and cards may run this many times wider than the text column"
+    },
+    "layout.lower": {
+      "value": 40,
+      "default": 40,
+      "min": -100,
+      "max": 200,
+      "step": 4,
+      "note": "Push the slide down (px) from dead centre"
+    },
+    "layout.space": {
+      "value": 1,
+      "default": 1,
+      "min": 0.5,
+      "max": 2,
+      "step": 0.05,
+      "note": "Spacing between parts"
+    },
+    "text.title": {
+      "value": 39,
+      "default": 39,
+      "min": 20,
+      "max": 80,
+      "step": 1,
+      "note": "Slide title size (px at 1440×900)"
+    },
+    "text.size": {
+      "value": 1.4,
+      "default": 1.4,
+      "min": 0.8,
+      "max": 2.5,
+      "step": 0.05,
+      "note": "Body text scale"
+    },
+    "bars.length": {
+      "value": 1,
+      "default": 1,
+      "min": 0.3,
+      "max": 1.5,
+      "step": 0.05,
+      "note": "Bar length"
+    },
+    "bars.thickness": {
+      "value": 5,
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "note": "Bar thickness (px)"
+    },
+    "bars.dot": {
+      "value": 16,
+      "default": 16,
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "note": "Bar end-dot size (px)"
+    },
+    "bars.lineFade": {
+      "value": 1,
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "note": "Bar line opacity"
+    },
+    "controls.size": {
+      "value": 1.55,
+      "default": 1.55,
+      "min": 0.8,
+      "max": 3,
+      "step": 0.05,
+      "note": "Corner controls size"
+    },
+    "controls.fade": {
+      "value": 0.65,
+      "default": 0.65,
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "note": "Corner controls opacity until hovered"
+    },
+    "controls.progress": {
+      "value": 6,
+      "default": 6,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "note": "Bottom progress bar thickness (px)"
     }
   }
 }
