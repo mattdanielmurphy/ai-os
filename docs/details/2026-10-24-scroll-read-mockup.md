@@ -81,3 +81,31 @@ Rejected: calling Speechify live from the page (exposes the key); one long clip 
 Tested headless (Chrome, muted) locally and on the deployed link: list items have one text child, middle drag scrolls 300 px, voice loads the Speechify clip and the highlight advances with it. Not tested: real iPhone audio (iOS sometimes blocks the next clip's autoplay after a block ends), and how it sounds. The orphan checker flags "Space" in the desktop hint; that's a false positive from the key-cap box sitting at a different height than the text.
 
 Undo: `git revert 3dad30f` in ~/projects/pages, then `pages deploy`.
+
+## 12:00 Voice on demand, speed bug, stretch refinement
+
+Matt: the voice was sped up; he doesn't want audio pre-rendered (paying for unused inference), but generated on first use and cached for the next person; the stretch should keep the blob on its word with a faint, paler, narrowing pull, and no stretch at all while paused.
+
+---
+
+### Speed bug cause
+
+Shared `services/reels/tts.py` sends `<prosody rate="100%">`; Speechify reads that as +100%. Same sentence: 9.72 s plain, 4.87 s with rate="100%". Reported to "Reel player fixes", which owns the shared fix. The new endpoint sends no prosody at all; speed comes from the browser's playback rate.
+
+---
+
+### Voice on first use
+
+`~/projects/pages/tts.ts` + `api/tts-vercel.ts`: GET `/api/tts?page=<id>&b=<block>`. It only speaks the text of that page's `[data-read]` blocks (bundled into the function at deploy), so it's not an open TTS proxy. Cache key sha1(voice|model|text) in a Vercel Blob store `pages-tts` (public, created 2026-10-24, linked to matt-pages); first request renders and stores mp3 + word marks, later ones return the cached URL. Dev server runs the same handler with a disk cache in `pages/tmp/tts-cache`, key loaded from ai-os .env into memory. The page aligns marks to its own words, plays the current block, and warms the next one. Any page with data-read blocks can use it; the reel thread was told.
+
+Rejected: pre-rendering (Matt's cost point); Speechify from the browser (exposes the key); VPS cache (more moving parts than Blob at this scale).
+
+Blocked: `SPEECHIFY_API_KEY` isn't on Vercel yet, so the live endpoint answers "voice not set up" and the toggle shows that note. Local dev works end to end.
+
+---
+
+### Stretch refinement
+
+The blob no longer grows taller. Under pull it stays on its word, thins up to 14% and pales (less saturation, a little brighter). A separate faint, lighter taper reaches from its edge toward the centre line, narrowing to a thin tip as the pull grows. Paused or ended: no pull, no snap, no pill, scrolling is plain scrolling. Checked in light and dark by headless screenshots.
+
+Undo: `git revert ace0f4b` in ~/projects/pages, then `pages deploy`; delete the Blob store with `vercel blob delete-store`.
