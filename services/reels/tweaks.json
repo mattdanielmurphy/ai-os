@@ -154,9 +154,9 @@
       "note": "More pause (s) for each text line on the slide, so busy slides linger"
     },
     "reveal.advance": {
-      "value": 0.75,
-      "default": 0.75,
-      "min": 0,
+      "value": 0,
+      "default": 0,
+      "min": -2,
       "max": 2,
       "step": 0.05,
       "note": "Seconds each slide part appears EARLIER than an even spread would (the voice was leading the visuals)"

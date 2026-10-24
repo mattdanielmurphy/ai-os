@@ -49,6 +49,7 @@ header { gap: 2px; } header h1 { font-size: clamp(18px, 2.6vw, 26px); }
 .progress { gap: 4px; } .seg { font-size: 10px; gap: 3px; } .seg::before { height: 3px; }
 .controls .grow { flex: 1 1 auto; }
 .hint { font: 500 10.5px/1.4 var(--mono); color: var(--muted); margin: 0; }
+.tune { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font: 12px var(--mono); } .tune[hidden] { display: none; } .tune label { display: flex; gap: 8px; align-items: center; } .tune input { flex: 1; max-width: 280px; }
 kbd { font: 500 10px/1 var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 2px 5px; background: var(--surface); color: var(--ink); }
 .start { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center;
          background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(2px); padding: 16px; }
@@ -81,14 +82,23 @@ a.quiet { color: var(--muted); }
     <span class="grow"></span>
     <button class="btn" id="speed" type="button" title="Pace (S): normal, quick, or gentle for hard topics">Normal</button>
     <button class="btn" id="voice" type="button" title="Voice / take (V): if a line glitches, try the next take">Voice</button>
+    <button class="btn" id="tune" type="button" title="Timing (T): adjust when slide parts appear, live" aria-pressed="false">Timing</button>
     <button class="btn" id="cc" type="button" title="Captions (C): show the narrator's words" aria-pressed="false">CC</button>
     <button class="btn" id="full" type="button" title="Full screen for presenting (F)">⛶</button>
   </div>
-  <p class="hint"><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> beats · <kbd>R</kbd> replay · <kbd>S</kbd> pace (normal / quick / gentle) · <kbd>V</kbd> voice · <kbd>C</kbd> captions · <kbd>F</kbd> full screen · tap a segment to jump</p>
+  <div class="tune" id="tunepanel" hidden>
+    <label>Visuals earlier than voice <input type="range" id="t-advance" min="-2" max="2" step="0.05"><output></output>s</label>
+    <label>Spread across narration <input type="range" id="t-spread" min="0.2" max="1" step="0.05"><output></output></label>
+    <label>Linger after slide <input type="range" id="t-hold" min="0" max="5" step="0.1"><output></output>s</label>
+    <button class="btn" id="t-copy" type="button">Copy for tweaks.json</button> <button class="btn" id="t-reset" type="button">Reset</button>
+    <span class="hint">Applies from the next slide (press R to replay this one). Stays in this browser only; copy the values to bake them in.</span>
+  </div>
+  <p class="hint"><kbd>Space</kbd> pause · <kbd>←</kbd> <kbd>→</kbd> beats · <kbd>R</kbd> replay · <kbd>S</kbd> pace (normal / quick / gentle) · <kbd>V</kbd> voice · <kbd>T</kbd> timing · <kbd>C</kbd> captions · <kbd>F</kbd> full screen · tap a segment to jump</p>
   <p class="hint" id="credit"></p>
 </main>
 <script>
 const D = __DATA__;
+D.tweaks0 = { ...D.tweaks };
 const T = D.tweaks;
 const $ = id => document.getElementById(id);
 const MUTE = new URLSearchParams(location.search).has('mute'); // agents test with ?mute so Matt doesn't hear spoilers
@@ -242,13 +252,23 @@ $('speed').onclick = () => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.
 $('full').onclick = () => document.fullscreenElement ? document.exitFullscreen() : $('stage').requestFullscreen?.();
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = { ' ': 'play', ArrowLeft: 'prev', ArrowRight: 'next', r: 'replay', s: 'speed', v: 'voice', c: 'cc', f: 'full' }[e.key];
+  const k = { ' ': 'play', ArrowLeft: 'prev', ArrowRight: 'next', r: 'replay', s: 'speed', v: 'voice', c: 'cc', t: 'tune', f: 'full' }[e.key];
   if (k) { e.preventDefault(); $(k).click(); }
 });
 if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('previoustrack', () => $('prev').click());
   navigator.mediaSession.setActionHandler('nexttrack', () => $('next').click());
 }
+
+// live timing panel: values apply to the next slide, are kept in this browser, and can be copied into tweaks.json
+const TUNE = { advance: 'reveal.advance', spread: 'reveal.spread', hold: 'beat.holdBase' };
+try { Object.assign(T, JSON.parse(localStorage.getItem('reel.tune') || '{}')); } catch {}
+const tuneShow = () => Object.entries(TUNE).forEach(([k, key]) => { const el = $('t-' + k); el.value = T[key]; el.nextElementSibling.textContent = (+T[key]).toFixed(2); });
+Object.entries(TUNE).forEach(([k, key]) => $('t-' + k).oninput = e => { T[key] = +e.target.value; tuneShow();
+  try { localStorage.setItem('reel.tune', JSON.stringify(Object.fromEntries(Object.values(TUNE).map(x => [x, T[x]])))); } catch {} });
+$('tune').onclick = () => { const h = $('tunepanel').hidden; $('tunepanel').hidden = !h; $('tune').setAttribute('aria-pressed', h); tuneShow(); };
+$('t-copy').onclick = () => navigator.clipboard?.writeText(JSON.stringify(Object.fromEntries(Object.values(TUNE).map(x => [x, +T[x].toFixed(2)])), null, 1)).then(() => { $('t-copy').textContent = 'Copied'; setTimeout(() => $('t-copy').textContent = 'Copy for tweaks.json', 1200); });
+$('t-reset').onclick = () => { try { localStorage.removeItem('reel.tune'); } catch {} Object.entries(TUNE).forEach(([k, key]) => T[key] = D.tweaks0[key]); tuneShow(); };
 setSpeed(SPEEDS.includes(speed) ? speed : 1);
 show(0, false);
 </script>

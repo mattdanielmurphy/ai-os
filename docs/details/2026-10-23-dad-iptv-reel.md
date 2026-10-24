@@ -66,3 +66,9 @@ Undo: git revert this commit.
 - Knobs are BAKED when build.py runs, so changing one does nothing until the reel is rebuilt and republished. Footer now shows "built <date time>" so you can see which build you have.
 - Voice-early on slide 3: chip and title used up the first two reveal slots, so content started ~2 gaps late. Now chip and title appear at once and content items spread over 85 percent of the narration starting immediately, minus reveal.advance (0.75 s).
 - Untested by eye/ear.
+
+## 00:25 Live Timing panel; advance back to 0
+- Voice now late vs visuals: advance 0.75 plus content starting at once overshot. reveal.advance default set to 0 (range -2..2; negative = visuals later).
+- Self-serve tuning: the reel has a Timing button (key T): sliders for advance, spread and linger that apply live from the next slide (R replays this one), are remembered in that browser, and "Copy for tweaks.json" gives values to bake in. No rebuild needed to find the right number.
+- Rebuild locally: python3 ~/projects/ai-os/services/reels/build.py reels/004-dad-iptv (about 10 s with cached audio). Publishing to claude.ai is only possible through the Claude Artifact tool, so republishing needs a Claude session; I did not find a CLI for it.
+- Worked in the main checkout this time (branch merged into main on Matt's thumbs-up). Published to the same artifact URL.
