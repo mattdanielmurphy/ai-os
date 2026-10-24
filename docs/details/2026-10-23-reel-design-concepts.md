@@ -185,3 +185,35 @@ bar thickness, dot size, line strength, total style, subtitle size and position,
 ### Mixer tested
 
 Headless Chrome at 1400 and 400 px wide: no errors, no sideways scroll, presets switch. Not tried on a real phone.
+
+## 22:20 The mixer becomes its own project
+
+**Asked:** make the mixer and the techniques its own project for reusing on future UI.
+
+---
+
+### What's in ui-mixer
+
+`~/projects/ui-mixer` (private GitHub repo `mattdanielmurphy/ui-mixer`):
+- `shell/` the generic mixer: options rail, presets, desktop + phone previews, light/dark, real full screen,
+  Copy settings, remembers your mix. Knows nothing about reels.
+- `subjects/reel-player/` the reel page: renderer, palettes, presets, options. A new UI = a new subject folder.
+- `build.ts` (bun) bundles shell + subject into one HTML file for the Artifact tool; `check.cjs` tests every
+  preset at desktop and phone width in headless Chrome.
+- `TECHNIQUES.md`: everything learned (Figma builder rounds, Matt's design feedback, when to switch to a mixer).
+- `figma/`: the round 1–3 builder scripts.
+The reel mixer link is now built from this project (same URL).
+
+---
+
+### Agents will use it on their own
+
+New rule 1m in `.rules/core_safety.md`: for UI with several possible looks, read TECHNIQUES.md, do at most one
+concept round, then build a mixer subject. Plus a memory entry and a line in ABOUT_MATT's "Where things live".
+
+---
+
+### Tested
+
+`bun run check`: built, all 6 presets clicked at 1400 and 400 px, no errors, no sideways scroll.
+Not tried on a real phone. The artifact link is shared "anyone with the link" (you set that).

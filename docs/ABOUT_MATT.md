@@ -38,6 +38,7 @@ Ask him only if all of these come up empty, and say what you searched.
 | Older school work (precalc, calculus) | `~/projects/school/` |
 | Flashcard decks / daily check-in | `~/projects/ai-os/services/checkin/` |
 | Code projects | `~/projects/<name>/` (each its own private repo) |
+| UI design: mix-and-match tool + design lessons | `~/projects/ui-mixer/` (README, TECHNIQUES.md) |
 | Project backlog | `~/projects/ai-os/PROJECT_BOARD.md` |
 | Thread handoffs | `~/projects/ai-os/docs/handoffs/` |
 | Past threads (searchable) | QMD collections `claude-threads`, `gemini-threads`, `antigravity-threads`, `vault` |
