@@ -1,0 +1,4 @@
+# Dad's Excel "End / Debug" error
+
+## 17:40 Diagnosis and fix
+"END BUG" = the VBA runtime-error box (End / Debug). Cause (found by reading the macros, not by running Excel, which I don't have): on open, Workbook_Open → ShowAllSheets hides "Discipline Instructions" because Master Control!O144 (DI_Visible) is FALSE, then Reset_Cursors runs `Worksheets(2).Activate` on that hidden sheet → error 1004. Fix: set O144 to TRUE (only sheet3.xml changed; macros untouched), so the sheet stays visible and Activate works. Passwords/protection verified unchanged. Real fix for IT: in Reset_Cursors wrap the Activate lines in `On Error Resume Next`, or skip hidden sheets. Rejected: patching vbaProject.bin (Excel runs cached p-code, edits likely ignored/corrupt). Untested in real Excel. Output: docs/outputs/000.509.F9161_Quality_Audit_Checklist_FIXED.xlsm. Undo: use the original.
