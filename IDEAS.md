@@ -127,3 +127,9 @@ Questions still unanswered:
 - How are new utilities introduced later: a quiet "new" badge, or a prompt?
 - Should the auto-delineator be left out of the default selection, given it is the likeliest to confuse?
 Status: idea; build on Matt 👍.
+
+## Slub Utils: command palette with inline shortcut setting (2026-10-24)
+Idea, not a build request. Inspired by the command palette in Rex (terminal app): set or change an action's keyboard shortcut right inside the palette, via a clickable icon on the row.
+Matt likes the whole implementation, and that it does not open with a wall of obscure commands the way VS Code sometimes does.
+Shape: opens short and curated (useful actions only), search reveals the rest; each row shows its shortcut and an icon to rebind it in place.
+Status: idea; build on Matt 👍.
