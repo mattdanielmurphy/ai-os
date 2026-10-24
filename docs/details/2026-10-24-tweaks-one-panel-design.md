@@ -33,3 +33,33 @@ Likely set (3–6) open, the rest in folded sections with value summaries (mixer
 Nothing built. Biggest unknowns: picker for native HUDs (each HUD must report its regions), and the Haiku fallback needs a key path from the panel. Mock values on the page are illustrative.
 
 **Undo:** delete the page folder in `~/projects/pages/site/tweaks-one-panel` and redeploy.
+
+## 07:10 Orphans: name, fix, rule, idea
+
+**Asked:** what's the one word hanging on its own line called; headings must never have one; idea of a robust minimal component library with guards, incl. an LLM rewriting a line to fit.
+
+---
+
+### Orphan is the name
+
+Typographers call a lone word on a paragraph's last line a *runt* or (in web circles) an *orphan*; strictly, "orphan/widow" also mean a lone line split across a page or column. Fix in CSS: `text-wrap: balance` (headings: evens out line lengths) and `text-wrap: pretty` (body: the browser avoids a short last line). `pretty` didn't catch "self-contained." (hyphenated last word), so the last two words were bound with `&nbsp;` (the old "widont" trick).
+
+---
+
+### Page fixed and checked
+
+Added balance/pretty + two `&nbsp;` bindings to the design page, redeployed. New `~/projects/ui-mixer/orphans.cjs` loads a page headless at 360/390/430/768/1280 px and lists every h1–h3/p/li whose last line is one word; before: 3 hits, after: none. It measures each word's line via Range rects.
+
+---
+
+### Rule saved
+
+`.rules/core_safety.md` "No orphans" (compiled into ai-os CLAUDE.md) and a line in `~/.claude/CLAUDE.md`: balance headings, pretty body, bind last two words, check with orphans.cjs.
+
+---
+
+### Component library idea recorded
+
+In ai-os `IDEAS.md`. Order of defences: CSS first (free), then &nbsp; binding, then detect leftovers with orphans.cjs and have a cheap model (Haiku) rephrase only that line. The LLM step is cheap per line but needs a build step that knows the copy source; it suits static pages, not live text. Shrinking text rejected (Matt's own point: mixed heading sizes look bad).
+
+Undo: revert the rule commit; remove the CSS lines from the page.
