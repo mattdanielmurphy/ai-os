@@ -108,3 +108,33 @@ file on the page "Round 1 · techy (rejected)".
 
 - Mocks only; no motion. Contrast checked by eye.
 - Builder: `services/reels/concepts/round2.js`.
+
+## 21:58 Round 3: Hairline-based
+
+**Matt's feedback (on round 1):** every concept except Poster made the slide a small window inside the page;
+the slide must be the page, with subtle controls floating on it (full screen takes it all, controls included).
+Favourite: Hairline (clean bones, likes its fonts). Liked: Caption first's look (not its big caption on top),
+Gallery's look (but overdone, reads as AI), Poster a bit (graphics too big). Disliked: Terminal, Blueprint,
+Synth panel (not warm). Dislikes the dot next to the chapter label.
+
+---
+
+### What round 3 does
+
+- All 8 are Hairline variants: Hanken Grotesk Light/Medium, tinted neutrals, hairline rules.
+- The page is the slide; content is centred vertically on it; controls float at the bottom at 78% opacity.
+- Graphics are smaller than rounds 1–2 (title 52 px desktop, bars at most 440–520 px).
+- No dot by the chapter label.
+- Variants borrow what he liked: 03 soft bars + tinted card (Caption first), 04 serif headline only
+  (Gallery, toned down), 05 pale colour wash (Poster, calmed).
+- 01 and 06 keep Martian Mono for the tiny label only (he said he liked Hairline's fonts); the rest have no mono.
+  Pick a no-mono one if the earlier "no monospace" still stands.
+
+---
+
+### Round 3 concepts
+
+01 Hairline, as is (14-3) · 02 no mono (14-67) · 03 soft card (14-133) · 04 serif title (14-191) ·
+05 colour field (14-255) · 06 warm grey (14-327) · 07 dot bars (14-393) · 08 aspen (14-469).
+Round 2 (13-2) already had the page-is-the-slide layout; it stays in the file for reference.
+Builder: `services/reels/concepts/round3.js`. Mocks only, contrast by eye.
