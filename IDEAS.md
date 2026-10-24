@@ -120,9 +120,10 @@ compare, timeline) so an agent writes a short JSON spec per beat and the kit dra
 ## Slub Utils: onboarding picker, gradual rollout (2026-10-24)
 Idea, not a build request. First run shows a picker of utilities with a sensible default selection already ticked.
 A gentle caution says not to enable too much at once. New utilities are then introduced gradually later, not all on day one.
-Matt note: the auto-delineator text-selection wrapper is the one utility that could confuse people, so it should not be on by default and needs a clear explanation.
+Goal: power users, or people who installed for one specific utility, can enable anything on day one. But changing too much about how the Mac behaves at once is confusing, so the app recommends starting with a couple and introduces more once they are used to those.
+Matt note: the auto-delineator text-selection wrapper is the only one he can think of that might confuse people, though what it does should be apparent immediately.
 Questions still unanswered:
 - Which utilities make up the default selection?
 - How are new utilities introduced later: a quiet "new" badge, or a prompt?
-- Should the auto-delineator sit behind an "advanced" section?
+- Should the auto-delineator be left out of the default selection, given it is the likeliest to confuse?
 Status: idea; build on Matt 👍.
