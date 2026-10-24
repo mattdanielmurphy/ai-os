@@ -56,3 +56,7 @@ Undo: git revert this commit.
 - Cause: parts appeared at most 0.9 s apart and over only 55 percent of the voice, and rows came in pairs, so slides filled in 1-2 s while the voice ran ~10 s.
 - Fix: tweaks reveal.spread 0.55 to 0.85 and reveal.maxGap 0.9 to 4 (all reels); in this reel each row/card is its own reveal group (slides.py g() splits at row()). Items now arrive evenly across ~85 percent of the narration.
 - Not synced to the exact words (no word-to-item mapping); even spacing only. Untested by eye/ear. Undo: revert tweaks.json values.
+
+## 00:45 Visuals earlier than the voice
+- Voice led the visuals. New tweak reveal.advance (0.75 s, range 0-2): every slide part after the first appears that much earlier (clamped at 0). Matt asked 0.5-1 s; took the middle. Tune in the Tweaks panel and rebuild.
+- Untested by ear/eye. Undo: set reveal.advance to 0.

@@ -203,7 +203,7 @@ function show(k, autoplay = playing) {
   pr.style.setProperty('--pd', (lead + b.dur / speed + T['beat.gap'] + T['beat.holdBase'] + T['beat.holdPerText'] * document.querySelectorAll('#slide text').length) + 's'); pr.classList.add('run');
   $('stage').style.setProperty('--beat', (lead + b.dur / speed + T['beat.gap'] + 1) + 's');
   const gap = Math.min(T['reveal.maxGap'], (b.dur * T['reveal.spread']) / Math.max(1, ps.length - 1));
-  requestAnimationFrame(() => ps.forEach((p, n) => later(() => { p.classList.add('in'); activate(p); }, n === 0 ? 0 : lead - T['beat.lead'] + n * gap)));
+  requestAnimationFrame(() => ps.forEach((p, n) => later(() => { p.classList.add('in'); activate(p); }, n === 0 ? 0 : Math.max(0, lead - T['beat.lead'] + n * gap - T['reveal.advance']))));
   later(() => audio.play().catch(() => setPlaying(false)), lead);
 }
 function setPlaying(on) {
