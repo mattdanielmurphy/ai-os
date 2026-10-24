@@ -217,3 +217,44 @@ concept round, then build a mixer subject. Plus a memory entry and a line in ABO
 
 `bun run check`: built, all 6 presets clicked at 1400 and 400 px, no errors, no sideways scroll.
 Not tried on a real phone. The artifact link is shared "anyone with the link" (you set that).
+
+## 22:35 Mixer v2: full screen fix, bigger, folded sections
+
+**Asked:** full screen was off-centre; his mix (pasted) but everything bigger except the title; more
+configurability with progressive disclosure while keeping the "can't go wrong" feel.
+
+---
+
+### Full screen was off centre
+
+The page was laid out for 1440×900 and full screen just stretched the box to the screen, so the centred
+column stayed where 1440 px put it. Now full screen re-lays the page out at the screen's shape (same 900 px
+height, wider) and scales it to fill, so the column centres on any screen. Phone previews stay phone-shaped,
+centred on the screen. Headless check: content centre is 0 px from screen centre.
+
+---
+
+### Your mix is the first preset
+
+"Your mix" = his pasted settings, with the title kept at the size he had (39 px) and everything else bigger:
+text 145%, subtitles 26 px, controls 130%, content 760 px wide.
+
+---
+
+### How it stays can't-go-wrong
+
+- Always visible: start-from presets, colours, font, one "Text size" slider (everything but the title).
+- Five folded sections (Text, Bars, Subtitles and total, Layout and spacing, Controls). Each header shows
+  a one-line summary of the current values, so nothing hidden can surprise you.
+- New knobs: title size, bar length, content width, spacing, controls size.
+- A dot marks anything changed from the preset; a section with changes gets "Reset … to preset".
+- Undo / Redo buttons and ⌘Z / ⇧⌘Z for every change.
+- Sliders only go as far as still looks sane; if the content would not fit above the controls it shrinks to
+  fit instead of overlapping.
+
+---
+
+### Tested
+
+`bun run check`: every preset at 1400 and 400 px, no errors, no sideways scroll, full screen centred.
+Not tried on a real phone. ui-mixer committed and pushed; same mixer link (version 3).
