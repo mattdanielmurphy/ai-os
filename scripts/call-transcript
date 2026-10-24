@@ -1,21 +1,48 @@
 #!/bin/zsh
-# call-transcript start [who] | stop | status | tail
-# Runs scripts/call_transcript.ts in the background; transcript lands in ~/calls/YYYY-MM-DD-<who>.md
+# call-transcript start [who] [flags] | stop | status | tail [who]
+# Runs scripts/call_transcript.ts in the background under a small supervisor: if the
+# transcriber dies for any reason other than `stop` (crash, audio device lost, killed),
+# it alerts Matt (toast + sound) and restarts it. Transcript: ~/calls/YYYY-MM-DD-<who>.md
 here="${0:A:h}"
 pidf="$HOME/calls/.transcript.pid"
 logf="$HOME/calls/.transcript.log"
+notify="$HOME/.hammerspoon/bin/claude-notify"
 mkdir -p "$HOME/calls"
 running() { [[ -f $pidf ]] && kill -0 "$(cat $pidf)" 2>/dev/null; }
+alert() { [[ -x $notify ]] && "$notify" "$1" "$2" --kind "${3:-needs}" >/dev/null 2>&1; print -r -- "$(date +%T) $1: $2"; }
 case "${1:-start}" in
   start)
     if running; then echo "already running (pid $(cat $pidf))"; exit 0; fi
     who="${2:-tyler}"; shift $(( $# > 1 ? 2 : 1 ))
-    nohup bun "$here/call_transcript.ts" "$who" "$@" >"$logf" 2>&1 &
+    nohup "$0" _supervise "$who" "$@" >"$logf" 2>&1 &
     echo $! >"$pidf"; echo "$HOME/calls/$(date +%F)-$who.md" >"$HOME/calls/.transcript.current"; sleep 3
     if running; then echo "recording → ~/calls/$(date +%F)-$who.md"; tail -3 "$logf"
     else echo "failed:"; cat "$logf"; exit 1; fi ;;
+  _supervise)
+    # Internal: keep the transcriber alive until `stop` (SIGINT/SIGTERM) arrives.
+    shift; stopping=0; child=0; quick=0
+    trap 'stopping=1; [[ $child -gt 0 ]] && kill -INT $child 2>/dev/null' INT TERM
+    while true; do
+      started=$SECONDS
+      bun "$here/call_transcript.ts" "$@" & child=$!
+      while kill -0 $child 2>/dev/null; do wait $child; done
+      (( stopping )) && break
+      # Five deaths in a row within 15s each = something won't fix itself (no key, no device).
+      if (( SECONDS - started < 15 )); then (( quick++ )); else quick=0; fi
+      if (( quick >= 5 )); then
+        alert "Call transcript FAILED" "It keeps dying and has stopped retrying. Run: call-transcript start ${1}" error
+        break
+      fi
+      alert "Call transcript dropped" "Restarting it now; a few seconds may be missing."
+      sleep 2
+    done
+    rm -f "$pidf" ;;
   stop)
-    if running; then kill -INT "$(cat $pidf)"; sleep 3; rm -f "$pidf"; echo stopped; else echo "not running"; fi
+    if running; then
+      kill -INT "$(cat $pidf)"
+      for _ in {1..20}; do running || break; sleep 0.25; done
+      rm -f "$pidf"; echo stopped
+    else echo "not running"; fi
     # Save a copy to the Obsidian vault (QMD indexes it) and leave a pointer for the live_call hook.
     md="$(cat "$HOME/calls/.transcript.current" 2>/dev/null)"
     if [[ -f $md ]]; then

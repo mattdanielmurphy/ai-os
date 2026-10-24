@@ -100,7 +100,11 @@ function connect() {
   ws.onclose = (e) => {
     if (stopping) return;
     console.error(`deepgram closed (${e.code} ${e.reason}); reconnecting in 2s`);
-    if (!dropped) write(`<!-- transcription dropped at ${clock()}, reconnecting -->`);
+    if (!dropped) {
+      write(`<!-- transcription dropped at ${clock()}, reconnecting -->`);
+      // Alert only if it stays down; a quick reconnect needs no attention.
+      setTimeout(() => { if (dropped && !stopping) notify("Call transcript dropped", "Deepgram disconnected and hasn't come back yet; still retrying."); }, 10000);
+    }
     dropped = true;
     setTimeout(connect, 2000);
   };
