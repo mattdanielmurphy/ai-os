@@ -18,7 +18,7 @@ self-contained player page (light/dark, phone-friendly, keyboard hints on screen
 3. `python3 build.py reels/<nnn-slug>` (run it backgrounded; first build calls Speechify once per voice).
 4. `./test.sh reels/<nnn-slug>` (backgrounded): headless, muted, checks errors, ducking, flash, fit.
    Never open a reel in the Claude browser pane.
-5. Publish `reel.html` with the Artifact tool; reply with the link plus the usual ≤ 50-word summary.
+5. Publish it as a page: `pages new <name> --from reel.html` (or copy over `~/projects/pages/site/<name>/index.html` on a rebuild), then `pages deploy`; reply with the public link plus the usual ≤ 50-word summary.
 
 Never the stock kit look (rule: No Claude-default look); `kit.json` exists only so reel 01 still builds.
 
@@ -36,7 +36,7 @@ Cloud sessions build reels too. The Speechify key never enters the VM: the cloud
 it. `tts.py` sends no key when `CLAUDE_CODE_REMOTE=true` and none is set. No system ffmpeg there:
 `build.py` pip-installs `imageio-ffmpeg`. Missing music loop → `music/default.m4a`. `test.sh` installs
 playwright-core with npm (bun can't fetch through the cloud proxy) and uses Playwright's Chromium.
-Then publish with the Artifact tool as usual.
+Then publish it with `pages` as usual (on Matt's Mac; a cloud session without his Mac publishes with the Artifact tool).
 
 ## Voices
 

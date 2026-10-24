@@ -22,7 +22,8 @@ if [ -z "${FORCE_WINDOW:-}" ] && { [ "$now" -lt $((4 * 60 + 25)) ] || [ "$now" -
   exit 0
 fi
 
-boot=$(sysctl -n kern.boottime | sed -E 's/.*sec = ([0-9]+).*/\1/')
+# "{ sec = 1792..., usec = 123 }": anchor on "{ sec", or the greedy match grabs usec.
+boot=$(sysctl -n kern.boottime | sed -E 's/^\{ sec = ([0-9]+),.*/\1/')
 up=$(( $(date +%s) - boot ))
 if [ "$up" -lt $((3 * 3600)) ]; then
   log "skip: restarted $((up / 60)) min ago"
@@ -40,7 +41,10 @@ if [ -n "${DRY_RUN:-}" ]; then
 fi
 
 log "restarting (up $((up / 3600)) h, swap: $(sysctl -n vm.swapusage | awk '{print $6}'))"
-if ! err=$(osascript -e 'tell application "loginwindow" to «event aevtrest»' 2>&1); then
+# aevtrrst = Restart without the "Are you sure?" dialog. aevtrest only showed that
+# dialog, so the Mac never restarted (up 4 days, swap 20 GB, 2026-10-23). Apps
+# with unsaved work can still cancel it.
+if ! err=$(osascript -e 'tell application "loginwindow" to «event aevtrrst»' 2>&1); then
   log "restart failed: $err"
   printf 'Nightly restart failed\n%s\n' "$err" > "$HOME/projects/ai-os/tmp/notify/.nightly-restart.txt" &&
     mv "$HOME/projects/ai-os/tmp/notify/.nightly-restart.txt" "$HOME/projects/ai-os/tmp/notify/nightly-restart.txt"
