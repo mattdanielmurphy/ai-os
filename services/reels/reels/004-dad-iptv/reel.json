@@ -12,35 +12,266 @@
   "beats": [
     {
       "svg": "1.svg",
-      "say": "Will the cheap TV box just work, the way Telus TV does? ... Short answer, not quite. ... It saves real money, but it comes with catches."
+      "say": "Will the cheap TV box just work, the way Telus TV does? ... Short answer, not quite. ... It saves real money, but it comes with catches.",
+      "slide": {
+        "layout": "cover",
+        "label": "The cheap TV box",
+        "title": "Will it just work, like Telus TV?",
+        "lede": "A Firestick plus a live-TV service: about $150–400 a year after a one-time box. The savings are real. So are the catches.",
+        "total": "Short answer: *cheaper*, but not hands-off."
+      }
     },
     {
       "svg": "2.svg",
-      "say": "Before, TV cost about two thousand dollars a year. ... Telus was nine hundred, Sportsnet plus alone is three fifty, and the other subscriptions are roughly seven fifty. ... With Telus gone, that's about eleven hundred."
+      "say": "Before, TV cost about two thousand dollars a year. ... Telus was nine hundred, Sportsnet plus alone is three fifty, and the other subscriptions are roughly seven fifty. ... With Telus gone, that's about eleven hundred.",
+      "slide": {
+        "layout": "bars",
+        "label": "What TV costs a year now",
+        "title": "Before: about *$2,000*",
+        "rows": [
+          {
+            "label": "Telus TV (cancelled)",
+            "value": 900,
+            "amount": "$900",
+            "note": "$75 a month"
+          },
+          {
+            "label": "Sportsnet+ alone",
+            "value": 350,
+            "amount": "$350",
+            "note": "per year"
+          },
+          {
+            "label": "Everything else: Apple One, Netflix, Prime…",
+            "value": 750,
+            "amount": "~$750",
+            "note": "estimate"
+          }
+        ],
+        "total": "With Telus gone: about $1,100 a year."
+      }
     },
     {
       "svg": "3.svg",
-      "say": "Here are four ways forward, in yearly costs. ... Keep everything as is, about eleven hundred. ... The box service plus the other subscriptions, around a thousand. ... The box service alone, one fifty to four hundred. ... Or trim and use Plex, about six hundred and twenty. ... The box itself is a one-time purchase on top, roughly fifty to a hundred dollars."
+      "say": "Here are four ways forward, in yearly costs. ... Keep everything as is, about eleven hundred. ... The box service plus the other subscriptions, around a thousand. ... The box service alone, one fifty to four hundred. ... Or trim and use Plex, about six hundred and twenty. ... The box itself is a one-time purchase on top, roughly fifty to a hundred dollars.",
+      "slide": {
+        "layout": "compare",
+        "label": "Four ways forward",
+        "title": "What each one costs a year",
+        "cards": [
+          {
+            "key": "A",
+            "head": "Keep as is",
+            "lines": [
+              [
+                "Sportsnet+",
+                "$350"
+              ],
+              [
+                "Everything else",
+                "~$750"
+              ]
+            ],
+            "total": "~$1,100"
+          },
+          {
+            "key": "B",
+            "head": "Box + keep apps",
+            "lines": [
+              [
+                "Box service",
+                "$150–400"
+              ],
+              [
+                "Sportsnet+",
+                "dropped"
+              ],
+              [
+                "Everything else",
+                "~$750"
+              ]
+            ],
+            "total": "$900–1,150",
+            "once": "+ box ~$50–100 once",
+            "tone": "bad"
+          },
+          {
+            "key": "C",
+            "head": "Box only",
+            "lines": [
+              [
+                "Box service",
+                "$150–400"
+              ],
+              [
+                "Everything else",
+                "dropped"
+              ]
+            ],
+            "total": "$150–400",
+            "once": "+ box ~$50–100 once",
+            "tone": "bad"
+          },
+          {
+            "key": "D",
+            "head": "Trim + Plex",
+            "lines": [
+              [
+                "Sportsnet+, 7 mo",
+                "~$245"
+              ],
+              [
+                "Plex",
+                "free"
+              ],
+              [
+                "Others, trimmed",
+                "~$375"
+              ]
+            ],
+            "total": "~$620",
+            "tone": "good"
+          }
+        ],
+        "small": "Estimates: everything else ~$750 (from the ~$2,000 total); trimmed = half dropped. Check the real bundle price."
+      }
     },
     {
       "svg": "4.svg",
-      "say": "The appeal is easy to see. ... It's cheaper than cable, with a huge number of channels. ... Setup is simple, and trials or monthly plans cap the risk. ... A coworker vouches for it, though that's one person."
+      "say": "The appeal is easy to see. ... It's cheaper than cable, with a huge number of channels. ... Setup is simple, and trials or monthly plans cap the risk. ... A coworker vouches for it, though that's one person.",
+      "slide": {
+        "layout": "list",
+        "label": "The upside",
+        "title": "Why it's tempting",
+        "tone": "good",
+        "items": [
+          {
+            "head": "Big saving",
+            "sub": "Often well under cable or Telus TV."
+          },
+          {
+            "head": "Lots of channels",
+            "sub": "Live sports, news, movies. Count unverified."
+          },
+          {
+            "head": "Easy to start",
+            "sub": "Arrives as a plug-in Firestick."
+          },
+          {
+            "head": "Low-risk trial",
+            "sub": "Trials and monthly plans cap the cost."
+          }
+        ],
+        "total": "A coworker uses it and vouches for it. That counts, but it's one user."
+      }
     },
     {
       "svg": "5.svg",
-      "say": "But it isn't Telus. ... This is a reseller of streams the channels never licensed, so it can vanish mid-term with no refund. ... Expect buffering at peak times like hockey night, possible blocking by your internet company, and no way to dispute an e-transfer."
+      "say": "But it isn't Telus. ... This is a reseller of streams the channels never licensed, so it can vanish mid-term with no refund. ... Expect buffering at peak times like hockey night, possible blocking by your internet company, and no way to dispute an e-transfer.",
+      "slide": {
+        "layout": "list",
+        "label": "Will it just work?",
+        "title": "Not like Telus TV",
+        "tone": "bad",
+        "lede": "Telus is a company with a phone number. This is a reseller of streams the channels never licensed.",
+        "items": [
+          {
+            "head": "It can vanish",
+            "sub": "Mid-term, with no refund (unverified)."
+          },
+          {
+            "head": "Peak-hour buffering",
+            "sub": "Hockey night is when it strains."
+          },
+          {
+            "head": "Sites get blocked",
+            "sub": "An internet-company block may need a VPN."
+          },
+          {
+            "head": "No money back",
+            "sub": "E-transfer has no chargeback."
+          }
+        ],
+        "small": "Plus payment details go to a seller no one holds accountable."
+      }
     },
     {
       "svg": "6.svg",
-      "say": "Tech support lands on you. ... Help is one person on WhatsApp. ... Apps are side-loaded, there are no profiles, and fifteen thousand channels are hard to dig through. ... Expect a few calls a month, and some outages."
+      "say": "Tech support lands on you. ... Help is one person on WhatsApp. ... Apps are side-loaded, there are no profiles, and fifteen thousand channels are hard to dig through. ... Expect a few calls a month, and some outages.",
+      "slide": {
+        "layout": "list",
+        "label": "Who fixes it?",
+        "title": "You are tech support",
+        "lede": "Telus fixed problems. Here the only help is one person on WhatsApp.",
+        "items": [
+          {
+            "head": "It breaks at the worst time",
+            "sub": "Game night, and the call comes to you."
+          },
+          {
+            "head": "No Netflix-style app",
+            "sub": "No profiles; 15,000 channels to dig through."
+          },
+          {
+            "head": "Side-loaded apps",
+            "sub": "Outside the app store; malware risk."
+          },
+          {
+            "head": "Nothing is checked",
+            "sub": "Age, refunds, channel count: unverified."
+          }
+        ],
+        "total": "Expect a few calls a month, and some outages."
+      }
     },
     {
       "svg": "7.svg",
-      "say": "Plex is the free option worth knowing. ... Hundreds of live channels, tens of thousands of free movies and shows, with ads, plus some Canadian channels. ... It runs on most TVs, but there's no NHL."
+      "say": "Plex is the free option worth knowing. ... Hundreds of live channels, tens of thousands of free movies and shows, with ads, plus some Canadian channels. ... It runs on most TVs, but there's no NHL.",
+      "slide": {
+        "layout": "list",
+        "label": "The free one",
+        "title": "Plex: *free*, with ads",
+        "tone": "good",
+        "lede": "Not cable, but a lot of watching for $0.",
+        "items": [
+          {
+            "head": "Live channels",
+            "sub": "Hundreds: news, movies, kids, some sports."
+          },
+          {
+            "head": "On-demand library",
+            "sub": "Tens of thousands of movies and shows."
+          },
+          {
+            "head": "Canadian channels",
+            "sub": "Bell Media's CTV News and TSN The Ocho."
+          },
+          {
+            "head": "Runs on your TV",
+            "sub": "App for Fire TV, Roku and most smart TVs."
+          }
+        ],
+        "small": "No NHL or premium cable channels. Channel counts vary by source (about 250–600+); check Plex's guide."
+      }
     },
     {
       "svg": "8.svg",
-      "say": "So, trim first. ... Add Plex, pay for hockey only in season, and drop overlapping subscriptions. ... That gets close to six hundred twenty a year. ... If the box is still tempting, pay month to month, and keep another way to watch hockey in case it stops working."
+      "say": "So, trim first. ... Add Plex, pay for hockey only in season, and drop overlapping subscriptions. ... That gets close to six hundred twenty a year. ... If the box is still tempting, pay month to month, and keep another way to watch hockey in case it stops working.",
+      "slide": {
+        "layout": "checks",
+        "label": "The takeaway",
+        "title": "Trim first, then decide",
+        "items": [
+          "Add Plex; it's free",
+          "Pay for hockey only in season",
+          "Drop overlapping subscriptions",
+          "That alone gets near *$620 a year*"
+        ],
+        "total": [
+          "Still tempted by the box? Pay month to month, not for a year.",
+          "Keep another way to watch hockey in case it stops working."
+        ]
+      }
     }
   ],
   "takes": 3

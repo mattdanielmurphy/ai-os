@@ -15,12 +15,13 @@ const url = 'file://' + process.argv[2] + '?mute';
   const t0 = Date.now(); await p.goto(url, { timeout: 30000 }); console.log('loaded ms', Date.now() - t0);
   await p.waitForTimeout(500);
   const btn = await p.$('#start'); console.log('start button', !!btn);
-  await p.evaluate(() => document.getElementById('play').click());
+  await p.evaluate(() => (document.getElementById('play') || document.getElementById('go')).click()); // old player / page player
   for (let k = 0; k < (+process.argv[3] || 20); k++) { await p.waitForTimeout(1000); console.log(k + 1, JSON.stringify(await p.evaluate(() => window.reelMix && window.reelMix()))); }
   // flash check: on a new slide, the last part must stay hidden for the first frames (it reveals later)
   console.log('flash', JSON.stringify(await p.evaluate(() => new Promise(done => {
-    document.getElementById('next').click();
-    const last = [...document.querySelectorAll('#slide .rv')].pop(), seen = [];
+    const nx = document.getElementById('next');
+    nx ? nx.click() : document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    const last = [...document.querySelectorAll('#slide .rv, #content .rv')].pop(), seen = [];
     const t0 = performance.now();
     (function f() { seen.push(+getComputedStyle(last).opacity); performance.now() - t0 < 300 ? requestAnimationFrame(f) : done({ maxOpacity: Math.max(...seen), frames: seen.length }); })();
   }))));

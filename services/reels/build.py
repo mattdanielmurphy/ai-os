@@ -159,7 +159,17 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
             voices.append({"name": name.title() + (f" take {rank + 1}" if takes > 1 else ""), "beats": [
                 {"dur": duration(mp3), "audio": "data:audio/mpeg;base64," + base64.b64encode(mp3.read_bytes()).decode()}
                 for mp3 in clips]})
-    beats = [{"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": re.sub(r"\s*\.\.\.\s*", " ", b["say"])} for b in reel["beats"]]
+    page = any("slide" in b for b in reel["beats"])  # new player: the page is the slide, laid out from JSON
+    beats = []
+    for b in reel["beats"]:
+        say = re.sub(r"\s*\.\.\.\s*", " ", b["say"])
+        if page:
+            slide = dict(b.get("slide") or {"layout": "svg", "svg": b["svg"]})
+            if slide.get("layout") == "svg":  # a custom asset (e.g. exported from Figma) placed on the page
+                slide["svg"] = re.sub(r'^<svg width="\d+" height="\d+"', "<svg", (reel_dir / slide["svg"]).read_text().strip())
+            beats.append({"slide": slide, "say": say})
+        else:
+            beats.append({"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": say})
     data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voices[0]["name"],
             "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None,
             "built": __import__("datetime").datetime.now().strftime("%b %d %H:%M")}
@@ -173,10 +183,31 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
         bed = music_bed(src, talk / tweaks["pace.gentle"] + tweaks["music.intro"] + 20, audio)
         data["music"] = {"name": reel.get("music_name") or src.stem,
                          "audio": "data:audio/mp4;base64," + base64.b64encode(bed.read_bytes()).decode()}
+    if page:
+        return write_page(reel, reel_dir, data)
     html = (HERE / "template.html").read_text()
     html = html.replace("/*__KIT_CSS__*/", (HERE.parent / "pages" / "kit.css").read_text())
     html = html.replace("/*__THEME_CSS__*/", theme_css(theme))
     html = html.replace("__FONTS__", theme["google"])
+    html = html.replace("__TITLE__", reel["title"].replace("<", "&lt;"))
+    html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
+    out = reel_dir / "reel.html"
+    out.write_text(html)
+    return out
+
+
+def write_page(reel: dict, reel_dir: Path, data: dict) -> Path:
+    """The page-is-the-slide player (player.html), styled by look.json (picked in the UI Mixer) + reel.json `look`."""
+    look = json.loads((HERE / "look.json").read_text())
+    look.update(reel.get("look", {}))
+    pal, font = look["palettes"][look["palette"]], look["fonts"][look["font"]]
+    data["look"] = {k: v for k, v in look.items() if k not in ("palettes", "fonts", "note")} | {"pal": pal}
+    roles = ("bg", "ink", "muted", "accent", "g1", "g2")
+    css = lambda m: "".join(f"--{r}:{pal[m][r]};" for r in roles)
+    html = (HERE / "player.html").read_text()
+    html = html.replace("__LOOK_LIGHT__", css("light")).replace("__LOOK_DARK__", css("dark"))
+    html = html.replace("__FONT__", f'"{font["family"]}", "Helvetica Neue", Arial, sans-serif')
+    html = html.replace("__FONTS__", font["google"] + "&family=Martian+Mono:wght@300;400")
     html = html.replace("__TITLE__", reel["title"].replace("<", "&lt;"))
     html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
     out = reel_dir / "reel.html"

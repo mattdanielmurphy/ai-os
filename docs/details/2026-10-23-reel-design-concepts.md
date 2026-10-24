@@ -258,3 +258,52 @@ text 145%, subtitles 26 px, controls 130%, content 760 px wide.
 
 `bun run check`: every preset at 1400 and 400 px, no errors, no sideways scroll, full screen centred.
 Not tried on a real phone. ui-mixer committed and pushed; same mixer link (version 3).
+
+## 22:55 The picked look is now the real reel player
+
+**Asked:** bring the mixer look (his JSON) into the real Explainer Reels project; subtitles a bit lower;
+bottom progress bar a bit thicker.
+
+---
+
+### New page player
+
+`services/reels/player.html`: the page is the slide. Content is drawn as HTML (not a 16:9 SVG box), centred
+in a column, with only Pause/Play bottom-left, Full screen bottom-right (hidden where a phone can't do full
+screen, e.g. iPhone Safari) and a progress line along the bottom edge (tap it to jump to a part; ticks mark
+the parts). Keys still work (Space, ← →, R, S pace, V voice, T timing, F) and S/V show a small toast.
+Phones: swipe left/right to move between parts. Subtitles are always on, under the content.
+Sizes scale with the screen (same proportions as the mixer at 1440×900; phone sizes match the mixer's phone).
+If a slide is too tall it shrinks to fit above the controls. Light and dark follow the system.
+
+---
+
+### Your two tweaks
+
+- Subtitles lower: gap above them 64 px (was 34) × spacing (`subGap` in look.json).
+- Progress bar thicker: 6 px (was 3) (`progress` in look.json).
+
+---
+
+### Slides from JSON (the template you wanted)
+
+Each beat in reel.json now has a `slide` object choosing one of six layouts: cover, bars, compare, list,
+checks, svg (a custom Figma/SVG asset placed on the page). The agent only fills JSON; the player lays it
+out for desktop and phone. Reel 04's eight slides were rewritten this way with the same words, so the
+narration audio was reused from cache (no new voice takes). Old reels 01–03 keep the old SVG player.
+The look itself lives in `services/reels/look.json` (your mixer settings + the two tweaks).
+
+---
+
+### Where it's live
+
+The `tv-box` page in ~/projects/pages now holds the new reel (deployed to its public Vercel link) and
+was re-published to mattmurphy.ca/tv-box, the link you may have sent your dad.
+
+---
+
+### Tested
+
+Headless Chrome at 1440×900 light and 390×844 dark: all 8 slides fit above the controls, no errors;
+audio test: voice plays, music ducks under it, no flash of parts. Not tried on a real phone or by ear.
+Undo: `git revert` this commit in ai-os; in pages, put the old index.html back from git and re-publish.

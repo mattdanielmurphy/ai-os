@@ -7,6 +7,22 @@ self-contained player page (light/dark, phone-friendly, keyboard hints on screen
 
 ## Make a reel (agents: this is the default for big replies)
 
+**New reels use the page player** (the page is the slide; Matt picked the look in the UI Mixer, 2026-10-23).
+Each beat in `reel.json` gets a `slide` object instead of an SVG; the player lays it out for desktop and phone.
+Look: `look.json` (a reel may override keys under `"look"`). Layouts (`layout`):
+
+- `cover`: `label`, `title`, `lede`, `total` (one line or a list)
+- `bars`: `rows` [{`label`, `value` (number), `amount`, `note`}], `total`
+- `compare`: `cards` [{`key`, `head`, `lines` [[a, b]], `total`, `once`, `tone`: good|bad}], `small`
+- `list`: `lede`, `items` [{`head`, `sub`, `tone`}], `tone` (good|bad for all), `total` / `small`
+- `checks`: `items` [text], `total`
+- `svg`: `svg` (a file in the reel folder, e.g. a custom asset exported from Figma) plus `label` / `title`
+
+Every layout takes `label`, `title`, `total` and `small`; wrap words in `*stars*` for the key-number highlight.
+Parts appear one by one as the narration reaches them. Content that won't fit shrinks to fit. See reel 04.
+
+Older reels (01–03) keep the SVG player (`template.html`); the steps below still describe it.
+
 1. Copy `reels/003-air-traffic/` to `reels/<nnn-slug>/`; keep `slides.py`'s helpers (chip, title, para,
    cards…), rewrite the slides. Slides are hand-written SVG (1280×720) using theme role classes
    (`f-ink`, `f-accent`…), never hexes. Groups `a1`, `a2`, … reveal in order; inside them `draw`, `grow`,
