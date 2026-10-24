@@ -133,3 +133,19 @@ All long subheads cut to one line ("1 · Agents mark them", "2 · A scanner", "3
 ### Rule tightened
 
 "No orphans" now says: subheadings fit one line at 360 px; balance is only a safety net.
+
+## 07:30 do.test links become the extra
+
+**Asked:** do.test links for md files and artifacts "really suck"; they should come in addition to the normal links.
+
+---
+
+### New link format
+
+Details and other markdown: sent with SendUserFile, linked by the `/mnt/project-files/...` path (opens the in-app preview, works on the phone), attached on the reply, then `· on Mac` (do.test) after it. Pages/artifacts: their https link first. do.test alone stays only for folders and code.
+
+---
+
+### Where it's saved
+
+`.rules/core_safety.md` (file-link rule + details-file bullet), `~/.claude/CLAUDE.md`, and the `link-files-and-folders` memory. Compiled with build_rules.py and pushed.
