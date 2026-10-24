@@ -169,3 +169,7 @@ While you pull (voice playing, not yet snapped), the word on the centre line, wh
 ### Your defaults
 
 Defaults are now 310 wpm, threshold 16%, pull 1.00, fade 70 px, fly 0.13. Your browser already had these saved; new visitors get them too.
+
+## 16:40 Speechify key on Vercel, voice live
+
+Matt 👍'd the offer. The key was copied from ai-os .env into the matt-pages Vercel project (Production, marked sensitive) through a pipe, never printed. Redeployed. Live check: the first request for a block took 2.2 s (rendered and cached in Blob), the repeat took 0.7 s (cache hit), and the word timings are normal speed ("Reading" is 0.41 s). The headless run on the live link heard the voice after the first tap. Undo: `vercel env rm SPEECHIFY_API_KEY production` in ~/projects/pages.
