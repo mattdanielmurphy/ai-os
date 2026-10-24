@@ -93,3 +93,10 @@ so it plays offline on Dad's phone; switch when that function is live if wanted.
 - The Tweaks panel follows the focused app; with the browser focused, pin "Explainer reels".
 - Apply republishes Dad's tv-box link every time.
 - Undo: git revert the commits in ai-os (services/reels), ~/.hammerspoon (tweaks.lua) and pages (tweaks-live.ts).
+
+## 18:15 Apply build failed: bun not found
+
+Matt pressed Apply: defaults saved and committed (beat.lead, duck.depth, music.outro, pace.gentle), then
+apply.sh failed with exit 127 because Hammerspoon runs it from `zsh -lc`, which skips ~/.zshrc where bun's
+PATH is set. Fix: apply.sh now puts ~/.bun/bin, ~/.local/bin and Homebrew on PATH itself. Re-ran it in a
+clean environment (`env -i … zsh -lc`) to finish his Apply: rebuild, republish tv-box, deploy.

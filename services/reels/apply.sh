@@ -3,6 +3,8 @@
 # Rebuilds every reel whose reel.json names a `page` (re-recording the voice if a voice.* knob changed),
 # copies it over that page in ~/projects/pages, deploys, and refreshes its mattmurphy.ca copy if it has one.
 set -e
+# Hammerspoon runs this from a login shell without ~/.zshrc, so bun / pages / vercel may be off the PATH
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 cd "$(dirname "$0")"
 for json in reels/*/reel.json; do
   page=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('page',''))" "$json")
