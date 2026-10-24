@@ -72,3 +72,8 @@ Undo: git revert this commit.
 - Self-serve tuning: the reel has a Timing button (key T): sliders for advance, spread and linger that apply live from the next slide (R replays this one), are remembered in that browser, and "Copy for tweaks.json" gives values to bake in. No rebuild needed to find the right number.
 - Rebuild locally: python3 ~/projects/ai-os/services/reels/build.py reels/004-dad-iptv (about 10 s with cached audio). Publishing to claude.ai is only possible through the Claude Artifact tool, so republishing needs a Claude session; I did not find a CLI for it.
 - Worked in the main checkout this time (branch merged into main on Matt's thumbs-up). Published to the same artifact URL.
+
+## 00:40 Published to mattmurphy.ca
+- Baked Matt's timing: reveal.advance -1.65, reveal.spread 0.85, beat.holdBase 0.6 (tweaks.json), rebuilt.
+- Added the reel to the mattmurphy.ca repo as public/tv-box/index.html (noindex so search engines skip it; unlisted, not linked from the site) plus a vercel.json rewrite so /tv-box works. Pushed main there; Vercel deployed. Live: https://www.mattmurphy.ca/tv-box (7 MB, 200 OK, noindex present). It loads Google Fonts from Google, nothing else external.
+- Undo: delete public/tv-box and the rewrite, push.
