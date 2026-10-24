@@ -161,7 +161,8 @@ def build(reel_dir: Path, voice: str | None = None, music: str | None = None) ->
                 for mp3 in clips]})
     beats = [{"svg": themed((reel_dir / b["svg"]).read_text(), theme), "say": re.sub(r"\s*\.\.\.\s*", " ", b["say"])} for b in reel["beats"]]
     data = {"title": reel["title"], "eyebrow": reel.get("eyebrow", ""), "voice": voices[0]["name"],
-            "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None}
+            "voices": voices, "figma": reel.get("figma", ""), "beats": beats, "tweaks": tweaks, "music": None,
+            "built": __import__("datetime").datetime.now().strftime("%b %d %H:%M")}
     music = music or reel.get("music")
     if music:
         src = (reel_dir / Path(music).expanduser()).resolve()

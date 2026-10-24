@@ -60,3 +60,9 @@ Undo: git revert this commit.
 ## 00:45 Visuals earlier than the voice
 - Voice led the visuals. New tweak reveal.advance (0.75 s, range 0-2): every slide part after the first appears that much earlier (clamped at 0). Matt asked 0.5-1 s; took the middle. Tune in the Tweaks panel and rebuild.
 - Untested by ear/eye. Undo: set reveal.advance to 0.
+
+## 00:55 Tweaks panel, early voice, build stamp
+- Why no reveal.advance knob: I edited the worktree copy; the panel reads ~/projects/ai-os/services/reels/tweaks.json on main. Merged the branch into main so it shows. (Main's tweaks.json had only a formatting rewrite by the panel, no value changes; took the branch version.)
+- Knobs are BAKED when build.py runs, so changing one does nothing until the reel is rebuilt and republished. Footer now shows "built <date time>" so you can see which build you have.
+- Voice-early on slide 3: chip and title used up the first two reveal slots, so content started ~2 gaps late. Now chip and title appear at once and content items spread over 85 percent of the narration starting immediately, minus reveal.advance (0.75 s).
+- Untested by eye/ear.

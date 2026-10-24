@@ -151,7 +151,7 @@ $('eyebrow').textContent = D.eyebrow;
 function labels() {
 const total = D.beats.reduce((s, b) => s + b.dur + T['beat.gap'] + T['beat.lead'], 0);
 $('meta').textContent = `${D.beats.length} beats · ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')} · voice: ${D.voice}` + (D.music ? ' · with music' : '');
-$('credit').innerHTML = (D.figma ? `Slides made in <a class="quiet" href="${D.figma}" target="_blank" rel="noopener">Figma</a> · ` : '') + `voice by Deepgram (${D.voice})` + (D.music ? ` · music: ${D.music.name}` : '');
+$('credit').innerHTML = (D.figma ? `Slides made in <a class="quiet" href="${D.figma}" target="_blank" rel="noopener">Figma</a> · ` : '') + `voice by Deepgram (${D.voice})` + (D.built ? ` · built ${D.built}` : '') + (D.music ? ` · music: ${D.music.name}` : '');
 $('voice').textContent = 'Voice: ' + D.voice; $('voice').hidden = D.voices.length < 2;
 if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: D.title, artist: D.voice });
 }
@@ -202,8 +202,10 @@ function show(k, autoplay = playing) {
   intro = false;
   pr.style.setProperty('--pd', (lead + b.dur / speed + T['beat.gap'] + T['beat.holdBase'] + T['beat.holdPerText'] * document.querySelectorAll('#slide text').length) + 's'); pr.classList.add('run');
   $('stage').style.setProperty('--beat', (lead + b.dur / speed + T['beat.gap'] + 1) + 's');
-  const gap = Math.min(T['reveal.maxGap'], (b.dur * T['reveal.spread']) / Math.max(1, ps.length - 1));
-  requestAnimationFrame(() => ps.forEach((p, n) => later(() => { p.classList.add('in'); activate(p); }, n === 0 ? 0 : Math.max(0, lead - T['beat.lead'] + n * gap - T['reveal.advance']))));
+  // chip + title (the first two parts) appear at once; the content parts then spread across the narration, a little early
+  const chrome = Math.min(2, ps.length), content = Math.max(1, ps.length - chrome);
+  const gap = Math.min(T['reveal.maxGap'], (b.dur * T['reveal.spread']) / content);
+  requestAnimationFrame(() => ps.forEach((p, n) => later(() => { p.classList.add('in'); activate(p); }, n < chrome ? 0 : Math.max(0, lead - T['beat.lead'] + (n - chrome) * gap - T['reveal.advance']))));
   later(() => audio.play().catch(() => setPlaying(false)), lead);
 }
 function setPlaying(on) {
