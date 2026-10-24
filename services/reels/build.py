@@ -12,7 +12,7 @@ with the roles' LIGHT hexes; the build swaps them for role classes so slides fol
 colours (e.g. swatches shown as content) are left alone. Every reel should get its own theme or a
 deliberate one; never the stock kit (No Claude-default look rule).
 
-Voice: the whole script is read in one Deepgram take at `pace` (default: tweak voice.pace), then cut per
+Voice: the whole script is read in one Speechify take at `pace` (default: tweak voice.pace), then cut per
 beat by word timings (see one_take), cached in REEL_DIR/audio/.
 Music: optional `music` (path to a loop) plays under the voice, side-chain ducked in the player. The build
 trims it to what the reel can use (Gentle pace included), evens its loudness and fades its ends.
@@ -85,7 +85,7 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
     """Read the whole script in ONE TTS call (one consistent voice, no energy drop at every line end),
     then cut it into per-beat clips. Cut points come from speech-to-text word timings: halfway between
     the last word of one beat and the first word of the next. Cached by voice + pace + full script."""
-    tag = hashlib.sha1((f"{voice}|{pace}|" + "\n".join(lines)).encode()).hexdigest()[:12]
+    tag = hashlib.sha1((f"speechify-v2|{voice}|{pace}|" + "\n".join(lines)).encode()).hexdigest()[:12]
     clips = [folder / f"{tag}-{k + 1}.mp3" for k in range(len(lines))]
     if all(c.exists() for c in clips):
         return clips, tag
