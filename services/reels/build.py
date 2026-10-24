@@ -85,7 +85,7 @@ def one_take(lines: list[str], voice: str, pace: float, folder: Path) -> list[Pa
     """Read the whole script in ONE TTS call (one consistent voice, no energy drop at every line end),
     then cut it into per-beat clips. Cut points come from speech-to-text word timings: halfway between
     the last word of one beat and the first word of the next. Cached by voice + pace + full script."""
-    tag = hashlib.sha1((f"{voice}|{pace}|" + "\n".join(lines)).encode()).hexdigest()[:12]
+    tag = hashlib.sha1((f"speechify-v2|{voice}|{pace}|" + "\n".join(lines)).encode()).hexdigest()[:12]
     clips = [folder / f"{tag}-{k + 1}.mp3" for k in range(len(lines))]
     if all(c.exists() for c in clips):
         return clips, tag

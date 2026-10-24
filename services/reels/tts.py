@@ -48,7 +48,9 @@ def call(req, timeout):
 def ssml(text, speed):
     """Plain text -> SSML. Blank lines and `...` lines become real pauses (<break>); `speed` is prosody rate."""
     paras = [" ".join(p.split()) for p in re.split(r"\n\s*\n", text)]
-    body = '<break time="500ms"/>'.join(escape(p) for p in paras if p.strip(". "))
+    def para(p):  # a `...` inside a line is a short real pause, not text for the voice to read
+        return '<break time="400ms"/>'.join(escape(x) for x in re.split(r"\s*\.\.\.\s*", p) if x.strip())
+    body = '<break time="500ms"/>'.join(para(p) for p in paras if p.strip(". "))
     return f"<speak><prosody rate=\"{round(speed * 100)}%\">{body}</prosody></speak>"
 
 
