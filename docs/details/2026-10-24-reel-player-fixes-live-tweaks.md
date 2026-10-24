@@ -100,3 +100,6 @@ Matt pressed Apply: defaults saved and committed (beat.lead, duck.depth, music.o
 apply.sh failed with exit 127 because Hammerspoon runs it from `zsh -lc`, which skips ~/.zshrc where bun's
 PATH is set. Fix: apply.sh now puts ~/.bun/bin, ~/.local/bin and Homebrew on PATH itself. Re-ran it in a
 clean environment (`env -i … zsh -lc`) to finish his Apply: rebuild, republish tv-box, deploy.
+
+## 17:35 Captions off, voice 1.15x as defaults
+Matt: remove captions, speed voice up 15%, make both the new defaults for all reels. Added an `off` choice to `subtitle.mode` (player hides `#sub`, slide layout ignores its gap) and set it as default; `voice.rate` 1 → 1.15 (value and default) in `services/reels/tweaks.json`. Ran `apply.sh`: re-recorded tv-box (baked rate 1.15), republished, deployed. Rejected: removing caption code (kept so Matt can turn it back on in Tweaks). Untested: listening to the new take; not clicked via the real Apply button. Undo: set subtitle.mode to "Current sentence" and voice.rate to 1 in the Tweaks panel, Apply.
