@@ -138,3 +138,50 @@ Synth panel (not warm). Dislikes the dot next to the chapter label.
 05 colour field (14-255) · 06 warm grey (14-327) · 07 dot bars (14-393) · 08 aspen (14-469).
 Round 2 (13-2) already had the page-is-the-slide layout; it stays in the file for reference.
 Builder: `services/reels/concepts/round3.js`. Mocks only, contrast by eye.
+
+## 22:05 A mixer so Matt can mix and match himself
+
+**Asked:** he never saw round 2 and commented on round 1. Get rid of the faint lines cutting through the bar
+numbers; why can't he delete things in Figma; he wants to mix and match ideas himself without describing
+changes and waiting. Round 3 notes: Hairline loved; Gallery's serif font feels played; warm grey and many
+others beautiful; dot bars liked but dot/line contrast too strong and bars too thin; Aspen and colour field
+feel corporate (a bank); drop 4, 5 and 8. Subtitles are required; #3's subtitles about 50% bigger. Not keen on
+soft-block bars or the card behind the total.
+
+---
+
+### Lines removed in Figma
+
+The faint 1 px "track" behind every thin bar ran under the numbers. Removed from all round 3 boards (30 lines),
+and the mixer has no tracks at all.
+
+---
+
+### Why he couldn't delete in Figma
+
+He owns the file (it's in his Drafts, made with his account). The lines sit several frames deep (board →
+page → slide content), so a plain click selects the whole board. **Cmd-click** (deep select) or double-click
+down into the frame selects the line itself; then Delete works.
+
+---
+
+### Why a web mixer instead of Figma
+
+Figma can do mix-and-match with components and variants, but it needs Figma know-how and every option has
+to be built as a variant first. A small web page with chips and sliders renders the reel page live at desktop
+and phone size, in light and dark, and is the same thing the future JSON template will do. So the mixer is
+also the first draft of the template's settings (palette, font, label, highlight, layout, graphics size, bars,
+bar thickness, dot size, line strength, total style, subtitle size and position, controls, controls strength).
+
+- Link: https://claude.ai/artifact/U9TF2nu8irgwBizQxoh1Yw (source: `services/reels/concepts/mixer.html`).
+- Presets: Hairline, Hairline no mono, Warm grey, Dot bars (thicker line, softer contrast), Soft card,
+  Film subtitles. Serif title, colour field and aspen are gone.
+- Subtitles are always on; default size 22 px desktop (about 50% bigger than round 3), 72% of that on phone.
+- "Copy settings" copies one line of JSON to paste back; his mix is remembered in his browser.
+- Full screen icon in a preview really goes full screen with the controls on it (desktop browsers).
+
+---
+
+### Mixer tested
+
+Headless Chrome at 1400 and 400 px wide: no errors, no sideways scroll, presets switch. Not tried on a real phone.

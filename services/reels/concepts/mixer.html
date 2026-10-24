@@ -1,0 +1,307 @@
+<title>Reel Look Mixer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600&family=Martian+Mono:wght@300;400&family=Familjen+Grotesk:wght@400;500;600&family=Onest:wght@300;400;500;600&family=Funnel+Sans:wght@300;400;500;600&family=Commissioner:wght@300;400;500;600&family=Libre+Franklin:wght@300;400;500;600&display=swap">
+<style>
+/* Layout: options rail on the left, live previews (desktop + phone) on the right; stacks on phones. */
+:root {
+  --ui-bg: #f2f2f0; --ui-panel: #fafaf9; --ui-ink: #1d211b; --ui-muted: #6b7166; --ui-line: #d9dbd5; --ui-pick: #1d211b; --ui-pick-ink: #fafaf9;
+  --ui-font: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ui-bg: #121411; --ui-panel: #1a1d19; --ui-ink: #e8eae5; --ui-muted: #9aa195; --ui-line: #30342e; --ui-pick: #e8eae5; --ui-pick-ink: #121411; color-scheme: dark } }
+:root[data-theme="dark"] { --ui-bg: #121411; --ui-panel: #1a1d19; --ui-ink: #e8eae5; --ui-muted: #9aa195; --ui-line: #30342e; --ui-pick: #e8eae5; --ui-pick-ink: #121411; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--ui-bg); color: var(--ui-ink); font-family: var(--ui-font); font-size: 14px; }
+.app { display: grid; grid-template-columns: 330px minmax(0, 1fr); height: 100%; }
+.rail { background: var(--ui-panel); border-right: 1px solid var(--ui-line); overflow-y: auto; padding-block: 20px 40px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: 18px; display: flex; flex-direction: column; gap: 18px; }
+.rail h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+.rail p.lede { margin: 4px 0 0; color: var(--ui-muted); line-height: 1.45; }
+.group { display: flex; flex-direction: column; gap: 7px; }
+.group > label, .group > .lab { font-size: 12px; font-weight: 500; color: var(--ui-muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chips button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--ui-line); background: transparent; color: var(--ui-ink); cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--ui-pick); color: var(--ui-pick-ink); border-color: var(--ui-pick); }
+.chips button:focus-visible, .actions button:focus-visible, input:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.slider { display: grid; grid-template-columns: 1fr 44px; align-items: center; gap: 8px; }
+.slider output { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ui-muted); text-align: right; }
+input[type=range] { width: 100%; accent-color: var(--ui-ink); }
+.sub { padding-left: 10px; border-left: 2px solid var(--ui-line); display: flex; flex-direction: column; gap: 7px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--ui-line); }
+.actions button { font: inherit; font-weight: 500; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--ui-line); background: transparent; color: var(--ui-ink); cursor: pointer; }
+.actions button.primary { background: var(--ui-pick); color: var(--ui-pick-ink); border-color: var(--ui-pick); }
+.note { font-size: 12px; color: var(--ui-muted); line-height: 1.45; }
+textarea#json { width: 100%; min-height: 90px; font: 11px/1.4 ui-monospace, Menlo, monospace; border: 1px solid var(--ui-line); border-radius: 8px; padding: 8px; background: var(--ui-bg); color: var(--ui-ink); box-sizing: border-box; }
+.stage { overflow-y: auto; padding-block: 20px 40px; padding-left: 24px; padding-right: max(24px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.stagebar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.stagebar .hint { color: var(--ui-muted); font-size: 12px; }
+.previews { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 22px; align-items: start; }
+.pv { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pv .cap { font-size: 12px; color: var(--ui-muted); }
+.frame { position: relative; overflow: hidden; border-radius: 10px; box-shadow: 0 0 0 1px var(--ui-line); }
+.frame.phone { border-radius: 30px; }
+.frame .reel { transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+.frame:fullscreen { border-radius: 0; box-shadow: none; }
+.frame:fullscreen .reel { transform: none !important; width: 100vw !important; height: 100vh !important; }
+
+/* ---------- the reel page itself (all values come from inline CSS variables set by script) ---------- */
+.reel { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; }
+.reel .content { position: absolute; display: flex; flex-direction: column; }
+.reel .label { color: var(--muted); font-weight: 500; }
+.reel .label.mono { font-family: "Martian Mono", ui-monospace, monospace; font-weight: 300; text-transform: uppercase; letter-spacing: .08em; }
+.reel .title { font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin: 0; text-wrap: balance; }
+.reel .hl-grad { background: linear-gradient(90deg, var(--g1), var(--g2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.reel .hl-colour { color: var(--accent); }
+.reel .rows { display: flex; flex-direction: column; }
+.reel .rowlab { opacity: .85; font-weight: 500; }
+.reel .bar { display: flex; align-items: center; gap: .55em; }
+.reel .track { position: relative; display: flex; align-items: center; flex: none; }
+.reel .amt { font-weight: 500; font-variant-numeric: tabular-nums; }
+.reel .note { color: var(--muted); font-weight: 300; }
+.reel .total-rule { border-top: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); }
+.reel .total-card { background: var(--card); border-radius: 14px; }
+.reel .total { font-weight: 500; line-height: 1.2; }
+.reel .subt { color: var(--muted); line-height: 1.4; font-weight: 400; }
+.reel .subt b { color: var(--ink); font-weight: 400; }
+.reel .ctl { position: absolute; left: 0; right: 0; bottom: 0; top: 0; pointer-events: none; }
+.reel .ctl * { pointer-events: auto; }
+.reel .ic { border-radius: 50%; display: grid; place-items: center; position: absolute; background: transparent; border: 0; padding: 0; cursor: pointer; color: var(--ink); }
+.reel .ic.ring { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 25%, transparent); }
+.reel .ic svg { display: block; }
+.reel .prog { position: absolute; }
+.reel .wordbtn { position: absolute; display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--ink); background: none; border: 0; cursor: pointer; font-family: var(--font); }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; height: auto; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--ui-line); order: 2; padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+  .stage { order: 1; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .previews { grid-template-columns: 1fr; }
+  .pv.phonepv { max-width: 300px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="rail" id="rail">
+    <div>
+      <h1>Reel look mixer</h1>
+      <p class="lede">Mix pieces of the concepts and see it live. When you like it, copy the settings and paste them to Claude.</p>
+    </div>
+    <div class="group"><span class="lab">Start from</span><div class="chips" id="presets"></div></div>
+    <div id="opts"></div>
+    <div class="actions">
+      <button class="primary" id="copy">Copy settings</button>
+      <button id="reset">Reset to preset</button>
+    </div>
+    <p class="note" id="copied" aria-live="polite">Your mix is remembered in this browser.</p>
+    <textarea id="json" aria-label="Settings as text" readonly></textarea>
+  </aside>
+  <main class="stage">
+    <div class="stagebar">
+      <div class="chips" id="modes"></div>
+      <span class="hint">Tap the full screen icon in a preview to see it at real size. Esc leaves.</span>
+    </div>
+    <div class="previews">
+      <div class="pv"><span class="cap">Desktop · 1440 × 900</span><div class="frame" id="fDesk"></div></div>
+      <div class="pv phonepv"><span class="cap">Phone · 390 × 844</span><div class="frame phone" id="fPhone"></div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const PALETTES = {
+  hairline: { name: 'Hairline', light: { bg: '#f5f5f4', ink: '#181d16', muted: '#737b6f', card: '#ebebe8', accent: '#9a6fb8', g1: '#a58ac5', g2: '#cf6eb6', bars: ['#181d16', '#a58ac5', '#b9bdb5'] },
+    dark: { bg: '#10120f', ink: '#ececea', muted: '#a3a8a0', card: '#1c1f1b', accent: '#c9a3df', g1: '#b9a3d6', g2: '#e08bcb', bars: ['#ececea', '#b9a3d6', '#4a4e47'] } },
+  warm: { name: 'Warm grey', light: { bg: '#f4f3f0', ink: '#2a2621', muted: '#776f66', card: '#e9e6e1', accent: '#825172', g1: '#825172', g2: '#a58ac5', bars: ['#2a2621', '#825172', '#c4bfb7'] },
+    dark: { bg: '#141210', ink: '#ece9e4', muted: '#a8a097', card: '#211e1a', accent: '#c79abb', g1: '#c79abb', g2: '#b9a3d6', bars: ['#ece9e4', '#c79abb', '#4a453e'] } },
+  dusk: { name: 'Dusk violet', light: { bg: '#f5f5f6', ink: '#24232d', muted: '#6c6a79', card: '#e9e7f1', accent: '#625c89', g1: '#625c89', g2: '#92c1c6', bars: ['#625c89', '#92c1c6', '#cfcdd8'] },
+    dark: { bg: '#121116', ink: '#e8e7ee', muted: '#a09eaf', card: '#211f2a', accent: '#a39dd0', g1: '#a39dd0', g2: '#92c1c6', bars: ['#a39dd0', '#92c1c6', '#3f3d4a'] } },
+  fireweed: { name: 'Fireweed', light: { bg: '#f5f5f4', ink: '#1d1c1f', muted: '#75727a', card: '#eaeaea', accent: '#b4479a', g1: '#b4479a', g2: '#a58ac5', bars: ['#1d1c1f', '#b4479a', '#9b98a0'] },
+    dark: { bg: '#121113', ink: '#ecebee', muted: '#a5a2aa', card: '#1f1e21', accent: '#e08bcb', g1: '#e08bcb', g2: '#b9a3d6', bars: ['#ecebee', '#e08bcb', '#6d6a72'] } },
+  verdigris: { name: 'Verdigris', light: { bg: '#f4f4f2', ink: '#1f2420', muted: '#6b726c', card: '#e8e9e6', accent: '#376d61', g1: '#376d61', g2: '#60a192', bars: ['#376d61', '#60a192', '#bfc4bf'] },
+    dark: { bg: '#111311', ink: '#e7eae6', muted: '#9ea59f', card: '#1d201d', accent: '#90c6b9', g1: '#90c6b9', g2: '#60a192', bars: ['#90c6b9', '#60a192', '#3f4540'] } },
+};
+const FONTS = { hanken: ['Hanken Grotesk', '"Hanken Grotesk"'], familjen: ['Familjen Grotesk', '"Familjen Grotesk"'], onest: ['Onest', 'Onest'], funnel: ['Funnel Sans', '"Funnel Sans"'], commissioner: ['Commissioner', 'Commissioner'], franklin: ['Libre Franklin', '"Libre Franklin"'] };
+const BASE = { palette: 'hairline', font: 'hanken', label: 'mono', highlight: 'gradient', layout: 'column', scale: 1, bars: 'line', thickness: 5, dot: 12, lineFade: 0.55, total: 'rule', subSize: 22, subPos: 'under', controls: 'line', ctlFade: 0.78 };
+const PRESETS = {
+  'Hairline': {},
+  'Hairline, no mono': { label: 'sans', layout: 'left' },
+  'Warm grey': { palette: 'warm' },
+  'Dot bars': { palette: 'fireweed', bars: 'dot', thickness: 3, dot: 12, lineFade: 0.55, highlight: 'colour', controls: 'segments' },
+  'Soft card': { palette: 'dusk', label: 'sans', bars: 'soft', thickness: 18, total: 'card', highlight: 'colour', controls: 'cluster' },
+  'Film subtitles': { palette: 'verdigris', label: 'sans', highlight: 'colour', subPos: 'bottom', controls: 'corners' },
+};
+const OPTS = [
+  { key: 'palette', label: 'Colours', type: 'chips', choices: Object.fromEntries(Object.entries(PALETTES).map(([k, v]) => [k, v.name])), swatch: true },
+  { key: 'font', label: 'Font', type: 'chips', choices: Object.fromEntries(Object.entries(FONTS).map(([k, v]) => [k, v[0]])) },
+  { key: 'label', label: 'Chapter label', type: 'chips', choices: { mono: 'Small mono caps', sans: 'Plain', none: 'None' } },
+  { key: 'highlight', label: 'Key number', type: 'chips', choices: { gradient: 'Gradient', colour: 'Colour', none: 'Plain' } },
+  { key: 'layout', label: 'Layout', type: 'chips', choices: { column: 'Centred column', left: 'Left, wider' } },
+  { key: 'scale', label: 'Graphics size', type: 'range', min: 0.7, max: 1.3, step: 0.05, fmt: v => Math.round(v * 100) + '%' },
+  { key: 'bars', label: 'Bars', type: 'chips', choices: { line: 'Line', soft: 'Soft block', dot: 'Line + dot' } },
+  { key: 'thickness', label: 'Bar thickness', type: 'range', min: 1, max: 28, step: 1, fmt: v => v + 'px', sub: true },
+  { key: 'dot', label: 'Dot size', type: 'range', min: 6, max: 22, step: 1, fmt: v => v + 'px', sub: true, when: s => s.bars === 'dot' },
+  { key: 'lineFade', label: 'Line strength (vs dot)', type: 'range', min: 0.15, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%', sub: true, when: s => s.bars === 'dot' },
+  { key: 'total', label: 'Total line', type: 'chips', choices: { rule: 'Hairline above', card: 'Soft card', plain: 'Plain' } },
+  { key: 'subSize', label: 'Subtitle size (desktop)', type: 'range', min: 14, max: 34, step: 1, fmt: v => v + 'px' },
+  { key: 'subPos', label: 'Subtitle position', type: 'chips', choices: { under: 'Under the content', bottom: 'Bottom, centred' } },
+  { key: 'controls', label: 'Controls', type: 'chips', choices: { line: 'Quiet line', cluster: 'Small cluster', corners: 'Corners + edge line', segments: 'Segments', pill: 'Pill' } },
+  { key: 'ctlFade', label: 'Controls strength', type: 'range', min: 0.3, max: 1, step: 0.05, fmt: v => Math.round(v * 100) + '%', sub: true },
+];
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+let preset = 'Hairline', S = { ...BASE }, view = 'both';
+try { const saved = JSON.parse(store.get('reelmix') || 'null'); if (saved && saved.S) { S = { ...BASE, ...saved.S }; preset = saved.preset || preset; view = saved.view || view; } } catch (e) {}
+
+const el = (tag, attrs = {}, ...kids) => { const n = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') n.style.cssText = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v); } for (const k of kids) if (k != null) n.append(k); return n; };
+const ICON = {
+  pause: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="6" width="3" height="12" rx="1"/><rect x="14" y="6" width="3" height="12" rx="1"/></svg>`,
+  fs: s => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>`,
+};
+
+function renderReel(device, mode) {
+  const phone = device === 'phone', W = phone ? 390 : 1440, H = phone ? 844 : 900;
+  const P = PALETTES[S.palette][mode], k = S.scale, ff = FONTS[S.font][1] + ', "Helvetica Neue", Arial, sans-serif';
+  const r = el('div', { class: 'reel', style: `width:${W}px;height:${H}px;--bg:${P.bg};--ink:${P.ink};--muted:${P.muted};--card:${P.card};--accent:${P.accent};--g1:${P.g1};--g2:${P.g2};--font:${ff}` });
+  const cw = phone ? W - 48 : S.layout === 'column' ? 720 : 960, x = phone ? 24 : S.layout === 'column' ? (W - 720) / 2 : 160;
+  const c = el('div', { class: 'content', style: `left:${x}px;width:${cw}px` });
+  const sz = (d, p) => (phone ? p : d) * k;
+  if (S.label !== 'none') c.append(el('div', { class: 'label' + (S.label === 'mono' ? ' mono' : ''), style: `font-size:${S.label === 'mono' ? (phone ? 9.5 : 11) : (phone ? 13 : 15)}px;margin-bottom:${phone ? 14 : 18}px` }, 'What TV costs a year now'));
+  const t = el('h2', { class: 'title', style: `font-size:${sz(52, 34)}px;margin-bottom:${sz(40, 28)}px` }, 'Before: about ');
+  t.append(el('span', { class: S.highlight === 'gradient' ? 'hl-grad' : S.highlight === 'colour' ? 'hl-colour' : '' }, '$2,000'));
+  c.append(t);
+  const rows = el('div', { class: 'rows', style: `gap:${sz(22, 18)}px;margin-bottom:${sz(30, 24)}px` });
+  const maxW = (phone ? 180 : S.layout === 'column' ? 440 : 520) * k;
+  [['Telus TV (cancelled)', '$900', 1, '$75 a month'], ['Sportsnet+ alone', '$350', .39, 'per year'], ['Everything else: Apple One, Netflix, Prime…', '~$750', .83, 'estimate']].forEach((d, j) => {
+    const row = el('div', {});
+    row.append(el('div', { class: 'rowlab', style: `font-size:${phone ? 12 : 13}px;margin-bottom:${phone ? 6 : 8}px` }, d[0]));
+    const w = Math.max(6, maxW * d[2]), col = P.bars[j], th = S.thickness;
+    let track;
+    if (S.bars === 'dot') {
+      const dd = S.dot;
+      track = el('div', { class: 'track', style: `width:${w}px;height:${Math.max(dd, th)}px` });
+      track.append(el('div', { style: `position:absolute;left:0;right:${dd / 2}px;height:${th}px;border-radius:${th}px;background:${col};opacity:${S.lineFade}` }));
+      track.append(el('div', { style: `position:absolute;right:0;width:${dd}px;height:${dd}px;border-radius:50%;background:${col}` }));
+    } else {
+      track = el('div', { class: 'track', style: `width:${w}px;height:${th}px;border-radius:${S.bars === 'soft' ? Math.min(8, th / 2) : th}px;background:${col}` });
+    }
+    const bar = el('div', { class: 'bar' }, track, el('span', { class: 'amt', style: `font-size:${sz(24, 19)}px` }, d[1]), el('span', { class: 'note', style: `font-size:${phone ? 11 : 13}px` }, d[3]));
+    row.append(bar); rows.append(row);
+  });
+  c.append(rows);
+  const tw = phone ? cw : S.layout === 'column' ? cw : 720;
+  const tot = el('div', { class: 'total ' + (S.total === 'rule' ? 'total-rule' : S.total === 'card' ? 'total-card' : ''), style: `width:${tw}px;box-sizing:border-box;font-size:${sz(24, 18)}px;padding:${S.total === 'card' ? (phone ? '14px 16px' : '20px 24px') : S.total === 'rule' ? (phone ? '14px 0 0' : '16px 0 0') : '0'}` }, 'With Telus gone: about $1,100 a year.');
+  c.append(tot);
+  const subSize = phone ? Math.round(S.subSize * 0.72) : S.subSize;
+  const sub = el('div', { class: 'subt', style: `font-size:${subSize}px` });
+  sub.innerHTML = '<b>Before, TV cost about two thousand dollars a year. Telus was nine hundred,</b> Sportsnet plus alone is three fifty.';
+  if (S.subPos === 'under') { sub.style.marginTop = (phone ? 24 : 34) + 'px'; sub.style.maxWidth = (phone ? cw : Math.min(tw, 680)) + 'px'; c.append(sub); }
+  r.append(c);
+  const ctlH = phone ? 96 : 100;
+  let subBottom = null;
+  if (S.subPos === 'bottom') {
+    const sw = phone ? W - 48 : 860;
+    sub.style.cssText += `;position:absolute;left:${(W - sw) / 2}px;width:${sw}px;text-align:center;`;
+    r.append(sub); subBottom = sub;
+  }
+  r.append(controls(W, H, phone, P));
+  // place content: vertically centred in the space above the controls (and above a bottom subtitle)
+  requestAnimationFrame(() => {
+    let bottom = H - ctlH;
+    if (subBottom) { subBottom.style.top = (bottom - subBottom.offsetHeight - 8) + 'px'; bottom = bottom - subBottom.offsetHeight - 24; }
+    const top = phone ? 64 : 56, h = c.offsetHeight;
+    c.style.top = Math.round(top + Math.max(0, (bottom - top - h) / 2)) + 'px';
+  });
+  return r;
+}
+function controls(W, H, phone, P) {
+  const g = el('div', { class: 'ctl', style: `opacity:${S.ctlFade}` });
+  const M = phone ? 20 : 40, frac = 0.19;
+  const btn = (kind, x, y, d, ring) => { const b = el('button', { class: 'ic' + (ring ? ' ring' : ''), 'aria-label': kind === 'fs' ? 'Full screen' : 'Pause', style: `left:${x}px;top:${y}px;width:${d}px;height:${d}px`, 'data-act': kind }); b.innerHTML = ICON[kind](Math.round(d * (ring ? .5 : .7))); return b; };
+  const line = (x, y, w, h, col, op) => el('div', { class: 'prog', style: `left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${col};opacity:${op};border-radius:${h}px` });
+  const colX0 = phone ? M : S.layout === 'column' ? (W - 720) / 2 : 160, colX1 = phone ? W - M : S.layout === 'column' ? (W + 720) / 2 : W - 160;
+  if (S.controls === 'line') {
+    const d = phone ? 36 : 32, y = H - (phone ? 66 : 64), w = colX1 - colX0 - 2 * d - 32;
+    g.append(btn('pause', colX0, y, d, true), line(colX0 + d + 16, y + d / 2, w, 1, P.ink, .18), line(colX0 + d + 16, y + d / 2 - .5, w * frac, 2, P.ink, 1), btn('fs', colX1 - d, y, d, true));
+  } else if (S.controls === 'cluster') {
+    const d = phone ? 40 : 36, y = H - (phone ? 70 : 66), cx = W / 2;
+    g.append(btn('pause', cx - d - 30, y, d, true), el('span', { class: 'wordbtn', style: `left:${cx - 15}px;top:${y + d / 2 - 9}px;font-size:13px;color:${P.muted};cursor:default` }, '2 / 8'), btn('fs', cx + 30, y, d, true));
+  } else if (S.controls === 'corners') {
+    const y = H - (phone ? 46 : 48);
+    g.append(line(0, H - 3, W, 3, P.ink, .1), line(0, H - 3, W * frac, 3, P.accent, 1));
+    const pz = el('button', { class: 'wordbtn', 'data-act': 'pause', style: `left:${M - 4}px;top:${y}px;font-size:13px` }); pz.innerHTML = ICON.pause(18) + 'Pause';
+    const fs = el('button', { class: 'wordbtn', 'data-act': 'fs', style: `right:${M}px;top:${y}px;font-size:13px` }); fs.innerHTML = ICON.fs(16) + 'Full screen';
+    g.append(pz, fs);
+  } else if (S.controls === 'segments') {
+    const y = H - (phone ? 60 : 56), d = 28, sx = colX0 + d + 12, sw = (colX1 - d - 12 - sx - 7 * 4) / 8;
+    g.append(btn('pause', colX0, y, d, false));
+    for (let i = 0; i < 8; i++) { g.append(line(sx + i * (sw + 4), y + d / 2 - 1, sw, 2, P.ink, .15)); if (i <= 1) g.append(line(sx + i * (sw + 4), y + d / 2 - 1, i ? sw * .45 : sw, 2, P.accent, 1)); }
+    g.append(btn('fs', colX1 - d, y, d, false));
+  } else if (S.controls === 'pill') {
+    const pw = phone ? 230 : 260, ph = 46, x = (W - pw) / 2, y = H - ph - (phone ? 30 : 30);
+    g.append(el('div', { class: 'prog', style: `left:${x}px;top:${y}px;width:${pw}px;height:${ph}px;border-radius:${ph}px;background:${P.card};box-shadow:inset 0 0 0 1px color-mix(in srgb, ${P.ink} 12%, transparent)` }));
+    g.append(btn('pause', x + 5, y + 5, ph - 10, false));
+    for (let i = 0; i < 8; i++) { const on = i === 1; g.append(el('div', { class: 'prog', style: `left:${x + ph + 12 + i * (phone ? 16 : 19)}px;top:${y + ph / 2 - 3}px;width:${on ? 16 : 6}px;height:6px;border-radius:6px;background:${on ? P.accent : P.ink};opacity:${on ? 1 : i < 1 ? .6 : .2}` })); }
+    g.append(btn('fs', x + pw - ph + 5, y + 5, ph - 10, false));
+  }
+  return g;
+}
+function draw() {
+  for (const [id, device] of [['fDesk', 'desk'], ['fPhone', 'phone']]) {
+    const f = document.getElementById(id); f.innerHTML = '';
+    const modes = view === 'both' ? (device === 'desk' ? ['light'] : ['dark']) : [view];
+    const reel = renderReel(device, modes[0]);
+    f.append(reel);
+    const W = device === 'phone' ? 390 : 1440, H = device === 'phone' ? 844 : 900;
+    const fit = () => { const s = f.clientWidth / W; reel.style.transform = `scale(${s})`; f.style.height = Math.round(H * s) + 'px'; };
+    fit(); f._fit = fit;
+    reel.querySelectorAll('[data-act="fs"]').forEach(b => b.addEventListener('click', () => {
+      if (document.fullscreenElement) { document.exitFullscreen?.().catch(() => {}); return; }
+      const p = f.requestFullscreen?.(); if (p && p.catch) p.catch(() => { document.getElementById('copied').textContent = 'Full screen isn’t allowed here; try it in a desktop browser.'; });
+    }));
+  }
+  document.getElementById('json').value = JSON.stringify(S, null, 1);
+  store.set('reelmix', JSON.stringify({ S, preset, view }));
+}
+new ResizeObserver(() => { for (const id of ['fDesk', 'fPhone']) document.getElementById(id)._fit?.(); }).observe(document.querySelector('.previews'));
+
+function buildUI() {
+  const pr = document.getElementById('presets'); pr.innerHTML = '';
+  for (const name of Object.keys(PRESETS)) pr.append(el('button', { 'aria-pressed': String(name === preset), onclick: () => { preset = name; S = { ...BASE, ...PRESETS[name] }; buildUI(); draw(); } }, name));
+  const o = document.getElementById('opts'); o.innerHTML = ''; o.style.cssText = 'display:flex;flex-direction:column;gap:16px';
+  let subWrap = null;
+  for (const opt of OPTS) {
+    if (opt.when && !opt.when(S)) continue;
+    const g = el('div', { class: 'group' });
+    if (opt.type === 'chips') {
+      g.append(el('span', { class: 'lab' }, opt.label));
+      const ch = el('div', { class: 'chips' });
+      for (const [v, lab] of Object.entries(opt.choices)) {
+        const b = el('button', { 'aria-pressed': String(S[opt.key] === v), onclick: () => { S[opt.key] = v; buildUI(); draw(); } });
+        if (opt.swatch) b.append(el('span', { class: 'swatch', style: `background:linear-gradient(90deg, ${PALETTES[v].light.bars[0]} 50%, ${PALETTES[v].light.accent} 50%)` }));
+        b.append(lab); ch.append(b);
+      }
+      g.append(ch);
+    } else {
+      const id = 'r-' + opt.key;
+      g.append(el('label', { for: id }, opt.label));
+      const out = el('output', { for: id }, opt.fmt(S[opt.key]));
+      const inp = el('input', { type: 'range', id, min: opt.min, max: opt.max, step: opt.step, value: S[opt.key] });
+      inp.addEventListener('input', () => { S[opt.key] = +inp.value; out.textContent = opt.fmt(S[opt.key]); draw(); });
+      g.append(el('div', { class: 'slider' }, inp, out));
+    }
+    if (opt.sub) { if (!subWrap) { subWrap = el('div', { class: 'sub' }); o.append(subWrap); } subWrap.append(g); }
+    else { subWrap = null; o.append(g); }
+  }
+  const md = document.getElementById('modes'); md.innerHTML = '';
+  for (const [v, lab] of [['both', 'Desktop light · phone dark'], ['light', 'Both light'], ['dark', 'Both dark']]) md.append(el('button', { 'aria-pressed': String(view === v), onclick: () => { view = v; buildUI(); draw(); } }, lab));
+}
+document.getElementById('reset').addEventListener('click', () => { S = { ...BASE, ...PRESETS[preset] }; buildUI(); draw(); });
+document.getElementById('copy').addEventListener('click', () => {
+  const txt = 'Reel look: ' + JSON.stringify(S);
+  const done = m => { document.getElementById('copied').textContent = m; };
+  try { navigator.clipboard.writeText(txt).then(() => done('Copied. Paste it to Claude in the thread.'), () => { const t = document.getElementById('json'); t.focus(); t.select(); done('Copy blocked here: the settings below are selected, press ⌘C.'); }); }
+  catch (e) { const t = document.getElementById('json'); t.focus(); t.select(); done('Copy blocked here: the settings below are selected, press ⌘C.'); }
+});
+buildUI(); draw();
+document.fonts?.ready.then(draw);
+</script>
