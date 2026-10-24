@@ -133,3 +133,9 @@ Idea, not a build request. Inspired by the command palette in Rex (terminal app)
 Matt likes the whole implementation, and that it does not open with a wall of obscure commands the way VS Code sometimes does.
 Shape: opens short and curated (useful actions only), search reveals the rest; each row shows its shortcut and an icon to rebind it in place.
 Status: idea; build on Matt 👍.
+
+## Robust minimal component library (Matt, 2026-10-24) — IDEA
+
+- **A small, minimalist component library** that's easy to get right and super robust, with clever guards built in (first one: no orphans).
+- **Orphans:** shrinking text to fit was rejected (several headings at different sizes look bad). Cheap layers first: `text-wrap: balance`/`pretty` and binding the last two words; then a script that detects leftover orphans (`ui-mixer/orphans.cjs`) and asks a cheap model to rephrase just that line so it fits, like hand-tuned man pages.
+- Matt: "It could be extremely cheap in theory, so why not?"
