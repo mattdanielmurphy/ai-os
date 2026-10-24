@@ -109,3 +109,31 @@ Blocked: `SPEECHIFY_API_KEY` isn't on Vercel yet, so the live endpoint answers "
 The blob no longer grows taller. Under pull it stays on its word, thins up to 14% and pales (less saturation, a little brighter). A separate faint, lighter taper reaches from its edge toward the centre line, narrowing to a thin tip as the pull grows. Paused or ended: no pull, no snap, no pill, scrolling is plain scrolling. Checked in light and dark by headless screenshots.
 
 Undo: `git revert ace0f4b` in ~/projects/pages, then `pages deploy`; delete the Blob store with `vercel blob delete-store`.
+
+## 12:10 Saved settings, voice on by default, waveform, arrival fade
+
+---
+
+### Settings are saved
+
+Every setting (the four sliders, the new fade slider, Read aloud on/off, Tune panel open) lives in one browser record, `scroll-read-settings`. Reloads and redeploys keep it. On load, only settings that still exist are read, so removed ones are dropped quietly. The old `scroll-read-tweaks` record is migrated. Tested: changed the speed, turned the voice off, opened Tune, reloaded; all three stayed.
+
+---
+
+### Read aloud by default
+
+The voice starts on. Browsers refuse to play sound before the first tap or key press, so until then the highlight reads silently, the toggle shows "Tap anywhere to hear the voice", and the first tap starts the voice. A web page can't tell whether the phone's silent switch is on, so "muted" can't be detected; turning it off is remembered instead.
+
+---
+
+### Speaking waveform
+
+Five small gradient bars next to "Read aloud" bounce only while the voice is actually playing (not loading, paused or blocked). Still bars with reduced motion.
+
+---
+
+### Arrival fade
+
+The blob sits at about a third of its opacity while moving and comes to full opacity only once it has settled on the word. The distance over which it fades is a Tune slider ("In-transit fade", default 28 px).
+
+Undo: revert the latest scroll-read commit in ~/projects/pages and `pages deploy`.
