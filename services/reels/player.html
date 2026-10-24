@@ -54,6 +54,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 .asset svg { width: 100%; height: auto; max-height: 46vh; display: block; margin-bottom: calc(24px * var(--sp)); }
 #sub { position: absolute; left: 50%; transform: translateX(-50%); width: var(--cw); font-size: var(--sub); line-height: 1.4; color: var(--muted); text-wrap: pretty; transition: opacity .25s; }
 #sub.sentence { min-height: 2.8em; }
+#sub.off { display: none; }
 #sub .said { color: var(--ink); }
 /* reveal: parts rise in while the narration reaches them */
 .rv { opacity: 0; transform: translateY(var(--rise, 18px)); transition: opacity var(--dur, .55s) ease, transform var(--dur, .55s) cubic-bezier(.2, .8, .2, 1); }
@@ -147,7 +148,7 @@ function place() {
   const { H, phone, k } = sizes(), c = $('content'), sub = $('sub');
   c.style.transform = 'translateX(-50%)';
   const top = (phone ? 56 : 48) * k, bottom = H - (phone ? 84 : 92) * L.ctlSize * k, avail = bottom - top;
-  const gap = L.subGap * (phone ? .6 : 1) * k, sh = sub.offsetHeight, h = c.offsetHeight;
+  const off = L.subMode === 'off', gap = off ? 0 : L.subGap * (phone ? .6 : 1) * k, sh = off ? 0 : sub.offsetHeight, h = c.offsetHeight;
   const room = avail - gap - sh, s = h > room ? Math.max(.3, room / h) : 1;
   c.style.transform = `translateX(-50%) scale(${s})`;
   const centred = top + (avail - h * s) / 2 + (L.lower || 0) * k;
@@ -292,6 +293,7 @@ function spokenIndex(b, t) { // how many of the line's words have been said at v
 let capKey = '';
 function caption() {
   const b = D.beats[i], sub = $('sub'), words = b.say.split(' ');
+  if (L.subMode === 'off') { if (capKey !== 'off') { capKey = 'off'; sub.className = 'off'; sub.innerHTML = ''; place(); } return; }
   const started = audioAt !== null, t = audioDone ? Infinity : started ? audio.currentTime : 0;
   const n = started ? spokenIndex(b, t) : (playing ? 0 : -1);
   let from = 0, to = words.length;

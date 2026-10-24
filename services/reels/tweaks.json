@@ -32,7 +32,7 @@
     "reveal.rise": { "value": 18, "default": 18, "min": 0, "max": 80, "step": 2, "note": "Pixels each part rises as it appears" },
     "reveal.spread": { "value": 0.85, "default": 0.85, "min": 0.1, "max": 1, "step": 0.05, "note": "Share of each beat's narration over which its parts appear" },
     "subtitle.gap": { "value": 88, "default": 88, "min": 0, "max": 200, "step": 4, "note": "Space (px) between the slide and the subtitle" },
-    "subtitle.mode": { "value": "sentence", "default": "sentence", "note": "What the subtitle shows", "choices": { "paragraph": "Whole line", "sentence": "Current sentence" } },
+    "subtitle.mode": { "value": "off", "default": "off", "note": "What the subtitle shows", "choices": { "off": "Off (no captions)", "paragraph": "Whole line", "sentence": "Current sentence" } },
     "subtitle.size": { "value": 20, "default": 20, "min": 10, "max": 40, "step": 1, "note": "Subtitle text size (px at 1440×900; phones scale down)" },
     "text.size": { "value": 1.4, "default": 1.4, "min": 0.8, "max": 2.5, "step": 0.05, "note": "Body text scale" },
     "text.title": { "value": 39, "default": 39, "min": 20, "max": 80, "step": 1, "note": "Slide title size (px at 1440×900)" },
@@ -43,7 +43,7 @@
     "voice.model": { "value": "simba-3.2", "default": "simba-3.2", "note": "Speechify model. Apply re-records", "choices": { "simba-3.0": "3.0", "simba-3.2": "3.2 (English)", "simba-3.5": "3.5 (newest)" } },
     "voice.paraBreak": { "value": 500, "default": 500, "min": 0, "max": 2000, "step": 50, "note": "Pause (ms) between beats in the take. Apply re-records" },
     "voice.pitch": { "value": 0, "default": 0, "min": -30, "max": 30, "step": 1, "note": "Speechify pitch change in % (0 = natural). Heard after Apply (re-records)" },
-    "voice.rate": { "value": 1, "default": 1, "min": 0.5, "max": 2, "step": 0.05, "note": "Speechify speed: 1 = the voice's natural pace (was effectively 2.15 before the fix). Previews live; Apply re-records" },
+    "voice.rate": { "value": 1.15, "default": 1.15, "min": 0.5, "max": 2, "step": 0.05, "note": "Speechify speed: 1 = the voice's natural pace (was effectively 2.15 before the fix). Previews live; Apply re-records" },
     "voice.textNorm": { "value": false, "default": false, "note": "Speechify text normalization (reads numbers/symbols for you; off because scripts are written as spoken)" },
     "voice.volume": { "value": 0, "default": 0, "min": -12, "max": 12, "step": 0.5, "note": "Speechify volume change in dB. Previews live; Apply re-records" }
   }
