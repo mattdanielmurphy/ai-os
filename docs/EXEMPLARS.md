@@ -120,6 +120,32 @@ showing support effort as a point of pride.
 
 ---
 
+## Superlogical: [superlogical.com](https://www.superlogical.com/)
+
+Terminal-multiplexer startup (Mitchell Hashimoto of Ghostty/HashiCorp, ex-Vercel/Poolside designers). Matt likes
+it (added 2026-10-23). Details read from the page source and CSS, not a rendered screenshot.
+
+- **Fonts:** one Swiss grotesque (Suisse Intl) at Light 300 body / Medium 500 headings, tight tracking
+  (-0.02em headings, -0.01em body), plus a quirky mono (GT Mechanik Mono) for small technical labels.
+  Only two families, three weights. Type scales fluidly with viewport width (`min()/max()` clamps), no breakpoints.
+- **Palette:** nearly monochrome. Light: paper `#f5f5f4`, ink `#181d16` (a green-black), muted `#737b6f`.
+  Dark: paper `#10120f`, ink `#ececea`, muted `#b3b3b3`. Hairline rules are the ink colour at ~12-14% alpha.
+  Colour comes only from soft pastel lavender-to-pink vertical gradients on key words and the app icon,
+  over a noise-grain gradient field. Tinted neutrals (green-black), never pure black or white.
+- **Layout:** one narrow column (`max-w-[72ch]`), huge whitespace, small body text, tiny muted section labels
+  ("What we're building", "Who we are") instead of big headings. Logo is fixed top-left. Team and investors are
+  plain text lists with underline-on-hover links, no cards. Announcement is a single rounded pill with hairline border.
+  The email signup is just an underlined input with an arrow that fades from 30% to 100% opacity once valid.
+- **Motion:** quiet and purposeful: a hero intro lift (600 ms), a custom thin scroll indicator replacing the
+  scrollbar, a rotating "wheel" of words in the headline, hover fades. All respect `prefers-reduced-motion`.
+- **Voice:** plain, long-form manifesto paragraphs instead of feature grids; says what it is and why, once.
+
+**Steal this:** two fonts and a tinted-neutral palette doing all the work; gradient only on the one thing that
+matters; hairline borders at low alpha; a single readable column; a form that is just a line; light and dark both
+first-class with the same hierarchy.
+
+---
+
 ## How agents use this
 
 - Building or reviewing any suite app, HUD, page or onboarding: run the checklist above and name which
