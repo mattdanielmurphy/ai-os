@@ -105,3 +105,31 @@ Headless WebKit test with the real reels (20 knobs) and reload-indicator files: 
 **Not done yet:** the UI Mixer's own rail still uses the old shell; moving it onto Knobs is next. Steps 2–4 (agent rule + scanner, picker, ask-an-agent/AI search) wait.
 
 **Undo:** `git revert` 01c9a10 in ~/.hammerspoon (restores Tweakpane from git history).
+
+## 07:25 Headings: shorter, not balanced
+
+**Asked:** Matt's phone screenshot: the balanced subheading "1 · AGENTS MARK THEM AS / THEY CODE (FROM NOW ON)" was no better, maybe worse.
+
+---
+
+### Why balance failed
+
+`text-wrap: balance` removes the lone word by making two half-width lines. For a short subhead that still reads as broken. The real fix is copy: a subheading should fit one line on a phone. Same idea as Matt's "rewrite the line" thought, done by hand here.
+
+---
+
+### Headings rewritten
+
+All long subheads cut to one line ("1 · Agents mark them", "2 · A scanner", "3 · A cheap cleanup pass", "A. One shared component", "C. Keep both"…); the dropped words moved into the first sentence below. Redeployed.
+
+---
+
+### Checker catches it now
+
+`orphans.cjs` also flags any h2–h6 that wraps at all, and an h1 whose last line is one word. On the old page it flagged all six bad headings at 360 px; the new page is clean at all 5 widths.
+
+---
+
+### Rule tightened
+
+"No orphans" now says: subheadings fit one line at 360 px; balance is only a safety net.
