@@ -116,3 +116,13 @@ ambient bed (from the claude-ambient project) instead of a reused loop. Not buil
 Overhead today is mostly the slides (~15 KB of hand-written SVG ≈ 4–5k output tokens per reel vs ~300
 for a text reply). Streamline: a shared slide kit of layouts (title+points, queue/flow, stat row,
 compare, timeline) so an agent writes a short JSON spec per beat and the kit draws it (~1k tokens).
+
+## Slub Utils: onboarding picker, gradual rollout (2026-10-24)
+Idea, not a build request. First run shows a picker of utilities with a sensible default selection already ticked.
+A gentle caution says not to enable too much at once. New utilities are then introduced gradually later, not all on day one.
+Matt note: the auto-delineator text-selection wrapper is the one utility that could confuse people, so it should not be on by default and needs a clear explanation.
+Questions still unanswered:
+- Which utilities make up the default selection?
+- How are new utilities introduced later: a quiet "new" badge, or a prompt?
+- Should the auto-delineator sit behind an "advanced" section?
+Status: idea; build on Matt 👍.
