@@ -68,3 +68,43 @@ Every player keeps the discoverability rules: a visible Pause button, every shor
 `services/reels/concepts/builder.js` + `specs.js` hold the builder and the eight specs (fonts, palette per mode,
 layout switches). Rebuild by pasting `const C = <spec>; const IDX = n;` + builder into the Figma MCP `use_figma`
 tool. Undo: delete the Figma file; nothing else changed.
+
+## 21:50 Round 2: warm, full-page, few controls
+
+**Why a round 2:** Matt's own message (sent before round 1 landed) asked for something round 1 missed:
+the whole page is the slide, only a few floating controls, warmer, **no monospace**, a bigger slide that is
+nearly full screen, a full screen button kept, and phone-first because his dad will open it on a phone.
+Round 1 was built from the coordinator's short brief and was techy (mono labels, keycap rows). It stays in the
+file on the page "Round 1 · techy (rejected)".
+
+---
+
+### What every round 2 concept shares
+
+- The slide content is drawn straight onto the page: no stage box, no header bar. Desktop 1440×900 light,
+  phone 390×844 dark.
+- Controls are only: play/pause, progress, full screen. Shortcut keys still exist in the player, but are no
+  longer printed as a row of keycaps (Matt: remove every button that isn't necessary). Phone concepts print a
+  one-line swipe/tap hint where the gesture isn't obvious.
+- No monospace anywhere. Warmth comes from humanist sans and soft serifs, warm-tinted greys, rounder corners.
+  No orange, no cream.
+
+---
+
+### The eight round 2 concepts
+
+1. **Pill** (13-3): one floating pill at the bottom: play, 8 beat dots, full screen; subtitle above it.
+2. **Corners** (13-74): progress hairline at the top edge, play bottom-left, full screen bottom-right, no subtitles.
+3. **Film subtitles** (13-132): centred subtitles, two small round buttons, progress hairline.
+4. **Side rail** (13-191): tappable beat dots down the right edge, play + subtitle bottom-left.
+5. **Stories** (13-262): phone-stories segments at the top, tap the sides to move.
+6. **Inset card** (13-334): slide as a big rounded card, slim dock below.
+7. **One button** (13-395): a play button whose ring fills as it plays, plus full screen.
+8. **Today, softened** (13-456): current slide style with a friendly sans and a small glass pill.
+
+---
+
+### Round 2 untested
+
+- Mocks only; no motion. Contrast checked by eye.
+- Builder: `services/reels/concepts/round2.js`.
