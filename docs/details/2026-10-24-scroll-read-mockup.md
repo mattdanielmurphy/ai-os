@@ -137,3 +137,35 @@ Five small gradient bars next to "Read aloud" bounce only while the voice is act
 The blob sits at about a third of its opacity while moving and comes to full opacity only once it has settled on the word. The distance over which it fades is a Tune slider ("In-transit fade", default 28 px).
 
 Undo: revert the latest scroll-read commit in ~/projects/pages and `pages deploy`.
+
+## 12:15 Position memory, tap-gated start, landing preview
+
+---
+
+### Position is remembered
+
+The current word is saved as it changes (`scroll-read-position`). On reload the page scrolls so that word sits a bit above the middle, and reading resumes from it. Tested: word 8 before reload, word 8 after.
+
+---
+
+### No silent start
+
+With Read aloud on, the page now loads paused with "Tap anywhere to start reading", because browsers block sound until the first tap. The first tap on the page starts reading and the voice together. Taps on controls (play, switch, Tune) do their own thing instead. The same pause-and-wait kicks in if a browser blocks playback later.
+
+---
+
+### Subtler transit fade
+
+The blob now dips only to 78% of its opacity while moving (it was 35%), easing back to full on arrival. That removes the flashing.
+
+---
+
+### Landing preview
+
+While you pull (voice playing, not yet snapped), the word on the centre line, where the blob would land, gets a dashed outline with a faint fill. It starts faint and firms up with the pull, turning solid near the snap point. Let go early and it fades away; pull through and the blob flies into it. A hint line explains it.
+
+---
+
+### Your defaults
+
+Defaults are now 310 wpm, threshold 16%, pull 1.00, fade 70 px, fly 0.13. Your browser already had these saved; new visitors get them too.
