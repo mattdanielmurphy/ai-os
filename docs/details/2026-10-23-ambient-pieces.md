@@ -143,3 +143,9 @@ piece 4 (Darker Pools, Fading Outward + Saturn tape, Echo Dust + Timeless 3, big
 Rendered alongside the Cicada loop to save time (9 min). Seam checked: jump at the wrap equals a normal
 sample step. -20 LUFS, 24-bit FLAC, 167 MB. Revealed in Finder after claude-control (ticket t4).
 Skipped the per-track balance test for speed (gains taken from piece 4). Not listened to by me.
+
+## 08:35 Loop: Cicada done
+
+`out/loop-cicada-22m06s.flac`, 22:06, seam checked (wrap jump = normal sample step). 13:40 to render.
+Its peaks capped the gain at +9.8 dB, so it sits near -23.6 LUFS, about 3.6 dB quieter than the others.
+Sunflower render started right after. Not listened to by me.
