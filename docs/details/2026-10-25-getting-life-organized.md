@@ -124,3 +124,7 @@ Matt 👍'd Linear. I can't create accounts or run sign-ins, so he does two thin
 - Labels: School, Slub, Money, Physical health, Mental health, Job, Notes & old projects, Mac inventory.
 - Seed: active projects and open threads, each with a one-line "where it's at".
 - Not decided yet: how agents enforce the 2-live cap (likely a rule: check Linear before starting work on his Mac).
+
+## 20:05 Linear connected, but not in this session
+
+Matt connected Linear. This session's connector list was fixed when it started, so Linear's tools never loaded here (checked the session's connector status; enabling it by name failed: "no connector by that name"). Asked the coordinator to start a fresh "Set up Linear project board" thread with the setup plan above; a new session picks up the connector. Nothing is set up in Linear yet.
