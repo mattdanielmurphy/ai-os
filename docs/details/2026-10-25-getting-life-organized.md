@@ -35,3 +35,43 @@ A 10-minute Sunday chat with Claude: what's coming this week, what slipped, what
 Rejected for now: a big new app or dashboard first (the dashboard ideas thread already exists; this should decide what it shows rather than duplicate it). No bed/wake reminders.
 
 Untested / open: which area feels most out of control is a guess until he answers.
+
+## 19:05 Overseer + specialists: proposed shape
+
+Matt said it's everything, not one area: too much, no central place, agents don't know his whole life. He wants one overseer and specialists, named the areas (school, Slub, money, health physical/mental, part-time job, notes + old projects, Mac inventory), asked for guardrails on building more Mac tools / custom harness, a CEO rhythm, and worried about things lost in threads. Recorded in `IDEAS.md` ("Life OS") and memory.
+
+---
+
+### Yes it makes sense
+
+One agent can't hold everything; the fix is files, not a bigger agent. Each area gets one short "area brief" file (what's true now, what's open, what's due). A specialist only reads its own brief. The overseer reads only the top 5 lines of each brief. That keeps every agent's context small and makes nothing depend on an agent remembering.
+
+---
+
+### Eight areas
+
+School, Slub/software, Money, Physical health, Mental health, Part-time job, Notes and old projects, Mac inventory. Job gets its own area as he asked. Rejected: merging health into one area (he named two different kinds).
+
+---
+
+### CEO rhythm
+
+Two fixed times a day. Morning: he gives orders (voice or text) to the overseer, who routes them. Evening: one short report, at most 3 things that need him. Everything else waits for the report. Times are his call (not bed/wake times, no reminders for those).
+
+---
+
+### Build guardrail
+
+Proposed: no new global Mac tool until every existing one is listed in the Mac inventory with how to turn it off and a test. After that, one new tool at a time, and only after the last one has a week with no bugs. Agents flag violations instead of building. Also: stay on Claude app; no custom harness work.
+
+---
+
+### Lost things sweep
+
+One pass over this week's threads (~60) to pull every open loose end into the area briefs. The existing "Custodian for loose ends" thread overlaps; check it before doing this.
+
+---
+
+### Suggested first step
+
+Write the 8 area briefs from what's already on the Mac and in threads; Matt only reviews. Reversible, small, and every later step (budget, job search, inventory) needs it. Waiting for his 👍 since he said discuss first.

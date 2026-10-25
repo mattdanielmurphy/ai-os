@@ -154,3 +154,12 @@ Status: idea; build on Matt 👍.
 - **Fully context-aware.** Say "heading into this coffee shop" and it goes quiet until you step out and say "continue the tour".
 - **Make it really, really nice to use.** Smart about when to speak and when to shut up.
 - **Camera as a second sense.** Phone sits in your shirt pocket with the camera peeking out (like in *Her*). Every so often it captures the scene and tells you cool things it sees, especially off the beaten path.
+
+## Life OS: organize everything with an overseer + specialists (Matt, 2026-10-25) — IDEA, discussing
+- Matt: "I know that things are going to get missed because there's just too much. And there's not one centralized place."
+- One "everything" project he talks to; one overseer agent for his life at a broad level; specialist agents per area (too much for one agent's context).
+- Areas he named: school; Slub / software dev; money (budget with all non-negotiable monthly expenses; worried he'll run out); health (physical, mental); part-time job (own category; he thinks working part-time would help a lot, money included); personal notes + old projects on his Mac (biggest cleanup); Mac inventory (every file/folder/app/tool that differs from a stock Mac, documented, so a breakage has a place to start).
+- Guardrails: resist building more global Mac tools or a custom AI harness ("Claude is good enough"); discipline on testing and buttoning up tools, since with ~10+ custom tools he can't tell which one broke.
+- CEO rhythm: he gives instructions at set times, agents work, he checks back at set times on a few things. The current projects view isn't clicking.
+- Things get lost from past Claude threads, even this week's.
+- Discussion thread: "Getting life organized" (2026-10-25). Build nothing until he 👍s.
