@@ -51,3 +51,13 @@ Not added: Hue lights, finished threads, the "Allow rm in scratch folders" threa
 Team doc "How this board works" (https://linear.app/mattmurphy/document/how-this-board-works-b5c045e51281) explains the stages and labels and lists the caps as a proposal: max 2 Live on Mac, a larger ongoing cap (number not picked). Nothing enforces them.
 
 Undo: archive MAT-5..34, retire the 8 labels, delete the doc.
+
+## 21:52 States renamed in Chrome; rule saved
+
+Matt: "you don't need the API to control a web app for me. YOU do it". He's right: Claude in Chrome (his real Chrome, Browser 1 profile) is signed in to Linear. With a light claude-control clearance I opened Settings → Issue statuses in a new tab and renamed Backlog → Idea, Todo → Planned, In Progress → Live on Mac, and added Paused under Started. Closed the tab, released clearance. Then moved MAT-12, 15, 16, 23, 32, 33 to Paused through the connector and removed the "Paused." prefix from their descriptions.
+
+The switch_browser Connect prompt timed out (no click came through), so I tried "Browser 1" directly; it was signed in.
+
+Rule saved to `.rules/core_safety.md` (1n): when a connector can't do a web-app step, drive the UI with Claude in Chrome instead of giving Matt steps. Also forwarded his "too concise to be confusing" feedback to the coordinator to route as a rule change.
+
+Undo: rename the states back in Settings → Teams → Mattmurphy → Issue statuses.
