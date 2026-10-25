@@ -75,3 +75,27 @@ One pass over this week's threads (~60) to pull every open loose end into the ar
 ### Suggested first step
 
 Write the 8 area briefs from what's already on the Mac and in threads; Matt only reviews. Reversible, small, and every later step (budget, job search, inventory) needs it. Waiting for his 👍 since he said discuss first.
+
+## 19:20 CEO rhythm too optimistic; project management software
+
+Matt (comment on CEO rhythm): far too optimistic, he's much more hands-on. Suggests max 2 projects actively live on his Mac at once, a much larger cap on ongoing projects, fine as long as each one's stage is clear. Feels he needs project management software.
+
+Dropped the twice-a-day CEO rhythm. Recorded the WIP caps as his proposal (not yet a rule, he said "maybe").
+
+---
+
+### Two live projects cap
+
+"Live on Mac" = an agent is actively changing things on his machine. Max 2. Everything else sits in a named stage. Agents check the board before starting work and flag if a third would go live. Untested idea, enforcement not designed.
+
+---
+
+### Stages for every project
+
+Proposed stages: Idea → Planned → Live on Mac (max 2) → Waiting/Paused → Done or Dropped. Every project and life area task carries one.
+
+---
+
+### Project management tool options
+
+Looked for existing tools first (rule 1a). Notion is already connected to Claude here (Notion connector), so agents can read and update a Projects database with Stage and Area fields, and it covers life areas, not just code. Linear is the nicest for software stages and has a Claude plugin, but needs sign-in and is built for code teams. GitHub Projects is free and close to his repos but code-only. Rejected building his own (guardrail he just asked for). Recommendation: Notion, with Linear as the alternative if he wants a stricter software-style board.
