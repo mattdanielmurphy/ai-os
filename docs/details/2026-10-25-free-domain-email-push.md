@@ -55,3 +55,25 @@ iCloud has no Claude connector. Agents could only reach it through Mail.app Appl
 Gmail "Send mail as" lets him (and Gmail itself) send from the custom address. I have not checked whether the Claude Gmail connector can pick that From address on drafts/sends; it may default to the gmail.com address. Needs a test after setup.
 
 Note: the existing memory rule "send to Matt via Mail.app, never the Gmail connector" is about agents emailing Matt himself; it would need revisiting if Gmail becomes his main inbox.
+
+## 15:30 Gmail send-as is going away, back to iCloud
+
+The coordinator passed on Matt's earlier "Stop sending through gmail": Gmail is dropping third-party "Send mail as". I checked: Gmailify and POP fetching ended January 2026, and Android Authority (Aug 5, 2026) reports third-party "Send as" (custom domains included) ends January 2027. One source only; Google's own page not found.
+
+---
+
+### Cloudflare-to-Gmail breaks on sending
+
+Receiving via Cloudflare forwarding would keep working, but from January 2027 neither Matt nor agents could send as his own domain from Gmail. So it's a dead end for a setup he wants to keep.
+
+---
+
+### iCloud with agent access
+
+Back to iCloud custom domain (already paid for). Agents get in through IMAP/SMTP with an Apple app-specific password: the himalaya CLI skill can read, draft (save to Drafts) and send as the custom address. On his Mac that's a local secret in ai-os .env; cloud threads would need the same secret on the cloud environment. Mail.app AppleScript also works on the Mac. No Claude connector, so it's CLI/script access rather than a one-click connector. Untested.
+
+---
+
+### Rejected combo
+
+Cloudflare receive + a sending API (Resend etc.): agents could send, but Matt's own phone replies would still come from Gmail. Too many pieces.
