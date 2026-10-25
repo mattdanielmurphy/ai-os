@@ -51,3 +51,9 @@ Matt's call from Artificial Analysis: Luna's cost per task is $0.07 vs $0.26 for
 Luna doubles to $0.20/M input past 272k prompt tokens, so very large codebases cost 2x per ask. Fine for most of his projects.
 
 Note: his screenshot compared the "1017" DeepSeek variant ($0.15/$0.60 on OpenRouter); my earlier pick was the plain `deepseek-v4.1-flash` ($0.02/$1.00). Doesn't change the choice.
+
+## 01:25 Reasoning effort low, not Max
+
+Matt noted his AA comparison was at Max effort only to compare like to like; he doesn't want Max. Requests now send `reasoning: { effort: "low" }` (OpenRouter's unified param). Override with `SMART_C2P_EFFORT` (none/minimal/low/medium/high). Rejected `none`: low keeps a little thinking for flag picking at tiny cost. Stub-tested (request body carries effort low).
+
+Fix: the repo's https push needed a credential helper; set `credential.helper` to `gh auth git-credential` in smart-c2p's local git config.
