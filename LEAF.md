@@ -59,13 +59,18 @@
   - **Strict Span-Only Styling Invariant**: For conversation artifacts and custom markdown layouts, agents MUST use `<span>` tags exclusively (with `display: block;`, `white-space: pre-wrap;`, and inline CSS) for all layout and styling containers. NEVER use `<div>`, `<p>`, or other block HTML tags. Use `<br>` or `<br><br>` tags within `<span>` to preserve line breaks and paragraph spacing without breaking out of the inline span container.
   - Any architectural redesign, style simplification, or structural removal requires explicit user request and approval.
 
-# Every Word Costs Matt: Brevity & Whitespace (2026-10-21)
+# Every Word Costs Matt: Clear, Short & Spaced Out (2026-10-21, clarity first since 2026-10-25)
 - **Why**: Matt runs many projects at once and has no capacity for walls of text. Matt, 2026-10-21: "treat me as if every character it sends hurts me a little bit", "really spread things out visually with whitespace". Write for a reader with ADHD who will skim one glance and stop.
 - **Covers**: every message Matt reads, on every surface and agent: chat replies, project thread replies, coordinator posts, status checklists, voice-task reports. Not code, files, commit messages, docs, or drafts he'll paste elsewhere.
-- **Budget**: default ≤ 50 words. Hard cap 100 words unless he asked for detail, an explanation or a full list. A 4-bullet reply with 2-3 sentences per bullet (~150 words) is the wall he means; never send that.
+- **Clarity beats brevity (Matt, 2026-10-25: replies had become "too concise, to the point of being confusing")**: short is the goal, but never at the cost of being understood on the first read. His example of what not to do: "You: rename 3 states, add Paused in Workflow settings...". Every line must make sense to someone who hasn't watched the work:
+  - Write plain full sentences ("You need to rename three states in Linear's Workflow settings"), not shorthand, labels or fragments ("You: rename 3 states").
+  - Say where (which app, screen or file, linked), why (one clause), and what it means for him ("so the board matches your stages").
+  - No cryptic prefixes ("You:", "Me:", "→"), unexplained abbreviations, internal names or jargon. Name things the way he would.
+  - Bold point-form and blank lines stay; cut filler, not meaning.
+- **Budget**: aim for ≤ 50 words. Go up to 100 if that's what it takes to be clear, and past 100 when he asked for detail, an explanation or a full list. A 4-bullet reply with 2-3 sentences per bullet (~150 words) is the wall he means; move that much into the details file instead. When the budget and clarity clash, clarity wins: drop a whole item into the details file before you squeeze the remaining ones into shorthand.
 - **Shape**:
   - Line 1 is the answer, or the one thing he must do. Nothing needed from him? Say so in line 1.
-  - One idea per line, about 12 words max. Bold the point; the bold alone must carry it.
+  - One idea per line, as one plain full sentence (about 12-20 words). Bold the point; the bold alone must carry it and still read as plain English.
   - A blank line between every line or bullet, so each one stands alone.
   - At most 4 items. More than that → the top 4, plus one line linking a file with the rest.
   - At most one question, last, answerable with one word or an emoji (👍 = recommended option).
@@ -80,17 +85,18 @@
   - **Generous whitespace around each linked section**: in the details file, put a blank line, a `---` rule, and another blank line before every linked `###` heading, so the section he lands on stands clearly apart from its neighbours.
   - Commit and push it with the work (`auto_commit.py --paths`).
   - Only pure acknowledgements (a reaction, "on it") skip it.
-- **Self-check before sending**: count the words. Delete every sentence he wouldn't miss. Shrink each line to its bold part when that alone is clear. Still over budget → move the detail into the details file.
+- **Self-check before sending**: first, reread each line as if you hadn't done the work: would he know what it means, where to go and why it matters? If not, add the missing words. Then delete every sentence he wouldn't miss. Still over budget → move whole items into the details file, never compress the rest into shorthand.
 - **"Try this" comes with a command (Matt, 2026-10-22)**: until action buttons exist, whenever you ask Matt to try, look at or test something ("try this now", "look at this and let me know"), give him a one-line, copy-pasteable terminal command that summons that behaviour (e.g. `~/.hammerspoon/bin/claude-control ask "demo" 3` to show the banner). Why: he wants to see it in one paste instead of waiting for or recreating the trigger. If a web link opens it, give the plain clickable link instead, never an `open <url>` command (Matt, 2026-10-22: clicking is easier than pasting).
 - **Detail on demand**: when he asks ("more", ❓, "why?"), answer in the same short-line, blank-line shape, or point to the details section.
 - **Big replies become explainer reels (Matt, 2026-10-23: "If an agent is replying with a lot of info, it should use this")**: when a reply would carry a lot of information (an explanation, walkthrough, report or update well past the 100-word cap), make an explainer reel with ai-os `services/reels/` (narrated, animated slides, ducked music) and send the reel link with the usual short reply. Recipe: `services/reels/README.md` "Make a reel": hand-write the slides as SVG in a `slides.py` (copy reel 03's helpers), Pandora voice, a music bed, `build.py`, then `test.sh` (headless, muted, backgrounded); **never open a reel in the browser pane** (it hangs the session); publish the reel as a page (`pages new <name> --from reel.html`, then `pages deploy`; see "Web Pages Live on Vercel"). Short answers stay text. Works on Matt's Mac (key in ai-os `.env`) and in cloud sessions (Deepgram network secret on the cloud environment; README "Cloud sessions"); if Deepgram refuses the request, reply in text and say so.
 - **Example**:
   - Before (150 words): "**The nightly restart is set up and live, starting tonight at 4:30.** It restarts like Apple menu > Restart, and your windows reopen afterwards. **It won't kill work in progress.** If a Claude thread is mid-task, it tries again every 15 min until 5:45, then skips that night. An app with unsaved work…" (plus 3 more bullets like that).
-  - After (25 words): "**You: turn on auto-login** (Settings > Users & Groups)." / blank line / "**Nightly restart is live**, 4:30 tonight." / blank line / "**Never kills unsaved work.**" / blank line / "**Not tested for real yet.** You'll get a toast if it fails."
+  - Too short (confusing): "**You: turn on auto-login** (Settings > Users & Groups)." / "**Never kills unsaved work.**"
+  - After (about 55 words): "**You need to turn on auto-login** in System Settings > Users & Groups, so the Mac can sign back in after the restart." / blank line / "**The nightly restart is live** and runs at 4:30 tonight." / blank line / "**It never closes an app with unsaved work**; it skips that night instead." / blank line / "**It hasn't run for real yet.** You'll get a small notice if it fails."
 
 # Universal Response Formatting & Progressive Disclosure Protocol
 - **Universal Cross-Platform Standard**: Across ALL platforms (Claude, Gemini, Codex, etc.), whenever the chat/thread UI supports native HTML disclosure elements, agents MUST format responses using this progressive disclosure protocol. (Claude's Code tab and project threads don't render HTML: plain markdown only there.)
-- **Ultra-Concise Scannable Core**: The top-level chat text follows "Every Word Costs Matt" above (≤ 50 words by default, blank line between items).
+- **Ultra-Concise Scannable Core**: The top-level chat text follows "Every Word Costs Matt" above (aim ≤ 50 words, clarity first, blank line between items).
 - **In-Thread Progressive Disclosure (`<details><summary>`)**:
   - Use native HTML `<details>` and `<summary>` tags for folding secondary details, technical logs, rationale, or multi-step execution context.
   - **Zero Manual Triangles**: NEVER insert manual triangles, arrows, or pointer emojis (`▶`, `▼`, `►`, `▸`, `▶︎`) inside `<summary>`. The browser UI already renders an interactive disclosure triangle that dynamically reflects the folded/expanded state. Adding manual triangles creates redundant and confusing double-triangles (`▶ ▶` or `▼ ▶`).

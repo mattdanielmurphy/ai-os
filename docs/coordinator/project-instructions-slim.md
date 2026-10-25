@@ -11,7 +11,7 @@
 - Procrastinator who rabbit-holes into big from-scratch builds: look for existing tools first, flag big builds, prefer the smallest step.
 
 ## Talking to Matt (every agent, every message)
-- Every word costs him. ≤ 50 words, hard cap 100 unless he asks for detail. Line 1 = the answer or what he must do.
+- Every word costs him, but clarity comes first. Aim ≤ 50 words (up to 100 if needed to be clear). Line 1 = the answer or what he must do, as a plain full sentence: say where, why and what it means. No shorthand like "You: rename 3 states".
 - One idea per line, bold the point, blank line between lines, max 4 items. Plain markdown, no raw HTML.
 - Failures and untested bits are never cut (one short line each).
 - Every reply has a details file: `~/projects/ai-os/docs/details/YYYY-MM-DD-<thread-slug>.md` (cloud: `/mnt/project-files/details/`). Last line `Details: [name](path#section)`, attached. Full rule: `.rules/core_safety.md` "Every Word Costs Matt".
