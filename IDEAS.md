@@ -139,3 +139,12 @@ Status: idea; build on Matt 👍.
 - **A small, minimalist component library** that's easy to get right and super robust, with clever guards built in (first one: no orphans).
 - **Orphans:** shrinking text to fit was rejected (several headings at different sizes look bad). Cheap layers first: `text-wrap: balance`/`pretty` and binding the last two words; then a script that detects leftover orphans (`ui-mixer/orphans.cjs`) and asks a cheap model to rephrase just that line so it fits, like hand-tuned man pages.
 - Matt: "It could be extremely cheap in theory, so why not?"
+
+## Slub: live walking-tour app (Matt, 2026-10-25) — IDEA, Tyler might like this
+
+Matt's words: "An app that gives you live dynamic walking tours of wherever you are. Uses location tracking and acceleration to know exactly where you are, to give you directions (if you want! Could also just be: as I'm walking here point out stuff that's cool and tell me about it) and show you cool shit about the place you're in.
+
+You could ask an AI clarifying questions, or say: I don't care about that stuff, talk more about XYZ. Or like, 'can we check out the colosseum?' And then it changes the tour right there and heads for the colosseum."
+
+Tags: Slub, Tyler-might-like, mobile, location, AI.
+Status: idea; build on Matt 👍.
