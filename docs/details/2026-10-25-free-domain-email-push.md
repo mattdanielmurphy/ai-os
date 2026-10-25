@@ -77,3 +77,13 @@ Back to iCloud custom domain (already paid for). Agents get in through IMAP/SMTP
 ### Rejected combo
 
 Cloudflare receive + a sending API (Resend etc.): agents could send, but Matt's own phone replies would still come from Gmail. Too many pieces.
+
+## 15:31 Does iCloud agent access need the Mac?
+
+No in principle: IMAP/SMTP (imap.mail.me.com:993, smtp.mail.me.com:587) are internet services, so any machine with the app password can read, draft and send. Cloud threads would need the password saved as a secret on the cloud environment.
+
+---
+
+### Cloud ports might be blocked
+
+Cloud sessions go through a network proxy that may only allow web (HTTPS) traffic. If ports 993/587 are blocked there, cloud threads can't reach iCloud mail directly. Untested. Fallbacks: hand it to the Mac (as with Amazon.ca), or a tiny mail relay on his VPS that cloud agents call over HTTPS.
