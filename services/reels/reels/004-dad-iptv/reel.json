@@ -226,6 +226,36 @@
       }
     },
     {
+      "svg": "6.svg",
+      "say": "What about watching the game later? ... Your dad often does that, and Telus records it on the PVR. ... This service lists a catch-up feature, but only on the premium plans, with no number of days given. ... It doesn't mention recording at all. ... It also never names hockey, baseball or football. ... So use the free trial to test all three before paying. ... And the ten day money-back promise covers monthly plans only, not yearly.",
+      "slide": {
+        "layout": "list",
+        "label": "Watching it later",
+        "title": "Can he watch it later?",
+        "tone": "bad",
+        "lede": "Telus records games on the PVR. The Firestick Guy site is thinner on this.",
+        "items": [
+          {
+            "head": "Catch-up: premium plans only",
+            "sub": "The site gives no number of days."
+          },
+          {
+            "head": "Recording: not mentioned",
+            "sub": "No PVR to fall back on."
+          },
+          {
+            "head": "No sports named",
+            "sub": "Hockey, baseball, football aren't listed."
+          },
+          {
+            "head": "Refund: monthly only",
+            "sub": "The 10-day promise skips yearly plans."
+          }
+        ],
+        "total": "Use the free trial to test replay and hockey before paying."
+      }
+    },
+    {
       "svg": "7.svg",
       "say": "Plex is the free option worth knowing. ... Hundreds of live channels, tens of thousands of free movies and shows, with ads, plus some Canadian channels. ... It runs on most TVs, but there's no NHL.",
       "slide": {
