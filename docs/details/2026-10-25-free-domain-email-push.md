@@ -31,3 +31,27 @@ Cloudflare Email Routing (free) forwards mail for the domain into an existing in
 Google Workspace (no free tier; old free legacy being phased out), Neo (15-day trial only), Outlook.com (no custom domains on free).
 
 Untested: iCloud setup itself and Zoho app push speed were not tried on his phone.
+
+## 15:25 Agent access changes the pick
+
+Matt wants Claude and other agents to read, draft and send his email. That flips the recommendation to Cloudflare forwarding into his existing Gmail.
+
+---
+
+### Gmail connector works everywhere
+
+His Claude setup already has a Gmail connector (search, read, draft, send, labels). It works from cloud threads and the Code tab, no Mac needed. With Cloudflare Email Routing, all mail for his domain lands in that Gmail, so every agent can see it, and Gmail push on his phone is instant.
+
+---
+
+### iCloud is Mac-only for agents
+
+iCloud has no Claude connector. Agents could only reach it through Mail.app AppleScript on his Mac (already used for emailing Matt) or IMAP with an app-specific password (himalaya CLI). Cloud threads couldn't touch it without a stored secret.
+
+---
+
+### Sending as the domain is unverified
+
+Gmail "Send mail as" lets him (and Gmail itself) send from the custom address. I have not checked whether the Claude Gmail connector can pick that From address on drafts/sends; it may default to the gmail.com address. Needs a test after setup.
+
+Note: the existing memory rule "send to Matt via Mail.app, never the Gmail connector" is about agents emailing Matt himself; it would need revisiting if Gmail becomes his main inbox.
