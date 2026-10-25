@@ -148,3 +148,9 @@ You could ask an AI clarifying questions, or say: I don't care about that stuff,
 
 Tags: Slub, Tyler-might-like, mobile, location, AI.
 Status: idea; build on Matt 👍.
+
+### Walking-tour app: follow-up notes (Matt, 2026-10-25)
+- **You lead, it follows.** Pre-recorded tours make someone else the leader. Here you explore on your own and find things nobody has seen.
+- **Fully context-aware.** Say "heading into this coffee shop" and it goes quiet until you step out and say "continue the tour".
+- **Make it really, really nice to use.** Smart about when to speak and when to shut up.
+- **Camera as a second sense.** Phone sits in your shirt pocket with the camera peeking out (like in *Her*). Every so often it captures the scene and tells you cool things it sees, especially off the beaten path.
