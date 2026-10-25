@@ -3,7 +3,7 @@
 # Costs are API-equivalent dollars, not what the subscription charges.
 # Usage: scripts/claude-usage.sh [days=7]
 # Plan meter (% of 5-hour / weekly limit) is not in the logs: see claude.ai
-# Settings > Usage, or ask any Code-tab agent to call get_usage.
+# Settings > Usage, or run scripts/claude_pace.py (weekly % + Opus/Sonnet call via CodexBar).
 # Cloud sessions (e.g. the Projects coordinator) are not logged locally.
 set -euo pipefail
 days="${1:-7}"
