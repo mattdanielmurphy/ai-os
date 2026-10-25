@@ -57,3 +57,28 @@ Note: his screenshot compared the "1017" DeepSeek variant ($0.15/$0.60 on OpenRo
 Matt noted his AA comparison was at Max effort only to compare like to like; he doesn't want Max. Requests now send `reasoning: { effort: "low" }` (OpenRouter's unified param). Override with `SMART_C2P_EFFORT` (none/minimal/low/medium/high). Rejected `none`: low keeps a little thinking for flag picking at tiny cost. Stub-tested (request body carries effort low).
 
 Fix: the repo's https push needed a credential helper; set `credential.helper` to `gh auth git-credential` in smart-c2p's local git config.
+
+## 01:28 Is Luna really right
+
+Matt asked if I truly agree. Yes, but on different grounds than AA cost per task.
+
+---
+
+### cost per task misleads here
+
+AA's cost per task is measured on its benchmark suite at Max effort, which is dominated by reasoning/output tokens. smart-c2p is the opposite: a huge input (whole codebase) and a short answer at low effort. So per-ask cost is basically input price × codebase size. At 100k tokens in / 1k out: Luna ≈ $0.0105; DeepSeek V4.1 Flash on a solid fp8 host (DeepInfra $0.112/$0.336) ≈ $0.0115. A near tie, and both are about a cent.
+
+---
+
+### my first pick was flawed
+
+The $0.02/M DeepSeek price I quoted was OpenRouter's cheapest endpoint (OpenInference, fp4 quantization). Default routing would favour such hosts; quality on fp4 hosts can be below what AA benchmarked. Real DeepSeek hosts run $0.10–$0.30/M. I should have checked `/endpoints`, not just the headline price.
+
+---
+
+### why luna wins anyway
+
+- AA-LCR (long-context reasoning, the benchmark that matches "read this codebase and answer") is a tie: 83% vs 83%.
+- DeepSeek's lead is on agentic/terminal benchmarks smart-c2p doesn't use.
+- Luna is served first-party (OpenAI/Azure/Bedrock): consistent quality, no fp4 lottery, same price.
+Kept: `openai/gpt-6-luna`, effort low. Lesson: compare per-endpoint prices and workload shape (input vs output) for frontier picks.
