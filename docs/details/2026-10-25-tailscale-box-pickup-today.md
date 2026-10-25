@@ -35,3 +35,22 @@ Nothing in stock is cheap, so buying at $250–$700 to return later costs more h
 ### Free option tonight
 
 Tailscale can run as an exit node on almost anything already at his parents' house: an old laptop or desktop (Linux, Windows or macOS), an Android phone, or an Apple TV. That works tonight for $0 while the used box is sorted out.
+
+## 17:40 Walmart, and the one-week window
+
+Matt's original message (which reached me after the reply above) named Walmart and said he technically has a week.
+
+---
+
+### Walmart needs a sign-in
+
+Walmart.ca redirected my background Chrome tab to its login page before showing any search results, so I couldn't check its stock. I don't sign in for him. Walmart stores rarely carry cheap mini PCs on the shelf, so this probably changes nothing.
+
+---
+
+### A week changes the plan
+
+With a week, there's no need to buy and return. Two clean paths:
+- Wait a day or two on the $85 Kijiji M710q, then fall back to the $180 Edmonton shop listing (free delivery, phone only).
+- Or order the $169 HP EliteDesk 800 G3 Mini from Amazon.ca (earlier thread), which ships free and arrives within the week.
+Meanwhile, an old laptop or Android phone at his parents' can be the exit node tonight for free.
