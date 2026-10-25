@@ -18,7 +18,10 @@ Ask him only if all of these come up empty, and say what you searched.
 - **Listening gear / smart home**: owns a receiver and a very big speaker with strong bass (plans to try them in the bedroom first), a JBL Charge 6 (finds it thin and bad-sounding) and a Raspberry Pi. Frugal about audio gear ($300 for an amp is too much). Wants a voice-controlled smart speaker that runs his lights with a better assistant than Siri; won't pay for a Google AI subscription. Idea in progress: Shairport Sync on the Pi + a shortcut that starts Claude voice mode (Oct 2026).
 - **Home/desk**: apartment in Edmonton; MacBook on a riser + external monitor, Logitech ergonomic keyboard and mouse, AirPods. Has a bike and a kettlebell.
 - **Car**: no CarPlay/Android Auto, uses his phone; has an old iPad mini he might mount as a dash screen. Buys gas around Edmonton / Fort Saskatchewan.
-- **Voice chat**: likes claude.ai voice for thinking out loud, then hands building to the project coordinator (`docs/VOICE_TASKS.md`). Calls are reviewed with the `_review-voice-calls` skill.
+- **Voice chat**: likes claude.ai voice for thinking out loud and for in-the-moment support while walking around (wants more of that, Oct 22), then hands building to the project coordinator (`docs/VOICE_TASKS.md`). Calls are reviewed with the `_review-voice-calls` skill.
+- **Apple Watch** (since ~Apr 2026): barely uses it. Main wish: persistent now-playing controls (phone and Mac music) and one-tap favourite. Interested in a fully programmable smartwatch (idea, Oct 23).
+- **Coffee**: Hoffman's single-cup V60 (15 g / 250 g, grinder ~4.4, Sharpie channel + swirls); prefers paper filters; has a Doppelganger Goods cloth filter mainly for cold brew.
+- **Calls with Tyler**: FaceTime audio; owns Audio Hijack; ~$190 Deepgram credits; building his own live voice mode / call transcriber (Oct 23).
 - **Sport**: plays in the U of A pickleball league as a free agent (paid $110, Fall 2026); games are at 9 pm.
 - **Main projects**: ai-os (this repo, his agent setup), qwerty MIDI plugin, daily mini crossword (mattmurphy.ca). Decided Oct 22 to build an anti-sycophancy AI therapist harness (not started; idea in `IDEAS.md`).
 - **Brother**: one of his brothers also builds software with Claude; they work well together. Family notes: vault `Family Relationships & Dynamics.md`.

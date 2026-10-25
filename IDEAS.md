@@ -163,3 +163,19 @@ Status: idea; build on Matt 👍.
 - CEO rhythm: he gives instructions at set times, agents work, he checks back at set times on a few things. The current projects view isn't clicking.
 - Things get lost from past Claude threads, even this week's.
 - Discussion thread: "Getting life organized" (2026-10-25). Build nothing until he 👍s.
+
+## Programmable smartwatch (Matt, 2026-10-23) — IDEA
+- Wants total control over a watch: own "Hey Claude", now-playing controls that show at once for phone *and* Mac music, one-tap favourite (Apple buries it in a submenu).
+- Options voice Claude named: Bangle.js (JS), PineTime (open source), LilyGo T-Watch (mic + Wi-Fi). Apple Watch apps can't have an always-on wake word; Vocal Shortcuts (iOS 18 / Sequoia) isn't on watchOS.
+- Source: voice call "Building a custom smartwatch with Claude". Build nothing until he 👍s.
+
+## Calm browser: gradual friction for Instagram/TikTok (Matt, 2026-10-22) — IDEA, product
+- Minimal WKWebView browser, pitched as "the calm way to open Instagram": ads hidden day one, mobile web made as good as the app, then friction turned up so slowly you barely notice; a month later you use it a fraction as much.
+- No self-imposed limits by default ("install it, use Instagram normally, we'll handle the rest"); settings exist but are framed as "we recommend you never open this".
+- Onboarding: delete the Instagram app, or universal links send you back to it. Quiet weekly "20% less" note.
+- App Store: disclose it as a digital-wellbeing feature (avoid 2.5.19 bait-and-switch); WebKit satisfies 2.5.6. Safari-extension route rejected (enable flow too clunky for normal people).
+- Source: voice call "Browser to curb social media addiction". Build nothing until he 👍s.
+
+## Live call transcript with Claude listening (Matt, 2026-10-23) — IDEA / in progress
+- Calls with Tyler: Audio Hijack splits his mic (channel 0 = Matt) and FaceTime output (channel 1 = Tyler) → Deepgram streaming (multichannel, own end-of-speech timing) → an always-current transcript file any model can read; "what do you think, Claude?" sends it. Voice (Deepgram Aura) later.
+- A setup task was sent from that call; check its thread before building.

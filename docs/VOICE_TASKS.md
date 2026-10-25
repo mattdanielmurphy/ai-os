@@ -77,6 +77,12 @@ connector is on, voice Claude should prefer `send_task` over email.
   Triple spaced ellipses glitch the British voice (a stray "art" before each word, once a made-up sentence). Hyphens did little.
 - Matt found the slow 0.8x pace calming at bedtime.
 
+## Voice Claude habits Matt corrected (2026-10-23)
+
+- Asked for a recent file (e.g. a doc an agent wrote yesterday): ask the coordinator via `send_task` first, don't keyword-search and give up. Matt: the coordinator knows the recent file.
+- A `send_task` once silently failed while voice Claude spoke garbled text; Matt had to ask again. Confirm only after the tool result.
+- Voice Claude can't change its own silence threshold; the call-screen mute button mutes Matt's mic, not Claude.
+
 ## Reviewing calls
 
 Unsaved calls queue a "Review unsaved voice calls" task; handle it with the `_review-voice-calls` skill
