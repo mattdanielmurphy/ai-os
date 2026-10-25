@@ -87,3 +87,33 @@ No in principle: IMAP/SMTP (imap.mail.me.com:993, smtp.mail.me.com:587) are inte
 ### Cloud ports might be blocked
 
 Cloud sessions go through a network proxy that may only allow web (HTTPS) traffic. If ports 993/587 are blocked there, cloud threads can't reach iCloud mail directly. Untested. Fallbacks: hand it to the Mac (as with Amazon.ca), or a tiny mail relay on his VPS that cloud agents call over HTTPS.
+
+## 15:55 Migration prep done, relay live
+
+Matt asked to begin migrating to iCloud Mail, build the VPS relay, and leave the DNS cutover until he's ready to oversee it. Nothing about his live mail changed: MX, SPF and every DNS record are untouched; Zoho still gets all mail.
+
+---
+
+### Relay is live on the VPS
+
+`services/mail-relay/relay.py` runs on oracle-vps (systemd `mail-relay`, 127.0.0.1:8790), published at https://vps.mattmurphy.ca/mail/ through Caddy (`handle_path /mail/*`; the existing app on 8000 still answers everything else, checked /docs = 200 before and after; Caddyfile backup `Caddyfile.bak-mail-relay`). Tools: list_folders, list_messages, search, read_message, find_codes (pulls sign-in codes from the last N minutes, aimed at his refresh pain), create_draft, send. REST with a bearer token and MCP (custom-connector style, token in path). Python stdlib only, so nothing to install. Why VPS + Python stdlib: the VPS already runs Caddy with HTTPS and reaches iCloud's IMAP/SMTP ports (checked with nc); stdlib means no dependency drift. Why MCP too: cloud threads and claude.ai can add it as a connector, closest to the Gmail-connector experience he liked. Rejected: Bun + imapflow (extra deps for no gain), a new subdomain (would need a DNS change, which he wants to hold).
+
+---
+
+### Tests and what's untested
+
+`test_relay.py` runs 21 end-to-end checks on the VPS against a throwaway GreenMail server: auth rejects, list, search, read without marking seen, find_codes, threaded drafts, send + Sent copy, MCP initialize/list/call, ALLOW_SEND=0. All pass (found and fixed one bug: Python 3.10's getaddresses returns nothing when fed an empty field). `import_eml.py` tested twice against GreenMail: imports, keeps dates, skips duplicates on re-run. Live over HTTPS: health OK, bad token 401, good token reaches the tool and says "mailbox not configured yet". Untested: real iCloud login, real iCloud folder names (assumed "Sent Messages"/"Drafts"), Zoho's export format, whether Zoho free allows export.
+
+---
+
+### Token handling
+
+Fresh token generated on the VPS (`~/apps/mail-relay/env`, mode 600), copied into ai-os `.env` as `MAIL_RELAY_TOKEN` via a pipe, never printed. Cloud threads need the same value added to the cloud environment's secrets (Matt does that). `configure.py` pushes the iCloud login from `.env` to the VPS the same way.
+
+---
+
+### Matt's steps before cutover
+
+1) Apple app-specific password, then add MAIL_USER, MAIL_PASSWORD, MAIL_FROM, MAIL_FROM_NAME to ai-os .env and run configure.py. 2) iCloud Settings → Custom Email Domain → add mattmurphy.ca and his address, stop at the DNS screen. 3) Export Zoho mail. Then the cutover itself is a session together: TXT verify, SPF with both includes, DKIM CNAME, MX swap, tests, Zoho kept two weeks as a safety net. Full runbook and the DNS snapshot for rollback: services/mail-relay/README.md.
+
+Side finding: a `*` wildcard CNAME to Vercel means Zoho DKIM was never set up, so his current outgoing mail isn't DKIM-signed. iCloud's explicit sig1 record fixes that at cutover.
