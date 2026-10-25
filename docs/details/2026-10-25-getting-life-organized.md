@@ -111,3 +111,16 @@ The coordinator pointed out two things I missed: Matt tried a Notion dashboard d
 - **Linear** (recommended now): a fast board with stages built in, little property fiddling, a Claude plugin exists. Needs a one-time sign-in through /mcp in a Claude terminal. Fine for life areas even though it's made for software.
 - **GitHub Projects**: works today through the gh CLI agents already use, free, sits next to his repos. Plainer and code-flavoured.
 - Craft (installed, connector present) is a docs app more than a board; left out.
+
+## 19:58 Linear chosen
+
+Matt 👍'd Linear. I can't create accounts or run sign-ins, so he does two things: make a free account at linear.app (if he has none), then connect the Linear connector from the card in the thread. After that I'll set up the board: one team, stages Idea / Planned / Live on Mac (max 2) / Paused / Done, a label per life area, and load his current projects from PROJECT_BOARD.md, IDEAS.md and open threads so he only reviews.
+
+---
+
+### Board setup plan
+
+- Workflow states map to the stages above.
+- Labels: School, Slub, Money, Physical health, Mental health, Job, Notes & old projects, Mac inventory.
+- Seed: active projects and open threads, each with a one-line "where it's at".
+- Not decided yet: how agents enforce the 2-live cap (likely a rule: check Linear before starting work on his Mac).
