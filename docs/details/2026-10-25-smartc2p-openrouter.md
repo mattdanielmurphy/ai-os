@@ -39,3 +39,15 @@ Tested with a stubbed fetch: help, missing-key error, `--out`, `--ask`, thread f
 Side note: `~/.zshrc` holds several API keys in plain text (some in comments). Worth moving to an .env.
 
 Undo: `git -C ~/projects/smart-c2p revert HEAD`.
+
+## 01:22 Switched default to GPT-6 Luna
+
+Matt's call from Artificial Analysis: Luna's cost per task is $0.07 vs $0.26 for DeepSeek V4.1 Flash (1017); DeepSeek scores higher (45 vs 38 intelligence) but the extra isn't needed for picking flags and code Q&A. Default is now `openai/gpt-6-luna`. Stub-tested; still no real key.
+
+---
+
+### luna large prompt price
+
+Luna doubles to $0.20/M input past 272k prompt tokens, so very large codebases cost 2x per ask. Fine for most of his projects.
+
+Note: his screenshot compared the "1017" DeepSeek variant ($0.15/$0.60 on OpenRouter); my earlier pick was the plain `deepseek-v4.1-flash` ($0.02/$1.00). Doesn't change the choice.
