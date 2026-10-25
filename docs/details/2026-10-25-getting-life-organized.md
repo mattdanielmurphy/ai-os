@@ -99,3 +99,15 @@ Proposed stages: Idea → Planned → Live on Mac (max 2) → Waiting/Paused →
 ### Project management tool options
 
 Looked for existing tools first (rule 1a). Notion is already connected to Claude here (Notion connector), so agents can read and update a Projects database with Stage and Area fields, and it covers life areas, not just code. Linear is the nicest for software stages and has a Claude plugin, but needs sign-in and is built for code teams. GitHub Projects is free and close to his repos but code-only. Rejected building his own (guardrail he just asked for). Recommendation: Notion, with Linear as the alternative if he wants a stricter software-style board.
+
+## 19:20 Correction: Notion
+
+The coordinator pointed out two things I missed: Matt tried a Notion dashboard demo on Oct 18 and hated it (finicky property list, bad memories, said he didn't want Notion; reopened the idea Oct 24), and the Notion connector is failing here (proxy 403), so "already connected" was wrong. I should have searched past threads before recommending it.
+
+---
+
+### Non-Notion options
+
+- **Linear** (recommended now): a fast board with stages built in, little property fiddling, a Claude plugin exists. Needs a one-time sign-in through /mcp in a Claude terminal. Fine for life areas even though it's made for software.
+- **GitHub Projects**: works today through the gh CLI agents already use, free, sits next to his repos. Plainer and code-flavoured.
+- Craft (installed, connector present) is a docs app more than a board; left out.
