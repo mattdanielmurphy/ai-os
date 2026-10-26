@@ -35,3 +35,7 @@ The raw transcript is committed as-is: both brothers were on the call and the re
 Ran on today's live call: 10 tasks (5 Matt, 5 Tyler) and a notes file were pushed. Not yet tested end to end through a real call hang-up. Known gap: a task done during the call (the Slub work calendar events) can still be listed; a later pass won't untick it.
 
 Undo: remove the `slub` block from `call-transcript` stop; delete rules 7-8.
+
+## 16:53 First real hang-up
+
+The call ended at 16:51; `call-transcript stop` ran save.sh on its own. The full transcript was committed and pushed (0c1ee7c), then Sonnet updated the notes (c3ec579). The last few minutes had no new action items, so TASKS.md did not change.
