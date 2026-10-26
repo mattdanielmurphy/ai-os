@@ -147,3 +147,17 @@ Matt asked (during the call): shared Google Calendar? Tyler asked on the call ho
 - Agents: Claude's Google Calendar connector can list and create events on any calendar Matt can see, so agents can add Slub meetings. It can't create the calendar itself, so that one step is manual. It's also model-neutral: any agent or app can reach Google Calendar.
 - Rejected: an iCloud shared calendar (Tyler may not be on Apple; worse agent access).
 - Not done: creating it. Matt is screen-sharing on a call, so I didn't drive his browser; and Tyler's Google email isn't on file.
+
+## 22:03 Telegram bot on Claude without the API
+
+Matt asked: can we add a Telegram bot that connects to Claude without using the Claude API?
+
+---
+
+### Answer: Claude Code Channels
+
+- Yes. Claude Code has an official Telegram "channel" plugin (research preview). It runs inside a Claude Code session on Matt's Mac and uses his Claude subscription, so no API key and no API bills.
+- Setup per official docs (https://code.claude.com/docs/en/channels): make a bot with Telegram's @BotFather, `/plugin install telegram@claude-plugins-official`, save the bot token with the plugin's configure command, restart with `claude --channels plugin:telegram@claude-plugins-official`, then pair. Only paired (approved) senders can reach it.
+- Catches: needs a Claude Code session running on the Mac (it stops when that session stops); research preview, so it may change; not yet verified whether it works inside a group chat like Slub Club or only in direct messages.
+- Lock-in check: the bot is Matt's own (BotFather token), so later the same bot can be pointed at another backend (his existing Telegram gateway with Codex, or an open-weights model) without Tyler changing anything.
+- Not done: nothing installed. Needs Matt in Telegram for BotFather, and he's on a call.
