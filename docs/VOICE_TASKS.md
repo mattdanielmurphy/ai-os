@@ -82,6 +82,7 @@ connector is on, voice Claude should prefer `send_task` over email.
 - Asked for a recent file (e.g. a doc an agent wrote yesterday): ask the coordinator via `send_task` first, don't keyword-search and give up. Matt: the coordinator knows the recent file.
 - A `send_task` once silently failed while voice Claude spoke garbled text; Matt had to ask again. Confirm only after the tool result.
 - Voice Claude can't change its own silence threshold; the call-screen mute button mutes Matt's mic, not Claude.
+- Oct 25: Matt saw his words transcribed on screen while voice Claude only heard a fragment ("missed the start"); he found it frustrating. Dropped speech happens; voice Claude should ask him to repeat rather than guess.
 
 ## Reviewing calls
 
