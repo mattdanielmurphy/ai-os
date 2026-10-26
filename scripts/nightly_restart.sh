@@ -87,6 +87,16 @@ if [ -n "${DRY_RUN:-}" ]; then
 fi
 
 log "restarting (up $((up / 3600)) h, swap: $(sysctl -n vm.swapusage | awk '{print $6}'))"
+# The Claude app "failed to quit" and stopped the Oct 23 restart (loginwindow's
+# dialog). Nothing is running (checked above), so quit it first, then force it.
+if pgrep -x Claude > /dev/null; then
+  osascript -e 'quit app "Claude"' > /dev/null 2>&1
+  for _ in $(seq 30); do pgrep -x Claude > /dev/null || break; sleep 1; done
+  if pgrep -x Claude > /dev/null; then
+    log "Claude didn't quit in 30 s; killing it"
+    pkill -TERM -x Claude; sleep 10; pkill -KILL -x Claude
+  fi
+fi
 # aevtrrst = Restart without the "Are you sure?" dialog. aevtrest only showed that
 # dialog, so the Mac never restarted (up 4 days, swap 20 GB, 2026-10-23). Apps
 # with unsaved work can still cancel it.
@@ -98,5 +108,11 @@ fi
 # Still here after 2 min = something cancelled it. Ask loginwindow who.
 sleep 120
 why=$(/usr/bin/log show --last 3m --style compact --predicate 'process == "loginwindow"' 2>/dev/null |
-  grep -iE 'cancel|refus|veto' | tail -2 | sed -E 's/^[^ ]+ [^ ]+ +//' | cut -c1-200 | tr '\n' ' ')
+  grep 'final Title:' | tail -1 | sed -E 's/.*final Title: //' | cut -c1-200)
 log "restart cancelled: ${why:-no reason in the loginwindow log}"
+# Claude was quit for nothing: bring it back so threads keep working. Launching
+# an app takes the input queue like any automation (claude-control lock).
+if ! pgrep -x Claude > /dev/null && t=$("$HOME/.hammerspoon/bin/claude-control" lock "nightly-restart"); then
+  open -a Claude
+  "$HOME/.hammerspoon/bin/claude-control" done "${t#granted }"
+fi

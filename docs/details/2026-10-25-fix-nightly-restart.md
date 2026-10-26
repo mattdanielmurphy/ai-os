@@ -41,3 +41,27 @@ Tested: with this thread active it waits and names the busy thread; with an empt
 - **The real restart has never run.** Tonight is its first real try. An app that asks "quit anyway?" (possibly the Claude app itself with sessions open, or a Terminal with running processes) will cancel it; tomorrow's log or toast will say which.
 - **A thread that keeps working overnight** will still block the restart, by design. The morning toast will say so.
 - Undo: `git revert` the commit, and `launchctl bootout gui/$(id -u)/com.matt.agent.nightly-restart-check` plus move its plist to the Trash.
+
+## 23:00 The app that blocked it was Claude
+
+Matt remembered seeing a dialog in the morning and guessed Ableton or Claude.
+
+---
+
+### Claude failed to quit
+
+macOS's own log for the Oct 23 4:30 try shows the restart did start (no "Are you sure?" dialog), then stopped with loginwindow's message: "Your Mac hasn't restarted because Claude failed to quit." That is the dialog Matt saw. Ableton didn't appear.
+
+---
+
+### Quit Claude first
+
+Before asking for the restart, the script now quits the Claude app itself (it already knows no thread is working), waits up to 30 seconds, and force-quits it if it's still open. Ableton is left alone, so unsaved music still stops the restart and keeps its save prompt.
+
+If the restart is still cancelled by another app, the script logs that app's name (it now reads loginwindow's "hasn't restarted because" message) and reopens Claude so threads keep running. Reopening goes through the take-control queue (`claude-control lock`).
+
+---
+
+### Still untested
+
+Quitting and reopening Claude haven't been run for real, since that would close this thread. Tonight's 4:30 run is the first test; tomorrow's log or 9:00 toast will show the result.
