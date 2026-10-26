@@ -50,6 +50,12 @@ case "${1:-start}" in
       mkdir -p "$vault"; cp "$md" "$vault/${md:t}"
       echo "$vault/${md:t}" >"$HOME/calls/.transcript.last"
       echo "saved → Obsidian Calls/${md:t}"
+      # Slub calls with Tyler also go to the shared slub-hq repo, which pulls out action items.
+      slub="$HOME/projects/slub-hq/calls/save.sh"
+      if [[ ${md:t} == *-tyler.md && -x $slub ]]; then
+        nohup "$slub" "$md" >"$HOME/calls/.slub-save.log" 2>&1 </dev/null &!
+        echo "saving → slub-hq/calls/${md:t} (log: ~/calls/.slub-save.log)"
+      fi
     fi ;;
   status) running && echo "running (pid $(cat $pidf))" || echo "not running"; tail -5 "$logf" 2>/dev/null ;;
   tail) tail -f "$HOME/calls/$(date +%F)-${2:-tyler}.md" ;;
