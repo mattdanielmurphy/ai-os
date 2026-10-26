@@ -41,10 +41,95 @@ for (const el of document.querySelectorAll("[data-read]")) {
 }
 
 // Checks: a .try after block b pauses the reading when block b ends, until it has been tried once.
-const tries = {};                      // block index → .try element
+// Quiz mode (2026-10-26): the first pick on each check is scored; a missed check is queued and comes back,
+// options reshuffled, at the next empty <div class="try redo" data-id="…"> slot at least one section later;
+// the end panel shows the score and lets the reader retry whatever is still missed.
+const tries = {};                      // block index → .try element (or .redo slot)
 { let b = -1; for (const el of document.querySelectorAll("[data-read], .try")) { if (el.matches("[data-read]")) b++; else if (b >= 0 && !tries[b]) tries[b] = el; } }
 const tried = new Set(store.get("tried", []));
+const firstPick = store.get("first", {});  // check id → true/false on its first pick
+const missed = store.get("missed", []); // ids still to come back, oldest first
+const checkById = {}; for (const t of document.querySelectorAll(".try[data-id]:not(.redo)")) checkById[t.dataset.id] = t;
 let waiting = null;                    // the .try the reading is paused at
+
+function shuffled(a) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function sectionOf(el) { return [...document.querySelectorAll("#text > section")].indexOf(el.closest("section")); }
+function scoreLine() {
+  const ids = Object.keys(checkById), seen = ids.filter(i => i in firstPick), right = seen.filter(i => firstPick[i]);
+  return { total: ids.length, seen: seen.length, right: right.length };
+}
+function updateScore() {
+  const el = $("#score"); if (!el) return;
+  const s = scoreLine(); el.hidden = !s.seen;
+  el.textContent = s.right + " / " + s.seen + " right first try";
+}
+function record(id, ok) {
+  if (!(id in firstPick)) { firstPick[id] = ok; store.set("first", firstPick); }
+  if (!ok && !missed.includes(id)) missed.push(id);
+  store.set("missed", missed); updateScore();
+}
+// Wires a check's options. again = true for comebacks and end-of-reel retries (they clear a miss when right).
+function wire(t, again) {
+  const id = t.dataset.of || t.dataset.id;
+  const after = document.createElement("div"); after.className = "after"; after.hidden = true;
+  const go = document.createElement("button"); go.textContent = "Continue reading ▸"; go.onclick = () => leaveTry(t);
+  const ask = document.createElement("button"); ask.textContent = "Ask about this"; ask.className = "askthis";
+  ask.onclick = () => window.reelAsk?.open({ quote: t.querySelector(".q")?.textContent || "" });
+  if (t.closest("#end")) go.remove();
+  after.append(go, ask); t.append(after);
+  let picked = false;
+  for (const o of t.querySelectorAll("button.opt")) o.onclick = () => {
+    const ok = o.hasAttribute("data-ok");
+    o.dataset.picked = ok ? "ok" : "no";
+    if (!picked) {
+      picked = true;
+      if (again) { if (ok) { const i = missed.indexOf(id); if (i >= 0) missed.splice(i, 1); store.set("missed", missed); } else if (!missed.includes(id)) { missed.push(id); store.set("missed", missed); } updateScore(); }
+      else record(id, ok);
+    }
+    t.querySelector(".why")?.remove();
+    const why = document.createElement("p"); why.className = "why";
+    why.innerHTML = (ok ? "<b>Yes.</b> " : "<b>Not quite.</b> ") + (o.dataset.why || "") + (ok ? "" : " <i>Try another option.</i>");
+    o.after(why); after.hidden = false;
+    go.textContent = ok ? "Continue reading ▸" : "Skip and keep reading ▸";
+    if (!ok && !again && !t.closest("#end")) why.innerHTML += " <i>This one will come back later.</i>";
+  };
+}
+// Fills a comeback slot with a fresh copy of the oldest missed check from an earlier section.
+function cloneCheck(id, into) {
+  const src = checkById[id]; if (!src) return null;
+  into.innerHTML = ""; into.dataset.of = id; into.classList.add("back");
+  const q = src.querySelector(".q").cloneNode(true); into.append(q);
+  for (const o of shuffled(src.querySelectorAll("button.opt"))) { const c = o.cloneNode(true); delete c.dataset.picked; into.append(c); }
+  wire(into, true); return into;
+}
+function fillRedo(slot) {
+  if (slot.dataset.of) return true;
+  const here = sectionOf(slot);
+  const id = missed.find(m => checkById[m] && sectionOf(checkById[m]) < here);
+  if (!id) return false;
+  cloneCheck(id, slot); slot.hidden = false; return true;
+}
+for (const t of document.querySelectorAll(".try:not(.redo)")) wire(t, false);
+for (const r of document.querySelectorAll(".try.redo")) r.hidden = true;
+
+function endReview() {
+  const box = $("#review"); if (!box) return;
+  const s = scoreLine(); box.innerHTML = "";
+  const h = document.createElement("p"); h.className = "tally";
+  h.innerHTML = s.seen ? "<b>" + s.right + " of " + s.seen + "</b> right on the first try." : "";
+  box.append(h);
+  const left = missed.filter(id => checkById[id]);
+  if (left.length) {
+    const p = document.createElement("p"); p.className = "tally";
+    p.textContent = left.length === 1 ? "One question still needs another go:" : left.length + " questions still need another go:";
+    box.append(p);
+    for (const id of left) { const d = document.createElement("div"); d.className = "try back"; box.append(d); cloneCheck(id, d); }
+  } else if (s.seen) {
+    const p = document.createElement("p"); p.className = "tally"; p.textContent = "Nothing left to redo. Nice.";
+    box.append(p);
+  }
+}
+updateScore();
 
 let idx = 0, playing = true, acc = 0, ended = false;
 const H = () => innerHeight;
@@ -66,7 +151,9 @@ function setIdx(i) {
 // True (and the reading stops) when block b is followed by a check not yet tried.
 function gate(b) {
   const t = tries[b];
-  if (!t || tried.has(t.dataset.id)) return false;
+  if (!t) return false;
+  if (t.classList.contains("redo")) { if (t._done || !fillRedo(t)) return false; }
+  else if (tried.has(t.dataset.id)) return false;
   waiting = t; playing = false; syncPlay(); stopVoice();
   t.classList.add("waiting");
   const r = t.getBoundingClientRect();
@@ -75,7 +162,7 @@ function gate(b) {
   return true;
 }
 function leaveTry(t) {
-  tried.add(t.dataset.id); store.set("tried", [...tried]);
+  if (t.classList.contains("redo")) t._done = true; else { tried.add(t.dataset.id); store.set("tried", [...tried]); }
   t.classList.remove("waiting");
   if (waiting === t) {
     waiting = null;
@@ -83,21 +170,6 @@ function leaveTry(t) {
     if (b + 1 < blockStart.length) { setIdx(blockStart[b + 1]); acc = 0; playing = true; ended = false; syncPlay(); restartVoice(); }
     else finish();
   }
-}
-for (const t of Object.values(tries)) {
-  const after = document.createElement("div"); after.className = "after"; after.hidden = true;
-  const go = document.createElement("button"); go.textContent = "Continue reading ▸"; go.onclick = () => leaveTry(t);
-  const ask = document.createElement("button"); ask.textContent = "Ask about this"; ask.className = "askthis";
-  ask.onclick = () => window.reelAsk?.open({ quote: t.querySelector(".q")?.textContent || "" });
-  after.append(go, ask); t.append(after);
-  for (const o of t.querySelectorAll("button.opt")) o.onclick = () => {
-    o.dataset.picked = o.hasAttribute("data-ok") ? "ok" : "no";
-    t.querySelector(".why")?.remove();
-    const why = document.createElement("p"); why.className = "why";
-    why.innerHTML = (o.hasAttribute("data-ok") ? "<b>Yes.</b> " : "<b>Not quite.</b> ") + (o.dataset.why || "");
-    o.after(why); after.hidden = false;
-    if (!o.hasAttribute("data-ok")) go.textContent = "Skip and keep reading ▸"; else go.textContent = "Continue reading ▸";
-  };
 }
 
 // ---- Scroll gestures. Any scroll we didn't cause ourselves is the reader's. ----
@@ -208,7 +280,7 @@ function voiceTick() {
   if (j !== idx) { setIdx(j); acc = 0; }
 }
 
-function finish() { ended = true; playing = false; $("#end").hidden = false; setIdx(words.length - 1); words.at(-1).classList.add("done"); syncPlay(); stopVoice(); }
+function finish() { ended = true; playing = false; endReview(); $("#end").hidden = false; setIdx(words.length - 1); words.at(-1).classList.add("done"); syncPlay(); stopVoice(); }
 function syncPlay() { $("#play").textContent = playing ? "❚❚" : "▶"; $("#play").setAttribute("aria-label", playing ? "Pause" : "Play"); }
 function togglePlay() {
   if (ended) return again();

@@ -35,7 +35,7 @@ ${kit("ask.css")}
 
 <main id="text">
 ${body}
-  <div class="end" id="end" hidden>— end —<br><button id="again">↺ Read again</button>${reel.next ? `<br><br>Next: ${reel.nextUrl ? `<a href="${esc(reel.nextUrl)}" target="_blank" rel="noopener">${esc(reel.next)}</a>` : esc(reel.next)}` : ""}</div>
+  <div class="end" id="end" hidden><div id="review"></div>— end —<br><button id="again">↺ Read again</button>${reel.next ? `<br><br>Next: ${reel.nextUrl ? `<a href="${esc(reel.nextUrl)}" target="_blank" rel="noopener">${esc(reel.next)}</a>` : esc(reel.next)}` : ""}</div>
 </main>
 
 <div class="ctl l">
@@ -51,6 +51,7 @@ ${body}
   <label>Fly speed <b id="flyV"></b><input type="range" id="fly" min=".05" max=".6" step=".01"></label>
 </div>
 <div id="bar"></div>
+<div id="score" hidden></div>
 
 <script>window.REEL = ${JSON.stringify(config)};</script>
 <script>

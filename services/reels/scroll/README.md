@@ -16,9 +16,14 @@ A scroll-to-read explainer: the page is the text, a highlighter follows the narr
    - `<div class="key"><b>Symbolization key</b>…</div>`, `<table class="sym">`;
    - `<div class="try" data-id="unique"><p class="q">…</p><button class="opt" data-ok data-why="…">…</button>…</div>`:
      a check. The reading pauses after the block before it until it's tried once (remembered per browser).
+   - Quiz mode (2026-10-26): add `data-back` to a check that revisits an earlier section ("Throwback"). Put empty
+     `<div class="try redo" data-id="unique"></div>` slots after later blocks: a check missed on its first pick
+     comes back there, options reshuffled, once it's at least a section old (an empty queue skips the slot).
+     The first pick on every check is scored (pill, top left); the end panel shows the tally and lets the reader
+     retry whatever is still missed. Each check must follow a `data-read` block (one check per block).
 3. `bun build.ts reels/<id>` (records each block once with Speechify via `~/projects/pages/tts.ts`, cached in
    `cache/`, backs off on 429). Output: `out/<id>/index.html` (Artifact fragment), `audio/`, `files.json`, `test.html`.
-4. Test: `NODE_PATH=<dir holding playwright-core> node test.cjs <id>` (headless, muted, fake Claude). Never open
+4. Test: `NODE_PATH=<dir holding playwright-core> node test.cjs <id>` (and `quiz-test.cjs <id>` for quiz mode) (headless, muted, fake Claude). Never open
    reels in the Claude browser pane.
 5. Publish as a claude.ai **Artifact** (it needs the `sample` capability, so not Vercel): `file_path`
    `out/<id>/index.html`, `root` `out/<id>`, `files` = `files.json`, `capabilities: {"sample": {}}`. Republishing
@@ -40,6 +45,8 @@ under a check. Past questions are kept per reel in the browser ("Earlier questio
 
 - `kit/player.js|css`: the reader (scroll gestures, highlight, narration, checks). `kit/reactions.js|css`: long-press
   reactions. `kit/ask.js|css`: Ask.
+- `reels/speed-1..`: PHIL 120 speed review with heavy quizzing for Midterm 2. Speed 1 (ch. 1–8)
+  https://claude.ai/artifact/WVneBno1UzEMfzY5a1rnpA
 - `reels/logic-1..4`: PHIL 120 Unit 5 catch-up (forall x ch. 23–29). Live: Logic 1 https://claude.ai/artifact/BrBy9VCdTbZapqZ4Fw1Zrs ·
   2 https://claude.ai/artifact/6DrNZ9BD27r9EPHbUgaxww · 3 https://claude.ai/artifact/MDkbTk9z3DjtXeWVVisAqt ·
   4 https://claude.ai/artifact/2webCnZjMNJtHwMBDgtGxW

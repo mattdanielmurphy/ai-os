@@ -119,3 +119,14 @@ body.speaking #wave i { animation: wave .9s ease-in-out infinite; }
 @media (max-width: 420px) { .toggle .lbl { display: none; } }
 button[hidden] { display: none; }
 body:not(.can-ask) .askthis, body:not(.can-ask) .askhint { display: none; }
+
+/* Quiz mode: throwbacks to earlier sections, comebacks of missed checks, live score, end review. */
+.try[data-back] .q::before { content: "Throwback · "; }
+.try.back .q::before { content: "Comes back · "; }
+.try.redo[hidden] { display: none; }
+#score { position: fixed; top: calc(20px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left, 0px)); z-index: 4; font: 500 10.5px/1 var(--mono); padding: 6px 9px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted); pointer-events: none; }
+#score[hidden] { display: none; }
+#review { text-align: left; margin: 0 0 1.4em; font: 400 1rem/1.6 var(--body); color: var(--ink); font-size: 21px; }
+@media (min-width: 700px) { #review { font-size: 24px; } }
+#review .tally { font-size: .9em; margin: 0 0 .8em; }
