@@ -138,3 +138,14 @@ table.tt th { font-weight: 600; color: var(--accent); }
 table.tt td.main, table.tt th.main { background: color-mix(in srgb, var(--g1) 14%, transparent); }
 table.tt td.sep, table.tt th.sep { border-left: 1px solid var(--line); }
 @media (max-width: 420px) { table.tt { font-size: .68em; } }
+
+/* Fitch-style proofs (shown, not read): <table class="pf"><tr class="as"><td>2</td><td><i></i>H</td><td>AS</td></tr>…
+   one <i></i> per open subproof draws its vertical line; tr.as underlines an assumption. */
+table.pf { border-collapse: collapse; margin: .4em 0 1.4em; font: 500 .8em/1.25 var(--math); }
+table.pf td { padding: 3px 8px 3px 0; white-space: nowrap; vertical-align: middle; }
+table.pf td:first-child { color: var(--muted); font: 400 .8em/1 var(--mono); padding-right: 10px; text-align: right; }
+table.pf td:nth-child(2) { border-left: 1.5px solid var(--ink); padding-left: 8px; }
+table.pf td:nth-child(2) i { display: inline-block; width: 14px; height: 1.5em; margin: -.3em 0; border-left: 1.5px solid var(--ink); vertical-align: middle; }
+table.pf tr.as td:nth-child(2) span { border-bottom: 1.5px solid var(--ink); padding-bottom: 1px; }
+table.pf td:last-child { color: var(--muted); font: 400 .78em/1 var(--mono); padding-left: 14px; }
+table.pf tr.q td { color: var(--accent); }

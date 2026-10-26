@@ -1,0 +1,265 @@
+  <p class="label">PHIL 120 speed review · reel 3 · forall x Part IV, ch. 16–22</p>
+  <h1 data-read>Natural deduction, fast</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>This is the big one for Midterm 2. Natural deduction means building proofs one small, rule-checked step at a time. The rules are few, and each one is simple. The skill is knowing which one to reach for, so this reel quizzes you on exactly that. Warm-ups first.</p>
+
+  <section>
+    <p class="label">00 · Warm-up from reels 1 and 2</p>
+    <h2 data-read>Before we start</h2>
+    <p data-read>Two quick ones from memory.</p>
+    <div class="try" data-back data-id="s3-tb-entail">
+      <p class="q">“These premises entail that conclusion” means…</p>
+      <button class="opt" data-why="That's a stronger claim, about every sentence being true. Entailment is about one combination.">every row makes the premises and conclusion all true</button>
+      <button class="opt" data-ok data-why="Entailment means no bad row: no row with every premise true and the conclusion false.">no row makes the premises all true and the conclusion false</button>
+      <button class="opt" data-why="That's joint satisfiability, a weaker idea.">some row makes them all true together</button>
+    </div>
+    <p data-read>And one about the arrow.</p>
+    <div class="try" data-back data-id="s3-tb-arrow">
+      <p class="q">When is H → K false?</p>
+      <button class="opt" data-ok data-why="True on the left, false on the right: the one row where an arrow fails.">H true, K false</button>
+      <button class="opt" data-why="A false left side can't make an arrow false.">H false, K true</button>
+      <button class="opt" data-why="Both false leaves the arrow true.">H false, K false</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">01 · The very idea · ch. 16–17.1</p>
+    <h2 data-read>Proofs instead of tables</h2>
+    <p data-read>Truth tables check every row, so they double in size with every letter. Twenty letters means about a million rows. A proof instead moves from the premises to the conclusion in small steps, and each step must follow a rule.</p>
+    <p data-read>A proof is a numbered list of lines. Each line has a sentence and a justification on the right. A line can be a premise, written PR, an assumption, written AS, or follow from earlier lines by a rule, which you cite with the line numbers it uses.</p>
+    <table class="pf">
+      <tr><td>1</td><td>K ∧ W</td><td>PR</td></tr>
+      <tr class="as"><td>2</td><td><span>K → R</span></td><td>PR</td></tr>
+      <tr><td>3</td><td>K</td><td>∧E, 1</td></tr>
+      <tr><td>4</td><td>R</td><td>→E, 2, 3</td></tr>
+    </table>
+    <p data-read>Every connective gets two rules. An introduction rule, marked with an I, says how to prove a sentence with that connective as its main connective. An elimination rule, marked with an E, says how to use one you already have.</p>
+  </section>
+
+  <section>
+    <p class="label">02 · Reiteration and conjunction · ch. 17.2–17.3</p>
+    <h2 data-read>The easy ones</h2>
+    <p data-read>Reiteration, R, just copies an earlier available line. And introduction joins two lines you already have into one conjunction. And elimination takes a conjunction and gives you either side.</p>
+    <div class="f pair"><div><span class="tag">∧I</span>𝒜, ℬ ⟹ 𝒜 ∧ ℬ</div><div><span class="tag">∧E</span>𝒜 ∧ ℬ ⟹ 𝒜, or ℬ</div></div>
+    <div class="try" data-id="s3-and">
+      <p class="q">Line 1 is K ∧ W. Line 2 is W. What justifies line 2?</p>
+      <button class="opt" data-why="∧I builds a conjunction. Here we're taking one apart.">∧I, 1</button>
+      <button class="opt" data-ok data-why="Taking one side out of a conjunction is and elimination, citing the conjunction's line.">∧E, 1</button>
+      <button class="opt" data-why="R copies a line exactly. W isn't the same sentence as K ∧ W.">R, 1</button>
+    </div>
+    <p data-read>For and introduction, the order you cite matters only for neatness: cite the line of the left side first, then the right side.</p>
+  </section>
+
+  <section>
+    <p class="label">03 · The conditional · ch. 17.4</p>
+    <h2 data-read>Using an arrow, and proving one</h2>
+    <p data-read>Arrow elimination is the famous one. If you have an arrow, and you have its left side, you may write its right side. You cite the arrow's line, then the left side's line.</p>
+    <div class="f">𝒜 → ℬ, 𝒜 ⟹ ℬ<small>→E. Only forwards: having ℬ tells you nothing about 𝒜.</small></div>
+    <div class="try" data-id="s3-arrow-e">
+      <p class="q">You have R → S on line 1 and S on line 2. What can →E give you?</p>
+      <button class="opt" data-why="That's running the arrow backwards, the classic invalid move from reel 1.">R</button>
+      <button class="opt" data-ok data-why="→E needs the left side, R, and you don't have it. Having the right side gets you nothing.">Nothing yet: →E needs R.</button>
+      <button class="opt" data-why="There's no rule that adds a not here.">¬R</button>
+    </div>
+    <p data-read>To prove an arrow, you need a subproof. Start a new vertical line and assume the left side. Work inside it until you reach the right side. Then close the subproof and write the arrow, citing the whole subproof as a range of lines.</p>
+    <table class="pf">
+      <tr class="as"><td>1</td><td><span>H → K</span></td><td>PR</td></tr>
+      <tr class="as"><td>2</td><td><i></i><span>H</span></td><td>AS</td></tr>
+      <tr><td>3</td><td><i></i>K</td><td>→E, 1, 2</td></tr>
+      <tr><td>4</td><td><i></i>K ∨ W</td><td>∨I, 3</td></tr>
+      <tr><td>5</td><td>H → (K ∨ W)</td><td>→I, 2–4</td></tr>
+    </table>
+    <div class="try" data-id="s3-arrow-i">
+      <p class="q">In the proof above, why does line 5 cite “2–4”?</p>
+      <button class="opt" data-ok data-why="→I cites the whole subproof: the assumption H on line 2 through the result on line 4.">It cites the subproof that assumed H and reached K ∨ W.</button>
+      <button class="opt" data-why="→I doesn't cite single lines. It cites a subproof as a range.">Lines 2 and 4 are used like in →E.</button>
+      <button class="opt" data-why="Line 1 isn't needed by →I itself. It was used inside the subproof.">It should cite 1–4.</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">04 · Subproofs · ch. 17.5</p>
+    <h2 data-read>What you can cite, and when</h2>
+    <p data-read>You can assume anything at all, at any time, by opening a subproof. The catch is that whatever you prove inside it depends on that assumption. So once the subproof is closed, its lines are locked away. This is called discharging the assumption.</p>
+    <p data-read>The rule for citing a single line: it must come earlier, and it must not sit inside a subproof that has already closed. A closed subproof can still be cited as a whole range, by rules like arrow introduction, as long as it isn't inside another closed one.</p>
+    <div class="try" data-id="s3-cite">
+      <p class="q">Same proof as above. You add a line 6. Which lines may line 6 cite on their own?</p>
+      <button class="opt" data-why="Line 3 is inside the subproof that closed at line 4, so it's locked away.">Line 3</button>
+      <button class="opt" data-ok data-why="Lines 1 and 5 are on the main proof line, outside the closed subproof, so they stay available.">Lines 1 and 5</button>
+      <button class="opt" data-why="Line 2 is the discharged assumption. It closed with its subproof.">Line 2</button>
+    </div>
+    <p data-read>Subproofs can sit inside subproofs. The inner one has to close before the outer one does, and the last line of a proof must be back on the main line, outside every subproof.</p>
+    <div class="try redo" data-id="s3-redo-1"></div>
+  </section>
+
+  <section>
+    <p class="label">05 · Biconditional · ch. 17.6</p>
+    <h2 data-read>Two arrows in one</h2>
+    <p data-read>To prove a double arrow you need two subproofs: one assuming the left side and reaching the right, and one assuming the right side and reaching the left. Then double arrow introduction cites both ranges.</p>
+    <p data-read>Double arrow elimination works in both directions. With the double arrow and either side, you may write the other side.</p>
+    <div class="try" data-id="s3-bicon">
+      <p class="q">Line 1 is S ↔ T. Line 2 is T. What can ↔E give you?</p>
+      <button class="opt" data-why="↔E isn't one-way like →E. Either side gets you the other.">Nothing: ↔E only goes left to right.</button>
+      <button class="opt" data-ok data-why="With the double arrow and its right side, you get the left side: S, by ↔E, 1, 2.">S</button>
+      <button class="opt" data-why="No rule adds a not here. ↔E gives the other side as it is.">¬S</button>
+    </div>
+    <p data-read>Cite the double arrow first, then the side you have.</p>
+  </section>
+
+  <section>
+    <p class="label">06 · Disjunction · ch. 17.7</p>
+    <h2 data-read>Or: easy in, hard out</h2>
+    <p data-read>Or introduction is generous. From any line, you may write that sentence or anything else, in either order. The added part can be any sentence at all, even a long one you've never seen.</p>
+    <div class="try" data-id="s3-or-i">
+      <p class="q">Line 4 is R. Which line can you write next by ∨I, 4?</p>
+      <button class="opt" data-why="That's a conjunction. ∨I only builds disjunctions.">R ∧ K</button>
+      <button class="opt" data-ok data-why="Any sentence can be the added side, however complicated: R or anything follows from R.">(K → ¬W) ∨ R</button>
+      <button class="opt" data-why="∨I keeps R as one side of the or. It can't drop R.">K</button>
+    </div>
+    <p data-read>Or elimination is the hard one. Having K or H doesn't tell you which. So to use it, you show your goal follows either way. You need the disjunction, a subproof assuming the left side that reaches the goal, and a subproof assuming the right side that reaches the same goal.</p>
+    <div class="f">𝒜 ∨ ℬ, [𝒜 … 𝒞], [ℬ … 𝒞] ⟹ 𝒞<small>∨E cites three things: the disjunction's line and both subproof ranges.</small></div>
+    <div class="try" data-id="s3-or-e">
+      <p class="q">You have K ∨ H and want S by ∨E. What do you need?</p>
+      <button class="opt" data-why="That only covers one of the two cases. H might be the true one.">One subproof: assume K, reach S</button>
+      <button class="opt" data-ok data-why="Both cases must lead to S: assume K and reach S, and separately assume H and reach S.">Two subproofs: from K reach S, and from H reach S</button>
+      <button class="opt" data-why="That's a different rule, disjunctive syllogism, and it gives K or H, not S.">The line ¬K, then S follows</button>
+    </div>
+    <div class="try redo" data-id="s3-redo-2"></div>
+    <p data-read>Both subproofs must end in exactly the same sentence. That's the whole trick.</p>
+  </section>
+
+  <section>
+    <p class="label">07 · Negation and contradiction · ch. 17.8</p>
+    <h2 data-read>Not, contradiction, and indirect proof</h2>
+    <p data-read>The symbol that looks like an upside-down T means "contradiction", and it is always false. Not elimination gets you there: if a sentence and its exact negation are both available, write the contradiction symbol. Cite the negation first.</p>
+    <p data-read>Not introduction runs the other way. Assume something, reach a contradiction, close the subproof, and conclude its negation. Indirect proof, IP, is the mirror image: assume a negation, reach a contradiction, and conclude the sentence without the not.</p>
+    <div class="f pair"><div><span class="tag">¬I</span>[𝒜 … ⊥] ⟹ ¬𝒜</div><div><span class="tag">IP</span>[¬𝒜 … ⊥] ⟹ 𝒜</div></div>
+    <div class="try" data-id="s3-ip">
+      <p class="q">A subproof assumed ¬P and reached ⊥, then closed. Which line can you add after it?</p>
+      <button class="opt" data-ok data-why="Assuming the negation and hitting a contradiction is indirect proof: you get P.">P, by IP</button>
+      <button class="opt" data-why="¬I would conclude the negation of what was assumed, and ¬P was the assumption, so that's backwards.">¬P, by ¬I</button>
+      <button class="opt" data-why="The ⊥ is inside a closed subproof, so it can't be cited any more.">Any sentence, by X</button>
+    </div>
+    <p data-read>Last, explosion, X. From a contradiction, you may write any sentence at all. It's legal, because a contradiction is never true. But it only works when the contradiction symbol is already on an available line. It's not a way out when you're stuck.</p>
+    <div class="try" data-id="s3-negE">
+      <p class="q">Which pair of available lines lets you write ⊥ by ¬E?</p>
+      <button class="opt" data-why="These don't contradict each other: both could be true, or both false.">¬K and ¬H</button>
+      <button class="opt" data-why="¬E needs a sentence and its exact negation. ¬(K ∧ H) negates K ∧ H, not K.">K and ¬(K ∧ H)</button>
+      <button class="opt" data-ok data-why="A sentence and its exact negation: cite the negation first, ¬E.">K ∨ H and ¬(K ∨ H)</button>
+    </div>
+    <div class="try redo" data-id="s3-redo-3"></div>
+    <p data-read>Those are all the basic rules. Next, how to actually find a proof.</p>
+  </section>
+
+  <section>
+    <p class="label">08 · Constructing proofs · ch. 18</p>
+    <h2 data-read>Work backwards from the goal, forwards from what you have</h2>
+    <p data-read>Look at your goal's main connective, and plan to use its introduction rule. Goal is an and? Prove each side. Goal is an arrow? Assume the left side and aim for the right. Goal is a negation? Assume the sentence without the not, and aim for a contradiction.</p>
+    <div class="try" data-id="s3-backward">
+      <p class="q">Your goal is ¬(W ∧ R). What's the natural first move?</p>
+      <button class="opt" data-ok data-why="A negation goal: assume the unnegated sentence, W ∧ R, aim for ⊥, then ¬I.">Assume W ∧ R and aim for ⊥</button>
+      <button class="opt" data-why="That's how you'd prove an arrow. The main connective here is ¬.">Assume W and aim for R</button>
+      <button class="opt" data-why="Separate pieces won't give a negated conjunction by ∧I. Look at the main connective, ¬.">Prove ¬W and ¬R, then use ∧I</button>
+    </div>
+    <p data-read>Then work forwards. Break up what you have: and elimination on conjunctions, arrow elimination when you have a left side, or elimination when you have a disjunction. Your goal and your premises meet in the middle.</p>
+    <p data-read>And if nothing works, proceed indirectly. Assume the negation of your goal and hunt for a contradiction, then finish with indirect proof. It always gives you something new to work with.</p>
+    <div class="try" data-back data-id="s3-tb-cite">
+      <p class="q">Throwback to subproofs: a line inside a closed subproof can be cited…</p>
+      <button class="opt" data-why="Single lines from a closed subproof are locked away.">by any later line</button>
+      <button class="opt" data-ok data-why="Single lines inside a closed subproof are off limits. Only the whole range can be cited, by a rule like →I.">never on its own; only the whole subproof as a range</button>
+      <button class="opt" data-why="Copying it with R is still citing it, so it's not allowed.">only by reiteration</button>
+    </div>
+    <div class="try redo" data-id="s3-redo-4"></div>
+    <p data-read>Now some shortcuts the book adds on top.</p>
+  </section>
+
+  <section>
+    <p class="label">09 · Additional rules · ch. 19</p>
+    <h2 data-read>Five handy extras</h2>
+    <p data-read>Chapter 19 adds five rules that save steps. Learn their names and shapes, because questions often ask which rule justifies a line.</p>
+    <table class="sym">
+      <tr><td>DS</td><td><b>Disjunctive syllogism.</b> 𝒜 ∨ ℬ and ¬𝒜 give ℬ (or ¬ℬ gives 𝒜). Cite the or first.</td></tr>
+      <tr><td>MT</td><td><b>Modus tollens.</b> 𝒜 → ℬ and ¬ℬ give ¬𝒜. Cite the arrow first.</td></tr>
+      <tr><td>DNE</td><td><b>Double-negation elimination.</b> ¬¬𝒜 gives 𝒜.</td></tr>
+      <tr><td>LEM</td><td><b>Excluded middle.</b> Two subproofs, from 𝒜 and from ¬𝒜, reaching the same ℬ, give ℬ.</td></tr>
+      <tr><td>DeM</td><td><b>De Morgan.</b> ¬(𝒜 ∧ ℬ) ⟺ ¬𝒜 ∨ ¬ℬ, and ¬(𝒜 ∨ ℬ) ⟺ ¬𝒜 ∧ ¬ℬ. Works both ways.</td></tr>
+    </table>
+    <div class="try" data-id="s3-mt">
+      <p class="q">Line 1 is R → S. Line 2 is ¬S. Line 3 is ¬R. Justification for line 3?</p>
+      <button class="opt" data-why="DS needs a disjunction. Line 1 is an arrow.">DS, 1, 2</button>
+      <button class="opt" data-ok data-why="Arrow plus the negation of its right side gives the negation of its left side: modus tollens.">MT, 1, 2</button>
+      <button class="opt" data-why="→E needs the left side, R, not the negation of the right side.">→E, 1, 2</button>
+    </div>
+    <p data-read>De Morgan is the "not both" and "neither" pairing from reel 1, now as a rule.</p>
+    <div class="try" data-id="s3-dem">
+      <p class="q">By DeM, ¬(K ∨ H) becomes…</p>
+      <button class="opt" data-why="That's the partner of ¬(K ∧ H), not ¬(K ∨ H).">¬K ∨ ¬H</button>
+      <button class="opt" data-ok data-why="Not-or becomes and-of-nots: neither K nor H.">¬K ∧ ¬H</button>
+      <button class="opt" data-why="The nots can't just disappear.">K ∧ H</button>
+    </div>
+    <div class="try redo" data-id="s3-redo-5"></div>
+    <p data-read>One caution. In the book, these extras are only allowed once chapter 19 introduces them. If an exam question says "basic rules only", leave them out.</p>
+  </section>
+
+  <section>
+    <p class="label">10 · Proof-theoretic concepts · ch. 20</p>
+    <h2 data-read>The single turnstile</h2>
+    <p data-read>The single turnstile means "there is a proof". Some sentences, single turnstile, a conclusion, says a proof exists from those sentences to that conclusion. Compare the double turnstile from reel 2, which is about truth-table rows.</p>
+    <div class="f pair"><div><span class="tag">provable</span>𝒜, ℬ ⊢ 𝒞</div><div><span class="tag">true on every row</span>𝒜, ℬ ⊨ 𝒞</div></div>
+    <p data-read>A theorem is a sentence you can prove from no premises at all. Two sentences are interderivable if each can be proved from the other. A set of sentences is inconsistent if you can prove the contradiction symbol from them.</p>
+    <p data-read>Notice the lopsidedness. To show something is a theorem, one proof is enough. To show it's not a theorem, you'd have to rule out every possible proof. That's why, in practice, you show "not provable" with a truth table instead.</p>
+    <div class="try" data-id="s3-theorem">
+      <p class="q">You want to show a sentence is <b>not</b> a theorem. The practical way is…</p>
+      <button class="opt" data-why="Failing to find a proof doesn't show there isn't one.">try hard to prove it, and fail</button>
+      <button class="opt" data-ok data-why="One row where it's false shows it isn't a tautology, so by soundness it can't be provable.">find one truth-table row where it's false</button>
+      <button class="opt" data-why="Every connective has an introduction rule, so this can't settle anything.">show its main connective has no introduction rule</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">11 · Derived rules, soundness, completeness · ch. 21–22</p>
+    <h2 data-read>Why the system can be trusted</h2>
+    <p data-read>Chapter 21 shows the five extra rules can each be built from the basic rules. So they're shortcuts, not new powers: anything you prove with them, you could prove without them.</p>
+    <p data-read>Chapter 22 links the two turnstiles. The proof system is sound: whatever you can prove is a real entailment, so proofs never lead you astray. And it is complete: every real entailment has a proof. Together, single turnstile and double turnstile always agree.</p>
+    <div class="f pair"><div><span class="tag">sound</span>if ⊢ then ⊨</div><div><span class="tag">complete</span>if ⊨ then ⊢</div></div>
+    <div class="try" data-id="s3-sound">
+      <p class="q">“Every argument that can be proved is valid.” That's…</p>
+      <button class="opt" data-ok data-why="Provable implies valid: single turnstile to double turnstile. That's soundness.">soundness</button>
+      <button class="opt" data-why="Completeness goes the other way: every valid argument can be proved.">completeness</button>
+      <button class="opt" data-why="Derived rules are about shortcuts, not about proofs matching truth tables.">a derived rule</button>
+    </div>
+    <div class="try redo" data-id="s3-redo-6"></div>
+    <p data-read>Soundness, provable means valid. Completeness, valid means provable.</p>
+  </section>
+
+  <section>
+    <p class="label">12 · Mixed round</p>
+    <h2 data-read>Everything mixed, three reels</h2>
+    <p data-read>No scrolling back.</p>
+    <div class="try" data-back data-id="s3-tb-ds">
+      <p class="q">Line 1 is K ∨ H. Line 2 is ¬H. Line 3 is K. Justification for line 3?</p>
+      <button class="opt" data-why="MT needs an arrow on line 1.">MT, 1, 2</button>
+      <button class="opt" data-ok data-why="A disjunction plus the negation of one side gives the other side: disjunctive syllogism, citing the or first.">DS, 1, 2</button>
+      <button class="opt" data-why="∨E needs two subproofs, not a negated side.">∨E, 1, 2</button>
+    </div>
+    <p data-read>Next, a strategy question.</p>
+    <div class="try" data-back data-id="s3-tb-goal-arrow">
+      <p class="q">Your goal is W → (K ∧ R). How should the proof end?</p>
+      <button class="opt" data-ok data-why="An arrow goal: a subproof assuming W that reaches K ∧ R, closed off by →I.">With →I, citing a subproof that assumes W and reaches K ∧ R</button>
+      <button class="opt" data-why="The main connective is →, so the last step is →I, not ∧I.">With ∧I on K and R</button>
+      <button class="opt" data-why="→E uses an arrow. To prove one, you need →I.">With →E</button>
+    </div>
+    <p data-read>And one from reel 1.</p>
+    <div class="try" data-back data-id="s3-tb-main">
+      <p class="q">What is the main connective of ¬K ∨ (H → R)?</p>
+      <button class="opt" data-why="The not only covers K.">¬</button>
+      <button class="opt" data-ok data-why="The or joins the two big parts, so it's the main connective. To prove this, you'd plan for ∨I.">∨</button>
+      <button class="opt" data-why="The arrow is inside brackets, a part of a part.">→</button>
+    </div>
+    <p data-read>Last chance for anything you missed.</p>
+    <div class="try redo" data-id="s3-redo-7"></div>
+    <p data-read>That's Part IV. The best next step is real proof practice from the course's practice lists, using these strategies, with the Ask button for hints when you're stuck.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 16–22. Explanations, examples and questions written for this reel. No textbook exercises are used or answered here.</p>

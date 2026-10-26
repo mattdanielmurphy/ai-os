@@ -68,3 +68,33 @@ The Part III exercises are mostly "make a truth table for this sentence" or "is 
 ### Kit change
 
 Small truth tables (`table.tt`) now have a style in the player, tightened on phones so seven columns fit at 360 px (checked with a screenshot, no sideways scroll).
+
+## 03:35 Speed reel 3 is live (natural deduction, chapters 16–22)
+
+Speed 3 · Natural Deduction: https://claude.ai/artifact/8KFVUwnGYh5JQkyAGAVyY2. Reel 2's end now links to it.
+
+---
+
+### What reel 3 covers
+
+This is the part most likely to carry Midterm 2 marks. It covers what a proof is (PR, AS, citing lines), every basic rule with its shape (R, ∧I/∧E, →I/→E, ↔I/↔E, ∨I/∨E, ¬E, ¬I, IP, X), which lines you may cite once a subproof closes, proof strategy (work backwards from the goal's main connective, forwards from what you have, indirect proof when stuck), the five extra rules (DS, MT, DNE, LEM, DeM), the single turnstile, theorems, interderivable and inconsistent, derived rules, and soundness vs completeness. 20 questions (5 throwbacks), 7 comeback slots. Proofs are drawn Fitch-style with the book's vertical lines and underlined assumptions.
+
+The questions are mostly "which rule justifies this line", "which lines can be cited" and "what's the first move", because that's the decision-making that proof questions test, and it can be quizzed without writing whole proofs.
+
+---
+
+### School rule check for reel 3
+
+All mini-proofs use my own sentences (K, W, H, R, S, T). I checked them against every chapter 17–20 exercise list; none match. The reel never gives a full proof of any exercise, and Ask for this reel has an extra line: never write or finish a proof of a textbook exercise, coach with hints and different examples instead.
+
+---
+
+### Kit change
+
+Fitch-style proof tables (`table.pf`) in the player: line numbers, one vertical bar per open subproof, underlined assumptions, muted justifications. Checked on a 360 px phone in light and dark.
+
+---
+
+### Next
+
+Reel 4: a quiz-heavy recap of Part V (first-order logic syntax, chapters 23–29; the four earlier catch-up reels already teach it). Reel 5: Part VI (interpretations and truth in FOL, chapters 30–35), which class reaches on Oct 28 and Midterm 2 likely includes.
