@@ -1,0 +1,10 @@
+{
+  "id": "speed-2",
+  "title": "Speed 2 · Truth Tables",
+  "next": "Speed 3, natural deduction (Part IV)",
+  "ask": {
+    "mode": "school",
+    "audience": "The reader is Matt, a PHIL 120 Symbolic Logic student at the University of Alberta. The textbook is forall x: Calgary. He scored 77 on Midterm 1 and wants to do much better on Midterm 2 (Nov 4), so this is a fast review of the whole course with lots of quizzing. This page speed-reviews Part III (chapters 9 to 15): characteristic truth tables, truth-functionality, complete truth tables, tautology, contradiction, equivalence, satisfiability, entailment and the double turnstile, limits of TFL, shortcuts and partial truth tables. Explain from the symbols up, in small steps, with fresh examples."
+  },
+  "url": "https://claude.ai/artifact/J17qDAd1PejdMqhhjnZRaN"
+}

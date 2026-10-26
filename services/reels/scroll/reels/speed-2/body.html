@@ -1,0 +1,229 @@
+  <p class="label">PHIL 120 speed review · reel 2 · forall x Part III, ch. 9–15</p>
+  <h1 data-read>Truth tables, fast</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>This reel turns the ideas from chapter 3 into something you can check, row by row. Same deal as last time: answer fast, your first pick is scored, and anything you miss comes back later. First, two warm-ups from the last reel.</p>
+
+  <section>
+    <p class="label">00 · Warm-up from reel 1</p>
+    <h2 data-read>Before we start</h2>
+    <p data-read>Pull these out of memory before you read anything new.</p>
+    <div class="try" data-back data-id="s2-tb-onlyif">
+      <p class="q">“The pool is open only if a lifeguard is on duty.” Key: O, the pool is open; L, a lifeguard is on duty.</p>
+      <button class="opt" data-why="That's “if a lifeguard is on duty, the pool is open”. “Only if” introduces the right-hand side.">L → O</button>
+      <button class="opt" data-ok data-why="“Only if” introduces the consequent: an open pool requires a lifeguard.">O → L</button>
+      <button class="opt" data-why="That's both directions, more than was said.">O ↔ L</button>
+    </div>
+    <p data-read>And one about arguments.</p>
+    <div class="try" data-back data-id="s2-tb-sound">
+      <p class="q">Which is true of every sound argument?</p>
+      <button class="opt" data-ok data-why="Sound means valid with all premises true, so the conclusion has to be true as well.">It is valid, and its conclusion is true.</button>
+      <button class="opt" data-why="A sound argument must be valid. True premises alone aren't enough.">It has true premises but may be invalid.</button>
+      <button class="opt" data-why="Valid plus true premises guarantees a true conclusion.">Its conclusion may be false.</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">01 · Characteristic truth tables · ch. 9</p>
+    <h2 data-read>Each connective is just a table</h2>
+    <p data-read>A truth table lists every combination of true and false for the parts, and says what the whole sentence is on each one. Here are all five connectives in one table. This is the one thing to know cold.</p>
+    <table class="tt">
+      <tr><th>𝒜</th><th>ℬ</th><th class="sep">¬𝒜</th><th>𝒜 ∧ ℬ</th><th>𝒜 ∨ ℬ</th><th>𝒜 → ℬ</th><th>𝒜 ↔ ℬ</th></tr>
+      <tr><td>T</td><td>T</td><td class="sep">F</td><td>T</td><td>T</td><td>T</td><td>T</td></tr>
+      <tr><td>T</td><td>F</td><td class="sep">F</td><td>F</td><td>T</td><td>F</td><td>F</td></tr>
+      <tr><td>F</td><td>T</td><td class="sep">T</td><td>F</td><td>T</td><td>T</td><td>F</td></tr>
+      <tr><td>F</td><td>F</td><td class="sep">T</td><td>F</td><td>F</td><td>T</td><td>T</td></tr>
+    </table>
+    <p data-read>Short versions. And is true only when both are true. Or is false only when both are false. The arrow is false only when the left is true and the right is false. The double arrow is true when both sides match.</p>
+    <div class="try" data-id="s2-or-false">
+      <p class="q">When is 𝒜 ∨ ℬ false?</p>
+      <button class="opt" data-why="With one side true, an inclusive or is true.">When exactly one side is true</button>
+      <button class="opt" data-ok data-why="Or needs at least one true side, so it fails only when both are false.">Only when both sides are false</button>
+      <button class="opt" data-why="Both true still makes an inclusive or true.">When both sides are true</button>
+    </div>
+    <p data-read>The arrow's table surprises people. The book calls it the material conditional: by stipulation, it's false only in that one row, and true in the other three.</p>
+    <div class="try" data-id="s2-arrow-ft">
+      <p class="q">P is false and Q is true. What is P → Q?</p>
+      <button class="opt" data-ok data-why="A false left side can never make an arrow false. Only true-then-false does.">True</button>
+      <button class="opt" data-why="An arrow is false only when the left is true and the right is false.">False</button>
+      <button class="opt" data-why="Every TFL connective is decided by its parts' values, so you can always tell.">You can't tell without more information</button>
+    </div>
+    <p data-read>And, or, and the double arrow are commutative: you can swap the two sides without changing anything. The arrow isn't.</p>
+  </section>
+
+  <section>
+    <p class="label">02 · Truth-functional connectives · ch. 10</p>
+    <h2 data-read>Only the truth values matter</h2>
+    <p data-read>A connective is truth-functional if the truth value of the whole is fixed by the truth values of its parts and nothing else. All five TFL connectives are. Many English ones aren't.</p>
+    <p data-read>Take "because". "Matt studied, because he wanted to pass" and "Matt studied, because it was Tuesday" might have all their parts true, yet the first is true and the second false. Knowing the parts are true isn't enough, so "because" is not truth-functional.</p>
+    <div class="try" data-id="s2-tf">
+      <p class="q">Which of these is <b>not</b> truth-functional?</p>
+      <button class="opt" data-why="“It is not the case that” just flips the value. That's ¬, which is truth-functional.">It is not the case that …</button>
+      <button class="opt" data-ok data-why="Two true sentences can give different answers here: whether something was necessary depends on more than its truth value.">It is necessarily the case that …</button>
+      <button class="opt" data-why="That's ∧ dressed up. Its value is fixed by the two parts.">… and also …</button>
+    </div>
+    <p data-read>This is why the book says we symbolize English rather than translate it. A symbolization key only promises that each letter has the same truth value as its English sentence. Tone, emphasis and contrast are left behind.</p>
+    <p data-read>It also explains the odd arrow. Subjunctive conditionals, like "if I had studied, I would have passed", aren't truth-functional, so the arrow handles them badly. TFL's arrow is only a stand-in for the indicative "if".</p>
+  </section>
+
+  <section>
+    <p class="label">03 · Complete truth tables · ch. 11</p>
+    <h2 data-read>Every row, from the inside out</h2>
+    <p data-read>A complete truth table has one row for every possible valuation of the sentence letters. With one letter that's two rows. Each new letter doubles it.</p>
+    <div class="f">rows = 2ⁿ<small>n letters: 1 → 2, 2 → 4, 3 → 8, 4 → 16.</small></div>
+    <div class="try" data-id="s2-rows">
+      <p class="q">How many rows does a complete table need for a sentence with the letters J, K, L and M?</p>
+      <button class="opt" data-why="That's four letters times two. Each letter doubles the rows instead.">8</button>
+      <button class="opt" data-ok data-why="Four letters: 2 × 2 × 2 × 2 = 16.">16</button>
+      <button class="opt" data-why="Rows don't depend on how many times a letter appears, or on the connectives. Only on the number of different letters.">It depends on the connectives</button>
+    </div>
+    <p data-read>The standard layout: the first letter's column goes half true, then half false. The next one halves again. The last letter alternates true, false, true, false. That way no row is missed and no row repeats.</p>
+    <p data-read>Then work from the inside out. Do the smallest parts first, then the connectives that join them, and finish with the main connective. The main connective's column is the truth value of the whole sentence.</p>
+    <div class="f">¬(P → Q) ∨ R<small>Try the row P = T, Q = F, R = F. Inside out: first P → Q, then ¬, then ∨.</small></div>
+    <div class="try" data-id="s2-row-eval">
+      <p class="q">On the row P = T, Q = F, R = F, what is ¬(P → Q) ∨ R?</p>
+      <button class="opt" data-ok data-why="P → Q is false (true to false). Its negation is true. True or false is true.">True</button>
+      <button class="opt" data-why="Check the inside first: P → Q is false on this row, so the ¬ makes that part true, and a true disjunct makes the or true.">False</button>
+      <button class="opt" data-why="One row has one answer: all the letters' values are given.">It depends on the other rows</button>
+    </div>
+    <p data-read>One bracket note from this chapter. Chains of only ands, or only ors, give the same table however you group them. Mix different connectives, or chain arrows, and the grouping changes the table, so the brackets matter.</p>
+    <div class="try redo" data-id="s2-redo-1"></div>
+  </section>
+
+  <section>
+    <p class="label">04 · Semantic concepts · ch. 12</p>
+    <h2 data-read>Chapter 3's ideas, made checkable</h2>
+    <p data-read>Each idea from chapter 3 gets a TFL version you can test with a table. A tautology is true on every row. A contradiction is false on every row. Anything else is contingent: true on some rows and false on others.</p>
+    <div class="try" data-id="s2-contingent">
+      <p class="q">A sentence's main column reads T, F, F, T. It is…</p>
+      <button class="opt" data-why="A tautology has T on every row.">a tautology</button>
+      <button class="opt" data-ok data-why="True on some rows, false on others: contingent.">contingent</button>
+      <button class="opt" data-why="A contradiction has F on every row.">a contradiction</button>
+    </div>
+    <p data-read>Two sentences are equivalent if their main columns match on every row. A group of sentences is jointly satisfiable if at least one row makes all of them true at the same time.</p>
+    <div class="try" data-id="s2-satisfiable">
+      <p class="q">Three sentences are each true on at least one row, but never on the same row. They are…</p>
+      <button class="opt" data-why="Satisfiable needs one single row where all of them are true together.">jointly satisfiable</button>
+      <button class="opt" data-ok data-why="No row makes all three true at once, so they're jointly unsatisfiable, even though each one alone is fine.">jointly unsatisfiable</button>
+      <button class="opt" data-why="Equivalence is about matching columns, a different idea.">equivalent</button>
+    </div>
+    <p data-read>Entailment is validity, made checkable. Some sentences entail a conclusion if no row makes all of them true and the conclusion false. A row like that is called a bad row. No bad rows means valid.</p>
+    <table class="tt">
+      <tr><th>row</th><th class="sep">first sentence</th><th>second sentence</th></tr>
+      <tr><td>1</td><td class="sep">T</td><td>T</td></tr>
+      <tr><td>2</td><td class="sep">F</td><td>T</td></tr>
+      <tr><td>3</td><td class="sep">F</td><td>T</td></tr>
+      <tr><td>4</td><td class="sep">F</td><td>F</td></tr>
+    </table>
+    <div class="try" data-id="s2-entail">
+      <p class="q">Using the table above: does the first sentence entail the second?</p>
+      <button class="opt" data-ok data-why="The only row where the first is true is row 1, and the second is true there too. No bad row, so yes.">Yes</button>
+      <button class="opt" data-why="Rows where the first sentence is false can't be bad rows. Only rows where it's true matter.">No, the second is true on rows where the first is false</button>
+      <button class="opt" data-why="Entailment doesn't need matching columns. That would be equivalence.">No, their columns don't match</button>
+    </div>
+    <p data-read>The book writes entailment with the double turnstile. It is not a TFL symbol. It belongs to the metalanguage, the English we use to talk about TFL, so a turnstile sentence is a claim about TFL sentences, not another TFL sentence.</p>
+    <div class="f pair"><div><span class="tag">entails</span>𝒜, ℬ ⊨ 𝒞</div><div><span class="tag">tautology</span>⊨ 𝒞</div><div><span class="tag">does not entail</span>𝒜 ⊭ 𝒞</div></div>
+    <p data-read>With nothing on the left, it says the sentence on the right is true on every row: a tautology. And the turnstile and the arrow are linked. A entails C exactly when A arrow C is a tautology.</p>
+    <div class="try" data-id="s2-turnstile">
+      <p class="q">What does 𝒜 ⊭ 𝒞 tell you?</p>
+      <button class="opt" data-ok data-why="Not entailing means there's at least one bad row: 𝒜 true and 𝒞 false.">Some row makes 𝒜 true and 𝒞 false.</button>
+      <button class="opt" data-why="Not entailing 𝒞 doesn't mean entailing its negation. Other rows might make both true.">𝒜 entails ¬𝒞.</button>
+      <button class="opt" data-why="They could be true together on some rows. One bad row is all it takes.">𝒜 and 𝒞 are never true together.</button>
+    </div>
+    <div class="try redo" data-id="s2-redo-2"></div>
+    <p data-read>That's the core of the chapter. Next, where this test falls short.</p>
+  </section>
+
+  <section>
+    <p class="label">05 · Limitations of TFL · ch. 13</p>
+    <h2 data-read>Where truth tables give the wrong answer</h2>
+    <p data-read>A truth table only sees letters. "Sam is a sister, so Sam is a sibling" is valid in English, but it becomes two unrelated letters, and the table calls it invalid. TFL can't see the meaning inside a sentence. First-order logic, later in the course, can see more.</p>
+    <div class="try" data-id="s2-limits">
+      <p class="q">“Kim is a bachelor. So Kim is unmarried.” What does a truth-table test say?</p>
+      <button class="opt" data-why="The English argument is valid, but the table can't know that.">Valid, like the English</button>
+      <button class="opt" data-ok data-why="It becomes two different letters, and a row with the first true and the second false is a bad row. TFL misses the link in meaning.">Invalid, even though the English is valid</button>
+      <button class="opt" data-why="It can be symbolized fine, as two letters. The trouble is the test result.">It can't be symbolized at all</button>
+    </div>
+    <p data-read>The arrow causes trouble too. Any arrow with a false left side counts as true, so some odd English "if" sentences come out true, or entail things they shouldn't. The fix is careful symbolizing, not a new table.</p>
+    <div class="try" data-back data-id="s2-tb-rows">
+      <p class="q">Throwback: a sentence uses the letters A, B and C, and A appears three times. How many rows?</p>
+      <button class="opt" data-ok data-why="Three different letters: 2 × 2 × 2 = 8. Repeats don't add rows.">8</button>
+      <button class="opt" data-why="Count different letters, not appearances. Three letters gives 8.">32</button>
+      <button class="opt" data-why="Each letter doubles the count: 2, 4, 8.">6</button>
+    </div>
+    <p data-read>Different letters, not appearances. Now, how to save time.</p>
+  </section>
+
+  <section>
+    <p class="label">06 · Shortcuts · ch. 14</p>
+    <h2 data-read>Stop filling in a row once you know the answer</h2>
+    <p data-read>You rarely need every cell. An or with one true side is true. An and with one false side is false. An arrow with a true right side, or a false left side, is true. Once one of these happens, skip the rest of that part.</p>
+    <p data-read>For validity, you only hunt for bad rows. So start with the conclusion. Any row where the conclusion is true can't be bad: skip it. On the rows left, as soon as one premise is false, that row can't be bad either.</p>
+    <div class="try" data-id="s2-shortcut">
+      <p class="q">You're testing an argument and the conclusion is true on row 3. What do you do with row 3?</p>
+      <button class="opt" data-ok data-why="A bad row needs a false conclusion, so row 3 can't be bad. Move on.">Skip it, it can't be a bad row.</button>
+      <button class="opt" data-why="Premise values don't matter here: with a true conclusion, the row can't be bad.">Check the premises carefully.</button>
+      <button class="opt" data-why="One good row proves nothing about validity. You still need to check the others.">Stop: the argument is valid.</button>
+    </div>
+    <div class="try redo" data-id="s2-redo-3"></div>
+    <p data-read>Shortcuts change nothing about the answer. They just skip the cells that can't matter.</p>
+  </section>
+
+  <section>
+    <p class="label">07 · Partial truth tables · ch. 15</p>
+    <h2 data-read>One row, or all of them?</h2>
+    <p data-read>Some claims need just one row as proof. To show a sentence isn't a tautology, find one row where it's false. To show sentences aren't equivalent, find one row where they differ. To show an argument is invalid, find one bad row.</p>
+    <p data-read>Other claims are about every row, so they need the complete table. That's showing something is a tautology, a contradiction, equivalent, jointly unsatisfiable, or valid.</p>
+    <table class="sym">
+      <tr><td>1 row</td><td><b>Not</b> a tautology · <b>not</b> a contradiction · <b>not</b> equivalent · jointly satisfiable · <b>in</b>valid</td></tr>
+      <tr><td>2 rows</td><td>Contingent: one true row and one false row</td></tr>
+      <tr><td>all</td><td>Tautology · contradiction · equivalent · jointly unsatisfiable · valid</td></tr>
+    </table>
+    <p data-read>A handy pattern: "some row exists" claims need one row, and "no row exists" claims need them all.</p>
+    <div class="try" data-id="s2-partial-1">
+      <p class="q">You want to show that a sentence is <b>not</b> a contradiction. What do you need?</p>
+      <button class="opt" data-ok data-why="Not a contradiction means it's true somewhere, so one true row proves it.">One row where it's true</button>
+      <button class="opt" data-why="A false row doesn't help: contradictions are false on every row.">One row where it's false</button>
+      <button class="opt" data-why="Overkill: one true row is already enough.">The complete table</button>
+    </div>
+    <p data-read>One more, the other way round.</p>
+    <div class="try" data-id="s2-partial-2">
+      <p class="q">You want to show an argument is <b>valid</b>. What do you need?</p>
+      <button class="opt" data-why="A row like that isn't bad, but other rows might be.">One row where the premises and conclusion are all true</button>
+      <button class="opt" data-ok data-why="Valid means no bad row anywhere, so you have to check every row (shortcuts allowed).">The complete table</button>
+      <button class="opt" data-why="That shows one row isn't bad. It says nothing about the rest.">One row with a false premise</button>
+    </div>
+    <p data-read>A contingent sentence needs exactly two rows: one where it's true, one where it's false.</p>
+    <div class="try redo" data-id="s2-redo-4"></div>
+  </section>
+
+  <section>
+    <p class="label">08 · Mixed round</p>
+    <h2 data-read>Everything mixed, both reels</h2>
+    <p data-read>No scrolling back. These mix this reel with the last one.</p>
+    <div class="try" data-back data-id="s2-tb-bicon">
+      <p class="q">P is true and Q is false. Which sentence is true?</p>
+      <button class="opt" data-why="True on the left, false on the right: the one row that makes an arrow false.">P → Q</button>
+      <button class="opt" data-why="The two sides don't match, so the double arrow is false.">P ↔ Q</button>
+      <button class="opt" data-ok data-why="The not makes Q true, and the left side is true too, so the and is true.">P ∧ ¬Q</button>
+    </div>
+    <p data-read>Next, chapter 3 meets chapter 12.</p>
+    <div class="try" data-back data-id="s2-tb-equiv">
+      <p class="q">Two sentences are equivalent. What do their columns look like?</p>
+      <button class="opt" data-ok data-why="Equivalent means same truth value on every row.">Identical on every row</button>
+      <button class="opt" data-why="That's satisfiable together. Equivalence needs every row to match.">Both true on at least one row</button>
+      <button class="opt" data-why="Opposite on every row means each is the negation of the other.">Opposite on every row</button>
+    </div>
+    <p data-read>And one from chapter 8.</p>
+    <div class="try" data-back data-id="s2-tb-meta">
+      <p class="q">Which of these is a sentence of TFL?</p>
+      <button class="opt" data-why="The turnstile belongs to the metalanguage. This is a claim about TFL, written in augmented English.">P ⊨ P ∨ Q</button>
+      <button class="opt" data-ok data-why="Letters and a connective, nothing else: a TFL sentence.">P → (P ∨ Q)</button>
+      <button class="opt" data-why="Script letters are metavariables. They stand for TFL sentences but aren't part of TFL.">𝒜 ∨ ℬ</button>
+    </div>
+    <p data-read>Last chance for anything you missed.</p>
+    <div class="try redo" data-id="s2-redo-5"></div>
+    <p data-read>That's Part III. The next reel is natural deduction, which is likely a big part of Midterm 2.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 9–15. Explanations, examples and questions written for this reel. No textbook exercises are used or answered here.</p>

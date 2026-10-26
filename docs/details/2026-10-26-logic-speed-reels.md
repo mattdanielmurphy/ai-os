@@ -46,3 +46,25 @@ Not tested: the real claude.ai viewer on his phone (as with the earlier reels, a
 ### How to undo
 
 Delete the artifact, and revert the commit that added quiz mode and `reels/speed-1`.
+
+## 02:55 Speed reel 2 is live (truth tables, chapters 9–15)
+
+Speed 2 · Truth Tables: https://claude.ai/artifact/J17qDAd1PejdMqhhjnZRaN. Reel 1's end now links to it.
+
+---
+
+### What reel 2 covers
+
+Two warm-up throwbacks from reel 1, then: the five characteristic tables in one table, truth-functionality ("because" and "necessarily" aren't), symbolizing vs translating, row counts (2 to the n), filling a table inside out, tautology/contradiction/contingent, equivalence, joint satisfiability, entailment and bad rows, the double turnstile as metalanguage (and its link to the arrow), limits of TFL, shortcuts, and which claims need one row, two rows or the complete table. 19 questions (5 throwbacks) and 5 comeback slots.
+
+---
+
+### School rule check for reel 2
+
+The Part III exercises are mostly "make a truth table for this sentence" or "is this argument valid" on specific A/B/C sentences. None of those sentences or arguments are used; every quiz sentence uses my own letters and shapes, and the one row-evaluation question uses a sentence not in any exercise list. The book's K-questions ("suppose C is a tautology, what about A, B ⊨ C?") are not asked.
+
+---
+
+### Kit change
+
+Small truth tables (`table.tt`) now have a style in the player, tightened on phones so seven columns fit at 360 px (checked with a screenshot, no sideways scroll).

@@ -46,7 +46,7 @@ under a check. Past questions are kept per reel in the browser ("Earlier questio
 - `kit/player.js|css`: the reader (scroll gestures, highlight, narration, checks). `kit/reactions.js|css`: long-press
   reactions. `kit/ask.js|css`: Ask.
 - `reels/speed-1..`: PHIL 120 speed review with heavy quizzing for Midterm 2. Speed 1 (ch. 1–8)
-  https://claude.ai/artifact/WVneBno1UzEMfzY5a1rnpA
+  https://claude.ai/artifact/WVneBno1UzEMfzY5a1rnpA · Speed 2 (ch. 9–15) https://claude.ai/artifact/J17qDAd1PejdMqhhjnZRaN
 - `reels/logic-1..4`: PHIL 120 Unit 5 catch-up (forall x ch. 23–29). Live: Logic 1 https://claude.ai/artifact/BrBy9VCdTbZapqZ4Fw1Zrs ·
   2 https://claude.ai/artifact/6DrNZ9BD27r9EPHbUgaxww · 3 https://claude.ai/artifact/MDkbTk9z3DjtXeWVVisAqt ·
   4 https://claude.ai/artifact/2webCnZjMNJtHwMBDgtGxW
