@@ -161,3 +161,17 @@ Matt asked: can we add a Telegram bot that connects to Claude without using the 
 - Catches: needs a Claude Code session running on the Mac (it stops when that session stops); research preview, so it may change; not yet verified whether it works inside a group chat like Slub Club or only in direct messages.
 - Lock-in check: the bot is Matt's own (BotFather token), so later the same bot can be pointed at another backend (his existing Telegram gateway with Codex, or an open-weights model) without Tyler changing anything.
 - Not done: nothing installed. Needs Matt in Telegram for BotFather, and he's on a call.
+
+## 22:06 One bot with fallback to Tyler's Mac
+
+Matt asked: one bot that runs on his Mac, falling back to Tyler's Mac when his is unavailable?
+
+---
+
+### Answer
+
+- Possible, but not built in. A Telegram bot can only be read by one computer at a time; if both Macs run it, Telegram rejects the second (409 Conflict) and messages get split or dropped.
+- Small build: a standby script on Tyler's Mac checks every minute or so whether Matt's Mac is serving the bot (e.g. a heartbeat Matt's Mac writes to slub-hq or the VPS). If the heartbeat is stale, Tyler's Mac starts its own Claude Code Telegram session; when Matt's comes back, Tyler's steps down.
+- Rejected: probing Telegram itself for the 409 as the health check, because the probe interrupts Matt's live connection.
+- Catch: the fallback Claude only knows what's on Tyler's Mac, so both should keep shared context in slub-hq.
+- Untested; nothing built yet.
