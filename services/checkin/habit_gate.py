@@ -279,10 +279,17 @@ def main(argv):
     t = now()
     if cmd == "hook":
         try:
-            ctx = hook(json.loads(sys.stdin.read() or "{}"), cfg)
+            payload = json.loads(sys.stdin.read() or "{}")
+            ctx = hook(payload, cfg)
         except Exception as e:  # a broken gate must never block Claude
             print(f"habit_gate: {e}", file=sys.stderr)
             return 0
+        try:  # missed morning check-in: a one-line nudge, never a hold
+            if classify(payload.get("prompt", ""))[0] == "matt":
+                import missed
+                ctx = "\n\n".join(filter(None, [missed.nudge(), ctx])) or None
+        except Exception as e:
+            print(f"missed check-in nudge: {e}", file=sys.stderr)
         if ctx:
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
                                                      "additionalContext": ctx}}))

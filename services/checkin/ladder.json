@@ -17,5 +17,7 @@
   },
   "unlock_order": ["tea", "intention", "stretch", "water"],
   "gate": { "_about": "habit_gate.py: after 'after' on the habit's days, Matt's first Claude prompt gets today's logic practice page; 👍/done records the dose, skip records 0.",
-            "enabled": true, "habit": "study", "after": "14:00" }
+            "enabled": true, "habit": "study", "after": "14:00" },
+  "watch": { "_about": "missed.py: if the check-in hasn't started, re-send its links 'resend_after_min' after the crossword text ('crossword_at', his crossword profile's hour) so his iPhone Shortcut opens the check-in, not the crossword; Matt's first Claude prompt before 'nudge_until' gets a one-line nudge.",
+             "enabled": true, "crossword_at": "09:00", "resend_after_min": 5, "nudge_until": "17:00" }
 }
