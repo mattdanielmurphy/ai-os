@@ -134,3 +134,16 @@ Matt 👍'd setting up slub-hq and a Slub Telegram group.
 ### Undo
 
 Archive or delete the repo on GitHub; move ~/projects/slub-hq to Trash.
+
+## 21:37 Shared Google Calendar
+
+Matt asked (during the call): shared Google Calendar? Tyler asked on the call how either of them can add things.
+
+---
+
+### Answer
+
+- Yes. Make one extra calendar called "Slub" inside Matt's Google Calendar (Settings > Add calendar > Create new calendar), then under that calendar's "Share with specific people" add Tyler's Google email with "Make changes to events". Both of them can then add, move and delete Slub events, and it shows on both phones next to their own calendars.
+- Agents: Claude's Google Calendar connector can list and create events on any calendar Matt can see, so agents can add Slub meetings. It can't create the calendar itself, so that one step is manual. It's also model-neutral: any agent or app can reach Google Calendar.
+- Rejected: an iCloud shared calendar (Tyler may not be on Apple; worse agent access).
+- Not done: creating it. Matt is screen-sharing on a call, so I didn't drive his browser; and Tyler's Google email isn't on file.
