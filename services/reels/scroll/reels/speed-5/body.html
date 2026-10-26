@@ -1,0 +1,202 @@
+  <p class="label">PHIL 120 speed review · reel 5 · forall x Part VI, ch. 30–35</p>
+  <h1 data-read>Interpretations: when is an FOL sentence true?</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>Class starts this part on October 28, and it's likely on Midterm 2, so this is a first look. The big idea: in TFL, a row of a truth table decides truth. In FOL, an interpretation does. Almost everything in reel 2 has a twin here.</p>
+
+  <section>
+    <p class="label">00 · Warm-up from reel 4</p>
+    <h2 data-read>Before we start</h2>
+    <p data-read>Two from first-order logic.</p>
+    <div class="try" data-back data-id="s5-tb-some">
+      <p class="q">“Some coach swims.” Key: C(x), x is a coach; S(x), x swims.</p>
+      <button class="opt" data-why="Any non-coach would make this true. There-is goes with and.">∃x (C(x) → S(x))</button>
+      <button class="opt" data-ok data-why="There-is with and: something is a coach and swims.">∃x (C(x) ∧ S(x))</button>
+      <button class="opt" data-why="That says every coach swims.">∀x (C(x) → S(x))</button>
+    </div>
+    <p data-read>And one about order.</p>
+    <div class="try" data-back data-id="s5-tb-order">
+      <p class="q">Which says one single person is liked by everyone? L(x, y): x likes y.</p>
+      <button class="opt" data-ok data-why="∃y comes first, so one y is fixed, then every x likes that y.">∃y ∀x L(x, y)</button>
+      <button class="opt" data-why="With ∀x first, each person may like someone different.">∀x ∃y L(x, y)</button>
+      <button class="opt" data-why="That says everyone likes everyone.">∀x ∀y L(x, y)</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">01 · Extensionality · ch. 30.1–30.2</p>
+    <h2 data-read>A predicate is just the things it's true of</h2>
+    <p data-read>The extension of a predicate is the collection of things it's true of. FOL only cares about extensions, not meanings. If two predicates are true of exactly the same things, FOL can't tell them apart. That's why the book calls FOL extensional, and says we symbolize rather than translate.</p>
+    <p data-read>You can set an extension just by listing things, even things with nothing in common. And an extension can be empty, with nothing in it at all.</p>
+    <div class="try" data-id="s5-extension">
+      <p class="q">In some domain, “x is a vice-captain” and “x wears number 7” happen to be true of exactly the same people. For FOL…</p>
+      <button class="opt" data-ok data-why="Same extension means FOL treats them the same, even though the English meanings differ.">the two predicates are interchangeable</button>
+      <button class="opt" data-why="FOL has no way to represent meaning beyond extensions.">FOL still sees their different meanings</button>
+      <button class="opt" data-why="Extensions can be anything, including identical ones.">that isn't allowed</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">02 · Pairs, identity, interpretations · ch. 30.3–30.5</p>
+    <h2 data-read>Two-place predicates take ordered pairs</h2>
+    <p data-read>A two-place predicate's extension is a list of ordered pairs, written in angle brackets. The order matters: the pair Ana, Bo is different from the pair Bo, Ana.</p>
+    <p data-read>Identity is special. Its meaning is fixed in every interpretation: each thing is identical to itself and to nothing else. Two different things can even share every other predicate and still be two things.</p>
+    <p data-read>An interpretation has four parts. A domain, which can't be empty. A truth value for each sentence letter. One object in the domain for each name. And an extension for each predicate, except identity, which is already fixed.</p>
+    <div class="try" data-id="s5-parts">
+      <p class="q">Which is <b>not</b> part of an interpretation?</p>
+      <button class="opt" data-why="Every interpretation needs a domain, and it can't be empty.">a domain</button>
+      <button class="opt" data-why="Each name has to pick out exactly one object in the domain.">an object for each name</button>
+      <button class="opt" data-ok data-why="Identity's meaning is fixed once and for all, so the interpretation doesn't set it.">an extension for =</button>
+    </div>
+    <p data-read>Here's the interpretation we'll use for the next few questions. Read it carefully.</p>
+    <div class="key"><b>Interpretation</b>domain: Ana, Bo, Cy<br>F(x): Ana, Bo<br>G(x): Bo<br>L(x, y): ⟨Ana, Bo⟩, ⟨Bo, Bo⟩, ⟨Cy, Ana⟩<br>a: Ana<br>c: Cy</div>
+    <div class="try" data-id="s5-atomic">
+      <p class="q">Is L(c, a) true in this interpretation?</p>
+      <button class="opt" data-ok data-why="c names Cy and a names Ana, and the pair ⟨Cy, Ana⟩ is in L's list.">Yes</button>
+      <button class="opt" data-why="Check the order: the first name is c, Cy, and ⟨Cy, Ana⟩ is listed.">No</button>
+      <button class="opt" data-why="Names always refer, and L has a list, so it's settled.">It has no truth value</button>
+    </div>
+    <div class="try redo" data-id="s5-redo-1"></div>
+  </section>
+
+  <section>
+    <p class="label">03 · Truth in FOL · ch. 31</p>
+    <h2 data-read>All means every object, some means at least one</h2>
+    <p data-read>Atomic sentences are true when the named objects, in order, are in the predicate's list. The connectives work exactly as in TFL. A for-all sentence is true when every object in the domain satisfies the formula after the quantifier. A there-is sentence is true when at least one object does.</p>
+    <p data-read>The book makes this precise with new names. To check a for-all sentence, imagine giving a fresh name to each object in turn, and check every one of those instances. For there-is, you only need one instance to come out true.</p>
+    <div class="try" data-id="s5-forall">
+      <p class="q">Same interpretation. Is ∀x F(x) true?</p>
+      <button class="opt" data-why="Every object has to be in F's list, and one isn't.">Yes</button>
+      <button class="opt" data-ok data-why="Cy isn't in F's extension, so not every object satisfies F(x).">No, because of Cy</button>
+      <button class="opt" data-why="Ana is in F's extension. Look for the one who isn't.">No, because of Ana</button>
+    </div>
+    <p data-read>Now a there-is one.</p>
+    <div class="try" data-id="s5-exists">
+      <p class="q">Is ∃x (F(x) ∧ G(x)) true?</p>
+      <button class="opt" data-ok data-why="Bo is in both F and G, and one witness is enough.">Yes, Bo is a witness</button>
+      <button class="opt" data-why="G is true only of Bo, but that's all it takes, since Bo is also F.">No, G is too small</button>
+      <button class="opt" data-why="Ana is in F but not in G, so Ana doesn't work. Someone else does.">Yes, Ana is a witness</button>
+    </div>
+    <p data-read>Two quantifiers, same game. Every object must have a partner for for-all, there-is. One object must work for everyone for there-is, for-all.</p>
+    <div class="try" data-id="s5-two">
+      <p class="q">Is ∃y ∀x L(x, y) true? (Is someone L'd by everyone?)</p>
+      <button class="opt" data-why="Check Bo: Ana and Bo both point to Bo, but Cy doesn't.">Yes, Bo</button>
+      <button class="opt" data-ok data-why="Bo gets Ana and Bo but not Cy. Ana gets only Cy. Cy gets nobody. No one gets all three.">No</button>
+      <button class="opt" data-why="Check Ana: only Cy points to Ana.">Yes, Ana</button>
+    </div>
+    <p data-read>Yet for-all-x, there-is-y, L of x y is true here. Ana points to Bo, Bo to Bo, Cy to Ana. Everyone points to someone, but no one is pointed to by all. Order matters, again.</p>
+    <div class="try redo" data-id="s5-redo-2"></div>
+  </section>
+
+  <section>
+    <p class="label">04 · Semantic concepts · ch. 32</p>
+    <h2 data-read>Reel 2's ideas, with interpretations instead of rows</h2>
+    <p data-read>Swap "row" for "interpretation" and the definitions carry over. A validity is true in every interpretation: it's FOL's version of a tautology. A contradiction is false in every one. An argument is valid if no interpretation makes the premises true and the conclusion false. Equivalent means same truth value in every interpretation. Jointly satisfiable means some interpretation makes them all true.</p>
+    <div class="try" data-id="s5-validity">
+      <p class="q">An FOL sentence is true in every interpretation. It is…</p>
+      <button class="opt" data-why="Satisfiable only needs one interpretation.">satisfiable, but that's all you can say</button>
+      <button class="opt" data-ok data-why="True in every interpretation: a validity, FOL's version of a tautology.">a validity</button>
+      <button class="opt" data-why="Contingent would mean true in some and false in others.">contingent</button>
+    </div>
+    <p data-read>A formula with free variables can't be true or false, but objects can satisfy it. That lets a formula express a relation the key has no letter for. With a key for "x trains y", the formula there-is-z, z trains x and z trains y, expresses "x and y share a trainer".</p>
+    <div class="try" data-back data-id="s5-tb-taut">
+      <p class="q">Throwback to reel 2: in TFL, what plays the role an interpretation plays in FOL?</p>
+      <button class="opt" data-ok data-why="A valuation, one row of a truth table, settles every TFL sentence the way an interpretation settles FOL sentences.">a valuation, one row of a truth table</button>
+      <button class="opt" data-why="A symbolization key is how we link letters to English, not what fixes truth values in TFL's semantics.">a symbolization key</button>
+      <button class="opt" data-why="Proofs are the other side of logic, syntax, not semantics.">a proof</button>
+    </div>
+    <div class="try redo" data-id="s5-redo-3"></div>
+    <p data-read>Next: how to actually use interpretations.</p>
+  </section>
+
+  <section>
+    <p class="label">05 · Using interpretations · ch. 33</p>
+    <h2 data-read>One counter-interpretation is enough to say no</h2>
+    <p data-read>To show a sentence is not a validity, give one interpretation where it's false. To show it's not a contradiction, give one where it's true. To show an argument is invalid, give one where the premises are true and the conclusion is false. That's a counter-interpretation, or counter-model.</p>
+    <p data-read>Tip from the book: keep the domain tiny, often one or two objects, and pick extensions that do exactly what you need.</p>
+    <div class="f">∃x L(x, a) ∴ L(a, a)<small>Invalid. Find premises true, conclusion false.</small></div>
+    <div class="try" data-id="s5-counter">
+      <p class="q">Domain: Ana, Bo. a: Ana. Which extension for L shows that argument is invalid?</p>
+      <button class="opt" data-ok data-why="Bo L's Ana, so the premise is true; Ana doesn't L herself, so the conclusion is false.">⟨Bo, Ana⟩</button>
+      <button class="opt" data-why="Then L(a, a) is true, so the conclusion isn't false.">⟨Ana, Ana⟩</button>
+      <button class="opt" data-why="Then nobody L's Ana, so the premise is false. You need it true.">⟨Ana, Bo⟩</button>
+    </div>
+    <p data-read>One caution. A counter-model to the symbolized argument doesn't prove the English argument is invalid. "Every fox is cute, so every vixen is cute" is valid in English, but FOL can't see that vixens are foxes unless you add it as a premise.</p>
+  </section>
+
+  <section>
+    <p class="label">06 · Reasoning about all interpretations · ch. 34</p>
+    <h2 data-read>Saying yes is harder than saying no</h2>
+    <p data-read>To show a sentence is a validity, checking many interpretations isn't enough, because there are infinitely many. You have to reason, in English, about an arbitrary interpretation: pick any one, and show the sentence must be true in it.</p>
+    <table class="sym">
+      <tr><td>one</td><td><b>Not</b> a validity · <b>not</b> a contradiction · <b>not</b> equivalent · satisfiable · <b>in</b>valid</td></tr>
+      <tr><td>all</td><td>Validity · contradiction · equivalent · unsatisfiable · valid · entails</td></tr>
+    </table>
+    <div class="try" data-id="s5-all">
+      <p class="q">To show some FOL sentences are jointly <b>un</b>satisfiable, you need…</p>
+      <button class="opt" data-why="One interpretation shows they're satisfiable, the opposite.">one interpretation where they're all true</button>
+      <button class="opt" data-ok data-why="Unsatisfiable means no interpretation makes them all true, so you must reason about every interpretation.">to reason about every interpretation</button>
+      <button class="opt" data-why="One interpretation where one is false proves nothing about the others.">one interpretation where one of them is false</button>
+    </div>
+    <p data-read>Same pattern as partial truth tables: "there is one" claims need one example. "There is none" claims need an argument about all of them. The difference is that truth tables are finite, and interpretations aren't.</p>
+    <div class="try redo" data-id="s5-redo-4"></div>
+  </section>
+
+  <section>
+    <p class="label">07 · Properties of relations · ch. 35</p>
+    <h2 data-read>Reflexive, symmetric, transitive</h2>
+    <p data-read>"Ana is taller than Bo, Bo is taller than Cy, so Ana is taller than Cy" is valid in English, but not in FOL as it stands. It relies on a property of "taller than": transitivity. Add transitivity as a premise and the FOL argument becomes valid.</p>
+    <table class="sym">
+      <tr><td>reflexive</td><td>Everything bears it to itself.</td></tr>
+      <tr><td>symmetric</td><td>Whenever it holds one way, it holds the other way too.</td></tr>
+      <tr><td>transitive</td><td>It chains: x to y and y to z gives x to z.</td></tr>
+      <tr><td>anti-symmetric</td><td>Never both ways between two different things.</td></tr>
+    </table>
+    <div class="f pair"><div><span class="tag">reflexive</span>∀x R(x, x)</div><div><span class="tag">symmetric</span>∀x ∀y (R(x, y) → R(y, x))</div><div><span class="tag">transitive</span>∀x ∀y ∀z ((R(x, y) ∧ R(y, z)) → R(x, z))</div></div>
+    <p data-read>A relation that is reflexive, symmetric and transitive is an equivalence relation. One that is reflexive, transitive and anti-symmetric is a partial order.</p>
+    <div class="try" data-id="s5-equiv-rel">
+      <p class="q">“x lives in the same city as y” is…</p>
+      <button class="opt" data-ok data-why="Everyone lives in their own city, it goes both ways, and it chains: an equivalence relation.">reflexive, symmetric and transitive</button>
+      <button class="opt" data-why="It is reflexive: everyone lives in the same city as themselves.">symmetric and transitive, but not reflexive</button>
+      <button class="opt" data-why="If x lives in y's city, y lives in x's city, so it's symmetric.">transitive only</button>
+    </div>
+    <p data-read>One more, a formula check.</p>
+    <div class="try" data-id="s5-sym">
+      <p class="q">Which formula says R is symmetric?</p>
+      <button class="opt" data-why="That says everything bears R to itself: reflexive.">∀x R(x, x)</button>
+      <button class="opt" data-ok data-why="Whenever it holds one way, it holds the other way.">∀x ∀y (R(x, y) → R(y, x))</button>
+      <button class="opt" data-why="That's the chaining property, transitivity.">∀x ∀y ∀z ((R(x, y) ∧ R(y, z)) → R(x, z))</button>
+    </div>
+    <div class="try redo" data-id="s5-redo-5"></div>
+  </section>
+
+  <section>
+    <p class="label">08 · Mixed round</p>
+    <h2 data-read>Everything mixed, all five reels</h2>
+    <p data-read>No scrolling back.</p>
+    <div class="try" data-back data-id="s5-tb-one-vs-all">
+      <p class="q">To show a TFL argument is <b>in</b>valid you need one bad row. To show an FOL argument is invalid you need…</p>
+      <button class="opt" data-ok data-why="The FOL twin of a bad row: an interpretation with true premises and a false conclusion.">one counter-interpretation</button>
+      <button class="opt" data-why="That's what showing validity needs.">reasoning about every interpretation</button>
+      <button class="opt" data-why="Proofs show validity, not invalidity.">a proof of the negated conclusion</button>
+    </div>
+    <p data-read>A proof question.</p>
+    <div class="try" data-back data-id="s5-tb-ip">
+      <p class="q">You're stuck proving K. What does indirect proof have you assume?</p>
+      <button class="opt" data-why="Assuming K and reaching ⊥ would give ¬K by ¬I.">K</button>
+      <button class="opt" data-ok data-why="Assume ¬K, reach ⊥, close the subproof, and IP gives K.">¬K</button>
+      <button class="opt" data-why="⊥ is something you reach, not something you assume.">⊥</button>
+    </div>
+    <p data-read>And one from the very start.</p>
+    <div class="try" data-back data-id="s5-tb-valid">
+      <p class="q">Can a valid argument have a false conclusion?</p>
+      <button class="opt" data-why="Valid only rules out true premises with a false conclusion.">No, never</button>
+      <button class="opt" data-ok data-why="Yes, as long as at least one premise is false.">Yes, if a premise is false</button>
+      <button class="opt" data-why="Sound arguments always have true conclusions. This is about valid ones.">Only if it's sound</button>
+    </div>
+    <p data-read>Last chance for anything you missed.</p>
+    <div class="try redo" data-id="s5-redo-6"></div>
+    <p data-read>That's the whole speed review. Before the midterm, run each reel once more and aim to clear the end review every time. Missed questions are the ones to practise.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 30–35. Explanations, examples and questions written for this reel. No textbook exercises are used or answered here.</p>

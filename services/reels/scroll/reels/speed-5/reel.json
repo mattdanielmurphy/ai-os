@@ -1,0 +1,9 @@
+{
+  "id": "speed-5",
+  "title": "Speed 5 · Interpretations",
+  "ask": {
+    "mode": "school",
+    "audience": "The reader is Matt, a PHIL 120 Symbolic Logic student at the University of Alberta. The textbook is forall x: Calgary. He scored 77 on Midterm 1 and wants to do much better on Midterm 2 (Nov 4), so this is a fast review of the whole course with lots of quizzing. This page is a first look at Part VI (chapters 30 to 35), which class starts on Oct 28: extensions, interpretations, truth in FOL, validity and the other semantic concepts in FOL, counter-interpretations, reasoning about all interpretations, and properties of relations. Explain from the symbols up, in small steps, with fresh examples. Never build an interpretation or counter-interpretation for a textbook exercise; coach with hints and different examples instead."
+  },
+  "url": "https://claude.ai/artifact/DrGK2z9wDXSHzbbDyZbf3w"
+}

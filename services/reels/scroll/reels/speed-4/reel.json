@@ -1,0 +1,11 @@
+{
+  "id": "speed-4",
+  "title": "Speed 4 · First-Order Logic Recap",
+  "next": "Speed 5, interpretations (Part VI)",
+  "ask": {
+    "mode": "school",
+    "audience": "The reader is Matt, a PHIL 120 Symbolic Logic student at the University of Alberta. The textbook is forall x: Calgary. He scored 77 on Midterm 1 and wants to do much better on Midterm 2 (Nov 4), so this is a fast review of the whole course with lots of quizzing. This page is a quiz-heavy recap of Part V (chapters 23 to 29): names, predicates, quantifiers, domains, the all and some patterns, negated quantifiers, empty predicates, multiple generality and quantifier order, identity and counting, free and bound variables, definite descriptions, and scope ambiguity. He has four longer catch-up reels on this material already. Explain from the symbols up, in small steps, with fresh examples."
+  },
+  "url": "https://claude.ai/artifact/7U8hAAFHjT6DteYnPv1xD2",
+  "nextUrl": "https://claude.ai/artifact/DrGK2z9wDXSHzbbDyZbf3w"
+}

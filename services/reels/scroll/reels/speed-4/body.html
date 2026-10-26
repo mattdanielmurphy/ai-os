@@ -1,0 +1,219 @@
+  <p class="label">PHIL 120 speed review · reel 4 · forall x Part V, ch. 23–29</p>
+  <h1 data-read>First-order logic, as a quiz</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>Your four catch-up reels already teach chapters 23 to 29. This one is mostly questions: one short reminder, then a question, over and over. If a question stumps you, that's the chapter to reread in the catch-up reels.</p>
+
+  <section>
+    <p class="label">00 · Warm-up from reel 3</p>
+    <h2 data-read>Before we start</h2>
+    <p data-read>Two rules from natural deduction.</p>
+    <div class="try" data-back data-id="s4-tb-mt">
+      <p class="q">From W → K and ¬K, you may write ¬W by…</p>
+      <button class="opt" data-ok data-why="An arrow plus the negation of its right side gives the negation of its left side: modus tollens.">MT</button>
+      <button class="opt" data-why="DS needs a disjunction.">DS</button>
+      <button class="opt" data-why="→E needs the left side, W, which you don't have.">→E</button>
+    </div>
+    <p data-read>And a strategy one.</p>
+    <div class="try" data-back data-id="s4-tb-goal-and">
+      <p class="q">Your goal is K ∧ R. How does the proof most likely end?</p>
+      <button class="opt" data-ok data-why="The goal's main connective is ∧, so plan to prove K and R separately, then ∧I.">∧I, citing a line with K and a line with R</button>
+      <button class="opt" data-why="∧E takes a conjunction apart. You need to build one.">∧E</button>
+      <button class="opt" data-why="→I proves arrows. The main connective here is ∧.">→I</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">01 · The pieces · ch. 23</p>
+    <h2 data-read>Names, predicates, variables, quantifiers</h2>
+    <p data-read>Names are lowercase a to r, and each picks out exactly one thing in the domain. Predicates are capitals with gaps. Variables are lowercase s to z. The upside-down A means "for all" and the backwards E means "there is at least one".</p>
+    <div class="key"><b>Symbolization key for this reel</b>domain: people at a gym<br>R(x): x runs<br>L(x): x lifts<br>T(x, y): x trains y<br>p: Priya<br>j: Jun</div>
+    <div class="try" data-id="s4-two-place">
+      <p class="q">“Jun trains Priya.”</p>
+      <button class="opt" data-why="The first gap is the trainer. This says Priya trains Jun.">T(p, j)</button>
+      <button class="opt" data-ok data-why="T(x, y) means x trains y, so Jun goes in the first gap.">T(j, p)</button>
+      <button class="opt" data-why="Variables aren't names. Without quantifiers this says nothing.">T(x, y)</button>
+    </div>
+    <p data-read>The order of the gaps is set by the key. Read the key's wording, and fill the gaps in that order.</p>
+  </section>
+
+  <section>
+    <p class="label">02 · All and some · ch. 24</p>
+    <h2 data-read>Arrow with all, and with some</h2>
+    <p data-read>The two patterns to know cold. "All A are B" uses for-all with an arrow inside. "Some A is B" uses there-is with an and inside.</p>
+    <div class="f pair"><div><span class="tag">all runners lift</span>∀x (R(x) → L(x))</div><div><span class="tag">some runner lifts</span>∃x (R(x) ∧ L(x))</div></div>
+    <div class="try" data-id="s4-all">
+      <p class="q">Why is ∀x (R(x) ∧ L(x)) wrong for “all runners lift”?</p>
+      <button class="opt" data-ok data-why="With ∧ inside ∀, it says everyone in the domain runs and lifts, which claims far too much.">It says everyone at the gym runs and lifts.</button>
+      <button class="opt" data-why="It's a perfectly good sentence. It just says something else.">It isn't a sentence of FOL.</button>
+      <button class="opt" data-why="It's stronger than intended, not weaker: it says everyone does both.">It only says some runners lift.</button>
+    </div>
+    <p data-read>And the matching trap on the other side.</p>
+    <div class="try" data-id="s4-some">
+      <p class="q">Why is ∃x (R(x) → L(x)) wrong for “some runner lifts”?</p>
+      <button class="opt" data-why="It's weaker, not stronger. Look at what makes the arrow true.">It says every runner lifts.</button>
+      <button class="opt" data-ok data-why="An arrow is true whenever its left side is false, so any non-runner at all makes this true, even if no runner lifts.">Any non-runner makes it true.</button>
+      <button class="opt" data-why="You can put an arrow inside ∃. It's legal, just not what we mean.">You can't put an arrow inside ∃.</button>
+    </div>
+    <div class="try redo" data-id="s4-redo-1"></div>
+    <p data-read>The rhyme: for-all goes with arrow, there-is goes with and.</p>
+  </section>
+
+  <section>
+    <p class="label">03 · Not with quantifiers · ch. 24</p>
+    <h2 data-read>A not flips all into some</h2>
+    <p data-read>"Not everyone lifts" means someone doesn't. "Nobody lifts" means everyone doesn't. Moving a not across a quantifier flips the quantifier.</p>
+    <div class="f pair"><div><span class="tag">same thing</span>¬∀x L(x) &nbsp;=&nbsp; ∃x ¬L(x)</div><div><span class="tag">same thing</span>¬∃x L(x) &nbsp;=&nbsp; ∀x ¬L(x)</div></div>
+    <div class="try" data-id="s4-no">
+      <p class="q">Which one does <b>not</b> say “no runner lifts”?</p>
+      <button class="opt" data-why="This one is right: every runner doesn't lift.">∀x (R(x) → ¬L(x))</button>
+      <button class="opt" data-why="This one is right too: there isn't a runner who lifts.">¬∃x (R(x) ∧ L(x))</button>
+      <button class="opt" data-ok data-why="This says some runner doesn't lift, which is much weaker than “no runner lifts”.">∃x (R(x) ∧ ¬L(x))</button>
+    </div>
+    <p data-read>Two rules about domains help here too. A domain always has at least one thing in it. And a sentence like "all runners lift" is true when there are no runners at all, because there's no runner to break it.</p>
+    <div class="try" data-id="s4-empty">
+      <p class="q">Nobody at the gym runs. Is ∀x (R(x) → L(x)) true?</p>
+      <button class="opt" data-ok data-why="Every arrow has a false left side, so every instance is true. With no runners, no runner can fail to lift.">Yes</button>
+      <button class="opt" data-why="False would need a runner who doesn't lift, and there are no runners.">No</button>
+      <button class="opt" data-why="In FOL every sentence is true or false in a given interpretation, and the empty case has an answer.">It has no truth value.</button>
+    </div>
+    <div class="try redo" data-id="s4-redo-2"></div>
+    <p data-read>Next, two quantifiers at once.</p>
+  </section>
+
+  <section>
+    <p class="label">04 · Multiple generality · ch. 25</p>
+    <h2 data-read>Order matters</h2>
+    <p data-read>With two quantifiers, read left to right, like a game. For-all-x, there-is-y means: whoever you pick for x, I can then find a y, possibly a different one each time. There-is-y, for-all-x means: one single y works for every x.</p>
+    <div class="f pair"><div><span class="tag">everyone trains someone</span>∀x ∃y T(x, y)</div><div><span class="tag">someone is trained by everyone</span>∃y ∀x T(x, y)</div></div>
+    <div class="try" data-id="s4-order">
+      <p class="q">“Somebody trains everyone.”</p>
+      <button class="opt" data-ok data-why="One trainer, x, comes first, and then every y is trained by that same x.">∃x ∀y T(x, y)</button>
+      <button class="opt" data-why="That says everyone is trained by someone or other, maybe different trainers.">∀y ∃x T(x, y)</button>
+      <button class="opt" data-why="That says everyone trains someone.">∀x ∃y T(x, y)</button>
+    </div>
+    <p data-read>Going from for-all-there-is to there-is-for-all is called the quantifier shift fallacy. "Everyone has a mother" doesn't mean "someone is everyone's mother".</p>
+    <div class="try" data-id="s4-shift">
+      <p class="q">Does ∀x ∃y T(x, y) entail ∃y ∀x T(x, y)?</p>
+      <button class="opt" data-why="That's the quantifier shift fallacy: different people could be trained.">Yes</button>
+      <button class="opt" data-ok data-why="Each person might train someone different, so no single person need be trained by all.">No</button>
+      <button class="opt" data-why="The two are different claims, not the same one.">They say the same thing.</button>
+    </div>
+    <p data-read>The other direction is fine: if one person is trained by everyone, then everyone trains someone.</p>
+    <div class="try redo" data-id="s4-redo-3"></div>
+  </section>
+
+  <section>
+    <p class="label">05 · Identity · ch. 26</p>
+    <h2 data-read>Equals, other, only, counting</h2>
+    <p data-read>The equals sign says two names, or variables, pick out the same thing. "Someone other than Priya" needs it: there is an x, and x is not equal to p.</p>
+    <div class="try" data-id="s4-other">
+      <p class="q">“Priya trains someone other than herself.”</p>
+      <button class="opt" data-why="Without identity, the someone could be Priya herself.">∃x T(p, x)</button>
+      <button class="opt" data-ok data-why="Someone Priya trains, and that someone isn't Priya.">∃x (T(p, x) ∧ ¬x = p)</button>
+      <button class="opt" data-why="That says Priya trains everyone except possibly herself, much too strong.">∀x (¬x = p → T(p, x))</button>
+    </div>
+    <p data-read>"Only Priya runs" says two things: Priya runs, and anyone who runs is Priya.</p>
+    <div class="f">R(p) ∧ ∀x (R(x) → x = p)</div>
+    <div class="try" data-id="s4-only">
+      <p class="q">In that formula, what job does the ∀ part do?</p>
+      <button class="opt" data-why="That's the first half, R(p).">It says Priya runs.</button>
+      <button class="opt" data-ok data-why="Anyone who runs is Priya, so no one else runs.">It rules out anyone else running.</button>
+      <button class="opt" data-why="It doesn't say everyone runs. It's an arrow inside ∀.">It says everyone runs.</button>
+    </div>
+    <p data-read>Counting works the same way. "At least two runners" needs two runners and a clause saying they're not the same. "At most one runner" says any two runners are the same one. "Exactly one" is both at least one and at most one.</p>
+    <div class="try" data-id="s4-count">
+      <p class="q">Why does ∃x ∃y (R(x) ∧ R(y)) <b>not</b> say there are at least two runners?</p>
+      <button class="opt" data-ok data-why="Nothing stops x and y from being the same person. You need ¬x = y to force two.">x and y could be the same runner.</button>
+      <button class="opt" data-why="Two ∃ quantifiers are fine. The problem is that they can pick the same thing.">You can't use two ∃ in a row.</button>
+      <button class="opt" data-why="It's weaker than that: one runner is enough to make it true.">It says everyone runs.</button>
+    </div>
+    <div class="try redo" data-id="s4-redo-4"></div>
+    <p data-read>Different variables don't mean different things. Only the equals sign, negated, can say that.</p>
+  </section>
+
+  <section>
+    <p class="label">06 · Sentences of FOL · ch. 27</p>
+    <h2 data-read>Free and bound variables</h2>
+    <p data-read>A variable is bound when a quantifier with that variable has it in its scope. Otherwise it's free. A formula with any free variable isn't a sentence: it has no truth value until something fills that gap.</p>
+    <div class="try" data-id="s4-sentence">
+      <p class="q">Which of these is a sentence of FOL?</p>
+      <button class="opt" data-why="y is free: no quantifier binds it.">∀x (L(x) → T(x, y))</button>
+      <button class="opt" data-ok data-why="Every variable is bound: x by ∀x and y by ∃y.">∃y ∀x (L(x) → T(x, y))</button>
+      <button class="opt" data-why="x is free here.">L(x) ∧ R(p)</button>
+    </div>
+    <p data-read>Brackets set a quantifier's scope, just like a not's. Without brackets, a quantifier only reaches the next smallest piece.</p>
+    <div class="try" data-id="s4-scope">
+      <p class="q">In ∀x L(x) → R(x), is the last x bound?</p>
+      <button class="opt" data-why="The quantifier's scope ends at L(x), since there are no brackets around the arrow.">Yes, by ∀x</button>
+      <button class="opt" data-ok data-why="Without brackets, ∀x only covers L(x). The x in R(x) is free, so this isn't a sentence.">No, it's free</button>
+      <button class="opt" data-why="Free and bound is decided by the brackets and quantifiers, nothing else.">It depends on the domain</button>
+    </div>
+    <div class="try redo" data-id="s4-redo-5"></div>
+    <p data-read>When in doubt, put brackets right after the quantifier around everything it should cover.</p>
+  </section>
+
+  <section>
+    <p class="label">07 · Definite descriptions · ch. 28</p>
+    <h2 data-read>“The” means three things</h2>
+    <p data-read>Russell's analysis says "the runner lifts" makes three claims. There is at least one runner. There is at most one runner. And that runner lifts.</p>
+    <div class="f">∃x (R(x) ∧ ∀y (R(y) → y = x) ∧ L(x))<small>At least one, at most one, and it lifts.</small></div>
+    <div class="try" data-id="s4-russell">
+      <p class="q">On Russell's view, if the gym has two runners, “the runner lifts” is…</p>
+      <button class="opt" data-why="It fails the at-most-one claim whatever the runners do.">true if both lift</button>
+      <button class="opt" data-ok data-why="The at-most-one part fails, so the whole sentence is false.">false</button>
+      <button class="opt" data-why="That's Strawson's view, the rival. On Russell's view it's simply false.">neither true nor false</button>
+    </div>
+    <p data-read>"The runner doesn't lift" has two readings. The outer reading puts the not in front of everything: it's not the case that the runner lifts, which is true if there's no runner. The inner reading says there is exactly one runner, and that runner doesn't lift.</p>
+    <div class="try" data-id="s4-inner">
+      <p class="q">Nobody runs. Which reading of “the runner doesn't lift” is true?</p>
+      <button class="opt" data-ok data-why="The outer not denies the whole three-part claim, and the claim fails because there's no runner.">The outer reading</button>
+      <button class="opt" data-why="The inner reading still claims there's exactly one runner, so it's false here.">The inner reading</button>
+      <button class="opt" data-why="The two readings come apart exactly in a case like this.">Both</button>
+    </div>
+    <div class="try redo" data-id="s4-redo-6"></div>
+  </section>
+
+  <section>
+    <p class="label">08 · Ambiguity · ch. 29</p>
+    <h2 data-read>English hides the order</h2>
+    <p data-read>"Every member trusts a coach" can mean each member has some coach they trust, maybe different ones. Or it can mean there is one coach everyone trusts. FOL makes you pick the order of the quantifiers, so you must pick a reading.</p>
+    <div class="try" data-id="s4-ambig">
+      <p class="q">Which reading puts ∃ first?</p>
+      <button class="opt" data-why="That's the ∀ first reading: each member, then a coach for them.">Each member trusts some coach or other.</button>
+      <button class="opt" data-ok data-why="One particular coach comes first, then every member trusts that coach.">There is one coach whom every member trusts.</button>
+      <button class="opt" data-why="This is a third, different claim, not a reading of the sentence.">Every coach is trusted by every member.</button>
+    </div>
+    <p data-read>Not and quantifiers make ambiguity too. "Every runner didn't finish" could mean no runner finished, or only that not every runner finished.</p>
+  </section>
+
+  <section>
+    <p class="label">09 · Mixed round</p>
+    <h2 data-read>Everything mixed, four reels</h2>
+    <p data-read>No scrolling back.</p>
+    <div class="try" data-back data-id="s4-tb-mix-all">
+      <p class="q">“Every lifter trains Jun.”</p>
+      <button class="opt" data-ok data-why="For-all with an arrow: if someone lifts, they train Jun.">∀x (L(x) → T(x, j))</button>
+      <button class="opt" data-why="With ∧, that says everyone lifts and trains Jun.">∀x (L(x) ∧ T(x, j))</button>
+      <button class="opt" data-why="The gaps are swapped: that says Jun trains every lifter.">∀x (L(x) → T(j, x))</button>
+    </div>
+    <p data-read>A truth table one.</p>
+    <div class="try" data-back data-id="s4-tb-taut">
+      <p class="q">A TFL sentence is true on every row. It is…</p>
+      <button class="opt" data-why="Contingent means true on some rows, false on others.">contingent</button>
+      <button class="opt" data-ok data-why="True on every valuation: a tautology.">a tautology</button>
+      <button class="opt" data-why="Satisfiable is weaker: one true row is enough.">only satisfiable</button>
+    </div>
+    <p data-read>And a proof one.</p>
+    <div class="try" data-back data-id="s4-tb-or-e">
+      <p class="q">∨E needs the disjunction plus…</p>
+      <button class="opt" data-why="That's disjunctive syllogism, a different rule.">the negation of one side</button>
+      <button class="opt" data-ok data-why="Two subproofs, one from each side, reaching the same sentence.">two subproofs reaching the same sentence</button>
+      <button class="opt" data-why="One case isn't enough. Either side might be the true one.">one subproof from the left side</button>
+    </div>
+    <p data-read>Last chance for anything you missed.</p>
+    <div class="try redo" data-id="s4-redo-7"></div>
+    <p data-read>That's Part V. The next reel starts Part VI: how to decide whether an FOL sentence is true, using interpretations.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 23–29. Explanations, examples and questions written for this reel. No textbook exercises are used or answered here.</p>

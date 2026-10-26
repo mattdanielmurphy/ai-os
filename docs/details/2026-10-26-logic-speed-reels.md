@@ -98,3 +98,29 @@ Fitch-style proof tables (`table.pf`) in the player: line numbers, one vertical 
 ### Next
 
 Reel 4: a quiz-heavy recap of Part V (first-order logic syntax, chapters 23–29; the four earlier catch-up reels already teach it). Reel 5: Part VI (interpretations and truth in FOL, chapters 30–35), which class reaches on Oct 28 and Midterm 2 likely includes.
+
+## 04:15 Reels 4 and 5 are live; the series is done
+
+---
+
+### Speed 4 · First-Order Logic Recap
+
+https://claude.ai/artifact/7U8hAAFHjT6DteYnPv1xD2. A quiz-first lap of chapters 23–29, since the four catch-up reels already teach them: one reminder, one question, repeated. It covers two-place gap order, the all-arrow and some-and patterns and their traps, negated quantifiers, empty predicates, quantifier order and the shift fallacy, identity ("other than", "only", why counting needs ¬x = y), free vs bound variables and bracket scope, Russell's descriptions with inner vs outer negation, and scope ambiguity. 20 questions. The book's own exercises (apples, Pavel, Hofthor, "glitters") are avoided; counting and "only" are asked conceptually ("what does this part do?") rather than as symbolize-this items, because those exercise answers would be the same shape.
+
+---
+
+### Speed 5 · Interpretations
+
+https://claude.ai/artifact/DrGK2z9wDXSHzbbDyZbf3w. A first look at chapters 30–35, which class starts on Oct 28: extensions and extensionality, ordered pairs, fixed identity, the four parts of an interpretation, truth for atomic, connective and quantified sentences (worked on one small interpretation of my own: Ana, Bo, Cy), validity and the other semantic concepts, satisfaction and expressing relations, counter-interpretations, the one-vs-all table, and reflexive/symmetric/transitive/anti-symmetric relations. 17 questions. The interpretation and the counter-model question are my own, not the chapter 31 or 33 exercise interpretations or arguments; Ask is told not to build interpretations for textbook exercises.
+
+---
+
+### Order and links
+
+Each reel's end links to the next: Speed 1 → 2 → 3 → 4 → 5. Speed 3 (natural deduction) and Speed 5 (interpretations) are the most likely Midterm 2 material.
+
+---
+
+### Untested
+
+Same as before: the real claude.ai viewer on his phone (voice from Artifact files, Ask consent) hasn't been tried. Everything else passed headless tests on every reel.

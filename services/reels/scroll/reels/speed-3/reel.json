@@ -6,5 +6,6 @@
     "mode": "school",
     "audience": "The reader is Matt, a PHIL 120 Symbolic Logic student at the University of Alberta. The textbook is forall x: Calgary. He scored 77 on Midterm 1 and wants to do much better on Midterm 2 (Nov 4), so this is a fast review of the whole course with lots of quizzing. This page speed-reviews Part IV (chapters 16 to 22): Fitch-style natural deduction for TFL, the basic rules (R, and, or, arrow, double arrow, not, contradiction, IP, explosion), subproofs and which lines can be cited, proof strategies, the additional rules (DS, MT, DNE, LEM, De Morgan), single turnstile concepts, derived rules, and soundness and completeness. Explain from the symbols up, in small steps, with fresh examples. Never write or finish a proof of a textbook exercise; coach with hints and with new, different examples instead."
   },
-  "url": "https://claude.ai/artifact/8KFVUwnGYh5JQkyAGAVyY2"
+  "url": "https://claude.ai/artifact/8KFVUwnGYh5JQkyAGAVyY2",
+  "nextUrl": "https://claude.ai/artifact/7U8hAAFHjT6DteYnPv1xD2"
 }
