@@ -273,6 +273,9 @@ function buildServer(): McpServer {
         "Tell Matt, and just have a short, warm morning chat about his day instead.");
       const mode = readFileSync(join(import.meta.dir, "..", "checkin", "chat_mode.md"), "utf8").split("\n---\n", 2)[1].trim();
       log(`checkin_today ${day}`);
+      // Marks today's check-in as started, so missed.py stops re-sending and nudging.
+      Bun.spawnSync(["/usr/bin/python3", join(CHECKIN, "missed.py"), "started"],
+        { stdout: "ignore", stderr: "ignore", env: { ...process.env, PATH: PATH_ENV } });
       return text(`${mode}\n\n---\n\n${readFileSync(f, "utf8")}`);
     } catch (e) { return fail(e); }
   });
