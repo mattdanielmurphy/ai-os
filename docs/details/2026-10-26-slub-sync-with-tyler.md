@@ -175,3 +175,39 @@ Matt asked: one bot that runs on his Mac, falling back to Tyler's Mac when his i
 - Rejected: probing Telegram itself for the 409 as the health check, because the probe interrupts Matt's live connection.
 - Catch: the fallback Claude only knows what's on Tyler's Mac, so both should keep shared context in slub-hq.
 - Untested; nothing built yet.
+
+## 22:15 Bot with failover built
+
+Matt asked "why after the call?" Real cause: I assumed he was too busy on the call; there was no technical reason. Started immediately.
+
+---
+
+### What's built (slub-hq/bot)
+
+- Installed Claude Code's official Telegram plugin (telegram@claude-plugins-official 0.0.7) on Matt's Mac.
+- Group chats work: read the plugin source. Groups are opted in one by one and by default the bot answers only when @mentioned or replied to.
+- `supervise.sh` runs every minute (launchd) on each Mac. Priority list matt then tyler. Heartbeats are one auto-edited comment per Mac on slub-hq issue #1 (collaborators can edit their own comments; a gist was rejected because Tyler couldn't write to Matt's gist; commits every minute were rejected as noise).
+- Hand-back uses a "claim" step: the plugin gives up after ~8 failed 409 retries, so the two Macs must never poll at once.
+- `session.sh` keeps `claude --channels plugin:telegram@claude-plugins-official` running in tmux, restarting it if it exits.
+- `install.sh <name>` installs the plugin, asks for the token hidden (never shown to agents), and loads the launchd job.
+
+---
+
+### Tested
+
+- Simulated two Macs on one machine: B alone starts; A returns and claims; B steps down; A starts; A goes stale; B takes over. All correct.
+
+---
+
+### Not tested / risks
+
+- The real bot: no token yet (Matt has to make it in @BotFather).
+- First launch in tmux may show the folder-trust prompt; I'll check the session after install.
+- Tools outside the allowlist would make the session wait on a permission prompt nobody sees.
+- `--channels` is a research-preview flag and isn't in `claude --help`.
+
+---
+
+### Undo
+
+`launchctl bootout gui/$(id -u)/ca.slub.bot`, `claude plugin uninstall telegram@claude-plugins-official`, delete bot/ in slub-hq.
