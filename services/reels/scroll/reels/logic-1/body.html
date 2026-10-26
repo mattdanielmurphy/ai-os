@@ -1,0 +1,157 @@
+  <p class="label">PHIL 120 catch-up · reel 1 of 4 · forall x ch. 23–24</p>
+  <h1 data-read>All and some: the first steps of first-order logic</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>You missed two classes, and that's fine. This reel covers chapters 23 and 24 of the textbook from the very start, and it assumes nothing from those lectures. Whenever something doesn't click, stop and ask about the exact sentence you're on.</p>
+
+  <section>
+    <p class="label">01 · Why we need more than TFL</p>
+    <h2 data-read>Truth tables can't see inside a sentence</h2>
+    <p data-read>Take this argument. Every cat purrs. Mo is a cat. So Mo purrs. Anyone can see it's valid.</p>
+    <p data-read>In truth-functional logic, the logic of Units 2 to 4, each of those sentences becomes one capital letter. You get P, Q, therefore R. A truth table calls that invalid, because R could be false while P and Q are true.</p>
+    <div class="f">P, Q ∴ R<small>∴ means “therefore”. Each letter is a whole sentence, so TFL loses the link between them.</small></div>
+    <p data-read>Nothing was symbolized wrong. TFL simply can't look inside a sentence, so it can't see that two of them are about cats. First-order logic, or FOL, splits each sentence into smaller pieces, so it can.</p>
+  </section>
+
+  <section>
+    <p class="label">02 · The pieces</p>
+    <h2 data-read>Four new kinds of symbols</h2>
+    <p data-read>Here is every new piece in one table. The rest of this reel uses only these, so come back to the table whenever a symbol looks strange.</p>
+    <table class="sym">
+      <tr><td>a b c … r</td><td><b>Names.</b> Lowercase a to r. Each one picks out exactly one thing, like m for Mo.</td></tr>
+      <tr><td>C(x)</td><td><b>Predicates.</b> Capital letters with a gap. C(x) could mean “x is a cat”.</td></tr>
+      <tr><td>s t … x y z</td><td><b>Variables.</b> Lowercase s to z. Placeholders, not names.</td></tr>
+      <tr><td>∀</td><td><b>“For all”.</b> The universal quantifier: an upside-down A, for All.</td></tr>
+      <tr><td>∃</td><td><b>“There is at least one”.</b> The existential quantifier: a backwards E, for Exists.</td></tr>
+      <tr><td>¬ ∧ ∨ → ↔</td><td><b>Connectives</b>, same as TFL: not, and, or, if-then, if and only if.</td></tr>
+    </table>
+    <p data-read>A name works like a proper name: the letter m might stand for Mo. A predicate is a sentence with a hole in it, like "blank is a cat". Put a name in the hole and you get a whole sentence.</p>
+    <div class="f">C(m)<small>“Mo is a cat.” The predicate comes first, then the name in brackets. Read it “C of m”.</small></div>
+    <p data-read>So "Mo is a cat" becomes capital C, with m in brackets. All the old connectives still work, so "Mo is a cat and Mo purrs" is C of m, and, P of m.</p>
+    <div class="f">C(m) ∧ P(m)<small>“Mo is a cat and Mo purrs.”</small></div>
+    <p data-read>Variables are the letters near the end of the alphabet, s to z. They don't name anything. They are placeholders, waiting for a quantifier to tell us how to fill them in.</p>
+  </section>
+
+  <section>
+    <p class="label">03 · The two quantifiers</p>
+    <h2 data-read>For all, and there is</h2>
+    <p data-read>The upside-down A means "for all". Write it, then a variable, then say something about that variable. "For all x, x purrs" says that everything purrs.</p>
+    <div class="f">∀x P(x)<small>“Everything purrs.” Read: for all x, P of x.</small></div>
+    <p data-read>The backwards E means "there is at least one". "There is an x such that x purrs" says something purrs. At least one thing does, maybe many.</p>
+    <div class="f">∃x P(x)<small>“Something purrs.” Read: there is an x such that P of x.</small></div>
+    <p data-read>The letter x isn't special. "For all y, P of y" says exactly the same thing. The variable only links the quantifier to the gap it fills.</p>
+    <div class="try" data-id="l1-something-cat">
+      <p class="q">Which one says “Something is a cat”?</p>
+      <button class="opt" data-why="That says everything is a cat, which is much stronger.">∀x C(x)</button>
+      <button class="opt" data-ok data-why="The backwards E is “there is at least one”, and C(x) says x is a cat.">∃x C(x)</button>
+      <button class="opt" data-why="The x here has no quantifier, so this doesn't say anything yet. Reel 3 explains why.">C(x)</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">04 · The domain</p>
+    <h2 data-read>What "everything" means</h2>
+    <p data-read>Every symbolization starts with a key: what each letter means, plus a domain. The domain is the collection of things we're talking about. "For all" means everything in the domain, not everything in the universe.</p>
+    <div class="key"><b>Symbolization key</b>domain: animals in Mo's house<br>C(x): x is a cat<br>P(x): x purrs<br>m: Mo</div>
+    <p data-read>With this key, "for all x, P of x" means every animal in Mo's house purrs. Nothing outside the house counts.</p>
+    <p data-read>Two rules about domains. A domain always has at least one thing in it. And every name must pick out exactly one thing in the domain. One thing can have several names, or no name at all.</p>
+    <p data-read>That's why a name can't stand for something that doesn't exist, like a unicorn. If you want to talk about unicorns, put them in the domain, for example a domain of creatures in stories.</p>
+  </section>
+
+  <section>
+    <p class="label">05 · Not, with a quantifier</p>
+    <h2 data-read>A "not" flips all into some</h2>
+    <p data-read>"No one is angry" can be written two ways. "It's not true that someone is angry." Or, "everyone is not angry." Both are correct, and they mean the same thing.</p>
+    <div class="f pair"><div><span class="tag">not some</span>¬∃x A(x)</div><div><span class="tag">all not</span>∀x ¬A(x)</div><small>Both say “No one is angry.” Domain: people.</small></div>
+    <p data-read>In the same way, "not everyone is happy" means the same as "someone is not happy".</p>
+    <div class="f pair"><div><span class="tag">not all</span>¬∀x H(x)</div><div><span class="tag">some not</span>∃x ¬H(x)</div><small>Both say “Not everyone is happy.”</small></div>
+    <p data-read>An easy way to remember it: moving a "not" across a quantifier flips the quantifier. All becomes some, and some becomes all.</p>
+  </section>
+
+  <section>
+    <p class="label">06 · The four patterns</p>
+    <h2 data-read>Every, some, no, and only</h2>
+    <p data-read>Most English sentences with one quantifier fit one of four patterns. Learn these four and you can handle most of chapter 24. Here's a key about animals at a shelter.</p>
+    <div class="key"><b>Symbolization key</b>domain: animals at the shelter<br>D(x): x is a dog<br>K(x): x is a kitten<br>B(x): x barks<br>S(x): x is asleep</div>
+    <p data-read>Pattern one. "Every dog barks." Paraphrase it as: take anything at all; if it's a dog, then it barks. That if-then is the key. Every F is G becomes: for all x, if F of x, then G of x.</p>
+    <div class="f"><span class="good">∀x (D(x) → B(x))</span><small>“Every dog barks.” The upside-down A goes with the arrow.</small></div>
+    <p data-read>Why not "and"? "For all x, D of x and B of x" says every animal is a dog, and every animal barks. The kittens would have to be barking dogs. That's far too strong.</p>
+    <div class="f"><span class="bad">∀x (D(x) ∧ B(x))</span><small>Says every animal at the shelter is a barking dog. Wrong.</small></div>
+    <p data-read>Pattern two. "Some dog barks." There's at least one thing that is a dog and barks. Some F is G becomes: there is an x such that F of x and G of x.</p>
+    <div class="f"><span class="good">∃x (D(x) ∧ B(x))</span><small>“Some dog barks.” The backwards E goes with “and”.</small></div>
+    <p data-read>Why not an if-then here? "There is an x such that if it's a dog, it barks" comes out true as soon as there's one animal that isn't a dog, like a kitten. Remember, an if-then with a false "if" part is true. So it says almost nothing.</p>
+    <div class="f"><span class="bad">∃x (D(x) → B(x))</span><small>True as soon as anything is not a dog. Far too weak.</small></div>
+    <blockquote data-read>Rule of thumb: all goes with the arrow, and some goes with "and".</blockquote>
+    <div class="try" data-id="l1-some-kitten">
+      <p class="q">Which says “Some kitten is asleep”?</p>
+      <button class="opt" data-why="An arrow with the backwards E: true if any animal isn't a kitten. Too weak.">∃x (K(x) → S(x))</button>
+      <button class="opt" data-why="That says every kitten is asleep.">∀x (K(x) → S(x))</button>
+      <button class="opt" data-ok data-why="Some goes with “and”: there's at least one thing that is a kitten and is asleep.">∃x (K(x) ∧ S(x))</button>
+    </div>
+    <p data-read>Pattern three. "No dog is asleep." Two good ways again. It's not true that some dog is asleep. Or: for all x, if x is a dog, then x is not asleep.</p>
+    <div class="f pair"><div><span class="tag">not some</span>¬∃x (D(x) ∧ S(x))</div><div><span class="tag">all not</span>∀x (D(x) → ¬S(x))</div><small>Both say “No dog is asleep.”</small></div>
+    <p data-read>Pattern four. "Only dogs bark." The trick with "only" is to ask when the sentence would be false. It's false if something barks and isn't a dog. So it says: for all x, if x barks, then x is a dog.</p>
+    <div class="f"><span class="good">∀x (B(x) → D(x))</span><small>“Only dogs bark.” The word right after “only” goes after the arrow.</small></div>
+    <p data-read>Notice the order flipped. "Only F's are G" becomes: for all x, if G of x, then F of x. The word that comes right after "only" goes after the arrow.</p>
+    <div class="try" data-id="l1-only-kittens">
+      <p class="q">Which says “Only kittens are asleep”?</p>
+      <button class="opt" data-why="That's “every kitten is asleep”. “Only” flips the order.">∀x (K(x) → S(x))</button>
+      <button class="opt" data-ok data-why="If something is asleep, it's a kitten, so nothing else is asleep.">∀x (S(x) → K(x))</button>
+      <button class="opt" data-why="That's “no kitten is asleep”.">¬∃x (K(x) ∧ S(x))</button>
+    </div>
+    <div class="f pair">
+      <div><span class="tag">every F is G</span>∀x (F(x) → G(x))</div>
+      <div><span class="tag">some F is G</span>∃x (F(x) ∧ G(x))</div>
+      <div><span class="tag">no F is G</span>¬∃x (F(x) ∧ G(x)) &nbsp;or&nbsp; ∀x (F(x) → ¬G(x))</div>
+      <div><span class="tag">only Fs are G</span>∀x (G(x) → F(x))</div>
+      <small>The four patterns on one card. Worth knowing cold for the midterm.</small>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">07 · Empty predicates</p>
+    <h2 data-read>"Every unicorn" can be true</h2>
+    <p data-read>A predicate is allowed to be true of nothing at all. Say U of x means x is a unicorn, and the domain is the shelter animals. There are no unicorns there, so U is an empty predicate.</p>
+    <p data-read>Now take "every unicorn is asleep": for all x, if U of x, then S of x. It's true! Every "if" part is false, so every if-then is true. Logicians call this vacuously true. But "some unicorn is asleep" is false, because there's no unicorn to do the sleeping.</p>
+    <div class="f pair"><div><span class="tag">true, vacuously</span>∀x (U(x) → S(x))</div><div><span class="tag">false</span>∃x (U(x) ∧ S(x))</div><small>With no unicorns in the domain.</small></div>
+    <p data-read>So "every F is G" doesn't promise that there are any F's. That surprises almost everyone the first time.</p>
+  </section>
+
+  <section>
+    <p class="label">08 · Picking a domain</p>
+    <h2 data-read>Who counts as "everyone"</h2>
+    <p data-read>The domain changes how you write things. If the domain is only people, "everyone is tired" is simply: for all x, T of x. If the domain has people and pets in it, you need: for all x, if x is a person, then x is tired.</p>
+    <div class="f pair"><div><span class="tag">domain: people</span>∀x T(x)</div><div><span class="tag">domain: people and pets</span>∀x (P(x) → T(x))</div><small>Both say “Everyone is tired.” P(x): x is a person.</small></div>
+    <p data-read>A small domain saves writing, but it has to include everything your sentences talk about.</p>
+  </section>
+
+  <section>
+    <p class="label">09 · Paraphrase and scope</p>
+    <h2 data-read>"She" can hide an "everyone"</h2>
+    <p data-read>"If Ada is a drummer, then she is loud" is about one person, Ada. It's a plain if-then with a name: D of a, arrow, L of a.</p>
+    <div class="f">D(a) → L(a)<small>a: Ada · D(x): x is a drummer · L(x): x is loud</small></div>
+    <p data-read>But "if a person is a drummer, then she is loud" is about everyone. Paraphrase it first: for any person x, if x is a drummer, then x is loud.</p>
+    <div class="f">∀x (D(x) → L(x))<small>Domain: people. Paraphrasing into “for any x, if…” first makes the symbols easy.</small></div>
+    <p data-read>How much of a sentence a quantifier covers is called its scope, and the brackets show it. Moving a bracket can change the meaning, so always check what the brackets wrap around.</p>
+    <div class="f pair"><div><span class="tag">∀ covers only D(x)</span>∀x D(x) → L(a)</div><div><span class="tag">∀ covers the whole if-then</span>∀x (D(x) → L(a))</div><small>Top: if everyone is a drummer, Ada is loud. Bottom: if anyone is a drummer, Ada is loud.</small></div>
+  </section>
+
+  <section>
+    <p class="label">Wrap-up</p>
+    <h2 data-read>What to remember</h2>
+    <ol>
+      <li><span data-read>Names are a to r, variables are s to z, predicates are capitals with gaps.</span></li>
+      <li><span data-read>All goes with the arrow, some goes with "and".</span></li>
+      <li><span data-read>"No" is "not some", and "only" flips the arrow.</span></li>
+      <li><span data-read>The domain decides what "everything" means.</span></li>
+    </ol>
+    <div class="try" data-id="l1-no-kitten">
+      <p class="q">Last one. Which says “No kitten barks”?</p>
+      <button class="opt" data-why="This says “not every kitten barks”, so some kitten is quiet. That's a different claim.">¬∀x (K(x) → B(x))</button>
+      <button class="opt" data-ok data-why="Every kitten is a non-barker. (The other good answer is ¬∃x (K(x) ∧ B(x)).)">∀x (K(x) → ¬B(x))</button>
+      <button class="opt" data-why="The “not” covers the whole if-then, which works out to “every animal is a kitten that doesn't bark”.">∀x ¬(K(x) → B(x))</button>
+    </div>
+    <p data-read>That's chapters 23 and 24. Next, in reel 2: predicates with two gaps, like "x loves y", and why the order of the quantifiers matters so much.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 23–24. Explanations and examples rewritten for this reel. No textbook exercises are used or answered here.</p>

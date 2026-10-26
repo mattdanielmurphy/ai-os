@@ -1,0 +1,112 @@
+  <p class="label">PHIL 120 catch-up · reel 3 of 4 · forall x ch. 26–27</p>
+  <h1 data-read>Identity, counting, and what counts as a sentence</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>This reel adds one symbol, the equals sign, and shows how much it can do. Then it covers the grammar of FOL: which strings of symbols are sentences, and which ones can't be true or false at all. That's chapters 26 and 27.</p>
+
+  <section>
+    <p class="label">01 · The equals sign</p>
+    <h2 data-read>Same thing, not just alike</h2>
+    <p data-read>Try writing "Ada likes everyone else". You can't do it yet, because "else" means "everyone who isn't Ada", and nothing so far says two things are the same, or different.</p>
+    <p data-read>The equals sign fixes that. It's a two-place predicate that always means the same thing: x equals y means x and y are one and the same object. Not two things that look alike. One thing.</p>
+    <div class="key"><b>Always part of every key</b>x = y: x is identical to y</div>
+    <p data-read>So if t names Mark Twain and s names Samuel Clemens, then t equals s says those two names pick out the same person. Which is true: it was his pen name.</p>
+    <div class="f">t = s<small>“Mark Twain is Samuel Clemens.” Two names, one person.</small></div>
+    <p data-read>It's written between its two terms, like in math, instead of out front. And to say two things are different, put a "not" in front: not, x equals a. That reads "x is not Ada".</p>
+    <div class="f">¬ x = a<small>“x is not Ada.” The ¬ covers the whole x = a.</small></div>
+    <p data-read>Now "Ada likes everyone else" works: for all x, if x is not Ada, then Ada likes x.</p>
+    <div class="f">∀x (¬ x = a → L(a, x))<small>“Ada likes everyone else.” L(x, y): x likes y · a: Ada</small></div>
+  </section>
+
+  <section>
+    <p class="label">02 · Only and except</p>
+    <h2 data-read>"Only Ada" and "everyone but Ada"</h2>
+    <div class="key"><b>Symbolization key</b>domain: people in the class<br>P(x): x passed<br>a: Ada</div>
+    <p data-read>"Only Ada passed" says two things. Ada passed. And anyone who passed is Ada. In symbols: P of a, and, for all x, if x passed, then x equals a.</p>
+    <div class="f pair"><div><span class="tag">two parts</span>P(a) ∧ ∀x (P(x) → x = a)</div><div><span class="tag">same, shorter</span>∀x (P(x) ↔ x = a)</div><small>“Only Ada passed.” The double arrow packs both parts into one.</small></div>
+    <p data-read>"Everyone except Ada passed" also says two things. Everyone who isn't Ada passed. And Ada didn't.</p>
+    <div class="f pair"><div><span class="tag">two parts</span>∀x (¬ x = a → P(x)) ∧ ¬P(a)</div><div><span class="tag">same, shorter</span>∀x (¬ x = a ↔ P(x))</div><small>“Everyone except Ada passed.”</small></div>
+    <p data-read>The book notes that not everyone agrees "except" means Ada failed. In math, "defined everywhere except at zero" leaves open what happens at zero. For this course, read "except" as including the "and Ada didn't" part unless told otherwise.</p>
+  </section>
+
+  <section>
+    <p class="label">03 · Counting</p>
+    <h2 data-read>At least, at most, exactly</h2>
+    <p data-read>Identity lets FOL count. We'll count bikes, with B of x meaning x is a bike.</p>
+    <p data-read>"There is at least one bike" needs nothing new: there is an x, B of x.</p>
+    <div class="f">∃x B(x)<small>At least one bike.</small></div>
+    <p data-read>"At least two bikes" is the tricky one. You might write: there's an x and a y, and both are bikes. But x and y are allowed to be the same bike! So you have to add: and x is not y.</p>
+    <div class="f pair"><div><span class="tag">wrong: one bike makes it true</span><span class="bad">∃x∃y (B(x) ∧ B(y))</span></div><div><span class="tag">at least two</span><span class="good">∃x∃y (B(x) ∧ B(y) ∧ ¬ x = y)</span></div></div>
+    <p data-read>For "at least three", you need three bikes, and every pair of them must be different: x isn't y, y isn't z, and x isn't z. Leaving out one pair is a common mistake.</p>
+    <div class="f">∃x∃y∃z (B(x) ∧ B(y) ∧ B(z) ∧ ¬ x = y ∧ ¬ y = z ∧ ¬ x = z)<small>At least three bikes. Three pairs, three “not equals”.</small></div>
+    <div class="try" data-id="l3-two-bikes">
+      <p class="q">The domain has exactly one bike. Is ∃x∃y (B(x) ∧ B(y)) true?</p>
+      <button class="opt" data-ok data-why="Pick the same bike for both x and y. Nothing stops them being the same thing, which is why “at least two” needs ¬ x = y.">Yes, it's true</button>
+      <button class="opt" data-why="x and y are allowed to be the very same bike, so one bike is enough to make it true.">No, it's false</button>
+    </div>
+    <p data-read>"At most one bike" means: if you pick a bike, and then pick a bike, you picked the same one twice. For all x and all y, if both are bikes, then x equals y. Or simply: it's not true that there are at least two.</p>
+    <div class="f pair"><div><span class="tag">pick twice, same one</span>∀x∀y ((B(x) ∧ B(y)) → x = y)</div><div><span class="tag">not at least two</span>¬∃x∃y (B(x) ∧ B(y) ∧ ¬ x = y)</div><small>At most one bike. Zero bikes also makes these true.</small></div>
+    <p data-read>"Exactly one bike" is at least one, plus at most one. The neat way to say it: there is a bike x, and every bike is x.</p>
+    <div class="f">∃x (B(x) ∧ ∀y (B(y) → x = y))<small>Exactly one bike. Remember this shape: reel 4 uses it for the word “the”.</small></div>
+    <p data-read>"Exactly two bikes" works the same way: there are two different bikes, x and y, and every bike is one of those two.</p>
+    <div class="f">∃x∃y (B(x) ∧ B(y) ∧ ¬ x = y ∧ ∀z (B(z) → (x = z ∨ y = z)))<small>Exactly two bikes.</small></div>
+    <p data-read>One last trick. Words like "thing" and "object" apply to everything, so they don't need a predicate. "There are at least two things" is just: there is an x and a y, and x is not y.</p>
+    <div class="f">∃x∃y ¬ x = y<small>“There are at least two things.” No predicate needed.</small></div>
+  </section>
+
+  <section>
+    <p class="label">04 · The grammar of FOL</p>
+    <h2 data-read>Building blocks, then formulas</h2>
+    <p data-read>Chapter 27 is the official grammar. Like in Unit 2 for TFL, it gives exact rules for which strings of symbols count. First, the six kinds of symbols.</p>
+    <table class="sym">
+      <tr><td>A … Z</td><td><b>Predicates</b>, plus the special predicate =</td></tr>
+      <tr><td>a … r</td><td><b>Names</b></td></tr>
+      <tr><td>s … z</td><td><b>Variables</b></td></tr>
+      <tr><td>¬ ∧ ∨ → ↔</td><td><b>Connectives</b></td></tr>
+      <tr><td>( )</td><td><b>Brackets</b></td></tr>
+      <tr><td>∀ ∃</td><td><b>Quantifiers</b></td></tr>
+    </table>
+    <p data-read>A term is any name or any variable. An atomic formula is a predicate with the right number of terms in its brackets, or two terms with an equals sign between them. Sentence letters from TFL count too.</p>
+    <div class="f pair"><div><span class="tag">atomic formulas</span>F(a) &nbsp; F(x) &nbsp; L(x, b) &nbsp; x = a</div><small>A predicate with the right number of terms, or term = term.</small></div>
+    <p data-read>From there, formulas are built up. If A is a formula, so is not-A. If A and B are formulas, so are A and B, A or B, A arrow B, and A double-arrow B, each in brackets. And if A is a formula, then for all x A, and there is an x A, are formulas too.</p>
+    <div class="f pair"><div>F(x)</div><div>(F(x) → G(x))</div><div>∀x (F(x) → G(x))</div><small>Built up one rule at a time. The last rule used gives the main operator.</small></div>
+    <p data-read>The main logical operator is whatever was added last when the formula was built. Its scope is the part of the formula it was added to. That's how you tell exactly what a quantifier covers.</p>
+  </section>
+
+  <section>
+    <p class="label">05 · Free and bound</p>
+    <h2 data-read>Only sentences can be true or false</h2>
+    <p data-read>Take L of z, z: "z likes z". Is that true? You can't say, because z doesn't name anyone. Put a quantifier in front and it becomes a real claim. There is a z who likes z means someone likes themselves.</p>
+    <p data-read>So here's the rule. A variable is bound if it sits inside the scope of a quantifier with the same letter. Otherwise it's free. A sentence is a formula with no free variables, and only sentences can be true or false.</p>
+    <div class="f pair"><div><span class="tag">free z: not a sentence</span>L(z, z)</div><div><span class="tag">bound z: a sentence</span>∃z L(z, z)</div></div>
+    <p data-read>Brackets matter here. In "for all x, F of x", then an arrow, then G of x, the quantifier only covers F of x. So the last x is free, and the whole thing isn't a sentence. With brackets around the if-then, both x's are bound.</p>
+    <div class="f pair"><div><span class="tag">last x is free</span><span class="bad">∀x F(x) → G(x)</span></div><div><span class="tag">a sentence</span><span class="good">∀x (F(x) → G(x))</span></div></div>
+    <div class="try" data-id="l3-free">
+      <p class="q">Which of these is a sentence (no free variables)?</p>
+      <button class="opt" data-why="The y has no ∀y or ∃y, so it's free.">∀x L(x, y)</button>
+      <button class="opt" data-ok data-why="x is bound by ∀x and y is bound by ∃y, and both brackets cover everything they need to.">∀x ∃y L(x, y)</button>
+      <button class="opt" data-why="∃x only covers F(x), so the x in G(x) is free.">∃x F(x) ∧ G(x)</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">06 · Bracket shortcuts</p>
+    <h2 data-read>Brackets you're allowed to drop</h2>
+    <p data-read>The same shortcuts as TFL apply. You may drop the outermost brackets. You may use square brackets to make things easier to read. And in a long chain of only "and"s, or only "or"s, you can drop the inner brackets.</p>
+    <div class="f pair"><div><span class="tag">fine</span>A ∧ B ∧ C ∧ D</div><div><span class="tag">not allowed: mixes ∨ and ∧</span><span class="bad">A ∨ B ∧ C</span></div></div>
+    <p data-read>You can't drop brackets when "and" and "or" are mixed, or next to an arrow, because then it would be ambiguous.</p>
+  </section>
+
+  <section>
+    <p class="label">Wrap-up</p>
+    <h2 data-read>What to remember</h2>
+    <ol>
+      <li><span data-read>x equals y means one and the same thing. Not x equals y means different things.</span></li>
+      <li><span data-read>"At least two" needs "not x equals y", or one thing can count twice.</span></li>
+      <li><span data-read>"Exactly one F": there's an F, and every F is that one.</span></li>
+      <li><span data-read>A sentence has no free variables. Check what each quantifier's brackets cover.</span></li>
+    </ol>
+    <p data-read>That's chapters 26 and 27. Next, in reel 4: the word "the", and how FOL clears up sentences that mean two things.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 26–27. Explanations and examples rewritten for this reel. No textbook exercises are used or answered here.</p>

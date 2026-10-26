@@ -1,0 +1,86 @@
+  <p class="label">PHIL 120 catch-up · reel 4 of 4 · forall x ch. 28–29</p>
+  <h1 data-read>The word "the", and sentences that mean two things</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>This is the last reel of the unit. It uses the "exactly one" shape from reel 3 to handle the word "the". Then it shows how FOL settles English sentences that could mean two things. That's chapters 28 and 29.</p>
+
+  <section>
+    <p class="label">01 · Definite descriptions</p>
+    <h2 data-read>"The thief" isn't a name</h2>
+    <p data-read>Phrases like "the thief", "the tallest student", or "Ada's dog" are called definite descriptions. They aim to pick out one thing by describing it.</p>
+    <p data-read>You could just give the thief a name, say t. But then you'd lose the information that whoever it is, they're a thief. Worse, names must always pick out something in the domain, and some descriptions pick out nothing, like "the unicorn in my garden".</p>
+    <p data-read>Bertrand Russell found a way to avoid names entirely. He said: "The F is G" means three things. There is at least one F. There is at most one F. And every F is G.</p>
+    <div class="f pair"><div><span class="tag">at least one thief</span>∃x T(x)</div><div><span class="tag">at most one thief</span>∀x∀y ((T(x) ∧ T(y)) → x = y)</div><div><span class="tag">every thief is tall</span>∀x (T(x) → A(x))</div><small>Russell's three parts of “The thief is tall.” T(x): x is a thief · A(x): x is tall</small></div>
+    <p data-read>The first two parts together just say "exactly one thief", the shape from reel 3. So the short version is: there is a thief x, every thief is x, and x is tall.</p>
+    <div class="f">∃x (T(x) ∧ ∀y (T(y) → x = y) ∧ A(x))<small>“The thief is tall.” Exactly one thief, and that one is tall.</small></div>
+    <blockquote data-read>The F is G: there's exactly one F, and it is G.</blockquote>
+    <p data-read>"Ada is the thief" is the same shape, ending with x equals a instead of "x is tall".</p>
+    <div class="f">∃x (T(x) ∧ ∀y (T(y) → x = y) ∧ x = a)<small>“Ada is the thief.” a: Ada</small></div>
+    <p data-read>"The thief is the cook" has two descriptions. There's exactly one thief x, exactly one cook y, and x equals y. That last part has to sit inside the scope of both quantifiers.</p>
+    <div class="f">∃x∃y (T(x) ∧ ∀z (T(z) → x = z) ∧ C(y) ∧ ∀z (C(z) → y = z) ∧ x = y)<small>“The thief is the cook.” C(x): x is a cook</small></div>
+    <div class="try" data-id="l4-two-thieves">
+      <p class="q">On Russell's analysis, two people are thieves, both tall. Is “The thief is tall” true?</p>
+      <button class="opt" data-why="The “at most one thief” part fails, and Russell's sentence needs all three parts.">Yes</button>
+      <button class="opt" data-ok data-why="“The thief” claims there's exactly one. With two thieves, the at-most-one part fails, so the whole sentence is false.">No</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">02 · When nothing fits</p>
+    <h2 data-read>Empty descriptions, and two kinds of "not"</h2>
+    <p data-read>Russell's method handles descriptions that pick out nothing. "The unicorn in my garden is friendly" just comes out false, because there's no unicorn there. No name ever had to point at nothing.</p>
+    <p data-read>Now add "not": "The unicorn in my garden is not friendly". That can mean two things, depending on where the "not" goes.</p>
+    <p data-read>Outer not: it's not true that the unicorn is friendly. That's true, since there is no unicorn. Inner not: there's exactly one unicorn, and it's unfriendly. That's false, for the same reason.</p>
+    <div class="f pair"><div><span class="tag">outer not · true</span>¬∃x (U(x) ∧ ∀y (U(y) → x = y) ∧ F(x))</div><div><span class="tag">inner not · false</span>∃x (U(x) ∧ ∀y (U(y) → x = y) ∧ ¬F(x))</div><small>U(x): x is a unicorn in my garden · F(x): x is friendly</small></div>
+    <p data-read>The inner version promises a unicorn exists. The outer version doesn't. So the inner one implies the outer one, but not the other way around.</p>
+  </section>
+
+  <section>
+    <p class="label">03 · Possessives, both, neither</p>
+    <h2 data-read>"Ada's dog" is a description too</h2>
+    <p data-read>A possessive like "Ada's dog" is a hidden definite description: the dog that Ada owns. So "Ada's dog barks" is false in three ways. If Ada has no dog. If she has two or more. Or if her one dog doesn't bark.</p>
+    <p data-read>To write it, paraphrase first: the dog Ada owns barks. Then use the same shape, with "is a dog Ada owns" in the F spot.</p>
+    <div class="f">∃x (D(x) ∧ O(a, x) ∧ ∀y ((D(y) ∧ O(a, y)) → x = y) ∧ B(x))<small>“Ada's dog barks.” D(x): x is a dog · O(x, y): x owns y · B(x): x barks</small></div>
+    <p data-read>"Both" and "neither" work the same way, but with exactly two. "Both F's are G" means there are exactly two F's, and each is G. "Neither F is G" means there are exactly two F's, and neither is G.</p>
+    <div class="f">∃x∃y (F(x) ∧ F(y) ∧ ¬ x = y ∧ ∀z (F(z) → (x = z ∨ y = z)) ∧ G(x) ∧ G(y))<small>“Both F's are G.” For “neither”, end with ¬G(x) ∧ ¬G(y).</small></div>
+  </section>
+
+  <section>
+    <p class="label">04 · Is Russell right?</p>
+    <h2 data-read>Two objections worth knowing</h2>
+    <p data-read>Peter Strawson argued that when nothing fits the description, the sentence isn't false. It's neither true nor false, because what it takes for granted fails. But our logic has only two truth values, so taking his side would mean changing the logic.</p>
+    <p data-read>Keith Donnellan raised mistaken identity. Someone says "the man drinking a martini is tall", pointing at a tall man. But the tall man's glass holds water, and a short man nearby is the one with the martini. On Russell's analysis, the speaker said something false, even though they clearly meant something true about the man they pointed at.</p>
+    <p data-read>The book's answer: the speaker had a false belief about the drinks, which is why they said something false. For this course, stick with Russell's analysis.</p>
+  </section>
+
+  <section>
+    <p class="label">05 · Ambiguity</p>
+    <h2 data-read>FOL forces you to pick a meaning</h2>
+    <p data-read>An English sentence can mean two things. A sentence of FOL can't, because every quantifier and every "not" has an exact scope. So when English is ambiguous, you write one FOL sentence for each meaning.</p>
+    <p data-read>Take "All the students didn't pass". It might mean no student passed. Or it might mean not all of them passed, so some did and some didn't. The difference is whether the "not" is inside the "all", or outside it.</p>
+    <div class="f pair"><div><span class="tag">no student passed</span>∀x (S(x) → ¬P(x))</div><div><span class="tag">not every student passed</span>¬∀x (S(x) → P(x))</div><small>S(x): x is a student · P(x): x passed</small></div>
+    <p data-read>Quantifier order makes ambiguity too. "Every student read a book" might mean they all read the same book, or each read some book or other.</p>
+    <div class="f pair"><div><span class="tag">one book for all</span>∃x (K(x) ∧ ∀y (S(y) → R(y, x)))</div><div><span class="tag">a book each</span>∀y (S(y) → ∃x (K(x) ∧ R(y, x)))</div><small>K(x): x is a book · R(x, y): x read y. In the first, the ∃ has wide scope; in the second, the ∀ does.</small></div>
+    <p data-read>"Only" can be ambiguous as well. "Only new phones are expensive" could mean only new phones, and nothing else, are expensive. Or it could mean that among phones, only the new ones are expensive. Stress in speech usually tells you which.</p>
+    <div class="f pair"><div><span class="tag">anything expensive is a new phone</span>∀x (E(x) → (N(x) ∧ H(x)))</div><div><span class="tag">expensive phones are new</span>∀x ((H(x) ∧ E(x)) → N(x))</div><small>H(x): x is a phone · N(x): x is new · E(x): x is expensive</small></div>
+    <p data-read>And descriptions add one more kind: "the unicorn is not friendly" from earlier had two readings, with the "not" inside or outside the description. Same idea: wide scope versus narrow scope.</p>
+    <div class="try" data-id="l4-scope">
+      <p class="q">“Every guest brought a gift” where all the guests chipped in on one shared gift. Which reading fits?</p>
+      <button class="opt" data-ok data-why="One gift exists that every guest brought: the ∃ comes first, with wide scope.">∃x (G(x) ∧ ∀y (P(y) → B(y, x)))</button>
+      <button class="opt" data-why="This one lets each guest bring a different gift. It's also true here, but it doesn't capture “one shared gift”.">∀y (P(y) → ∃x (G(x) ∧ B(y, x)))</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Wrap-up</p>
+    <h2 data-read>What to remember</h2>
+    <ol>
+      <li><span data-read>"The F is G" means exactly one F, and it is G.</span></li>
+      <li><span data-read>An empty description makes "the F is G" false, and "not" can go inside or outside.</span></li>
+      <li><span data-read>Possessives, "both" and "neither" are descriptions in disguise.</span></li>
+      <li><span data-read>When English means two things, write one FOL sentence for each.</span></li>
+    </ol>
+    <p data-read>That's the whole of Unit 5, chapters 23 to 29. You've now covered everything from the two missed classes. Before the midterm, go back to any reel where a check tripped you up, and use the Ask button on anything still fuzzy.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapters 28–29. Explanations and examples rewritten for this reel. No textbook exercises are used or answered here.</p>
