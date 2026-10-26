@@ -127,6 +127,18 @@ Previously, mock mode required explicitly passing `GLASS_MOCK_STREAM=1`. Because
 ### metadata-vs-streams
 The show and movie cards shown on screen come from standard TMDB/IMDb metadata (saved in local `state.json` or fetched from TMDB). Now, clicking play on any title resolves to public test streams (`TearsofSteel.mp4` / `BigBuckBunny.mp4`) instead of touching Real-Debrid.
 
+---
+
+## 21:45 Committed and pushed changes to remote repository
+
+Pushed all changes cleanly to GitHub.
+
+---
+
+### repository-pushed-clean
+Committed all 20 modified and untracked files with message `feat: isolate real streaming resolver into .claudeignore and add offline mock default` and pushed to `origin/master`. Working tree is now completely clean.
+
+
 
 
 
