@@ -5,6 +5,12 @@ self-contained player page (light/dark, phone-friendly, keyboard hints on screen
 
 **Just for Matt for now**, built self-contained so it can go public later.
 
+## Scroll reels with Ask (2026-10-25)
+
+For teaching and anything people read at their own pace: `scroll/` (README there). Scroll-to-read page, narrated
+word by word, with checks and an **Ask** button that answers questions about the current sentence (Artifact `sample`
+capability; `ask.mode: "school"` keeps it to explaining for coursework). Slide reels below stay for short updates.
+
 ## Make a reel (agents: this is the default for big replies)
 
 **New reels use the page player** (the page is the slide; Matt picked the look in the UI Mixer, 2026-10-23).

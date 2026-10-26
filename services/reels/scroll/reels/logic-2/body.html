@@ -1,0 +1,107 @@
+  <p class="label">PHIL 120 catch-up · reel 2 of 4 · forall x ch. 25</p>
+  <h1 data-read>Two-place predicates, and why order matters</h1>
+  <p class="hint">Small scroll: look around, the voice keeps its place.<br>Big scroll: the highlight jumps to the middle of the screen.<br>Tap any word to read from there.<br>Boxes with symbols are shown, not read out.<br><span class="askhint">Stuck? Press <b>Ask</b> (bottom left) to ask about the sentence you're on.<br></span><span class="desk">Press <kbd>Space</kbd> to pause<span class="askhint">, <kbd>A</kbd> to ask</span>.</span></p>
+
+  <p data-read>In reel 1, every predicate had one gap, like "blank is a cat". This reel adds predicates with two gaps, and then puts two quantifiers in one sentence. It's chapter 25 of the textbook.</p>
+
+  <section>
+    <p class="label">01 · Two gaps</p>
+    <h2 data-read>Predicates that relate two things</h2>
+    <p data-read>Some predicates are about how two things relate: "blank likes blank", or "blank is taller than blank". These are two-place predicates. You need two terms to fill them and make a sentence.</p>
+    <div class="key"><b>Symbolization key</b>domain: people<br>L(x, y): x likes y<br>a: Ada<br>b: Ben</div>
+    <p data-read>"Ada likes Ben" is L, with a and b in the brackets. "Ben likes Ada" is L, with b and a. Those are different sentences, because liking doesn't have to go both ways.</p>
+    <div class="f pair"><div><span class="tag">Ada likes Ben</span>L(a, b)</div><div><span class="tag">Ben likes Ada</span>L(b, a)</div><div><span class="tag">Ada likes herself</span>L(a, a)</div></div>
+    <p data-read>There's no limit on the number of gaps. "Blank lent blank to blank" has three.</p>
+    <p data-read>The key tells you which gap is which. The variables in the key are just labels for the gaps: x marks the one who likes, and y marks the one who is liked. In L of b, a, the first name fills the x gap and the second fills the y gap.</p>
+    <p data-read>Passive voice changes the order of the words, not the gaps. "Ben is liked by Ada" still means Ada likes Ben, so it's L of a, b.</p>
+    <div class="try" data-id="l2-passive">
+      <p class="q">With L(x, y): x likes y, which says “Ada is liked by Ben”?</p>
+      <button class="opt" data-why="That's “Ada likes Ben”. Check who is doing the liking.">L(a, b)</button>
+      <button class="opt" data-ok data-why="Ben does the liking, so b fills the first (x) gap.">L(b, a)</button>
+    </div>
+    <p data-read>Connectives work as always. "Ada likes Ben, but not the other way around" is: L of a, b, and not L of b, a.</p>
+    <div class="f">L(a, b) ∧ ¬L(b, a)<small>“Ada likes Ben, but Ben doesn't like Ada.”</small></div>
+  </section>
+
+  <section>
+    <p class="label">02 · One quantifier, two gaps</p>
+    <h2 data-read>Someone, everyone, and a name</h2>
+    <p data-read>Now add a quantifier. "Ada likes someone": there is a y such that Ada likes y.</p>
+    <div class="f">∃y L(a, y)<small>“Ada likes someone.” Ada fills the liker gap.</small></div>
+    <p data-read>"Someone likes Ada": there is an x such that x likes Ada. Same quantifier, but now the variable sits in the other gap.</p>
+    <div class="f">∃x L(x, a)<small>“Someone likes Ada.” Ada fills the liked gap.</small></div>
+    <p data-read>"Everyone likes Ada" puts the upside-down A on the liker. "Ada likes everyone" puts it on the one who is liked.</p>
+    <div class="f pair"><div><span class="tag">everyone likes Ada</span>∀x L(x, a)</div><div><span class="tag">Ada likes everyone</span>∀y L(a, y)</div></div>
+    <div class="try" data-id="l2-everyone-ben">
+      <p class="q">Which says “Everyone likes Ben”?</p>
+      <button class="opt" data-ok data-why="Each x is the one doing the liking, and Ben is the one liked.">∀x L(x, b)</button>
+      <button class="opt" data-why="That says Ben likes everyone.">∀x L(b, x)</button>
+      <button class="opt" data-why="That says someone likes Ben.">∃x L(x, b)</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">03 · Two quantifiers</p>
+    <h2 data-read>"Everyone likes someone" has two meanings</h2>
+    <p data-read>Here's the most important idea in the chapter. "Everyone likes someone" can mean two different things.</p>
+    <p data-read>Meaning one: each person likes somebody or other, maybe a different somebody for each person. For all x, there is a y, such that x likes y.</p>
+    <div class="f">∀x∃y L(x, y)<small>Each person has someone they like. It can be a different someone for each.</small></div>
+    <p data-read>Meaning two: there's one particular person whom everybody likes. There is a y, such that for all x, x likes y.</p>
+    <div class="f">∃y∀x L(x, y)<small>One single person is liked by everyone.</small></div>
+    <p data-read>Picture three people. Ada likes Ben, Ben likes Cal, and Cal likes Ada. Everyone likes someone, so meaning one is true. But no single person is liked by all three, so meaning two is false.</p>
+    <div class="f pair"><div>Ada → Ben → Cal → Ada</div><div><span class="good">∀x∃y L(x, y) · true</span></div><div><span class="bad">∃y∀x L(x, y) · false</span></div><small>An arrow means “likes”. Everyone has someone, but nobody is everyone's someone.</small></div>
+    <p data-read>A way to read them: whatever comes first gets picked first. With "for all x, there is a y", you pick any x, and then the y is allowed to depend on which x you picked. With "there is a y, for all x", one y has to work for every x at once.</p>
+    <p data-read>Sliding from the first meaning to the second is a classic mistake, called the quantifier shift fallacy. "Every lock has a key that opens it" does not mean "there's one key that opens every lock".</p>
+    <div class="f">∀x∃y … does not give ∃y∀x …<small>Every lock has a key, but that doesn't mean there's a master key.</small></div>
+    <p data-read>Two quantifiers of the same kind can swap freely. "For all x, for all y" says the same as "for all y, for all x", and two backwards E's work the same way. Order only matters when you mix all with some.</p>
+    <div class="try" data-id="l2-likes-everyone">
+      <p class="q">Domain: people. Which says “There is someone who likes everyone”?</p>
+      <button class="opt" data-why="That's “everyone likes someone”: each person likes somebody.">∀x∃y L(x, y)</button>
+      <button class="opt" data-why="That says everyone is liked by someone or other.">∀y∃x L(x, y)</button>
+      <button class="opt" data-ok data-why="Pick one person x first; then x likes every y.">∃x∀y L(x, y)</button>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">04 · Stepping stones</p>
+    <h2 data-read>Long sentences, one step at a time</h2>
+    <p data-read>Long sentences get much easier if you go in steps, writing half in English and half in symbols. Those half-way lines aren't real FOL. They're scratch work, like doodles in a margin, and they keep you from getting lost.</p>
+    <div class="key"><b>Symbolization key</b>domain: people and cats<br>C(x): x is a cat<br>O(x, y): x owns y<br>F(x, y): x feeds y<br>a: Ada</div>
+    <p data-read>Start small. "Ada owns a cat" means: there's a cat that Ada owns. There is an x, such that x is a cat, and Ada owns x.</p>
+    <div class="f">∃x (C(x) ∧ O(a, x))<small>“Ada owns a cat.”</small></div>
+    <p data-read>Now "someone owns a cat". Step one: there is a y such that y owns a cat. Step two: "y owns a cat" has the same shape we just built, with y where Ada was.</p>
+    <div class="f pair"><div><span class="tag">step 1, scratch</span>∃y (y owns a cat)</div><div><span class="tag">step 2</span>∃y ∃x (C(x) ∧ O(y, x))</div></div>
+    <p data-read>Now "every cat owner feeds a cat". Step one: for all y, if y owns a cat, then y feeds a cat. Step two: fill in both halves with the same shape.</p>
+    <div class="f pair"><div><span class="tag">step 1, scratch</span>∀y (y owns a cat → y feeds a cat)</div><div><span class="tag">step 2</span>∀y (∃x (C(x) ∧ O(y, x)) → ∃z (C(z) ∧ F(y, z)))</div></div>
+    <p data-read>See how the second cat gets a new letter, z? One variable can't serve two quantifiers at the same time. While a quantifier's brackets are still open, give the next quantifier a different letter. New letters are always safe.</p>
+    <blockquote data-read>One variable can't serve two quantifiers at once.</blockquote>
+  </section>
+
+  <section>
+    <p class="label">05 · Hidden quantifiers</p>
+    <h2 data-read>When English doesn't say which</h2>
+    <p data-read>English often leaves the quantifiers out. "Dogs chase cats" could mean every dog chases every cat, or some dog chases some cat, or something in between. Writing it in FOL forces you to choose.</p>
+    <div class="f pair"><div><span class="tag">every dog chases every cat</span>∀x (D(x) → ∀y (C(y) → H(x, y)))</div><div><span class="tag">some dog chases some cat</span>∃x (D(x) ∧ ∃y (C(y) ∧ H(x, y)))</div><small>D(x): x is a dog · C(x): x is a cat · H(x, y): x chases y</small></div>
+    <p data-read>The textbook shows why this matters with Mary Astell, a philosopher writing around the year seventeen hundred. A writer claimed that men are naturally superior to women. Astell asked which claim he meant.</p>
+    <p data-read>If he meant every man is superior to every woman, then even the Queen would have to obey her footman, which nobody would accept. If he meant some man is superior to some woman, that's no discovery, since some woman is also superior to some man. Pinning down the quantifiers took his claim apart.</p>
+  </section>
+
+  <section>
+    <p class="label">Wrap-up</p>
+    <h2 data-read>What to remember</h2>
+    <ol>
+      <li><span data-read>The key's variables label the gaps. Check which name goes in which gap.</span></li>
+      <li><span data-read>Whatever quantifier comes first gets picked first.</span></li>
+      <li><span data-read>All-then-some and some-then-all mean different things.</span></li>
+      <li><span data-read>Build long sentences in steps, with a new letter for each quantifier.</span></li>
+    </ol>
+    <div class="try" data-id="l2-liked-by-all">
+      <p class="q">Domain: people. Which says “Someone is liked by everyone”?</p>
+      <button class="opt" data-ok data-why="Pick one person x first; then every y likes x.">∃x∀y L(y, x)</button>
+      <button class="opt" data-why="This says everyone likes someone or other, maybe different people.">∀y∃x L(y, x)</button>
+      <button class="opt" data-why="The gaps are swapped: this says someone likes everyone.">∃x∀y L(x, y)</button>
+    </div>
+    <p data-read>That's chapter 25. Next, in reel 3: the equals sign, how to count with it, and the grammar rules that decide what counts as a sentence of FOL.</p>
+  </section>
+
+  <p class="credit">Based on <a href="https://forallx.openlogicproject.org/" target="_blank" rel="noopener">forall x: Calgary</a> by P. D. Magnus, Tim Button, Robert Trueman and Richard Zach (CC BY 4.0), chapter 25. Explanations and examples rewritten for this reel. No textbook exercises are used or answered here.</p>

@@ -1,0 +1,48 @@
+/* Reactions: React mode, long-press, margin dots (desktop only), review sheet. Colours reuse the page's own tokens. */
+body.reacting #text { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+#text .w { -webkit-touch-callout: none; }
+.rtop { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 6; display: flex; gap: 8px; }
+.rtop button { height: 34px; padding: 0 12px; }
+.rtop button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--g1) 22%, var(--surface)); }
+.rhint { position: fixed; top: calc(54px + env(safe-area-inset-top)); right: 12px; z-index: 6; max-width: 260px; text-align: right; font: 400 10.5px/1.5 var(--mono); color: var(--muted); pointer-events: none; opacity: 0; transition: opacity .2s; }
+body.reacting .rhint { opacity: 1; }
+
+/* Picked target and reacted sentences. */
+.w.rpick { background: color-mix(in srgb, var(--g1) 30%, transparent); border-radius: 0; }
+.w.rmark { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+.rbadge { font-size: .62em; margin-left: .25em; vertical-align: .2em; user-select: none; }
+
+/* Action bar. */
+#rbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 7; width: min(520px, calc(100vw - 20px));
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 6px 24px rgba(0,0,0,.14); }
+#rbar[hidden] { display: none; }
+#rbar .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+#rbar .quote { font: 400 11px/1.4 var(--mono); color: var(--muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#rbar button { height: 38px; padding: 0 12px; font-size: 14px; }
+#rbar button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--g1) 25%, var(--surface)); }
+#rbar .lv button { height: 28px; font-size: 11px; padding: 0 10px; }
+#rbar textarea { width: 100%; box-sizing: border-box; min-height: 54px; resize: vertical; font: 400 15px/1.4 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+#rbar textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+#rbar .x { margin-left: auto; }
+
+/* Margin dots: a fine pointer only, never on phones. */
+.rdot { display: none; }
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+  [data-read]:not(span) { position: relative; }
+  .rdot { display: block; position: absolute; left: -34px; top: .55em; width: 14px; height: 14px; padding: 0; border-radius: 50%; border: 1.5px solid var(--muted); background: transparent; opacity: .45; transition: opacity .15s, background .15s; }
+  [data-read]:hover > .rdot, .rdot:focus-visible, .rdot.on { opacity: 1; }
+  .rdot.on { background: var(--accent); border-color: var(--accent); }
+  li .rdot { display: none; }
+}
+
+/* Review sheet. */
+#rsheet { position: fixed; inset: 0; z-index: 9; background: color-mix(in srgb, var(--bg) 88%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); overflow: auto; padding: 5vh 16px 12vh; }
+#rsheet[hidden] { display: none; }
+#rsheet .in { max-width: 640px; margin: 0 auto; display: grid; gap: 12px; font: 400 15px/1.5 var(--body); }
+#rsheet h3 { margin: 0; font: 600 20px/1.2 var(--body); }
+#rsheet .item { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); display: grid; gap: 6px; }
+#rsheet .item q { color: var(--muted); font-size: 13px; quotes: none; }
+#rsheet .meta { font: 500 11px/1.4 var(--mono); color: var(--muted); display: flex; gap: 8px; align-items: center; }
+#rsheet .meta button { height: 26px; font-size: 11px; padding: 0 10px; margin-left: auto; }
+#rsheet .empty { color: var(--muted); }
+#rsheet .acts { display: flex; gap: 8px; position: sticky; bottom: 0; }
