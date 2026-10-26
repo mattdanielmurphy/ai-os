@@ -242,3 +242,9 @@
 - **"Add to my website"**: the local toolbar button (or `pages publish <name> [slug]`) copies the page to `mattmurphy.ca/<slug>` (unlisted, noindex, like /tv-box) and pushes the site's `main`. Agents publish to the website only when Matt asks.
 - **Exception**: a page that needs Artifact runtime features (shared database, viewer identity, asking Claude) stays an Artifact; say why in one line.
 - **Why**: Matt, 2026-10-23, replacing the "Vite instead of HTML artifacts" idea: he wants live reload while building, links that open anywhere, and one click to put a page on his site.
+
+# Subagent Rules
+
+1. **Execution Only**: Strictly execute the plan provided by the orchestrator.
+2. **Direct Edits**: When acting as a file editor, use write tools directly. Avoid recursive spawning.
+3. **Reporting**: Conclude with a clear diff or summary of changes so the orchestrator can easily verify.
