@@ -48,6 +48,9 @@ class MissedTest(unittest.TestCase):
         self.assertFalse(self.tick("2026-10-25T09:20")["resent"])
         self.assertEqual(len(self.sent), 1)
 
+    def test_no_resend_late_in_day(self):
+        self.assertFalse(self.tick("2026-10-25T21:30")["resent"])
+
     def test_no_resend_once_started_or_sent_late(self):
         missed.daily._save_day(TMP, "2026-10-25", started_at="2026-10-25T08:30:00")
         self.assertFalse(self.tick("2026-10-25T09:10")["resent"])
