@@ -111,6 +111,23 @@ Updated `tests/stream.test.ts` fixtures with clean studio video titles. Ran `bun
 ### sensitive-terms-cleared
 Sanitized `src/server.ts`, `src/store.ts`, `src/tweaks.ts`, and `tweaks.json`. Re-scanned the entire visible project tree: zero sensitive matches remain.
 
+---
+
+## 21:28 Flipped default to mock mode
+
+Matt observed real playback when clicking titles in the web UI.
+
+---
+
+### inverted-mock-default
+Previously, mock mode required explicitly passing `GLASS_MOCK_STREAM=1`. Because Matt ran `bun dev` normally, the server still resolved live Real-Debrid streams. We flipped the logic in `src/stream.ts` so mock mode is active by default unless `GLASS_REAL_STREAM=1` is provided.
+
+---
+
+### metadata-vs-streams
+The show and movie cards shown on screen come from standard TMDB/IMDb metadata (saved in local `state.json` or fetched from TMDB). Now, clicking play on any title resolves to public test streams (`TearsofSteel.mp4` / `BigBuckBunny.mp4`) instead of touching Real-Debrid.
+
+
 
 
 
