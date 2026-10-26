@@ -60,3 +60,30 @@ Rejected: switching everything at once (loses cloud threads and the phone card v
 - Whether the desktop linked-session notes reach a coordinator you are viewing from Chrome or the phone (they're a desktop app feature).
 - The Notification hook for `--bg` sessions may only fire while `claude agents` is open; needs a check.
 - Undo: nothing to undo; nothing was built.
+
+## 01:25 Should Chrome be the default over Claude.app?
+
+Matt: realized tabs matter a lot, links from his own web apps would open in a new Chrome tab instead of bouncing to Claude.app, and in Chrome he can inject scripts to customize claude.ai (e.g. auto-colour each project or thread). Keyboard shortcuts are the only worry, and he can recreate them.
+
+---
+
+### Chrome is the right default
+
+Not a sucker; Claude.app just came first. For reading and replying in projects, threads and chats, claude.ai in Chrome does the same job and adds tabs, links that stay in Chrome, extensions and userscripts (Tampermonkey or his own extension) for colours and shortcuts. Shortcuts: a userscript can bind any key on claude.ai, so nothing is lost there.
+
+---
+
+### What still needs Claude.app
+
+- Starting a new local Code session on the Mac from scratch (the web shows Remote Control sessions and cloud sessions, but the desktop app is the easy way to start a local one; project threads already start their own).
+- Mods (bands, panes, toasts) and the built-in browser pane: desktop only.
+- The desktop's linked sessions (`start_session` with notes back to the parent).
+- Computer use through the app.
+
+So: Chrome by default, open Claude.app only for those jobs.
+
+---
+
+### Risk with injected scripts
+
+claude.ai changes its page structure without notice, so a userscript that colours threads can break after an update. Keep each tweak small, key it to URLs (project id, thread id) rather than page layout where possible, and expect to fix one now and then. Not built: project freeze.
