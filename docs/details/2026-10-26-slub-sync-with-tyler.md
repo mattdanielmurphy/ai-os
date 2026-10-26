@@ -211,3 +211,9 @@ Matt asked "why after the call?" Real cause: I assumed he was too busy on the ca
 ### Undo
 
 `launchctl bootout gui/$(id -u)/ca.slub.bot`, `claude plugin uninstall telegram@claude-plugins-official`, delete bot/ in slub-hq.
+
+## 22:20 Puns saved, plugin scoped to the bot
+
+- Saved the coordinator's Slub puns list (plus bot-name ideas from the call) to slub-hq `NAMES.md`, linked from the README.
+- Found a problem I caused: installing the Telegram plugin at user scope turned it on in every Claude session on Matt's Mac. With no token it showed as a failing server; with a token, every session would start its own poller and steal the bot from the others (the plugin kills the previous poller on start). Fixed: disabled at user scope; `session.sh` enables it only for the bot session via `--settings`; `install.sh` does the same on Tyler's Mac.
+- Untested: whether `--channels` accepts a plugin enabled only through `--settings`. If not, fallback is `--plugin-dir` pointing at the plugin folder. Will check on first real start.
