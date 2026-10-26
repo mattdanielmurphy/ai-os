@@ -54,3 +54,10 @@ Untested for real: the re-send hasn't fired yet (first chance is tomorrow 9:05),
 haven't confirmed the Shortcut opens the second text. The page-only check-in (without the chat) isn't visible the
 same day, so if he only does the page the 9:05 re-send still goes out. Undo: set `"enabled": false` under `watch`
 in `services/checkin/ladder.json`, or `launchctl bootout gui/$(id -u)/com.matt.agent.checkin-watch`.
+
+## 21:45 Mistake: a stray text tonight
+
+When I switched the watcher on at 9:30 PM it ran right away, saw today's check-in had been missed and the crossword
+had gone out, and texted Matt the re-send. I had no "too late in the day" cutoff. Fixed: `watch.resend_until`
+(14:00) in `ladder.json`, with a test (`test_no_resend_late_in_day`). It won't send again today either way, since
+today's `resent_at` is set.

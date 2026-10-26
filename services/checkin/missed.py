@@ -38,7 +38,7 @@ def now():
 
 def cfg_watch(cfg=None):
     w = (cfg or ladder.load_config()).get("watch") or {}
-    return {"enabled": True, "crossword_at": "09:00", "resend_after_min": 5, "nudge_until": "17:00", **w}
+    return {"enabled": True, "crossword_at": "09:00", "resend_after_min": 5, "resend_until": "14:00", "nudge_until": "17:00", **w}
 
 
 def done(day, days, history):
@@ -84,6 +84,8 @@ def tick(t=None, send=None):
     h, m = map(int, w["crossword_at"].split(":"))
     due = t.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(minutes=w["resend_after_min"])
     if t < due or datetime.fromisoformat(day["sent_at"]) >= due:  # crossword not out yet, or ours already came after
+        return {"resent": False}
+    if t.strftime("%H:%M") >= w["resend_until"]:  # too late in the day for a morning check-in text
         return {"resent": False}
     msg = resend_message(streak(today, days))
     (send or photon_send)(msg)
