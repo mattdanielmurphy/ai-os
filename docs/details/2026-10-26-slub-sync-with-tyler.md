@@ -110,3 +110,27 @@ Telegram group for Matt and Tyler, slub-hq repo as the agents' shared memory, an
 - Not verified: whether Claude's Slack app works on Slack's free plan. Didn't matter for the recommendation.
 - The bridge (NOW.md → Telegram post) doesn't exist yet; it's a small build after the repo exists.
 - Nothing was created or sent. slub-hq and the Telegram group both wait on Matt's 👍 (outward actions involving Tyler).
+
+## 20:50 slub-hq created
+
+Matt 👍'd setting up slub-hq and a Slub Telegram group.
+
+---
+
+### What exists now
+
+- Private repo https://github.com/mattdanielmurphy/slub-hq (local: ~/projects/slub-hq) with README, NOW.md, IDEAS.md, DONE.md, and the agent rule in CLAUDE.md plus an identical AGENTS.md (so non-Claude agents like Codex read it too, keeping it model-neutral as Matt and Tyler wanted).
+
+---
+
+### What's blocked
+
+- Tyler isn't invited: I couldn't find his GitHub username anywhere on the Mac (not a collaborator on any of Matt's repos). Need it from Matt.
+- Telegram group: bots can't create groups or add people, so Matt has to make the "Slub" group with Tyler in the Telegram app. I tried to look up Matt's existing bot's username to add to the group, but reading the bot token was blocked as credential access, which is correct. Matt can add his bot himself if he wants agents in the chat.
+- Habit gate: no tap data was stored for today's practice page (doc 2026-10-26 missing), so nothing was scored. Done was recorded by the Mac side.
+
+---
+
+### Undo
+
+Archive or delete the repo on GitHub; move ~/projects/slub-hq to Trash.
