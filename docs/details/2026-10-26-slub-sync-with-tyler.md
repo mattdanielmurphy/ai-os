@@ -217,3 +217,12 @@ Matt asked "why after the call?" Real cause: I assumed he was too busy on the ca
 - Saved the coordinator's Slub puns list (plus bot-name ideas from the call) to slub-hq `NAMES.md`, linked from the README.
 - Found a problem I caused: installing the Telegram plugin at user scope turned it on in every Claude session on Matt's Mac. With no token it showed as a failing server; with a token, every session would start its own poller and steal the bot from the others (the plugin kills the previous poller on start). Fixed: disabled at user scope; `session.sh` enables it only for the bot session via `--settings`; `install.sh` does the same on Tyler's Mac.
 - Untested: whether `--channels` accepts a plugin enabled only through `--settings`. If not, fallback is `--plugin-dir` pointing at the plugin folder. Will check on first real start.
+
+## 22:28 Bot didn't answer: plugin wasn't loaded
+
+- Cause: my earlier fix (plugin disabled at user scope, enabled per session with `--settings`) didn't load the plugin at all, so the bot session had no Telegram connection. The "bun server.ts" process I saw was an unrelated server from 12:31.
+- Tried `--plugin-dir`: loads, but the channel becomes `telegram@inline`, which needs `--dangerously-load-development-channels`. Rejected.
+- Fix that works: uninstalled from user scope, installed at local scope inside `~/.slub-bot` (outside any git repo; a local install inside slub-hq would apply to every session in the repo). The bot session runs from there with `--add-dir ~/projects/slub-hq`. Log shows "Channel notifications registered" and the bot.pid poller file exists.
+- Accepted the folder-trust prompt in the background tmux session (with claude-control light clearance). Tyler will need to do this once; added to bot/README.
+- Group -5505467513 approved in access.json; also in bot/config.sh so install.sh approves it on Tyler's Mac.
+- Still untested: a real reply in the group.
