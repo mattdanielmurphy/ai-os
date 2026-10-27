@@ -24,3 +24,24 @@ Unit tests pass. Scratch server with fake player: trending ratings filled in (40
 
 ### Undo
 `git revert 813fc20` in ~/projects/glass-tv, then `glass restart`.
+
+---
+
+## 08:00 Black-and-white as a setting, more tweaks
+
+**Asked:** keep the black-and-white look as a setting, and put a lot more in the Tweaks menu.
+
+### Black-and-white switch
+Settings → Look → "Black-and-white trending posters" toggle, off by default. Saved in `state.json` (`settings.greyTrending`), so it survives restarts. Only the trending shelf goes grey, colour returns on hover, same as the old look.
+
+### New tweak knobs (18)
+Poster width (rows), library grid poster size, gap, corner rounding, app width, IMDb score on/off, score text size, hover outline, toast time, search delay, B&W strength, B&W fade, B&W fade-back time, hold-to-commit seconds, voice search length, "Pick up where you left off" count, trending titles per genre (up to 20), how long the page waits for IMDb scores. UI knobs apply on the next screen refresh. Rejected: putting the B&W on/off in tweaks too, since he called it a setting.
+
+### Note
+Hold-to-commit time is now tweakable (0.5–5 s); it's part of the anti-binge flow, so it's his call to lower it. Trending per genre above 12 needs the 12-hour trending cache to expire first.
+
+### Tested
+Settings toggle on/off in the scratch app (posters went grey / back to colour), a knob change showed up live, unit tests pass, live server restarted. Not checked inside the ⌃⌥⌘T panel itself.
+
+### Undo
+`git revert 973be76` in ~/projects/glass-tv, then `glass restart`.
