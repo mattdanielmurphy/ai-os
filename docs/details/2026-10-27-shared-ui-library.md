@@ -54,3 +54,13 @@ Matt: it's between plain and hairline; plain is good enough for now, and it can 
 ### Plain is now the default
 
 `build.ts` writes `dist/slub-ui.css` from `DEFAULT_LOOK = 'plain'`. Hosts load that one file, so switching later (for example to hairline) is a one-word change and a rebuild. All looks stay in `looks/`. The Tweaks thread was told to use `slub-ui.css`.
+
+## 17:58 Steppers on number-only fields
+
+Matt: with plain, the Offset field should have increment and decrement buttons.
+
+---
+
+### Steppers when there's no slider
+
+Knobs now shows Web Awesome's − / + steppers on a number field when the knob has no slider (no min and max). Knobs that have a slider keep a compact field without steppers, because the slider already does that job. The field is 150 px wide so the value isn't clipped. The look picker page is updated.
