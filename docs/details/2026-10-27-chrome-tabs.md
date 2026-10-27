@@ -63,3 +63,46 @@ Risk: Claude might close something you still wanted; the archive and a "suggest 
 Do Option 1 now (2 minutes, no build), try Option 2 for a week, and only build Option 3 if time-based closing feels too dumb. That respects the freeze.
 
 Undo: all settings are toggles; Tab Wrangler uninstalls cleanly and its list can be exported first.
+
+## 18:45 Built Tab Tidy (Haiku groups tabs, closes stale ones)
+
+**Asked:** periodically run a script that calls Haiku to group tabs by date and topic, and closes tabs that are idle 24h and not particularly unique; new-to-you sites stay longer, YouTube closes much more safely, resource-heavy tabs close faster. Tabs he puts in a group are his "save for later" and must never be closed. "Figure it out please" = go.
+
+### How it reads and groups your tabs
+
+Only an extension can see tab groups and when each tab was last used (`chrome.tabs`, `chrome.tabGroups`, `tab.lastAccessed`); AppleScript sees titles and URLs only, and Chrome blocks remote debugging on your main profile. So: a small unpacked extension (`services/tab-tidy/extension`) plus a native helper (`host/tab_tidy_host.py`) that Chrome starts on each run. The helper calls Haiku through the `claude` CLI (your subscription; there is no Anthropic API key on the Mac). It lives inside ai-os, not a new repo, because of the project freeze.
+
+---
+
+### The closing rules
+
+- Never touched: tabs in your own groups (any group not named "<day> · <topic>"), pinned tabs, tabs playing sound, the tab you're on.
+- Empty New Tab pages and unused duplicates: after 1 hour.
+- YouTube: after 6 hours, no Haiku check.
+- Everything else: after 24 hours, halved (12h) for heavy sites still loaded in memory (Figma, Google Docs, Maps, social feeds, AI chats), tripled (72h) for sites you've visited 3 times or fewer (from Chrome history).
+- Those 24h-type tabs then go past Haiku, which keeps anything specific and hard to re-find (a listing you're comparing, a thread, an order page, a half-done form). If Haiku fails, those tabs stay open; only the empty/duplicate/YouTube rules close.
+- "Resource heavy" uses a site list, because Chrome gives extensions no per-tab memory figure (that API is Dev-channel only). A tab Chrome has already put to sleep (discarded) doesn't count as heavy.
+
+---
+
+### The archive and dry run
+
+Every closed tab is written to `private/tab-tidy/closed.md` (title + link + reason, private, not in git) before the extension is told to close it. It ships in **dry run**: grouping happens for real, but closes are only listed in `private/tab-tidy/dry-run.md`. I'll read the first dry run, show you what it would close, then switch closing on.
+
+---
+
+### Grouping
+
+When 12+ loose tabs are open, it groups them per window by day last used (Today, Yesterday, weekday, Older) and Haiku topic; a topic needs 2+ tabs that day, the rest go to "Misc". Oldest groups at the top, newest at the bottom (new tabs land at the bottom anyway). Groups older than yesterday are collapsed. Runs every 2 hours, and when you click its toolbar icon.
+
+---
+
+### Tested
+
+Fake-tab tests cover every rule, the Haiku-down fallback, dry run and the Chrome message format (`host/test_tab_tidy.py`). Haiku on your 70 real tab titles took 27s and gave sensible topics (Streaming, Dev, School, AI, Shopping, Music) and kept things like a Kijiji listing and an Amazon product you were comparing. **Not yet tested inside Chrome**: that needs you to load the extension.
+
+---
+
+### Knobs and undo
+
+All numbers are in the ⌃⌥⌘T Tweaks panel under Tab Tidy (`~/.hammerspoon/tweaks/tab_tidy.json`). Undo: remove the extension in chrome://extensions; your groups stay as they are and can be ungrouped by right-click. Closed tabs: reopen from closed.md or Chrome History.
