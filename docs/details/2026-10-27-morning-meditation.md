@@ -132,3 +132,43 @@ Music raised from -10 to -2 dB under the voice (`MUSIC_DB`), so voice peaks now 
 ### Not changed
 
 Attempt #0 stays as it was (the joke). Untested by ear.
+
+## 12:50 Voice louder, plus a plan for drone, chimes and levels
+
+Matt listened to meditation #1 (Marian): much better, but the voice is a touch too quiet against the music. He also wants a never-wavering drone, guiding chimes the voice introduces, difficulty levels, and a clear line between breathing exercises and mindfulness.
+
+---
+
+### Voice is louder now
+
+The music bed sits 2.5 dB lower under the voice (`MUSIC_DB` in `services/checkin/meditation/build.py` went from -2 to -4.5). The voice itself and the final loudness (-21 LUFS) are unchanged, so the whole track doesn't get louder, only the balance moves toward the voice. I picked 2.5 dB because "a touch" usually means 2-3 dB, and the last two moves were 3 dB each way. Undo: set `MUSIC_DB` back to -2 and rebuild.
+
+---
+
+### Drone that never wavers
+
+Add a third layer under the piano bed: one sustained drone on the loop's root (and maybe its fifth), rendered from a real synth Audio Unit like the rest of claude-ambient. It is never ducked, never faded except at the very start and end, and sits at a fixed level. Only the piano layer dips under the voice. The artistic piano bed stays as it is on top.
+
+---
+
+### Chime the voice introduces
+
+Early in the script the voice says something like "when you hear this sound, take it as a reminder to come back to the breath", then plays the chime once. After that a `[chime]` tag in the script (or an automatic interval) plays it. The chime would be a soft bell or bowl tone from a real instrument (Arturia Augmented Mallets is already installed), not a generated sound.
+
+---
+
+### Difficulty levels
+
+One script, many levels. Each level sets: total length, how long the silences are (a multiplier on every `[pause]`), how much instruction (lines tagged with the highest level they appear in get dropped above it), and how often the chime plays. Example: level 1 = 5 min, chime every 30 s, lots of guidance; level 5 = 20 min, chime every 3 min, mostly silence. The build makes one track per level and the player page gets a level picker.
+
+---
+
+### Breathing is not mindfulness
+
+Mindfulness scripts get at most two or three settling breaths at the start, then the voice hands the breath back ("let it do whatever it does on its own") and never directs it again. Attempt #1 already does this. Breath-pacing (sounds that guide in and out) becomes a separate kind of track, a breathing or relaxation exercise, never mixed into a mindfulness session.
+
+---
+
+### Untested and open
+
+The voice change is rebuilt and on the page, but nobody has listened to it yet. Nothing in the plan above is built.
