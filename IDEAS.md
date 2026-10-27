@@ -179,3 +179,8 @@ Status: idea; build on Matt 👍.
 ## Live call transcript with Claude listening (Matt, 2026-10-23) — IDEA / in progress
 - Calls with Tyler: Audio Hijack splits his mic (channel 0 = Matt) and FaceTime output (channel 1 = Tyler) → Deepgram streaming (multichannel, own end-of-speech timing) → an always-current transcript file any model can read; "what do you think, Claude?" sends it. Voice (Deepgram Aura) later.
 - A setup task was sent from that call; check its thread before building.
+
+## Tweaks panel: hover a knob to highlight its UI element (Matt, 2026-10-27)
+- Hovering a control in the ⌃⌥⌘T Tweaks panel outlines the matching UI element in the app, when there is one.
+- Feasibility: doable. Knobs (hud-kit `Tweaks.swift`, `modules/tweaks.lua`) have no link to a UI element yet. Add an optional `target` id per knob, and have the panel send "hover <app> <target>" to the app (a small IPC file or distributed notification). Each app then draws a brief outline on that element; the shared Knobs component would own the outline helper so apps just register targets. Knobs with no visible element (timings, curves) get no highlight.
+- Status: idea; parked in Linear. Build nothing until he 👍s.
