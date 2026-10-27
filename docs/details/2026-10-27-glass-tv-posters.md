@@ -129,3 +129,11 @@ Not seen in the Dock yet (needs a relaunch). It renders correctly from the insta
 **Switch:** `echo f-case-tv > ~/projects/glass-tv/app/icon/CHOSEN && ~/projects/glass-tv/build.sh`
 **Untested:** not seen in the Dock yet. Small sizes (16-32 px) will lose the label text.
 **Memory:** updated the icon-feedback memory: no diffusion icons, no fussy blur SVG.
+
+---
+
+## 19:40 Fire hose take
+
+**Matt:** the fire hose is a good analogy for the endless stream of content the app protects you from.
+**Done:** a sixth take, `k-case-hose`: a coiled fire hose behind the glass in the red BREAK GLASS cabinet, its steel nozzle shaped like a play arrow, a small crack in the top corner. Installed it as the icon, since it carries his metaphor directly. Wrote the metaphor into `IDEAS.md` (could also go into onboarding copy, the break-glass screen and the README tagline; nothing built there).
+**Switch back:** `echo h-case-cracked > ~/projects/glass-tv/app/icon/CHOSEN && ~/projects/glass-tv/build.sh`
