@@ -1,0 +1,100 @@
+# voice: marian
+# speed: 0.84
+# music: ~/projects/claude-ambient/out/loop-cicada-22m06s.flac
+# One line or paragraph per spoken segment. [pause N] = N seconds of music only.
+
+[pause 10]
+This is a recording for deep relaxation. Play it only when you can safely rest, never while driving or doing anything that needs your attention. You stay in control the whole time. If you need to respond to anything, you'll simply open your eyes, fully alert.
+[pause 5]
+Get comfortable, lying down or reclining. Let your arms rest by your sides, or in your lap.
+[pause 8]
+And when you're ready, let your eyes close.
+[pause 8]
+Take a slow, full breath in... hold it for a moment... and let it all the way out.
+[pause 8]
+Again. Breathe in deeply... hold... and as you breathe out, let your body become a little heavier.
+[pause 8]
+One more. In... hold... and out. And just let your breathing settle into its own easy rhythm.
+[pause 12]
+There's nothing you need to do now. You don't have to try to relax. Relaxation is something that happens on its own when you stop holding things up.
+[pause 10]
+Let's begin with your face. Notice your forehead... and let it smooth out. Let the small muscles around your eyes soften. Your eyelids are heavy and comfortable.
+[pause 10]
+Let your jaw unclench. Your teeth can part slightly. Your tongue rests easy in your mouth.
+[pause 10]
+That softness moves down into your neck... and your shoulders. Let your shoulders drop, just a little further than feels normal.
+[pause 12]
+Feel the relaxation flowing down your arms... through your elbows... your forearms... into your hands. Your hands feel warm and heavy. Each finger loose and still.
+[pause 14]
+Now notice your chest rising and falling. Each breath out lets go of a little more tension. Your upper back... your lower back... sinking into whatever is holding you.
+[pause 14]
+Your belly is soft. Your hips feel heavy. That heaviness flows down through your thighs... your knees... your calves... all the way into your feet.
+[pause 14]
+Your whole body is heavy, warm and comfortable. Supported completely. Nothing to hold up.
+[pause 16]
+Now, in a moment, I'll count down from ten to one. With each number, you'll drift twice as deep into relaxation. You don't need to make it happen. Just let each number carry you down.
+[pause 6]
+Ten. Deeper and deeper.
+[pause 7]
+Nine. Every breath taking you further down.
+[pause 7]
+Eight. Calm. Heavy. Easy.
+[pause 7]
+Seven. Letting go completely.
+[pause 7]
+Six. Drifting down, like a leaf settling slowly through still water.
+[pause 8]
+Five. Halfway down, and twice as relaxed.
+[pause 8]
+Four. Deeper still.
+[pause 8]
+Three. So peaceful.
+[pause 8]
+Two. Almost all the way.
+[pause 9]
+One. Deeply, comfortably relaxed.
+[pause 18]
+Imagine you're standing at the top of a wide, gentle staircase. Ten soft steps leading down to a quiet place, somewhere you feel completely safe. It can be anywhere. Real or imagined.
+[pause 8]
+Take the first step down... and the next. Each step makes you feel calmer and more at ease.
+[pause 12]
+Three... four... five. Your feet know the way.
+[pause 12]
+Six... seven... eight. Nearly there.
+[pause 10]
+Nine... and ten. You step into your quiet place.
+[pause 12]
+Look around. Notice the light here. Is it warm sunlight, or something softer? Notice the temperature of the air on your skin.
+[pause 18]
+Notice any sounds here. Maybe water. Maybe wind. Maybe just stillness.
+[pause 18]
+Find a spot to rest in this place. Let it hold you completely. There's nowhere else you need to be.
+[pause 30]
+While you rest here, your mind can take in a few simple ideas, easily and without effort.
+[pause 6]
+Your body knows how to rest. It's been doing it your whole life.
+[pause 10]
+Each time you relax like this, it becomes easier to find this calm again.
+[pause 10]
+You can return to this feeling whenever you choose, with one slow breath out.
+[pause 10]
+Tension is temporary. Calm is always underneath it, waiting.
+[pause 40]
+Just rest now. Let the music carry you. I'll be quiet for a while.
+[pause 120]
+You're doing beautifully. Still deeply relaxed. Still completely safe.
+[pause 90]
+In a little while, I'll guide you back. For now, keep resting. Enjoy this.
+[pause 60]
+Now it's time to come back. You'll bring this calm with you, while your mind becomes clear and alert. I'll count up from one to five, and on five, you'll open your eyes feeling refreshed.
+[pause 6]
+One. Becoming aware of your body again. The weight of it. The surface beneath you.
+[pause 7]
+Two. Noticing the sounds of the room around you. Your breath getting a little deeper.
+[pause 7]
+Three. Energy returning to your hands and feet. Maybe wiggle your fingers and toes.
+[pause 7]
+Four. Feeling clear, rested, and calm. Take a deeper breath, and stretch if you like.
+[pause 6]
+Five. Eyes open. Wide awake, and feeling good.
+[pause 15]

@@ -119,6 +119,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
       <button class="btn primary" id="bstart" type="button">Start breathing</button>
       <button class="btn" id="bnext" type="button" hidden>Skip</button>
     </div>
+    <a class="btn" id="bmed" href="https://matt-pages.vercel.app/3a22db06-7d4d-4779-adde-1e377c22caa3/#morning" target="_blank" rel="noopener">Or a 10-minute guided meditation</a>
   </section>
 
   <section class="step" id="s-grateful" hidden>
@@ -256,6 +257,8 @@ $("bstart").onclick = () => {
   cycle(0);
 };
 $("bnext").onclick = () => go("grateful");
+/* The guided meditation opens in the browser (an Artifact page can't host the audio); remember that he went. */
+$("bmed").onclick = () => { state.meditation = true; save(); };
 /* Newly unlocked steps from the habit ladder */
 $("extras").replaceChildren(...EXTRAS.map(x => {
   const box = document.createElement("div"); box.className = "extra";
@@ -389,6 +392,7 @@ async function renderDone() {
   const right = state.reviews.filter(r => r.correct).length;
   const lines = PRACTICE ? [["Questions", `${right} of ${state.reviews.length} correct`]] : [
     ["Breaths", `${state.breaths} of ${BREATHS}`],
+    ...(state.meditation ? [["Meditation", "opened"]] : []),
     ["Grateful for", state.gratitude || "skipped"],
     ["Cards", state.reviews.length ? `${right} of ${state.reviews.length} correct` : "none today"],
   ];

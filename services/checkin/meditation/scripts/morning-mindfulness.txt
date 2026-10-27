@@ -1,0 +1,50 @@
+# voice: douglas
+# speed: 0.88
+# music: ~/projects/claude-ambient/out/loop-breath-20m.flac
+# One line or paragraph per spoken segment. [pause N] = N seconds of music only.
+
+[pause 8]
+Good morning. For the next ten minutes, there's nothing to fix and nothing to get right. We're just going to pay attention, on purpose, to what's already happening.
+
+Find a way to sit or lie that you can hold without effort. Let your eyes close, or rest them softly on a spot in front of you.
+[pause 6]
+Start by taking one deep breath in... and letting it go slowly.
+[pause 7]
+And one more. In... and a long, slow breath out.
+[pause 8]
+Now let the breath go back to doing whatever it does on its own. You don't need to control it.
+[pause 10]
+Notice the weight of your body. The pressure where you're touching the chair, or the bed, or the floor. Gravity is holding you there. You don't have to.
+[pause 14]
+Bring your attention to the breath, wherever you feel it most clearly. Maybe the cool air at the nostrils. Maybe the chest, or the belly rising and falling.
+[pause 6]
+Just feel the next breath come in... and leave.
+[pause 18]
+Here's something worth knowing. Your mind is going to wander. Probably in the next few seconds. That's not a failure. It's what brains do. Research on mind wandering suggests we spend nearly half our waking hours thinking about something other than what we're doing.
+[pause 4]
+So the practice isn't keeping the mind still. The practice is the moment you notice it moved. That moment of noticing is the rep. Every time it happens, you've done the exercise.
+[pause 20]
+If you've drifted into planning the day, that's fine. Notice it. You might even say, quietly, "planning." Then come back to the next breath.
+[pause 24]
+Now widen the attention a little. Notice the sounds around you. The music. Anything outside. Let sounds arrive and fade on their own. You don't need to name them or follow them.
+[pause 20]
+Notice that hearing happens by itself. You don't have to do anything to hear. The sounds just show up in awareness.
+[pause 18]
+Thoughts work the same way. Watch for the next one. Where does it come from? You didn't choose it. It just appears, like a sound.
+[pause 6]
+See if you can notice a thought as a thought. An event in the mind, rather than a voice you have to obey.
+[pause 26]
+If you got lost in thought just now, good. You noticed. That's the whole skill. Come back to the breath.
+[pause 24]
+Now check in with the body. Is there tightness in the jaw? The shoulders? The space between your eyebrows? You don't need to fix it. Just feel it, and see whether it softens on its own once you've noticed it.
+[pause 26]
+Rest here for a while. Breath, body, sounds, thoughts. Whatever is most vivid, let your attention rest there. Nothing to accomplish.
+[pause 50]
+Notice whatever you're feeling about the day ahead. Maybe some energy. Maybe some reluctance. Maybe nothing much. Whatever it is, it's allowed to be here. Feelings are weather. They pass through.
+[pause 30]
+In a moment we'll finish. Before we do, pick one small thing you'd like to do with care today. Not a big plan. Just one thing.
+[pause 18]
+Now take a slightly deeper breath. Feel your hands and feet. Maybe stretch a little.
+[pause 8]
+When you're ready, open your eyes and take this same quality of attention into the next few minutes. You can come back to it any time, with a single breath.
+[pause 12]
