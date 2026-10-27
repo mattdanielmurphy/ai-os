@@ -268,3 +268,30 @@ Matt: two → presses in a row should raise the skim level, and the UI should ap
 - Both → targets are preloaded, so neither should buffer.
 
 Tested headless on a copy of this Readthrough: → → (slow) stayed on Everything moving one sentence each, a quick pair moved to Skip details, a second quick pair to Hurry, Esc back to Everything, and the panel closed after about 4 seconds.
+
+## 12:25 Times read as "5", and a tool for TTS-proof text
+
+---
+
+### What was wrong
+
+Speechify swallowed "10:25" (it spent a quarter of a second on it and Whisper heard nothing), so "10:25 Buffering spinner" came out as roughly "5 buffering spinner". And "re-name" does make a little pause: that clip was 0.92 s against 0.75 s for the respelling "renaim", which Whisper still hears as "Rename".
+
+---
+
+### Fixed now (live)
+
+- A heading that starts with a time (the details-file style "10:25 Topic") is read without the time; the highlight just passes over it.
+- Other times are said as words: 10:25 as "10 25", 9:05 as "9 oh 5", 3:00 as "3 o'clock".
+- "0.05 s" and "350 ms" are said as "seconds" and "milliseconds".
+- Rename, renamed and renames are respelled "renaim", "renaimed", "renaims" (no hyphen, no pause).
+
+Checked by transcribing each new clip with Whisper: "Buffering Spinner", "Rename.", "It seeked 0.05 seconds before the word … waited 350 milliseconds." Only paragraphs with these words get new audio.
+
+---
+
+### Is there a ready-made tool?
+
+Partly. Text normalizers (NVIDIA NeMo's text normalization, the one built into most TTS services) handle numbers, times, units and dates, which is what my rules above do for the cases we hit. Nothing off the shelf reliably catches words that are only ambiguous out of context, like "Rename" alone as a heading. Exact phonetic spelling would fix those, but Speechify only accepts it on its newer Simba 3.5 model (a `pronunciations` setting); our model, 3.2, takes only respellings.
+
+Proposed: add a step to the background Claude pass that already rates sentences. It would list the words in each Readthrough a voice might misread (heteronyms, acronyms, jargon, one-word headings) with hyphen-free respellings, and the voice server would use them for that page only. No work for agents; the global list stays for repeat offenders. Waiting for Matt's 👍.
