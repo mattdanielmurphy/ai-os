@@ -42,3 +42,13 @@
 **Untested:** Tyler hasn't pasted it yet. Scripts still have Matt's hard-coded paths.
 
 **Undo:** delete `docs/shared/coordinator-instructions.md` and the page in `~/projects/pages`.
+
+---
+
+## 17:40 Model choice rule added back
+
+**Asked:** the coordinator confirmed the model rule is real (project memory, Matt, Oct 25) and is the one Matt called most critical. Put it near the top and save it to `.rules`.
+
+**Did:** added a "Model choice (most important)" section right after "How this project works" on the page, tagged **[needs: claude_pace.py + CodexBar]**, and listed both in the script list. Added "Model Choice by Usage Pace" to `.rules/core_safety.md` and ran `build_rules.py`, so it's no longer memory-only. Paste block is now 12,081 characters.
+
+**My miss:** I searched `.rules`, docs and Mac memory but not the coordinator's cloud project memory, so I wrongly called the rule unsourced.

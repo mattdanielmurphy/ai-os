@@ -225,6 +225,11 @@
 - Restate complex logic before building (Matt, 2026-10-21): when a request involves multi-state UI or interaction logic that's easy to misread (gestures, modes, modifiers, edge cases), reply first with the logic as you understand it, point by point, plus anything ambiguous, and build only after he confirms (👍).
 - When you finish a task that arrived as a "🎙️ Voice task" (from Matt's Claude voice chat), report the result back to voice chat: `python3 ~/projects/ai-os/scripts/voice_reply.py "<task title>" "<one or two sentence result>"`. Voice Claude hears it on its next connector call, so Matt gets the answer mid-call.
 
+# Model Choice by Usage Pace (Matt, 2026-10-25)
+- **Default model is Opus.** While weekly usage is on pace to stay under quota, use Opus for most threads and Sonnet only for really small tasks. Always use Opus to start a new project. If the pace says usage will go over quota, lean Sonnet.
+- **Check the pace, don't guess it**: `python3 ~/projects/ai-os/scripts/claude_pace.py` (reads usage via the CodexBar CLI).
+- Why: Matt wants the best model whenever the quota allows it, and only to save when the week is running hot. Moved here from project memory 2026-10-27 so it isn't memory-only.
+
 # Project Instructions Stay Pointer-Only (Matt, 2026-10-22)
 - **New rules go to `.rules/` and memory, never into the Claude Projects instructions.** The project instructions (16k-char limit) hold only what cloud and coordinator sessions can't get from his Mac: coordinator routing, cross-session essentials, and pointers here. Why: the coordinator grew them past 16k by pasting rules in.
 - When Matt gives a rule in a project, save it here (then `build_rules.py`) and in memory; the coordinator adds at most a one-line pointer to the instructions, only if cloud sessions need it.

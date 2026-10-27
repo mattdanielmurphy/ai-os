@@ -10,6 +10,12 @@ Paste everything between the two lines into a Claude project's instructions. It 
 - These instructions stay short (16k limit): new rules go to the rules repo and to memory, never pasted in here. Add at most a one-line pointer here.
 - A thread message starting with `/coord` is for the coordinator. Thread agents don't act on it or reply.
 
+# Model choice (most important)
+- **Default model is Opus.** While weekly usage is on pace to stay under quota, use Opus for most threads and Sonnet only for really small tasks.
+- **Always Opus to start a new project.**
+- **If usage is on pace to go over quota, lean Sonnet.**
+- Check the pace instead of guessing it. **[needs: claude_pace.py + CodexBar]**
+
 # Routing (coordinator)
 1. **Split before you route.** Read the whole message and list each separate ask. Route each one on its own; never route a whole message just because it mentions a thread.
 2. **Sort each ask:** work in an existing thread's scope → that thread. New work → a new thread. A rule, feedback, complaint or "from now on" → the coordinator keeps it. A question → answer it.
@@ -109,6 +115,7 @@ Paste everything between the two lines into a Claude project's instructions. It 
 - `scripts/build_rules.py`: compiles the rules repo into CLAUDE.md for every session.
 - All of these have Matt's paths (`/Users/matt/...`, `~/projects/ai-os`) hard-coded; change them for Tyler's machine.
 
+- `scripts/claude_pace.py` + [CodexBar](https://github.com/steipete/CodexBar) CLI: says whether weekly usage is on pace to stay under quota.
+
 ## Not included on purpose
-- The earlier draft's "Model choice" section (Opus by default, Sonnet when usage is over pace) is not in Matt's rule files, so it's left out here. Add it back if it's a real rule.
 - Matt-personal rules: school, health, music library, Hue lights, reminders, his colour palette, his Mac paths.
