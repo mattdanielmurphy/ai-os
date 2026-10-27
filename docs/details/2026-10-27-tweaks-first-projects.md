@@ -40,3 +40,15 @@ Hard part: turning a literal into a knob means editing the code to read the twea
 Rejected: "everything is a tweak, no pruning" (panel becomes a wall of 200 sliders; it fights the likely-set design).
 
 **Untested:** all of this is design; nothing built. **Undo:** nothing to undo.
+
+## 08:05 Freeze means no new projects
+
+**Asked:** Matt clarified the freeze: no new projects and lean toward simplifying until he and Tyler start merging their Claude setups. Tweaks work is fine, "a no-brainer good thing to have working well". He also asked how to say "Tyler and I's merge".
+
+**Did:** saved the rule as core_safety 1p (rebuilt rules) and in memory. Grammar: "the merge of Tyler's and my setups", or "our merge". Didn't start the build: he hadn't given the 👍 on the offer yet, and it's a few hours of work, so one 👍 is cheap insurance.
+
+---
+
+### Scanner build plan
+
+The recommended option: a script turns named constants into tweaks, then Sonnet prunes and organises. It lives inside the existing Tweaks module, so it adds no new project. It starts on the Hammerspoon modules.
