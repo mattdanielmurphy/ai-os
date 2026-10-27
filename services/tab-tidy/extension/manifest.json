@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Tidy",
+  "version": "0.1.0",
+  "description": "Groups your tabs by day and topic, and closes stale ones after saving them to an archive.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4/bG/il+pRiNLioXl+MtCfepJKxZqaZJ7Mhs3/zCZsGw+/2ZLsmegYV7MGnEH6NifHIK3XpIhXrhfHwu5MkEGKH3o4oCPKrdkjdxLtVcu2vYUxmne40ISoSD9H/4Yz2WsqpUVReZ5eKYGSTGUNVWB+btRBaVc43B0kEPV33ikFUyhaK9HK46FBgt8opL9lSVU8CAmGNTgHGD5/bYL+hbTYYHMZUYUNEY8foaZ8knBhXl32qDi68gKrMFb1F03j0T6WyEQhFoW7zGtm7SIcIRojoILJkadW4CFdVXcriajhVP4UU0AJt5f+T2IaH4bGt7F575Xb9tFTh5lN9YJx2OtwIDAQAB",
+  "permissions": ["tabs", "tabGroups", "history", "alarms", "nativeMessaging", "storage"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Tab Tidy: click to tidy now" }
+}
