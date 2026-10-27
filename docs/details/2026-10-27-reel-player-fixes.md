@@ -347,3 +347,14 @@ From the Vercel storage thread: Hobby Blob allows 2,000 uploads a month and lock
 - Moving the cache to Matt's VPS is waiting for his approval in the storage thread; not done here.
 
 Tested live: a new 175% recording made in 1.3 s, served from cache on the second request, and the player read through two paragraphs at 200% from the new single-file recordings.
+
+## 14:00 Making inline code sound different
+
+Matt: the voice blazes through `inline code` with nothing to set it apart; add commas around it, ideally make it sound different.
+
+- **What Speechify allows on our model (simba-3.2):** pauses (`break`), and `prosody` pitch, volume and rate. Emphasis and emotion styles are accepted but ignored on this model, and a second voice can't be switched in mid-paragraph within one recording.
+- **What I did:** the voice server now gets inline code marked out of the page. Each code span gets a 180 ms pause before and after (like commas, but without changing the words) and is spoken 12% lower in pitch and 2 dB softer, so it sounds like an aside or a quote. The page and highlight are unchanged.
+- Bare punctuation written as code is still named (`,` = "comma"), and a sentence's own full stop right after code is no longer mistaken for one.
+- Checked live: the "Rename" section's first paragraph renders fine, and Whisper hears the pauses (it puts full stops after "pages readthrough" and "pages reel"). Pitch and volume I can't judge without ears.
+- **Tuning:** the three knobs are `CODE_PAUSE`, `CODE_PITCH`, `CODE_VOLUME` at the top of `pages/tts.ts`. Changing them re-records only paragraphs that contain code.
+- Only paragraphs with inline code get re-recorded (one upload each).
