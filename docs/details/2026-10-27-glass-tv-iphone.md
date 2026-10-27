@@ -73,3 +73,19 @@ Tailscale publishes libtailscale (its tsnet library with C bindings), which lets
 ### Rejected
 
 - Public tunnel (Cloudflare Tunnel etc.): exposes the Mac's files to the internet; needs real login security. Not worth it for one person.
+
+## 17:53 Tailscale inside the Mac app too
+
+Matt asked about building Tailscale into the Mac app. Answer from knowledge, nothing tried.
+
+---
+
+### How it would work
+
+A small Go helper using Tailscale's tsnet library ships inside Glass TV.app. It joins the tailnet as its own device (say "glass-tv") and forwards to the Bun server on 127.0.0.1, so the server itself stays private. About 1 day. With the iPad side also built in, neither device needs the Tailscale app; only a Tailscale account (sign in once per device inside Glass TV).
+
+---
+
+### Is it worth it for Matt?
+
+Not for him alone: his Mac already runs Tailscale, so the server only needs to listen on the tailnet address (minutes). It matters if Glass TV ships to other people, who then wouldn't need to install anything besides Glass TV.
