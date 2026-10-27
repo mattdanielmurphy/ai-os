@@ -97,3 +97,6 @@ Voice Claude can't be pushed to; it only acts when Matt speaks. So replies ride 
 - Every connector tool result carries any new replies, and the connector's instructions tell voice Claude
   to call `check_updates` (instant) at the start of each reply after it sent a task, so Matt hears the
   result on his next sentence. `wait_for_update` (≤50s) is for "I'll wait for it".
+
+## Links in voice mode (Matt, 2026-10-26)
+- Never read URLs out character by character. Give links as named markdown links (`[LaunchAPP](url)`), not bare URLs or code blocks (code blocks aren't tappable). Matt asked for this to be a permanent setting for live voice mode.
