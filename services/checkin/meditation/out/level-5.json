@@ -1,0 +1,59 @@
+{
+ "title": "level-5",
+ "voice": "marian",
+ "music": "loop-breath-20m.flac",
+ "seconds": 420,
+ "bells": [
+  74.0,
+  134.0,
+  194.0,
+  254.0,
+  374.0
+ ],
+ "lines": [
+  {
+   "t": 3.0,
+   "text": "For the next seven minutes, there's nothing to do but notice. Let your eyes close."
+  },
+  {
+   "t": 15.1,
+   "text": "Take one slow, deep breath in... and let it out slowly."
+  },
+  {
+   "t": 29.14,
+   "text": "One more. In... and a long breath out."
+  },
+  {
+   "t": 40.55,
+   "text": "Now let the breath go back to doing whatever it does on its own. You don't need to control it."
+  },
+  {
+   "t": 54.79,
+   "text": "Rest your attention on the breath, wherever you feel it most."
+  },
+  {
+   "t": 63.01,
+   "text": "When you hear this sound, take it as a reminder. If your mind has wandered, gently come back to the breath."
+  },
+  {
+   "t": 151.41,
+   "text": "Your mind will wander. That's fine. Noticing that it wandered is the whole practice."
+  },
+  {
+   "t": 231.13,
+   "text": "If you're lost in a thought, no problem. Let it go, and feel the next breath."
+  },
+  {
+   "t": 310.54,
+   "text": "There's nothing to get right. Just this breath, and then the next one."
+  },
+  {
+   "t": 387.3,
+   "text": "Let the practice go now. Notice how you feel."
+  },
+  {
+   "t": 397.18,
+   "text": "Feel your hands and feet. When you're ready, open your eyes."
+  }
+ ]
+}

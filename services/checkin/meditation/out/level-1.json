@@ -1,0 +1,24 @@
+{
+ "title": "level-1",
+ "voice": "marian",
+ "music": "loop-breath-20m.flac",
+ "seconds": 60,
+ "bells": [
+  18.1,
+  33.1
+ ],
+ "lines": [
+  {
+   "t": 3.0,
+   "text": "Just one minute. Close your eyes, and feel one breath."
+  },
+  {
+   "t": 12.78,
+   "text": "When you hear this sound, come back to the breath."
+  },
+  {
+   "t": 49.28,
+   "text": "And open your eyes."
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "title": "level-2",
+ "voice": "marian",
+ "music": "loop-breath-20m.flac",
+ "seconds": 120,
+ "bells": [
+  49.2,
+  69.2,
+  89.2
+ ],
+ "lines": [
+  {
+   "t": 3.0,
+   "text": "For the next two minutes, there's nothing to do but notice. Let your eyes close."
+  },
+  {
+   "t": 14.83,
+   "text": "Take one slow breath in... and let it go. Then let the breath do whatever it does on its own."
+  },
+  {
+   "t": 30.02,
+   "text": "Rest your attention on the breath, wherever you feel it most."
+  },
+  {
+   "t": 38.23,
+   "text": "When you hear this sound, take it as a reminder. If your mind has wandered, gently come back to the breath."
+  },
+  {
+   "t": 101.47,
+   "text": "Let the practice go now. Notice how you feel. When you're ready, open your eyes."
+  }
+ ]
+}

@@ -12,3 +12,6 @@ https://matt-pages.vercel.app/3a22db06-7d4d-4779-adde-1e377c22caa3/ (`~/projects
 - To update the page: rebuild, copy `out/*.m4a` into `~/projects/pages/site/still/`, then `pages deploy`.
 - The check-in page's Breathe step links the morning track ("Or a 10-minute guided meditation"); a tap saves
   `meditation: true` in that day's page doc.
+- Levels (the page's difficulty slider): `levels.py` writes `scripts/level-1..8.txt` (1 to 20 min); build each with
+  `build.py`. A steady drone and a bell come from claude-ambient (`# drone:`, `# bell:`); `[fill]` stretches the
+  silences to hit `# minutes:`, and `# bell_every:` rings the bell on a steady grid during them.

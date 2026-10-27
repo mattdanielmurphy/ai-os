@@ -172,3 +172,50 @@ Mindfulness scripts get at most two or three settling breaths at the start, then
 ### Untested and open
 
 The voice change is rebuilt and on the page, but nobody has listened to it yet. Nothing in the plan above is built.
+
+## 13:45 Difficulty slider, drone and bell are live
+
+Matt asked for a difficulty slider on the page that starts at one minute, and said to build everything now.
+
+---
+
+### The slider has eight levels
+
+The Still page has a new card at the top, "Sit with the bell", with a slider from level 1 to 8. Each level is its own pre-built track; moving the slider swaps the track and the line under it says how often the bell rings and how many reminders there are. The page remembers your last level on that device.
+
+| Level | Length | Bell every | Reminders during the sit |
+|---|---|---|---|
+| 1 | 1 min | 15 s | none |
+| 2 | 2 min | 20 s | none |
+| 3 | 3 min | 30 s | 1 |
+| 4 | 5 min | 45 s | 3 |
+| 5 | 7 min | 1 min | 3 |
+| 6 | 10 min | 90 s | 3 |
+| 7 | 15 min | 2 min | 2 |
+| 8 | 20 min | 3 min | 2 |
+
+Short levels can't fit many bells around the talking, so level 2 rings 3 times and level 3 rings 3 times. Levels 1 to 3 use one settling breath; 5 minutes and up use two, then hand the breath back.
+
+---
+
+### Drone that never wavers
+
+A KORG Alexandria organ holds D, A and D under the piano for 21 minutes, softened with a low-pass. Its level moves by about 1 dB over the whole track, it never dips under the voice, and it sits about 10 dB below the piano. I chose the organ because the pad and analog synths I tried swelled or faded over time (measured, not listened to). If it's too loud or quiet, the knob is `DRONE_DB` in `build.py`.
+
+---
+
+### The bell
+
+Arturia Augmented Mallets, preset "Gentle Bells", one high A that fades in about 5 seconds. The voice introduces it ("When you hear this sound, take it as a reminder. If your mind has wandered, gently come back to the breath."), rings it once, and after that it rings on a steady grid during the silences, never over the voice. Volume knob: `BELL_DB`.
+
+---
+
+### How it's built
+
+`levels.py` writes one script per level. `build.py` learned `[bell]`, `[fill]` (silences that stretch so the track hits its exact length), `# drone:`, `# bell_every:` and `# fade_out:`. Rebuild everything with `python3 levels.py` then `build.py scripts/level-N.txt`.
+
+---
+
+### Not listened to yet
+
+I can't hear the audio, so the drone and bell levels are set by measurement only. The drone could be too present, and the bell might feel too loud or too quiet against the piano. Tell me which and I'll move one knob.
