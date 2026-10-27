@@ -256,3 +256,15 @@ Tested headless, locally and live: at 100% it played the plain recording; pressi
 ## 12:05 Why "rename" sounded like "re-na-may"
 
 Speechify's voice guesses pronunciation from spelling and context, and "rename" alone (as in the heading "Rename") looks like a French-style word such as résumé, so it said "re-na-may". Transcribing the old live clip with Whisper heard "RENEMY". Fix: the voice server now has a small pronunciation list that tells Speechify to say "re-name" (also renamed, renames) while the page still shows the real word. The fixed clip transcribes as "Rename." Only paragraphs containing those words get new audio. When you hear another word said wrong, tell me and I'll add it to the list (`PRONOUNCE` in pages/tts.ts).
+
+## 12:15 Skim levels on a double →
+
+Matt: two → presses in a row should raise the skim level, and the UI should appear right away on any → so it's clear.
+
+- **→ once** goes to the next sentence (skipping faded ones if a skim level is on).
+- **→ twice within 0.6 seconds** raises the level one step (Everything → Skip details → Hurry → Key points) and moves on. A third quick press counts as a plain → again, so four quick presses raise it twice.
+- **Any →** opens the Pace panel in the top left, with the four levels, the current one marked, and the keys. It closes by itself after 3.5 seconds unless the pointer is on it.
+- **Lowering it:** Esc goes back to Everything, or tap any level in the panel. ← stays "previous sentence" (and the quick double ← still goes back two), so going back never fights with skimming.
+- Both → targets are preloaded, so neither should buffer.
+
+Tested headless on a copy of this Readthrough: → → (slow) stayed on Everything moving one sentence each, a quick pair moved to Skip details, a second quick pair to Hurry, Esc back to Everything, and the panel closed after about 4 seconds.
