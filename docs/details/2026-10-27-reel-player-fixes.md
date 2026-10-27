@@ -358,3 +358,11 @@ Matt: the voice blazes through `inline code` with nothing to set it apart; add c
 - Checked live: the "Rename" section's first paragraph renders fine, and Whisper hears the pauses (it puts full stops after "pages readthrough" and "pages reel"). Pitch and volume I can't judge without ears.
 - **Tuning:** the three knobs are `CODE_PAUSE`, `CODE_PITCH`, `CODE_VOLUME` at the top of `pages/tts.ts`. Changing them re-records only paragraphs that contain code.
 - Only paragraphs with inline code get re-recorded (one upload each).
+
+## 18:15 Inline code: no pause before, every character sounded
+
+- **Pause:** removed before inline code (the lower voice already marks the start); the 180 ms pause after it stays.
+- **Every character sounded:** the translator (the background Claude pass) now gets the page's inline code and paths as their own list and must give each one that could be misread a spoken form: symbols named (slash, dot, underscore, dash, tilde, at) and hidden initialisms spelled letter by letter, lowercase ones too. For this Readthrough it now says, for example, "pages slash T T S dot T S", "api slash T T S vercel dot T S", "speech fixes dot jay son", "A I O S", "M P 3".
+- No hand-written rules were added to the voice code; it's all in the translator's instructions (`pages/rate.ts`), as Matt asked earlier.
+- Checked live with Whisper on the "Only these 10 voices" paragraph: the path comes through as "slash api slash T T S question voices equals all" (Whisper writes "pages slash T T S dot T S" back as "pages/tts.ts", so that one I can't confirm by transcript).
+- Small judgement calls in the list may still be off (it says "api" as a word in one path). Tell me which and I'll tighten the instructions.
