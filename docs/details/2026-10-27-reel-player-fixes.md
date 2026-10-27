@@ -238,3 +238,7 @@ Before, only the next paragraph's voice was fetched ahead. Now it also fetches t
 ## 11:35 Pauses between short sentences
 
 Cause: the voice comes in one recording per paragraph or heading, and moving to the next one meant swapping the audio file in the one player and waiting for it to load, so short paragraphs had a pause after each. Fix: a second, hidden player holds the next paragraph already loaded and takes over the moment the first one ends. The voice is also fetched ahead for the next 160 words, however many short sentences or paragraphs that spans. Measured: gaps between paragraphs are now 0 to 2 milliseconds (headless, on this Readthrough and the demo page).
+
+## 11:45 Speed keys back to small steps
+
+Matt: 25% per key press was far too much; he meant the slider should snap to 25% marks. Now `,` and `.` change speed by 5% per press, and the speed slider accepts any value but snaps to 100%, 125% and the other 25% marks when you come within 5% of one. Tested: keys step 135 → 140 → 145; slider 97 and 103 both snap to 100, 112 stays 112.
