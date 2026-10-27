@@ -167,3 +167,34 @@ Not heard by ear: the slow recording's pitch and the smoothness of the switch at
 ## 10:25 Buffering spinner
 
 Matt asked for a buffering icon while the voice loads. The play button now turns into a spinning ring whenever reading is on but the voice hasn't started yet (first load, a new block, after a skip, or a voice or speed change), and goes back to ❚❚ the moment it speaks. Tested headless with a deliberately slow voice server: spinner for about 1.5 seconds, then speaking. Undo: revert the "play button spins" commit in ~/projects/pages and run `pages deploy`.
+
+## 10:45 Smart skip, built
+
+Matt approved smart skip and asked that the stages be visible and reversible.
+
+---
+
+### How it works now
+
+- **Ratings come for free.** Every `pages readthrough` now starts a background job (about 45 seconds including the push) that asks Claude's small model, through the claude command on Matt's plan, to rate each sentence crucial, useful or detail and to pick one key phrase per paragraph where it matters. It writes `ratings.json` next to the page. Agents do nothing extra. If the text changes, old ratings are ignored until the new ones land.
+- **The Pace chip (top left) shows the stage**: four dots and its name. Tapping it opens the four stages with a one-line explanation each, and you can pick any of them directly. That's how it works on a phone.
+- **→ skims more, ← skims less.** Everything → Skip details → Hurry → Key points. ← steps back one stage without moving; only at Everything does ← go back a sentence. A small note names each stage as you enter it, with "← to undo".
+- **Skip details** and **Hurry** apply to the section you're in and wear off at the next section. If the skip itself lands in the next section, the stage moves with it. **Hurry** and **Key points** read 25% faster; your speed setting isn't changed.
+- **Skipped sentences stay on the page, faded.** Tapping one reads it, then skimming carries on after it.
+- **Key phrases** are underlined.
+
+Readthroughs without ratings (or the scroll-read demo page) keep the plain → = next sentence.
+
+---
+
+### Also fixed
+
+The section list on wide screens let long headings run into the text; they now cut off with "…" and the list scrolls.
+
+---
+
+### Untested
+
+Not tried on a phone or by ear. The ratings come from a small model, so some judgments will be off; tell me which ones and I'll tune the prompt in `pages/rate.ts`. All existing Readthroughs are being rated in the background now.
+
+Undo: revert the "smart skip" commit in ~/projects/pages and run `pages deploy`.
