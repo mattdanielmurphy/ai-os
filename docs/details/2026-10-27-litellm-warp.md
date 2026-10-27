@@ -72,3 +72,19 @@ Warp's log shows the deleted endpoint pointed at `https://macbook-pro:8082/v1`, 
 ### Still untested
 
 I didn't open Warp to check that it loaded the new endpoint. Warp's log shows no reload line, so it may need a restart. Undo: delete that block from `settings.toml`, or remove the endpoint in Warp settings.
+
+## 19:42 Luna only, Terra removed
+
+Matt pointed out, with the Artificial Analysis Intelligence vs Cost chart, that GPT-6.1 Terra (max) sits below the Pareto line, while GPT-6 Luna (max) is on it. I had taken an article's claim that Terra's low and medium efforts are "Pareto-optimal" and ignored the chart; that was wrong for what he asked. He also said Luna is smart enough for his use.
+
+---
+
+### Terra taken out
+
+I removed the `terra` model from the OpenRouter endpoint in `~/.warp/settings.toml`. The only custom model is now `openai/gpt-6-luna`, alias `luna`.
+
+---
+
+### Effort is not max
+
+The frontier point on his chart is Luna at max effort. Warp's code (`crates/ai/src/api_keys.rs`) always sends an empty reasoning effort for custom models, so OpenRouter's default effort applies, which is lower than max. A fix is an [OpenRouter preset](https://openrouter.ai/settings/presets) that pins Luna to max effort, then using `@preset/<name>` as the model name in Warp. Not done yet; offered to Matt.
