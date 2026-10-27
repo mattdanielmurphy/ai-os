@@ -105,3 +105,22 @@ Ideas not built (each would need agents to write something extra): quick-check q
 ### Untested
 
 Not tried on a real phone or by ear. Touch scrolling uses the same hold logic but was only tested with a mouse wheel.
+
+## 09:52 Why the voice sounds like a log, and the fix I propose
+
+Matt: the voice reads things like "09:20 Round 2: … Matt picked Readthrough, asked that his own scroll…", and no person reading him a report would talk like that.
+
+---
+
+### Cause
+
+Details files are written as an agent's log: third person ("Matt asked"), timestamps in headings, inline code, paths. The voice reads the page word for word, so it reads the log.
+
+---
+
+### Proposed fix
+
+1. **Write to Matt, not about him.** Change the details-file rule: second person ("You asked…", "I changed…"), plain spoken sentences, headings without the time. Agents write this text anyway, so no extra work, and the highlight stays exact because voice and page are the same words.
+2. **Voice-only cleanup in the player's voice server.** When making the audio, skip the timestamps in headings, skip code blocks and file paths (the highlight passes over them), and say symbols like `,` and `.` by name. Deterministic, no AI call.
+
+Rejected: having an AI rewrite each block for speech at publish time. It would sound most natural, but the spoken words would no longer match the page, so the word highlight would drift, and every publish would cost an AI call.
