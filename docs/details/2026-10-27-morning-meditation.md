@@ -76,3 +76,31 @@ The "Or a 10-minute guided meditation" button on the check-in page is hidden unt
 ### Next step waits on Matt
 
 Once he names a voice from the Speechify playground, rebuild with `build.py scripts/morning-mindfulness.txt` after changing its `# voice:` line (it renders to a new file name so attempt #0 stays), add it to the page and un-hide the button.
+
+## 04:40 Meditation attempt #1
+
+**Matt asked:** for a second meditation attempt now, instead of waiting for a voice pick.
+
+---
+
+### Attempt one uses Marian
+
+Same script as attempt #0, read by Marian (the voice he called "not too bad") at speed 0.86, so it runs 11 min 53 s. Same Breath piano loop, with the new gentle 3 dB ducking. Script: `services/checkin/meditation/scripts/meditation-attempt-1.txt`. It's the top track on the page (`#morning`); attempt #0 moved to `#attempt0`.
+
+---
+
+### Music a bit louder
+
+Bed raised from -13 to -10 dB (`MUSIC_DB` in `build.py`), because the sparse Breath loop sat almost 20 dB under the voice. Music peaks now land about 12 dB under the speech. The hypnosis track was not rebuilt with this.
+
+---
+
+### Check-in button back on
+
+The check-in page's Breathe step shows "Or a 12-minute guided meditation" again, linking attempt #1. It appears from tomorrow's check-in. To hide it again, add `hidden` back to `#bmed` in `services/checkin/template.html`.
+
+---
+
+### Still untested by ear
+
+Levels checked; I haven't listened through it.

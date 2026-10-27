@@ -16,7 +16,7 @@ import tts  # noqa: E402
 
 # Feel knobs
 GAP = 1.2          # s of quiet after every spoken line, on top of any [pause]
-MUSIC_DB = -13     # music level under the voice (dB) before ducking
+MUSIC_DB = -10     # music level under the voice (dB) before ducking
 DUCK = 3           # dB the music dips while the voice speaks (a fixed, gentle dip; Matt: 4 dB of compression + AGC was way too much)
 DUCK_IN, DUCK_OUT = 0.8, 2.0   # s the dip takes to fade in before a line and back out after it
 FADE_IN, FADE_OUT = 6, 12
