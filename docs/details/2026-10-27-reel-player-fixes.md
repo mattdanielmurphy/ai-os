@@ -331,3 +331,8 @@ Matt: "our system" shouldn't worry about this; use something like Jev (I read th
 ### Scrolling in Tune
 
 Scrolling or touching inside Tune, the Pace panel, the section list or the reactions sheet no longer counts as scrolling the page, and those panels no longer pass their scroll on to the page when they reach the end. Tested: five wheel scrolls over Tune left the reading and the page untouched.
+
+## 12:55 Keys said by name; how speeds are made
+
+- `speech-fixes.json` now also names bare punctuation used as keys: comma, period, semicolon, colon, slash, greater than, less than, plus, equals, question mark, exclamation mark. They only match a symbol standing on its own (like a key written as `,`), never punctuation inside a sentence. Checked live with Whisper: "…comma and period for speed…".
+- Speeds are rendered on the fly: the first time anyone listens to a paragraph at a given speed, the voice server asks Speechify for it (about 1 to 3 seconds), then keeps it, so everyone after gets it instantly. "Its own recording" means a native Speechify render at that pace instead of the browser stretching the 100% one. The player also renders ahead (the next 160 words), so after the first paragraph the wait is usually hidden.
