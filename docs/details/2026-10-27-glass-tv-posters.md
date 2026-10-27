@@ -64,3 +64,26 @@ Settings toggle on/off in the scratch app (posters went grey / back to colour), 
 
 ### Undo
 `git revert a381ffa` in ~/projects/glass-tv, `./build.sh`, `glass restart`.
+
+---
+
+## 18:10 Liquid glass icon, install to Applications
+
+**Asked:** a nice liquid glass icon, and the app should build into /Applications automatically.
+
+### Liquid glass icon
+His Mac is on macOS 15, which has no system Liquid Glass icon rendering (that's macOS 26 with Icon Composer), so the look is drawn: blurred colour light behind a thick translucent screen pane, a bright top rim, a soft inner bevel and a small break-glass crack. Colours are the app's own blue tokens (#6192e1, #1251b4, #002b7c, #c2d6f7). No orange.
+Three takes in `app/icon/` (per the "show options" rule; installed the first so he isn't blocked): a-blue-screen (default, TV with stand), b-blue-play (play symbol, green glow), c-night (dark with blue and deep red light). Contact sheet: `app/icon/options.png`.
+Rejected: a glossy 2000s-Aqua highlight band from the first draft; it looked dated, not glassy.
+
+### Auto-install to Applications
+`./build.sh` now renders the icon to an .icns, builds the app, and installs it to `/Applications/Glass TV.app` (replacing the old copy and refreshing the icon cache). `glass` rebuilds and reinstalls first whenever anything in `app/` is newer than the installed app, so Swift or icon edits land on the next open without a manual build.
+
+### Switch icon
+`echo b-blue-play > ~/projects/glass-tv/app/icon/CHOSEN && ~/projects/glass-tv/build.sh`
+
+### Untested
+I didn't relaunch the running app (needs his screen), so the Dock icon hasn't been checked live; the installed .icns renders correctly at 1024px.
+
+### Undo
+`git revert 674ec1f` in ~/projects/glass-tv; move /Applications/Glass TV.app to the Trash.
