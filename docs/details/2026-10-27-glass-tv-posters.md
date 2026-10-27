@@ -87,3 +87,25 @@ I didn't relaunch the running app (needs his screen), so the Dock icon hasn't be
 
 ### Undo
 `git revert 674ec1f` in ~/projects/glass-tv; move /Applications/Glass TV.app to the Trash.
+
+---
+
+## 19:20 Grand-theatre icon
+
+**Asked:** keep the dark background of the third icon, drop the red/blue "cop" colours and the two round blobs, make the play button *be* the cracked glass, and go for a 20th Century Fox feel: gold, grand theatre, big searchlights.
+
+### What changed
+New generator `app/icon/theatre.py`. Dark warm stage (the app's own dark tokens), gold searchlight beams fanning up from the stage edge with bright cores, a warm floor glow, a frosted glass screen with a gold rim and a gold stand. The crack is now the play button: a jagged triangular shard lit gold from behind, with fracture lines running out from its three corners across the glass.
+Two takes: **d-theatre-screen** (installed; TV screen and stand, beams cross behind it) and **e-theatre-pane** (no TV frame, just the cracked play shard floating in the beams, beams fan outward).
+
+### Colour choices
+Gold comes from the palette's "tape cream" scale plus its yellow scale (#f8e365, #dcc300). It's deliberately yellow-gold, nowhere near orange. Rejected: tape cream on its own, which read as grey-beige rather than gold in the first render.
+
+### Switch icon
+`echo e-theatre-pane > ~/projects/glass-tv/app/icon/CHOSEN && ~/projects/glass-tv/build.sh`
+
+### Untested
+Not seen in the Dock yet (needs a relaunch). It renders correctly from the installed .icns.
+
+### Undo
+`git revert a27e576` and rebuild.
