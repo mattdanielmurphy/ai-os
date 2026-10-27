@@ -295,3 +295,14 @@ Checked by transcribing each new clip with Whisper: "Buffering Spinner", "Rename
 Partly. Text normalizers (NVIDIA NeMo's text normalization, the one built into most TTS services) handle numbers, times, units and dates, which is what my rules above do for the cases we hit. Nothing off the shelf reliably catches words that are only ambiguous out of context, like "Rename" alone as a heading. Exact phonetic spelling would fix those, but Speechify only accepts it on its newer Simba 3.5 model (a `pronunciations` setting); our model, 3.2, takes only respellings.
 
 Proposed: add a step to the background Claude pass that already rates sentences. It would list the words in each Readthrough a voice might misread (heteronyms, acronyms, jargon, one-word headings) with hyphen-free respellings, and the voice server would use them for that page only. No work for agents; the global list stays for repeat offenders. Waiting for Matt's 👍.
+
+## 12:35 Automatic respellings for the voice
+
+Matt confirmed: reword only what the voice says; the page keeps the normal English.
+
+- The background Claude pass that rates sentences now also lists words a voice would genuinely get wrong in that Readthrough, with a respelling (`say` in ratings.json). The voice server applies them only to that page's audio; the page text never changes.
+- The first prompt over-flagged (it respelled "Speechify" as "Speechifye" and "Readthrough" as "Reedthroo", which could make things worse). I tightened it: only real problems (ambiguous one-word headings, heteronyms, lowercase acronyms, file names, made-up names), respellings must be plain English or spaced letters, never hyphens. This Readthrough now gets: Rename → renaim, wpm → W P M, ratings.json → ratings dot jay son.
+- Checked live with Whisper: the paragraph with "wpm" is now heard as "20 WPM".
+- The global list (times, seconds, rename) still applies everywhere; page-specific ones are on top.
+
+Still read oddly: single-symbol keys written as code, like `,` and `.`, are silent in speech ("press to read faster"). Could be fixed the same way (say "comma", "period") if Matt wants.
