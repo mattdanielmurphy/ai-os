@@ -52,3 +52,28 @@ Settings has a new **Player** line: tap to switch between Glass Player and IINA 
 - Merged into `master` and pushed. Glass Player is built in `~/projects/glass-tv/bin/`.
 - Matt was watching something when it merged, so the server restarts by itself once nothing is playing (`tmp/restart-when-idle.sh`); the episode after that opens in Glass Player.
 - Undo: Settings → Player → tap to pick IINA, or `git revert 15fec43`.
+
+## 14:08 Subtitles, full-screen scaling and transitions
+
+**Asked:** subtitles off by default; full screen should fill the screen, with native resolution as an opt-in setting; the full-screen transition squished the picture to the left (his screen recording, ui-recorder 14:05).
+
+---
+
+### Why full screen didn't fill
+
+The recording showed the picture staying window-sized in the middle of the full screen, and a squished frame at the left during the animation. Cause: the player sized each frame from OpenGL's viewport, which kept the old window size after a resize. It now sizes frames from the layer itself (points × backing scale). The layer also keeps the last frame's shape (`resizeAspect`) while the animation runs, so it can't squish between frames.
+
+---
+
+### Subtitles and native size
+
+- Subtitles start off (`sid=no`); S or the subtitles menu turns them on.
+- New Settings line under Player: "Show video at its own resolution", off by default. On, it passes mpv's `video-unscaled=downscale-big` (never upscaled, still shrinks to fit).
+
+---
+
+### Tested and not
+
+- Built, typechecked, 20 unit tests pass, settings page bundles.
+- **Not tested in full screen:** the clearance banner wasn't reachable (Hammerspoon down), so I didn't take over his screen. The server restarted by itself at 14:07 when nothing was playing, so the next video uses the fixes.
+- Undo: `git revert 020241d 494b19b`.
