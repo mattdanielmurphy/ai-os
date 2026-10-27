@@ -17,7 +17,8 @@ import tts  # noqa: E402
 # Feel knobs
 GAP = 1.2          # s of quiet after every spoken line, on top of any [pause]
 MUSIC_DB = -13     # music level under the voice (dB) before ducking
-DUCK = 4           # extra dB the music dips while the voice speaks
+DUCK = 3           # dB the music dips while the voice speaks (a fixed, gentle dip; Matt: 4 dB of compression + AGC was way too much)
+DUCK_IN, DUCK_OUT = 0.8, 2.0   # s the dip takes to fade in before a line and back out after it
 FADE_IN, FADE_OUT = 6, 12
 LUFS = -18         # final loudness: quiet, for headphones in bed
 
@@ -52,7 +53,7 @@ def build(script, out=None):
     cache.mkdir(parents=True, exist_ok=True)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    t, placed, lines = 0.0, [], []
+    t, placed, lines, durs = 0.0, [], [], []
     for kind, val in items:
         if kind == "pause":
             t += val
@@ -62,12 +63,14 @@ def build(script, out=None):
         if not mp3.exists() or mp3.stat().st_size < 1000:
             tts.speak(voice, val, mp3, speed)
         d = dur(mp3)
+        durs.append(d)
         placed.append((mp3, t))
         lines.append({"t": round(t, 2), "text": val})
         t += d + GAP
     total = t + FADE_OUT
 
-    # Voice track: each line delayed to its start; music: loop trimmed, faded, ducked under the voice.
+    # Voice track: each line delayed to its start. Music: loop trimmed, faded, and dipped by a fixed DUCK dB
+    # around each spoken line (a volume envelope, not a compressor, so the dip never goes deeper than DUCK).
     args = ["ffmpeg", "-y", "-v", "error"]
     for mp3, _ in placed:
         args += ["-i", str(mp3)]
@@ -75,15 +78,26 @@ def build(script, out=None):
     fc = [f"[{i}]aresample=48000,aformat=channel_layouts=stereo,adelay={int(s * 1000)}:all=1[v{i}]"
           for i, (_, s) in enumerate(placed)]
     n = len(placed)
+    ramps = [f"clip((t-{s - DUCK_IN:.2f})/{DUCK_IN},0,1)*clip(({s + d + DUCK_OUT:.2f}-t)/{DUCK_OUT},0,1)"
+             for (_, s), d in zip(placed, durs)]
+    env = ramps[0]
+    for r in ramps[1:]:
+        env = f"max({env},{r})"
+    dip = 1 - 10 ** (-DUCK / 20)
     fc.append("".join(f"[v{i}]" for i in range(n)) + f"amix=inputs={n}:normalize=0,apad=whole_dur={total}[vo]")
-    fc.append("[vo]asplit[voice][key]")
     fc.append(f"[{n}]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{total},volume={MUSIC_DB}dB,"
+              f"volume='1-{dip:.4f}*({env})':eval=frame,"
               f"afade=t=in:d={FADE_IN},afade=t=out:st={total - FADE_OUT}:d={FADE_OUT}[m]")
-    fc.append(f"[m][key]sidechaincompress=threshold=0.02:ratio={1 + DUCK}:attack=200:release=1500[md]")
-    fc.append(f"[voice][md]amix=inputs=2:normalize=0,loudnorm=I={LUFS}:TP=-2:LRA=11[out]")
-    args += ["-filter_complex", ";".join(fc), "-map", "[out]", "-t", str(total),
-             "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out)]
-    subprocess.run(args, check=True)
+    fc.append("[vo][m]amix=inputs=2:normalize=0[out]")
+    wav = cache.parent / f"{name}.wav"
+    subprocess.run(args + ["-filter_complex", ";".join(fc), "-map", "[out]", "-t", str(total), str(wav)], check=True)
+    # Loudness: one static gain to LUFS (loudnorm's one-pass mode rides the gain like an AGC and pumps the music).
+    meas = subprocess.run(["ffmpeg", "-nostats", "-i", str(wav), "-af", "ebur128", "-f", "null", "-"],
+                          capture_output=True, text=True).stderr
+    measured = float(re.findall(r"I:\s+(-?[\d.]+) LUFS", meas)[-1])
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(wav), "-af", f"volume={LUFS - measured:.2f}dB,alimiter=limit=0.8",
+                    "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out)], check=True)
+    wav.unlink()
     (out.with_suffix(".json")).write_text(json.dumps({"title": name, "voice": voice, "music": music.name,
                                                       "seconds": round(total), "lines": lines}, indent=1))
     print(json.dumps({"out": str(out), "seconds": round(total), "lines": len(lines)}))

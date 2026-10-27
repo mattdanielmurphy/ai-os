@@ -48,3 +48,31 @@ Rejected: making the meditation a mandatory step (would lengthen every check-in;
 I checked the files, levels and that the page serves them (HTTP 200, audio/mp4), but I haven't listened all the way through. Lock-screen playback on the iPhone is untested.
 
 **Undo:** revert commit f5a79ae5 in ai-os (removes the button); the page lives at `~/projects/pages/site/still`.
+
+## 03:05 Voice was a joke, ducking too strong
+
+**Matt said:** the Douglas voice is a hilariously bad fit (keep it as "Meditation attempt #0" for his brother), Marian is not too bad, and the ducking made the music vanish whenever the voice spoke. He'll pick a voice in the Speechify playground.
+
+---
+
+### Attempt zero is kept
+
+The page now lists the morning track as "Meditation attempt #0" (an outtake), same audio and link (`#morning`).
+
+---
+
+### Ducking is now a fixed 3 dB dip
+
+Cause: a sidechain compressor at ratio 5 with a low threshold, plus loudnorm in one-pass mode, which rides the gain like an automatic level control. Together they pulled the music way down under every line. Now `build.py` draws a volume envelope: the music dips exactly 3 dB (`DUCK`), fading in 0.8 s before a line and out 2 s after (`DUCK_IN`, `DUCK_OUT`), and loudness is one static gain measured over the whole mix. The hypnosis track is rebuilt with it (music sits about 10 dB under the voice and no longer disappears).
+
+---
+
+### Check-in button hidden for now
+
+The "Or a 10-minute guided meditation" button on the check-in page is hidden until there's a real meditation with a voice Matt picked, so he doesn't get the joke version at 7:45. Un-hide by removing `hidden` from `#bmed` in `services/checkin/template.html`.
+
+---
+
+### Next step waits on Matt
+
+Once he names a voice from the Speechify playground, rebuild with `build.py scripts/morning-mindfulness.txt` after changing its `# voice:` line (it renders to a new file name so attempt #0 stays), add it to the page and un-hide the button.
