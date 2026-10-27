@@ -100,3 +100,43 @@ The panel inlines `vendor/slub-ui/slub-ui.js` and the chosen look's CSS (synced 
 Untested: I didn't open the real panel on your screen; you'll see it with ⌃⌥⌘T. The docking behaviour isn't built yet; it's still waiting for your 👍 on the logic.
 
 **Undo:** revert commit 729afa6 in ~/.hammerspoon and 70181b4 in ui-mixer.
+
+## 12:05 Plain look in the panel, and 119 knobs wired into the code
+
+**Asked:** Matt picked the "plain" Slub UI look for now (hairline is the runner-up), so the panel doesn't need a look setting. His 👍 on the 08:50 reply was the go to wire the kept knobs in.
+
+---
+
+### Plain look, no look setting
+
+The panel now inlines `vendor/slub-ui/slub-ui.css`, the suite stylesheet, which is plain by default. The "Tweaks panel › look.style" knob and its file are gone. `sync.sh` copies only that one stylesheet now. The UI test passes, and Hammerspoon reloaded fine.
+
+Mistake: my `git commit -a` in ui-mixer (739e57b) also swept in another session's unfinished edits to `dist/reel-player.html`, `kit/entry.js` and `knobs/knobs.js` under my commit message. Nothing was lost; those edits are pushed as they were. If that session wanted them committed separately, the commit can be split.
+
+---
+
+### How the knobs got wired
+
+There's a new step, `bin/tweaks wire [--dry] [module]`, and it's mechanical: no AI. For each knob Sonnet kept, it does one of three things. A top-level constant (`local STALE = 3 * 24 * 3600`) is deleted, and every place that used it now reads `T("queue.staleSeconds")`, so the value is live. An inline field (`alpha = 0.95`) or a timer delay (`doAfter(0.3, …)`) has its number replaced with `T("key")`. Matching `xRadius` and `yRadius` values share one knob. Declarations go into the module's existing knobs table, or into a new `TWEAKS` block at the top that opens Tweaks only inside real Hammerspoon, so test fakes just get the defaults. Every rewritten file is checked with `luac -p` before it's written, and comments are left alone.
+
+Result: 119 of the 149 keepers are wired across 26 modules. Every Lua test passes, and Hammerspoon reloaded with "all modules started" and no errors. 39 apps are now in the Tweaks panel.
+
+---
+
+### Problems caught and fixed
+
+- **Symlinks:** qwerty_midi, ps5_dashboard and ui_recorder are symlinks into their own repos (qwerty_midi is a generated bundle). The first run replaced those links with files. I restored them from git, checked that the target repos weren't touched, and `wire` now skips symlinks.
+- **Test fakes:** some tests fake `hs`, so the guard is `type(hs.reload) == "function"`. thread_queue's test stub now returns each knob's default.
+- **Knobs declared before use:** fields in a table that comes before the module's own tweaks block (song_key's CFG) are skipped, not wired.
+- **Two tweaks blocks in one file:** otp_copy and tv_resync open Tweaks inside a function, so I merged their new knobs into the existing tables by hand. `wire` now skips modules like that and says so.
+- **Sonnet slips:** otp_copy's "pill height" was really the width, so it's now `look.pillWidth` with a sensible range. claude_warm's lead time was read as 10 instead of 10 * 60; that's fixed, and the scanner now reads whole arithmetic. A value outside its slider range now widens the range.
+
+---
+
+### Not wired yet
+
+30 keepers: the three symlinked modules (they need wiring in their own repos), song_key's 6 CFG values, and 12 in eye_breaks (constants used before its tweaks block). These are small hand jobs per module.
+
+**Untested:** I didn't drag any of the new knobs live on screen. The modules load and the tests pass, but you're the first to turn them.
+
+**Undo:** revert 70ba67e (wiring) and e98f3a1 (plain look) in ~/.hammerspoon.
