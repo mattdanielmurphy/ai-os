@@ -117,3 +117,15 @@ Not seen in the Dock yet (needs a relaunch). It renders correctly from the insta
 **Matt:** the theatre icons are bad.
 **Real cause:** I drew them by hand as SVG code (shapes, gradients, blur). That approach can't reach the polish of a real app icon; the beams, glass and shard all look like vector clip-art. It's a tooling ceiling, not a matter of tweaking.
 **Proposal:** generate 4 renders with a real image model (Figma's image generation; GPT Image or Gemini Image) from one brief (dark stage, gold searchlights, glass screen whose crack forms the play button, macOS icon shape). He picks one, I cut it into the app icon. Costs Figma AI credits per image, so I asked first.
+
+---
+
+## 19:50 Break-glass icons, five takes
+
+**Asked:** no image models (diffusion icons look like slop); try again, ~5 attempts, "break in case of emergency" style like a fire hose behind glass.
+**Concept:** a red emergency cabinet, but the show is behind the glass instead of a hose. Concrete object, bold shapes, one light source top-left, few effects (learned from the rejected blob/beam takes).
+**Takes (app/icon/emergency.py):** f-case-tv (little TV behind glass), g-case-reel (film reel and strip where the hose would be, "IN CASE OF EMERGENCY"), h-case-cracked (play button behind spider-cracked glass, installed), i-case-hammer (cabinet on a wall with a chained hammer), j-case-minimal (no label, just glass, screws, play and a crack).
+**Colours:** palette red scale (#d40037 → #7a001d, #f85b66 rim light), the app's cream and dark tokens. Label font: Helvetica Neue heavy (rsvg couldn't load DIN Condensed).
+**Switch:** `echo f-case-tv > ~/projects/glass-tv/app/icon/CHOSEN && ~/projects/glass-tv/build.sh`
+**Untested:** not seen in the Dock yet. Small sizes (16-32 px) will lose the label text.
+**Memory:** updated the icon-feedback memory: no diffusion icons, no fussy blur SVG.
