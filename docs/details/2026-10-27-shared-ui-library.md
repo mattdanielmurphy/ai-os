@@ -64,3 +64,25 @@ Matt: with plain, the Offset field should have increment and decrement buttons.
 ### Steppers when there's no slider
 
 Knobs now shows Web Awesome's − / + steppers on a number field when the knob has no slider (no min and max). Knobs that have a slider keep a compact field without steppers, because the slider already does that job. The field is 150 px wide so the value isn't clipped. The look picker page is updated.
+
+## 18:05 Arrow keys on number fields
+
+Matt: every number field gets standard arrow-key increment and decrement with modifiers: nothing = 1, Shift = 10, Option = 0.1.
+
+---
+
+### How the arrow keys work
+
+`kit/arrows.js` catches ↑/↓ on every number field on the page (kit fields and plain ones). It moves by the field's step, which is 1 when the field has none. Shift multiplies that by 10 and Option divides it by 10. So a normal field moves 1, 10 and 0.1, exactly as asked. The value is clamped to the field's min and max, and the change counts as a normal edit (live update, and Knobs undo).
+
+---
+
+### Fields with a finer step
+
+A field whose step is 0.1 moves 0.1 / 1 / 0.01 instead, so a 0–1 opacity can't jump past its whole range in one press. I rejected fixed 1/10/0.1 everywhere for that reason. Say if you want fixed amounts instead.
+
+---
+
+### Smaller fixes
+
+Hovering a Knobs number field shows the key hint. Knobs no longer shows trailing zeros ("23.10" is now "23.1"). Tested in Chrome: 12 → 13 → 23 → 23.1 → 23 → 22 → 12.
