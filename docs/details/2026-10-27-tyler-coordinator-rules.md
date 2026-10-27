@@ -52,3 +52,25 @@
 **Did:** added a "Model choice (most important)" section right after "How this project works" on the page, tagged **[needs: claude_pace.py + CodexBar]**, and listed both in the script list. Added "Model Choice by Usage Pace" to `.rules/core_safety.md` and ran `build_rules.py`, so it's no longer memory-only. Paste block is now 12,081 characters.
 
 **My miss:** I searched `.rules`, docs and Mac memory but not the coordinator's cloud project memory, so I wrongly called the rule unsourced.
+
+---
+
+## 17:52 API keys and moving shared things into slub-hq
+
+**Asked:** "We can share API keys in slub-hq. And I feel like maybe everything that I'd share should be moved into slub-hq monorepo?"
+
+---
+
+### Keys stay out of git
+
+slub-hq is private, but a key committed to git stays in its history forever, gets copied to every clone, laptop and agent context, and the rules (and auto_commit's secret gate) block it anyway. Rejected: a plain `.env` in the repo. Options: a shared 1Password vault (or similar), or an encrypted file in the repo (sops/age or git-crypt) that only your two machines can open. Recommended a shared vault: no new tooling, each machine's `.env` is filled from it.
+
+---
+
+### Monorepo: yes, but only the shareable kit
+
+Recommended: a `kit/` folder in slub-hq holding the scripts and rules on the Tyler page (cold_handoff, _handoff, context-alert, auto_commit, aios-env, claude_pace, pages, reels, build_rules + the generic rules). ai-os keeps the personal parts (school, Hue, reminders, voice bridge, private/) and uses the kit from slub-hq. Every script needs its `/Users/matt` and `~/projects/ai-os` paths replaced with a config value first.
+
+Why not move everything: ai-os is mostly personal, and the project freeze says simplify, not add. Moving the shared parts once means one copy instead of two drifting copies, which is simpler.
+
+**Not done yet:** waiting on Matt's 👍; it's a multi-step move that touches the live hooks his Mac runs.
