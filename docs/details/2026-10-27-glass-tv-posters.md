@@ -45,3 +45,22 @@ Settings toggle on/off in the scratch app (posters went grey / back to colour), 
 
 ### Undo
 `git revert 973be76` in ~/projects/glass-tv, then `glass restart`.
+
+---
+
+## 08:10 Break-glass final button, Mac shortcuts
+
+### Final spend-or-decline button
+**Asked:** after the 5-minute wait, one more press to continue vs decline; the token is only ever lost on that final press.
+**Before:** when the countdown hit zero the page auto-claimed, spending the token, then showed an "unlocked" screen.
+**Now:** at zero the wait screen shows "Spend 1 token and watch <title>" (or "…and pick one more" when there's no episode to continue) next to "No thanks, keep my token". Breaking the glass and reaching zero spend nothing. Pressing spend takes the token and plays right away. The server still refuses a claim before the wait ends ("Still waiting"). The old "unlocked" screen is no longer reached.
+**Tested:** scratch server: at 0:00 tokens stayed 2, spend → 1 token and one extra unlocked; early claim refused; decline kept the token.
+
+### Standard Mac shortcuts
+**Asked:** the macOS app had no standard shortcuts.
+**Cause:** the Swift app never built a main menu, and macOS shortcuts come from menu items.
+**Now:** Glass TV menu (About, Settings ⌘,, Hide ⌘H, Hide Others ⌥⌘H, Quit ⌘Q), Edit (undo, redo, cut, copy, paste, select all, Search ⌘F), View (Reload ⌘R, zoom ⌘0/⌘=/⌘-, Full Screen ⌃⌘F), Window (Minimize ⌘M, Zoom, Close ⌘W).
+**Untested:** it compiles, but I didn't relaunch the running app (that needs his screen). He has to quit it from the Dock once and reopen it with `glass`.
+
+### Undo
+`git revert a381ffa` in ~/projects/glass-tv, `./build.sh`, `glass restart`.
