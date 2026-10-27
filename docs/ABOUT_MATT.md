@@ -53,6 +53,11 @@ Ask him only if all of these come up empty, and say what you searched.
 | Identifiers for forms (name, emails, IDs) | `~/projects/ai-os/private/identity.md` (gitignored; read only when a form needs it, never copy) |
 | Reminders / to-dos | Apple Reminders via `apple-reminders` CLI |
 
+## Life facts (added 2026-10-26)
+- Propranolol worked well for his performance nerves (first used around the Oct 26 show).
+- Alcohol tends to bring on low moods for him.
+- He wants to stop relying on being high to enjoy things and to improvise. Be warm and non-judgmental about it; don't lecture.
+
 ## Not used
 - **Mem0**: installed in August, shelved 2026-10-17 (only 20 memories, nothing written after Sept 25). QMD over the vault and all threads replaced it. Data still in `~/.mem0/`; revival steps in `shelf/INDEX.md`.
 - Other shelved tools: `shelf/INDEX.md`.
