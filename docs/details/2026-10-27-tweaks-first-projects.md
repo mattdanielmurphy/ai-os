@@ -78,3 +78,25 @@ The recommended option: a script turns named constants into tweaks, then Sonnet 
 - Dock icon: Hammerspoon windows can't have their own Dock icon. Detached mode needs a small native wrapper app (hud-kit Swift around the same page). It's the main extra cost.
 - Width: fixed at about 400 px, with its own tweak.
 - If you move or resize the app while the panel is open, closing still restores the original frame unless you moved it a lot. I'd keep your new position then.
+
+## 08:50 Scanner built, panel restyled with Slub UI
+
+**Asked:** Matt 👍'd the scanner. The shared UI library thread finished the "Slub UI" kit (`~/projects/ui-mixer/kit`, built on Web Awesome) and asked this thread to use it in the panel.
+
+---
+
+### Scanner and prune results
+
+`~/.hammerspoon/bin/tweaks scan` reads every Hammerspoon module without AI. It picks up top-level constants (`local HOLD = 1.2`), named numeric fields (`alpha = 0.8`) and timer delays. It skips values that are already knobs, 0/1, hex marks, and names like PORT, VERSION and PATH. That found 457 candidates. `tweaks prune` asks Sonnet, per module and without tools, whether a developer would ever turn each value. Keepers get a key, a note and a slider range. Sonnet kept 149 and dropped 308, all with a short reason. Every decision is stored in `~/.hammerspoon/tweaks/candidates/<module>.json`, keyed by the surrounding code rather than the line number, so a decision is never asked twice. `tweaks report` lists the keepers. Spot check: claude_notify kept font sizes, radii, opacity and timings, and dropped icon geometry and hit areas. Tests: `tests/tweaks_scan_test.py`.
+
+Not done: wiring the 149 keepers into the modules' code (replacing each literal with `T("key")` plus a declaration). That's a per-module edit an agent should do and check, so I left it as the next step. Rule 1g now says to put feel values in named constants and lets the scanner find the rest.
+
+---
+
+### Panel now uses Slub UI
+
+The panel inlines `vendor/slub-ui/slub-ui.js` and the chosen look's CSS (synced by `ui-mixer/knobs/sync.sh`, which now builds the kit too). The jump menu is `<slub-jump>`: ⌘J opens it, you type to filter, and it's grouped into Apps (the ones with focus bundle IDs) and Background utilities, each showing a knob count. Sliders, number fields, switches, colours, chips, search, preset fields and buttons all come from the kit. The panel's own hard-coded colours are gone; every colour comes from the look. The panel has its own tweaks entry, "Tweaks panel" › `look.style` (Hairline, Prairie or Synth chips), and changing it reopens the panel in the new look. Small fix in `tweaks.lua`: `choices` declared in code now get seeded into the file. The headless WebKit test passes all 23 checks in every look, light and dark. Hammerspoon reloaded fine.
+
+Untested: I didn't open the real panel on your screen; you'll see it with ⌃⌥⌘T. The docking behaviour isn't built yet; it's still waiting for your 👍 on the logic.
+
+**Undo:** revert commit 729afa6 in ~/.hammerspoon and 70181b4 in ui-mixer.
