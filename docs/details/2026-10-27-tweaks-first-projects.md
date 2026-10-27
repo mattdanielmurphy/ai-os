@@ -140,3 +140,24 @@ Result: 119 of the 149 keepers are wired across 26 modules. Every Lua test passe
 **Untested:** I didn't drag any of the new knobs live on screen. The modules load and the tests pass, but you're the first to turn them.
 
 **Undo:** revert 70ba67e (wiring) and e98f3a1 (plain look) in ~/.hammerspoon.
+
+## 12:35 The panel docks beside its app
+
+**Asked:** Matt 👍'd the 12:05 reply, which ended by asking for his 👍 on the docking logic. I took that as the go.
+
+---
+
+### How docking works now
+
+⌃⌥⌘T checks which app is in front. If that app has tweaks, the panel opens down the left edge of its screen, already showing them, and the app's window moves over. A window that fills the screen (within `dock.fullSlack` px) shrinks to the space that's left. A smaller one slides right, and narrows only if it has to. A window already clear of the panel stays put. A real full-screen window is taken out of full screen first and put back afterwards. ⌃⌥⌘T again, Esc, or the window's close button closes the panel and puts the app window back where it was. If you moved the window more than `dock.keepMoved` px while docked, it stays where you put it. The panel is now an ordinary window (it used to float above everything) and no longer follows focus, so cmd-tab leaves it behind. In an app with no tweaks, the panel opens with the ⌘J jump menu showing, so you can pick what to tweak. Picking an app with a window from the menu docks beside that app instead. Picking a background utility puts the docked app back, and the panel stays on its own. The panel's own knobs are "Tweaks panel" › `dock.width`, `dock.keepMoved` and `dock.fullSlack`. The frame logic is a pure function with its own test (`tests/tweaks_panel_dock_test.lua`).
+
+Tested on screen, with your clearance: Claude was 1920×1080. The panel opened at 0,0 380×1080, Claude moved to 380,0 1540×1080, and after closing Claude was back to 1920×1080. The UI test and the docking test pass.
+
+---
+
+### Not built or not tried yet
+
+- **Dock icon when standing alone:** Hammerspoon windows can't have their own Dock or cmd-tab entry. That needs a small native wrapper app around the same page, which is a separate build.
+- **Untried on screen:** the smaller-window slide, real full-screen windows, and the ask-which-app flow. The geometry is unit-tested; the full-screen path has the most risk.
+
+**Undo:** revert 4a6704f in ~/.hammerspoon.
