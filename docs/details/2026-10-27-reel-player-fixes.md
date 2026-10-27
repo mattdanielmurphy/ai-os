@@ -399,3 +399,15 @@ Reacted text now has one continuous underline across words and the spaces betwee
 - Tested: the VPS endpoint live (accepts a valid post, rejects other pages), the Mac job's dry run (formats the message correctly), and the player in headless Chrome (sends a reaction once, not again on reload, shows the note, underline is continuous).
 - Not yet tested: a real delivery all the way into the coordinator. The first real one will be his own 👍 when he next opens this Readthrough.
 - Undo: `python3 ~/projects/ai-os/scripts/readthrough_comments.py uninstall` stops delivery; revert the "reactions and comments are sent to Claude" commit in ~/projects/pages and run `pages deploy`.
+
+## 18:55 Right-click quick reactions
+
+Matt: right-click should react to the current sentence or paragraph with the six emoji he uses with Claude, with a tooltip explaining each.
+
+- **Right-click anywhere on the text** opens a small menu at the pointer: Sentence / Paragraph (the sentence you clicked is picked and highlighted; Paragraph widens it), the six emoji 👍 ❌ ❓ ⏩ ✋ ✅, and "Comment…" for the full comment box. Right-clicking off the text reacts to the sentence being read.
+- **Meanings:** hovering an emoji shows its meaning both as a browser tooltip and as a line inside the menu (instant, also readable on a trackpad): 👍 yes, go ahead · ❌ no, don't · ❓ didn't get it, explain simpler · ⏩ next, keep going · ✋ wait, I'll say more · ✅ done, all good.
+- Clicking an emoji toggles it (click again to remove), closes the menu and sends it to Claude like any reaction. Esc, scrolling or clicking elsewhere closes it. Links, text boxes and the panels keep the normal right-click menu.
+- The big reaction bar now uses the same six emoji (old ❤️ reactions still show), and the delivered messages name each reaction's meaning for the receiving agent.
+- The picked-text highlight is now one continuous band, like the underline.
+
+Tested headless: right-click opened the menu with 38 words picked, hovering ⏩ showed "Next, keep going", Paragraph widened it to 59 words, 👍 saved and closed. Not tried with a real trackpad or in Safari.
