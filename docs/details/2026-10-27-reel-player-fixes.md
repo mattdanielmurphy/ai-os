@@ -198,3 +198,25 @@ The section list on wide screens let long headings run into the text; they now c
 Not tried on a phone or by ear. The ratings come from a small model, so some judgments will be off; tell me which ones and I'll tune the prompt in `pages/rate.ts`. All existing Readthroughs are being rated in the background now.
 
 Undo: revert the "smart skip" commit in ~/projects/pages and run `pages deploy`.
+
+## 11:15 Highlight stall on "0.05 s", and held small scrolls
+
+---
+
+### Stall after words like "0.05 s"
+
+Cause: Speechify gives "0.05 s" as one timing mark, but the page has two words ("0.05" and "s"). The matcher then let "s" match the start of "so" four words later, so every word in between got the same time and lit up all at once. Fix: short words (under 3 letters) must match exactly; a page word that is the leftover end of the previous mark shares that mark's time; and any word without a mark gets a time spread evenly between its neighbours instead of copying the previous one. Tested on the exact sentence: old code put "s before the word, so" all at one time, new code gives each its own.
+
+---
+
+### Held small scroll
+
+A scroll too small to snap now still moves the reading if you stay there: after the page has been still for 1.5 seconds, the reading jumps to the line 40% down the screen (where auto-follow keeps it, so the page doesn't shift afterwards). A dashed outline on the target word fills in and a small note counts down ("reading moves here in 0.8s"), so you can scroll back before it happens. Only while reading is playing; paused scrolling stays free. Tested headless with a 115 px wheel scroll: jumped after about 1.5 seconds.
+
+Changed with it: after a small scroll, auto-follow now waits until the reading is back within a line of its spot, rather than anywhere in the middle band.
+
+---
+
+### Ratings for older Readthroughs
+
+9 of 16 rated so far; the rest are running in the background.
