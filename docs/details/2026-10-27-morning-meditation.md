@@ -104,3 +104,31 @@ The check-in page's Breathe step shows "Or a 12-minute guided meditation" again,
 ### Still untested by ear
 
 Levels checked; I haven't listened through it.
+
+## 04:50 Smoother, quieter voice
+
+**Matt said (about Deep relaxation):** the voice is too loud against the music and loud overall; it sounds a bit artifact-y (blamed the slowed speed); maybe run a subtle FabFilter or similar over it.
+
+---
+
+### Speed back to natural
+
+Both Marian tracks (hypnosis and meditation #1) now use speed 1.0, so Speechify sends no rate change and reads at its natural pace. Slowing it (0.84–0.86) was the likely source of the artifacts. They got shorter: hypnosis 21 min, meditation 11 min.
+
+---
+
+### FabFilter on the voice
+
+New `fx.swift` hosts Audio Units offline (same approach as claude-ambient's `render_mix.swift`) and runs the voice bus through `voice_fx.json`: Pro-DS de-esser (4 dB max), Pro-C 2 in Clean style (threshold -26 dB, low ratio, soft 24 dB knee, auto gain) to even it out, and Pro-R 2 as a small, dark room at 11% mix to soften the TTS edges without mud. Plus a 70 Hz low cut. Edit `voice_fx.json` to change any of it; `swift fx.swift --list aumf:FC2p:FabF` prints a plugin's parameter names.
+
+---
+
+### Levels
+
+Music raised from -10 to -2 dB under the voice (`MUSIC_DB`), so voice peaks now sit about 8 dB above the music instead of 12+. The whole track is now -21 LUFS, about 5 dB quieter than before. Also fixed a hidden cause of extra loudness: ffmpeg's `alimiter` auto-levels by default, which had pushed earlier renders ~2 dB over target.
+
+---
+
+### Not changed
+
+Attempt #0 stays as it was (the joke). Untested by ear.

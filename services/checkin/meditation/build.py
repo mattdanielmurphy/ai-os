@@ -16,11 +16,12 @@ import tts  # noqa: E402
 
 # Feel knobs
 GAP = 1.2          # s of quiet after every spoken line, on top of any [pause]
-MUSIC_DB = -10     # music level under the voice (dB) before ducking
+MUSIC_DB = -2      # music level under the voice (dB) before ducking (Matt, 10-27: voice was too loud vs the music)
 DUCK = 3           # dB the music dips while the voice speaks (a fixed, gentle dip; Matt: 4 dB of compression + AGC was way too much)
 DUCK_IN, DUCK_OUT = 0.8, 2.0   # s the dip takes to fade in before a line and back out after it
 FADE_IN, FADE_OUT = 6, 12
-LUFS = -18         # final loudness: quiet, for headphones in bed
+VOICE_FX = HERE / "voice_fx.json"  # FabFilter Pro-DS -> Pro-C 2 -> Pro-R 2, gentle; run by fx.swift
+LUFS = -21         # final loudness: quiet, for headphones in bed (Matt: -18 was quite loud)
 
 
 def parse(path):
@@ -84,8 +85,15 @@ def build(script, out=None):
     for r in ramps[1:]:
         env = f"max({env},{r})"
     dip = 1 - 10 ** (-DUCK / 20)
-    fc.append("".join(f"[v{i}]" for i in range(n)) + f"amix=inputs={n}:normalize=0,apad=whole_dur={total}[vo]")
-    fc.append(f"[{n}]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{total},volume={MUSIC_DB}dB,"
+    # 1. Voice bus alone (low cut), then through the FabFilter chain.
+    vbus, vfx = cache.parent / f"{name}-voice.wav", cache.parent / f"{name}-voice-fx.wav"
+    vfc = fc + ["".join(f"[v{i}]" for i in range(n)) + f"amix=inputs={n}:normalize=0,apad=whole_dur={total},highpass=f=70[vo]"]
+    subprocess.run(args[:-4] + ["-filter_complex", ";".join(vfc), "-map", "[vo]", "-t", str(total), str(vbus)], check=True)
+    subprocess.run(["swift", str(HERE / "fx.swift"), str(VOICE_FX), str(vbus), str(vfx)], check=True, capture_output=True)
+    # 2. Mix the processed voice with the dipped music.
+    args = ["ffmpeg", "-y", "-v", "error", "-i", str(vfx), "-stream_loop", "-1", "-i", str(music)]
+    fc = [f"[0]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{total}[vo]"]
+    fc.append(f"[1]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{total},volume={MUSIC_DB}dB,"
               f"volume='1-{dip:.4f}*({env})':eval=frame,"
               f"afade=t=in:d={FADE_IN},afade=t=out:st={total - FADE_OUT}:d={FADE_OUT}[m]")
     fc.append("[vo][m]amix=inputs=2:normalize=0[out]")
@@ -95,9 +103,10 @@ def build(script, out=None):
     meas = subprocess.run(["ffmpeg", "-nostats", "-i", str(wav), "-af", "ebur128", "-f", "null", "-"],
                           capture_output=True, text=True).stderr
     measured = float(re.findall(r"I:\s+(-?[\d.]+) LUFS", meas)[-1])
-    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(wav), "-af", f"volume={LUFS - measured:.2f}dB,alimiter=limit=0.8",
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(wav), "-af", f"volume={LUFS - measured:.2f}dB,alimiter=limit=0.8:level=disabled",
                     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(out)], check=True)
-    wav.unlink()
+    for f in (wav, vbus, vfx):
+        f.unlink()
     (out.with_suffix(".json")).write_text(json.dumps({"title": name, "voice": voice, "music": music.name,
                                                       "seconds": round(total), "lines": lines}, indent=1))
     print(json.dumps({"out": str(out), "seconds": round(total), "lines": len(lines)}))

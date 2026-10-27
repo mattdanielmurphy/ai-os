@@ -1,0 +1,5 @@
+[
+ {"au": "aumf:FPSr:FabF", "params": {"Threshold": 0.45, "Range": 4}},
+ {"au": "aumf:FC2p:FabF", "params": {"Style": 0, "Threshold": -26, "Ratio": 0.25, "Knee": 24, "Attack": 0.3, "Release": 0.5, "Auto Gain": 1, "Mix": 1}},
+ {"au": "aumf:FR2p:FabF", "params": {"Space": 0.3, "Distance": 0.35, "Brightness": 0.35, "Decay Rate": -0.2, "Character": 0.2, "Stereo Width": 0.8, "Mix": 11}}
+]

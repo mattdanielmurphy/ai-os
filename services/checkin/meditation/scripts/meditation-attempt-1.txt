@@ -1,5 +1,5 @@
 # voice: marian
-# speed: 0.86
+# speed: 1.0
 # music: ~/projects/claude-ambient/out/loop-breath-20m.flac
 # One line or paragraph per spoken segment. [pause N] = N seconds of music only.
 
