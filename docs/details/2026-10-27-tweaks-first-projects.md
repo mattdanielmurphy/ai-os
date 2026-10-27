@@ -161,3 +161,21 @@ Tested on screen, with your clearance: Claude was 1920×1080. The panel opened a
 - **Untried on screen:** the smaller-window slide, real full-screen windows, and the ask-which-app flow. The geometry is unit-tested; the full-screen path has the most risk.
 
 **Undo:** revert 4a6704f in ~/.hammerspoon.
+
+## 12:40 Dock icon when the panel stands alone
+
+**Asked:** Matt: "we need a dock icon eventually anyway, so figure it out".
+
+---
+
+### What the Dock icon does now
+
+When you jump to a background utility, the panel puts the app back and turns on Hammerspoon's Dock icon, which also gives it a cmd-tab entry. The icon gets a custom tile drawn with `hs.dockicon.tileCanvas`: three little sliders with accent-coloured knobs, using only system colours (window background, tertiary label, control accent), so no new colours. Docking beside an app or closing the panel hides the icon again. If you've turned Hammerspoon's Dock icon on yourself, the panel leaves it alone. Tested on screen with your clearance. Docked: Claude at 380,0 1540×1080, no icon. Jumping to Reload indicator: Claude back to 1920×1080, icon on. Closed: icon off.
+
+---
+
+### What it still can't do
+
+The Dock tile is ours, but cmd-tab and the hover label still show Hammerspoon's own icon and name, because the panel lives inside Hammerspoon. An icon that says "Tweaks" everywhere needs a small native app (hud-kit Swift, a WKWebView running the same page, talking to Hammerspoon), which is a new app. Given the freeze, it fits best as part of the Slub Utils app when the suite becomes one, rather than as a standalone project now. I didn't build it.
+
+**Undo:** revert this commit in ~/.hammerspoon (the "Dock icon and cmd-tab entry" one).
