@@ -234,3 +234,7 @@ A second ← within 0.7 seconds now goes one sentence further back from where th
 ### Preloading
 
 Before, only the next paragraph's voice was fetched ahead. Now it also fetches the paragraphs holding the next sentence, the one after next, and wherever → would land in smart skip, and it downloads their audio files too (before, only the timing was fetched, so the audio still had to load when you jumped).
+
+## 11:35 Pauses between short sentences
+
+Cause: the voice comes in one recording per paragraph or heading, and moving to the next one meant swapping the audio file in the one player and waiting for it to load, so short paragraphs had a pause after each. Fix: a second, hidden player holds the next paragraph already loaded and takes over the moment the first one ends. The voice is also fetched ahead for the next 160 words, however many short sentences or paragraphs that spans. Measured: gaps between paragraphs are now 0 to 2 milliseconds (headless, on this Readthrough and the demo page).
