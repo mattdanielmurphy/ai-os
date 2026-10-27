@@ -45,3 +45,7 @@
 
 ## 13:32 Drag tested
 - Matt tested window dragging himself: works. Toolbar look choice (1/2/3) still open; look 1 stays on until he picks.
+
+## 13:55 Toolbar look 3
+- Matt picked 3 (frosted glass). Made it the only look; removed looks 1 and 2, the title strip and the `ui.toolbarStyle` tweak. Checked in light and dark (WebKit screenshots).
+- Not live until `glass restart` (an episode was still paused in IINA, so I didn't restart the server).
