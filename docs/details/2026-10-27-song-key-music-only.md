@@ -53,3 +53,24 @@ The listener now runs while anything plays, not only while the pill is up, so it
 - The keyboard's tonic colour in the pill is terracotta (`#e07a5f`), which breaks the colour rule; left alone because it's outside this ask.
 
 **Undo:** `git -C ~/.hammerspoon revert 7670653`.
+
+## 04:35 No Esc; hover Close like Trackpad Mixer
+
+**Asked:** Esc is too common a shortcut; keep the self-fade; add click-to-close like Trackpad Mixer.
+
+---
+
+### What changed
+
+- Esc removed entirely (and its "ESC HIDES" chip and tweak).
+- Moving the mouse over the pill dims it and shows one big "Close" button, copied from Trackpad Mixer's hover overlay. It acts on mouse release. Only real mouse movement shows it, so a pill that appears under a resting cursor stays clean.
+- Clicking anywhere else no longer hides it (matches the mixer). The ↗ corner still opens Hooktheory and sits above the dim layer.
+- Auto-fade stays at 25 s, but waits while the mouse is over the pill so it doesn't vanish under your cursor.
+
+---
+
+### Untested
+
+- Rendered and hover-tested in headless Chrome. Not tested in the real Hammerspoon pill with the mouse, since that needs input on the Mac. Piano HUD uses hover in the same kind of window, so it should work.
+
+**Undo:** `git -C ~/.hammerspoon revert HEAD`.
