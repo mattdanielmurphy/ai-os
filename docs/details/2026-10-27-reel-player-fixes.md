@@ -366,3 +366,36 @@ Matt: the voice blazes through `inline code` with nothing to set it apart; add c
 - No hand-written rules were added to the voice code; it's all in the translator's instructions (`pages/rate.ts`), as Matt asked earlier.
 - Checked live with Whisper on the "Only these 10 voices" paragraph: the path comes through as "slash api slash T T S question voices equals all" (Whisper writes "pages slash T T S dot T S" back as "pages/tts.ts", so that one I can't confirm by transcript).
 - Small judgement calls in the list may still be off (it says "api" as a word in one path). Tell me which and I'll tighten the instructions.
+
+## 18:40 Comments on a Readthrough now reach Claude
+
+Matt left a 👍 on the line "Moving the cache to Matt's VPS is waiting for his approval" and expected me to see it. Comments and reactions on a Readthrough were only saved in his own browser, so no agent could see them. He wants every comment to be dealt with even if he closes the page and comes back a week later.
+
+---
+
+### His 👍
+
+Read as approval of the VPS move. That move was already done and live (the storage thread finished it today), so nothing more to do.
+
+---
+
+### How comments reach Claude now
+
+- **The page sends them.** Every reaction, comment, change or removal on a Readthrough is posted to Matt's VPS (`https://vps.mattmurphy.ca/tts/comments`, part of the existing voice-cache service), which appends it to a file there. If sending fails (offline), it waits in the browser and retries on the next visit. A small note says "Sent to Claude ✓ · it'll be picked up even if you close this page". Reactions left before today are sent the next time the page is opened, so his 👍 will go through too.
+- **The Mac hands them on.** A new launchd job, `ai-os/scripts/readthrough_comments.py` (every 2 minutes), reads new comments from the VPS over ssh and sends them to the Everything coordinator, the same way voice tasks are delivered. It only moves its bookmark forward once the coordinator has them, so nothing is lost if delivery fails; it retries in 5 minutes.
+- **The coordinator routes them** to the thread that wrote the page. New Readthroughs carry their thread id (agents now pass `--cmsg <thread id>` to `pages readthrough`; the rule is updated), so routing is exact; older ones are matched by their page name.
+- **Safety:** the page is public, so anyone with the link could post. The endpoint only accepts posts for `/claude/…` pages, caps size and rate (60 an hour per address), and the coordinator is told to weigh them as Matt's input, not as approval for anything irreversible.
+
+---
+
+### Underline
+
+Reacted text now has one continuous underline across words and the spaces between them, instead of separate rounded pieces per word.
+
+---
+
+### Tested and untested
+
+- Tested: the VPS endpoint live (accepts a valid post, rejects other pages), the Mac job's dry run (formats the message correctly), and the player in headless Chrome (sends a reaction once, not again on reload, shows the note, underline is continuous).
+- Not yet tested: a real delivery all the way into the coordinator. The first real one will be his own 👍 when he next opens this Readthrough.
+- Undo: `python3 ~/projects/ai-os/scripts/readthrough_comments.py uninstall` stops delivery; revert the "reactions and comments are sent to Claude" commit in ~/projects/pages and run `pages deploy`.
