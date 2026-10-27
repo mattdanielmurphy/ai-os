@@ -306,3 +306,28 @@ Matt confirmed: reword only what the voice says; the page keeps the normal Engli
 - The global list (times, seconds, rename) still applies everywhere; page-specific ones are on top.
 
 Still read oddly: single-symbol keys written as code, like `,` and `.`, are silent in speech ("press to read faster"). Could be fixed the same way (say "comma", "period") if Matt wants.
+
+## 12:45 No browser processing, find-and-replace speech fixes, panel scrolling
+
+---
+
+### Voice speed: no browser processing at all
+
+Matt: a good-sounding voice matters more than fine speed steps; no browser processing. Now every speed is its own Speechify recording played at exactly 1x: 75%, 100%, 125%, 150%, 175% and 200%. The slider and the `,` `.` keys move one step. Your old 135% became 125%. Smart skip's Hurry and Key points go one step up instead of stretching. Each step is made the first time anyone listens at it, so the first listen at a new speed waits a moment.
+
+---
+
+### Speech fixes moved out of code
+
+Matt: "our system" shouldn't worry about this; use something like Jev (I read that as a fast AI model) or a simple find-and-replace, ideally an existing project.
+
+- **What I looked for:** an existing open-source tool that makes text TTS-safe. Number/time/unit normalizers exist ([NVIDIA NeMo text processing](https://github.com/NVIDIA/NeMo-text-processing) in Python; a .NET one, [Agash.TTSTextNormalization](https://www.nuget.org/packages/Agash.TTSTextNormalization/0.1.0)), but none handles context words like "Rename" alone, and none is a small drop-in for our setup. So I went with the two things Matt named.
+- **Find and replace:** the hand-written rules are gone from the voice code. `pages/speech-fixes.json` is a plain list (rename → renaim, → → right arrow, ← ↑ ↓ ⌘ ⌥ ⇧ ⌃ ↵). Anyone can add a line.
+- **AI per page:** the background Claude pass (small model; it runs after publishing, so speed doesn't matter and no new key is needed) writes each page's own find-and-replace list. For this Readthrough it now drops the heading times, says "0.05 seconds", "350 milliseconds", "escape", "W P M", "simba three point two", file paths in words, and so on.
+- Checked live with Whisper: the smart skip paragraph now starts "Right arrow once…".
+
+---
+
+### Scrolling in Tune
+
+Scrolling or touching inside Tune, the Pace panel, the section list or the reactions sheet no longer counts as scrolling the page, and those panels no longer pass their scroll on to the page when they reach the end. Tested: five wheel scrolls over Tune left the reading and the page untouched.
