@@ -109,3 +109,11 @@ Not seen in the Dock yet (needs a relaunch). It renders correctly from the insta
 
 ### Undo
 `git revert a27e576` and rebuild.
+
+---
+
+## 19:32 Icons rejected
+
+**Matt:** the theatre icons are bad.
+**Real cause:** I drew them by hand as SVG code (shapes, gradients, blur). That approach can't reach the polish of a real app icon; the beams, glass and shard all look like vector clip-art. It's a tooling ceiling, not a matter of tweaking.
+**Proposal:** generate 4 renders with a real image model (Figma's image generation; GPT Image or Gemini Image) from one brief (dark stage, gold searchlights, glass screen whose crack forms the play button, macOS icon shape). He picks one, I cut it into the app icon. Costs Figma AI credits per image, so I asked first.
