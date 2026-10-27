@@ -57,3 +57,51 @@ Read along (Matt's idea, recommended), Readthrough, Trail. Not renamed yet; wait
 
 - Not tested on a real phone or by ear; the headless test checked timing, keys and layout only.
 - Undo: `git revert` the scroll-read commit in ~/projects/pages, then `pages deploy`.
+
+## 09:20 Round 2: Readthrough name, scroll hold, speed keys, extras
+
+Matt picked "Readthrough" (also floated "Table Read"), asked that his own scroll pauses auto-follow at once, that dimmed words light up while he scrolls and dim again on play, `,` and `.` for speed with a reminder when he skips a lot, and anything interactive an agent gets for free.
+
+---
+
+### Scroll hold
+
+Any scroll of yours turns auto-follow off at once and keeps it off afterwards (before, it pulled the page back to the word as soon as you stopped). It comes back when the word scrolls back into view, or when you press "Back to reading" (bottom centre, arrow points to where the reading is), tap a word, use a key or press play. A big scroll still snaps the reading to where you are, as before.
+
+---
+
+### Lit words
+
+While you're scrolling, scrolled away, or paused, every word is full ink (no dimming of read words, no pale upcoming words in Ink). Reading again dims them as before.
+
+---
+
+### Speed keys
+
+`.` reads 20 wpm faster, `,` 20 slower (YouTube's keys without Shift; `>` and `<` work too). A small note shows the new speed and fades. After 3 sentence skips within 30 seconds, if speed hasn't changed in 10 minutes, a one-time note says "In a hurry? Press . to read faster". Rejected: making → temporarily speed up instead of skip; Matt said the skip feels right, and two behaviours on one key would be confusing.
+
+Bug found and fixed while testing: after clicking a button (like play), the arrow and speed keys were ignored because the focused button swallowed them.
+
+---
+
+### Free extras
+
+All automatic from plain Markdown, nothing for agents to write:
+
+- **Section rail**: headings as a list on the left (wide screens) or a "§ Sections" button (narrow), current section marked, tap to jump, plus "About N min left".
+- **Copy** on every code block.
+- **Task lists** (`- [ ]`) become checkboxes that remember their state per page.
+
+Ideas not built (each would need agents to write something extra): quick-check questions, decision buttons that reply to the thread.
+
+---
+
+### Rename
+
+`pages readthrough` is the command now; `pages reel` still works so nothing breaks. The rule in ai-os and the global instructions now say Readthrough, and the Details line link is labelled `[Readthrough]`.
+
+---
+
+### Untested
+
+Not tried on a real phone or by ear. Touch scrolling uses the same hold logic but was only tested with a mouse wheel.
