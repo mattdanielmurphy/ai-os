@@ -30,7 +30,8 @@ LABEL = "com.matt.agent.readthrough-comments"
 PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 LAUNCH_LOG = Path.home() / "Library" / "Logs" / "launch-agents" / "readthrough-comments.log"
 RETRY_AFTER = 300
-REACT = {"love": "❤️", "agree": "👍", "no": "✕", "confused": "❓"}
+REACT = {"agree": "👍 yes, go ahead", "no": "❌ no, don't", "confused": "❓ didn't get it, explain simpler", "next": "⏩ next, keep going",
+         "wait": "✋ wait, he'll say more", "done": "✅ done, all good", "love": "❤️ love it"}
 
 
 def log(msg):
