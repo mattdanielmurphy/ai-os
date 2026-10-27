@@ -44,3 +44,13 @@ When the kit is loaded, Knobs rows use the kit's slider, number field, switch, c
 - The Tweaks panel itself is unchanged until that thread adopts the kit.
 
 Undo: `git revert` the two Slub UI commits in ui-mixer.
+
+## 17:52 Plain is the default look
+
+Matt: it's between plain and hairline; plain is good enough for now, and it can change later.
+
+---
+
+### Plain is now the default
+
+`build.ts` writes `dist/slub-ui.css` from `DEFAULT_LOOK = 'plain'`. Hosts load that one file, so switching later (for example to hairline) is a one-word change and a rebuild. All looks stay in `looks/`. The Tweaks thread was told to use `slub-ui.css`.
