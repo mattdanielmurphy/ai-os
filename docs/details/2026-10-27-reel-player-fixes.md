@@ -336,3 +336,14 @@ Scrolling or touching inside Tune, the Pace panel, the section list or the react
 
 - `speech-fixes.json` now also names bare punctuation used as keys: comma, period, semicolon, colon, slash, greater than, less than, plus, equals, question mark, exclamation mark. They only match a symbol standing on its own (like a key written as `,`), never punctuation inside a sentence. Checked live with Whisper: "…comma and period for speed…".
 - Speeds are rendered on the fly: the first time anyone listens to a paragraph at a given speed, the voice server asks Speechify for it (about 1 to 3 seconds), then keeps it, so everyone after gets it instantly. "Its own recording" means a native Speechify render at that pace instead of the browser stretching the 100% one. The player also renders ahead (the next 160 words), so after the first paragraph the wait is usually hidden.
+
+## 13:40 Halving Vercel Blob uploads
+
+From the Vercel storage thread: Hobby Blob allows 2,000 uploads a month and locks for 30 days past that; October was at 445, mostly today, because each recording was 2 uploads and every speed is now its own recording.
+
+- **One upload per recording.** `api/tts-vercel.ts` now saves a single `tts/<key>.json` holding the word timings and the mp3 (base64). The player turns it into a `blob:` URL and plays that (a plain `data:` URL stalled in Chrome, found in testing).
+- **No Blob API calls on reads.** Cached recordings are fetched straight from the store's public address (worked out from the store token), so no `head()` and never `list()`. The response header `x-tts-read: direct` confirms it live.
+- **Old recordings still work.** Ones saved before today (separate mp3 + json) are served as they are; nothing was re-recorded or deleted.
+- Moving the cache to Matt's VPS is waiting for his approval in the storage thread; not done here.
+
+Tested live: a new 175% recording made in 1.3 s, served from cache on the second request, and the player read through two paragraphs at 200% from the new single-file recordings.
