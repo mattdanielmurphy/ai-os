@@ -163,3 +163,7 @@ Without ratings (old Readthroughs, or if the background step fails), → stays a
 ### Untested
 
 Not heard by ear: the slow recording's pitch and the smoothness of the switch at 85% are checked only by measurement (the 70% recording is 1.42 times as long, as expected).
+
+## 10:25 Buffering spinner
+
+Matt asked for a buffering icon while the voice loads. The play button now turns into a spinning ring whenever reading is on but the voice hasn't started yet (first load, a new block, after a skip, or a voice or speed change), and goes back to ❚❚ the moment it speaks. Tested headless with a deliberately slow voice server: spinner for about 1.5 seconds, then speaking. Undo: revert the "play button spins" commit in ~/projects/pages and run `pages deploy`.
