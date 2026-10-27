@@ -51,3 +51,25 @@ You have a paid Apple developer account: your existing iOS provisioning profiles
 ## 17:50 Correction: iPad, not iPhone
 
 Matt asked about iPad; the first reply said iPhone throughout. The plan is the same. The iPad is a bit easier: its screen is close to the Mac window, so the web layout needs little change, and touch controls have more room. Estimates stay: quick version an afternoon, full app 3 to 5 days, X-Ray about a day more. The same app can also run on iPhone later at little extra cost.
+
+## 17:52 Can Tailscale be folded into the app?
+
+Matt asked if the iPad app could avoid needing Tailscale. Answer from knowledge, nothing tried.
+
+---
+
+### Home Wi-Fi only: no Tailscale at all
+
+The Mac announces Glass TV on the local network (Bonjour), the iPad app finds it automatically. Zero setup, about half a day. Only works when both are on the same Wi-Fi. Needs a simple pairing code so other people on the network can't use it.
+
+---
+
+### Anywhere: Tailscale built into the app
+
+Tailscale publishes libtailscale (its tsnet library with C bindings), which lets an app join the tailnet by itself in userspace: no Tailscale app, no VPN profile on the iPad. Sign in once inside Glass TV. About 1 to 2 days (Go cross-compiled for iOS is the fiddly part). Still needs a Tailscale account; the Mac side already runs Tailscale.
+
+---
+
+### Rejected
+
+- Public tunnel (Cloudflare Tunnel etc.): exposes the Mac's files to the internet; needs real login security. Not worth it for one person.
