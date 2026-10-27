@@ -242,3 +242,13 @@ Cause: the voice comes in one recording per paragraph or heading, and moving to 
 ## 11:45 Speed keys back to small steps
 
 Matt: 25% per key press was far too much; he meant the slider should snap to 25% marks. Now `,` and `.` change speed by 5% per press, and the speed slider accepts any value but snaps to 100%, 125% and the other 25% marks when you come within 5% of one. Tested: keys step 135 → 140 → 145; slider 97 and 103 both snap to 100, 112 stays 112.
+
+## 11:55 No more stretched voice when changing speed
+
+Matt: changing speed first played a browser-stretched voice (sounds bad) before the proper recording took over, which makes you think it will sound bad.
+
+Fix: the voice server now keeps a recording per pace, 70%, 100%, 130% and 160% of natural speed, each spoken by Speechify at that pace. The player picks the nearest one and only fine-tunes with the browser (at most about 15% either way, which isn't audible as processing). When a speed change needs a different recording, the voice goes quiet with the buffering spinner, waits a third of a second for you to stop pressing, then carries on in the new recording from the same word. Within the same recording, speed just adjusts.
+
+Your usual 135% now plays the 130% recording at 1.04x, instead of the plain recording stretched 1.35x, so it should sound cleaner all the time. Each pace is made the first time anyone listens at it, so the first listen of a paragraph at a new pace has a short wait.
+
+Tested headless, locally and live: at 100% it played the plain recording; pressing . four times went quiet, then resumed on the 130% recording at 0.92x.
