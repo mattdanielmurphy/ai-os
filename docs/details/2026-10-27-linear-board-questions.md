@@ -60,3 +60,46 @@ Stay on Linear free. He's at about 15% of the cap, and agents already park ideas
 Untested: whether archived issues count toward 250; whether Initiatives are on the free plan.
 
 Undo: nothing changed.
+
+## 07:35 Separate Slub workspace, moving projects, more generous alternatives
+
+Matt noticed the board is turning into a Slub board, floated a second Linear account under his slub.cc email (keeping this one personal), asked whether a project can be moved between Linear accounts easily, and whether there's something nearly identical to Linear with a more generous free tier.
+
+---
+
+### Two workspaces, not two accounts
+
+Linear's unit is the **workspace**, and one login can belong to several workspaces and switch between them from the workspace menu. So he doesn't strictly need a second account: he can create a "Slub" workspace (signed up with or owned by his slub.cc address if he wants company stuff under the company email) and keep "mattmurphy" personal.
+
+Why this is a good split:
+- The free plan is per workspace, so two workspaces = 250 issues each.
+- On the free plan everyone is an admin and private teams need Business, so if Tyler joined the current workspace he'd see all the personal cards (job, budget, therapy-harness idea). A separate Slub workspace avoids that, and members are unlimited on free.
+- Agents' Linear connector is signed in to one workspace at a time; using a second one means connecting it too (Linear's connector can be re-authorized per workspace). Untested which workspace the current connector would pick.
+
+---
+
+### Moving projects between workspaces
+
+- Linear's docs (Exporting data, FAQ) say teams can be moved between workspaces by importing them from one Linear workspace into another. That's the whole team with its issues, not a single project.
+- There's no one-click "move this project to another workspace". Options: put Slub work in its own team first and import that team; or CSV export and re-import; or I copy cards across with the API/connector.
+- Within one workspace, moving issues between teams is one click (or bulk select).
+
+Suggested path: make a second team "Slub" in the current workspace now (free allows 2 teams), move the ~16 Slub-labelled cards into it, then when the Slub workspace exists, import that team over. Nothing is lost if he changes his mind.
+
+---
+
+### Alternatives with a more generous free tier
+
+- **[Plane Cloud](https://plane.so/pricing)** (hosted, no VPS): free for up to 12 users; the pricing page lists no work-item cap. Has a Linear importer, cycles, modules, pages. Free plan lacks exports, integrations (GitHub/Slack), templates and dashboards; no exports on free is a lock-in risk. Closest look and feel to Linear.
+- **GitHub Projects**: free and effectively unlimited, and agents already use GitHub fluently. Far less polished as a board.
+- **Jira free**: 10 users, but nothing like Linear's feel.
+
+Not recommended: Height (shut down), Huly cloud (reported winding down, unconfirmed).
+
+---
+
+### Recommendation for this round
+
+Stay on Linear and split into two free workspaces (personal + Slub). That doubles the free room, keeps Tyler out of personal cards, and keeps the agent connector. Plane Cloud is the fallback if the cap ever bites.
+
+Untested: Linear-to-Linear team import (documented, not tried); whether the connector can hold two workspaces at once.
