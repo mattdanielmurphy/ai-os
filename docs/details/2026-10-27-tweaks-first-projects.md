@@ -52,3 +52,29 @@ Rejected: "everything is a tweak, no pruning" (panel becomes a wall of 200 slide
 ### Scanner build plan
 
 The recommended option: a script turns named constants into tweaks, then Sonnet prunes and organises. It lives inside the existing Tweaks module, so it adds no new project. It starts on the Hammerspoon modules.
+
+## 08:20 Panel docks beside its app: logic check before building
+
+**Asked:** Matt: the Tweaks panel should be summoned per app, dock on the left, push the app over, not float on top, not follow cmd-tab, toggle closed and restore the app; a jump menu at the top for background utilities, which turns the panel into its own Dock app. Restyle it using a new shared UI library built by a separate agent. He also 👍'd the scanner.
+
+**Did:** asked the coordinator to start a separate thread for the shared UI library, quoting his request and pointing it at the design threads and UI rules, and to message this thread when it's ready. Restated the panel logic back to him before building (rule: restate complex logic first). Started the scanner, which was approved.
+
+---
+
+### Panel logic as understood
+
+1. Pressing ⌃⌥⌘T in an app that has tweaks opens the panel on the left edge of that app's screen, already set to that app. Apps whose Hammerspoon helpers attach to them count too: Claude shows Cmd-K, Quote comments and Thread queue.
+2. If the app's window filled the screen, it shrinks to fill the space that's left. Otherwise it just slides right until it clears the panel. Its original position is remembered.
+3. The panel is an ordinary window, not always on top. It doesn't follow focus or cmd-tab.
+4. Pressing ⌃⌥⌘T again closes the panel and puts the app's window back where it was.
+5. In an app with no tweaks (a system app), the panel opens with a picker that asks which app or utility to tweak.
+6. If the jump menu switches the panel to a background utility, the app goes back to where it was, and the panel becomes its own Dock icon you can cmd-tab to. Panels tied to an app never get a Dock icon.
+
+---
+
+### Open questions on the panel
+
+- Jump to another app that has a window: I assume the first app is restored and the panel docks beside the new one instead.
+- Dock icon: Hammerspoon windows can't have their own Dock icon. Detached mode needs a small native wrapper app (hud-kit Swift around the same page). It's the main extra cost.
+- Width: fixed at about 400 px, with its own tweak.
+- If you move or resize the app while the panel is open, closing still restores the original frame unless you moved it a lot. I'd keep your new position then.
