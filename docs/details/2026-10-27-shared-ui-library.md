@@ -86,3 +86,24 @@ A field whose step is 0.1 moves 0.1 / 1 / 0.01 instead, so a 0–1 opacity can't
 ### Smaller fixes
 
 Hovering a Knobs number field shows the key hint. Knobs no longer shows trailing zeros ("23.10" is now "23.1"). Tested in Chrome: 12 → 13 → 23 → 23.1 → 23 → 22 → 12.
+
+## 18:20 Round 2: four looks between plain and hairline
+
+Matt: plain is about 95% there but slightly too vanilla. He likes hairline's minimalism and its all-caps headings, but in hairline everything blends together, and its search box is too minimal. Prairie is okay, synth is garish. He asked for four new looks crossing plain and hairline.
+
+---
+
+### The four new looks
+
+Four separate agents each made one look from its own brief. All four start from plain, add hairline's all-caps headings and keep a real search box.
+
+- **Caps** is the smallest step: plain plus caps headings, mono digits and a search field with a ⌕ glyph.
+- **Quiet** has softer 1px borders, slightly tighter corners, a thin slider track and a filled search box.
+- **Grouped** puts each section on its own rounded surface, like macOS System Settings.
+- **Ink** uses a stronger type ladder: loud labels, quiet notes, mono numbers, and the accent only on what's active or changed.
+
+---
+
+### Page changes
+
+The looks page now shows plain, caps, quiet, grouped, ink and hairline. Prairie and synth are off the page; their files stay in `looks/`. Each look was checked in light and dark with three accent colours, with no page errors.
