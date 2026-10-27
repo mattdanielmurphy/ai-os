@@ -252,3 +252,7 @@ Fix: the voice server now keeps a recording per pace, 70%, 100%, 130% and 160% o
 Your usual 135% now plays the 130% recording at 1.04x, instead of the plain recording stretched 1.35x, so it should sound cleaner all the time. Each pace is made the first time anyone listens at it, so the first listen of a paragraph at a new pace has a short wait.
 
 Tested headless, locally and live: at 100% it played the plain recording; pressing . four times went quiet, then resumed on the 130% recording at 0.92x.
+
+## 12:05 Why "rename" sounded like "re-na-may"
+
+Speechify's voice guesses pronunciation from spelling and context, and "rename" alone (as in the heading "Rename") looks like a French-style word such as résumé, so it said "re-na-may". Transcribing the old live clip with Whisper heard "RENEMY". Fix: the voice server now has a small pronunciation list that tells Speechify to say "re-name" (also renamed, renames) while the page still shows the real word. The fixed clip transcribes as "Rename." Only paragraphs containing those words get new audio. When you hear another word said wrong, tell me and I'll add it to the list (`PRONOUNCE` in pages/tts.ts).
