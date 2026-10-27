@@ -220,3 +220,17 @@ Changed with it: after a small scroll, auto-follow now waits until the reading i
 ### Ratings for older Readthroughs
 
 9 of 16 rated so far; the rest are running in the background.
+
+## 11:25 Double back and smarter preloading
+
+---
+
+### Pressing back twice
+
+A second ← within 0.7 seconds now goes one sentence further back from where the first one landed (same for ↑ with paragraphs). A single ← still goes to the start of the current sentence first if you're more than a couple of words in. Tested: from the middle of sentence 8, three quick presses landed on 8, 7, 6.
+
+---
+
+### Preloading
+
+Before, only the next paragraph's voice was fetched ahead. Now it also fetches the paragraphs holding the next sentence, the one after next, and wherever → would land in smart skip, and it downloads their audio files too (before, only the timing was fetched, so the audio still had to load when you jumped).
