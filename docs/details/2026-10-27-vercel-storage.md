@@ -41,3 +41,7 @@ Handed to the Readthrough thread, since it owns `tts.ts` and the player, so two 
 ### How to undo
 
 Nothing was changed or deleted.
+
+## 10:40 Uploads halved
+
+The Readthrough thread shipped it: each recording is now one Blob upload (timings plus the mp3 in one JSON), and cache reads go straight to the public address with no head() or list() calls. I checked `api/tts-vercel.ts`: one `put()` per recording. Old two-file recordings still play; nothing was deleted. The VPS move still waits on Matt's 👍.
