@@ -65,3 +65,40 @@ Face detection returns a box for every face anyway, so the name tags in B just s
 ### Design C parked in ideas
 
 Added to `~/projects/glass-tv/IDEAS.md` as the future director's-commentary mode, with the mockup link. Plan doc updated: `~/projects/glass-tv/docs/XRAY_PLAN.md`.
+
+## 13:05 Design B built and live
+
+Matt 👍'd building B with recognition only on pause.
+
+---
+
+### X-Ray works in IINA
+
+Tested inside the real IINA with a short muted clip made from TMDB stills of The Office S2E1: pausing on Pam and Jim put "Pam Beesly / Jenna Fischer" and "Jim Halpert / John Krasinski" tags on them within about a second, and playing again hid them. Glass TV's live server runs the new code (reinstalled with `./install.sh`).
+
+How it works: the plugin (`iina-plugin/`) asks `127.0.0.1:4747/api/xray?t=<paused time>`. The server saves the paused frame through IINA's player socket, `bin/xray-faces` (Apple Vision) finds faces and makes aligned crops, SFace turns each into a fingerprint, and each is compared with that episode's TMDB cast photos (up to 3 per actor, top 20 billed). One face and one actor are paired at most once, best scores first.
+
+Speed and memory: about 0.1 s per pause once the episode's cast is fingerprinted. That happens in the background when an episode starts (about 3 s, once per actor ever, saved on disk). The model uses about 120 MB only while in use and unloads after 5 idle minutes.
+
+Accuracy on the 4 stills: every named face was right (Michael 0.62–0.64, Pam 0.56, Jim 0.36–0.41). A screaming, blurred Pam and two small background faces came back unknown. Nothing was named wrongly.
+
+---
+
+### What's not tested yet
+
+- Tab, Return and X were tested only in a browser copy of the overlay, not by pressing keys in IINA (that would mean typing on Matt's Mac).
+- Only a local file was tried, not a stream. It should behave the same, since the frame comes from the player either way.
+- The photo in the Return card loads from TMDB; not checked inside IINA.
+
+---
+
+### Choices and why
+
+- Face model: SFace from OpenCV's model zoo, chosen because it's Apache 2.0 (fine for the world). InsightFace's models were rejected: research-only licence.
+- Face finding: Apple Vision (built into macOS, no download).
+- Rules for naming a face, all in the Tweaks panel: likeness 0.36 or more, or 0.28 or more and clearly ahead of the next-best actor by 0.08.
+- Tags go above the head (a third of a face above the brow line), or under the chin when there's no room; overlapping tags get nudged apart.
+- Light and dark follow the system.
+- Just for Matt for now: it needs Glass TV, IINA and a free TMDB key.
+
+Undo: `iina-plugin unlink`, `defaults delete com.colliderli.iina PluginEnabled.ca.mattmurphy.glass-tv.xray`, and revert commit 7ef031e in glass-tv.
