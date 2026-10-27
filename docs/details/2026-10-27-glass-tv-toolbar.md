@@ -42,3 +42,6 @@
 
 ### Undo
 - `git revert` the commit "Draggable toolbar with centred stoplights…" in ~/projects/glass-tv, then `./build.sh`.
+
+## 13:32 Drag tested
+- Matt tested window dragging himself: works. Toolbar look choice (1/2/3) still open; look 1 stays on until he picks.
