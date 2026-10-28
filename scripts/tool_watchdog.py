@@ -51,12 +51,19 @@ def main():
     now = stuck(a.warn_min * 60)
     live = {str(p) for p, _, _ in now}
     seen = {k: v for k, v in seen.items() if k in live}
-    for p, e, c in now:
-        if str(p) in seen:
-            continue
+    fresh = [x for x in now if str(x[0]) not in seen]
+    named = {}
+    if fresh:
+        try:
+            from claude_bg import listing
+            named = {r["pid"]: r["title"] for r in listing(a.warn_min * 60)}
+        except Exception:
+            pass
+    for p, e, c in fresh:
         m = re.search(r"eval\s+'?(.{0,90})", c)
         cmd = (m.group(1) if m else c)[:90]
-        body = f"{e // 60} min: {cmd}\nStop it: pkill -TERM -P {p}; kill {p}"
+        who = named.get(p, "unknown session")
+        body = f"{e // 60} min in {who}: {cmd}\nSee all: claude-bg · stop it: claude-bg stop {p}"
         print(f"pid {p}: {body}")
         if not a.dry_run:
             subprocess.run([NOTIFY, "A Claude command may be stuck", body, "--kind", "needs"], timeout=10)
