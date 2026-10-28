@@ -29,12 +29,27 @@ for c in cards:
     if isinstance(c["options"], str):
         c["options"] = json.loads(c["options"])
 d = date.fromisoformat(a.date)
+
+
+def meditation():
+    """Today's guided meditation: the ladder's level for it, and that level's track (a page asset, see meditation/)."""
+    if "meditation" not in cfg["habits"]:
+        return None
+    levels = cfg["habits"]["meditation"]["levels"]
+    minutes = ladder.dose(cfg, state, "meditation")
+    level = levels.index(minutes) + 1
+    assets = HERE / "meditation" / "assets.json"
+    src = json.loads(assets.read_text()).get(str(level)) if assets.exists() else None
+    return {"minutes": minutes, "level": level, "levels": len(levels), "src": src}
+
+
 data = {
     "date": a.date,
     "dateline": d.strftime("%A, %B ") + str(d.day),
     "dueTotal": len(cards),
     "cards": [{k: c[k] for k in ("card_id", "prompt", "answer", "elaboration", "options", "correct_index")} for c in cards],
     "plan": plan,
+    "meditation": meditation(),
 }
 html = (HERE / "template.html").read_text().replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
 Path(a.out).write_text(html)

@@ -132,6 +132,8 @@ def record_from_checkin(doc, planned, due_total):
     reviews = doc.get("reviews") or []
     values = {
         "breaths": int(doc.get("breaths") or 0),
+        # Minutes of the guided meditation heard (older pages saved `true` for "opened the link": not a sit).
+        "meditation": doc["meditation"] if type(doc.get("meditation")) in (int, float) else 0,
         "gratitude": 1 if str(doc.get("gratitude") or "").strip() else 0,
         # No cards due that day counts as hitting the dose.
         "cards": len(reviews) if (reviews or due_total) else planned.get("cards", 0),

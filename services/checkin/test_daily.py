@@ -27,7 +27,9 @@ class DailyTest(unittest.TestCase):
 
     def test_record_from_page_doc(self):
         doc = {"breaths": 3, "gratitude": "Mia", "reviews": [{"card_id": "c1", "rating": 2}], "extras": {"water": 1}}
-        self.assertEqual(daily.record_from_checkin(doc, {}, 5), {"breaths": 3, "gratitude": 1, "cards": 1, "water": 1})
+        self.assertEqual(daily.record_from_checkin(doc, {}, 5), {"breaths": 3, "meditation": 0, "gratitude": 1, "cards": 1, "water": 1})
+        self.assertEqual(daily.record_from_checkin({**doc, "meditation": 2}, {}, 5)["meditation"], 2)
+        self.assertEqual(daily.record_from_checkin({**doc, "meditation": True}, {}, 5)["meditation"], 0)
         # Mistapped cards are skipped, never counted or sent to the deck.
         self.assertEqual(daily.record_from_checkin({**doc, "skipped": ["c2"]}, {}, 5)["cards"], 1)
         # No cards due that day counts as hitting the dose.

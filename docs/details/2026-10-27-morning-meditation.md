@@ -219,3 +219,35 @@ Arturia Augmented Mallets, preset "Gentle Bells", one high A that fades in about
 ### Not listened to yet
 
 I can't hear the audio, so the drone and bell levels are set by measurement only. The drone could be too present, and the bell might feel too loud or too quiet against the piano. Tell me which and I'll move one knob.
+
+## 12:40 (Oct 28) Meditation is now the first step of the check-in
+
+The coordinator passed on Matt's ask: the morning check-in must start with the level 1 guided meditation (1 minute), and the level should move up and down on its own with use and consistency.
+
+---
+
+### First step of every check-in
+
+The check-in page now opens on "Sit": today's guided track plays right inside the page, then Breathe, Grateful, Recall and Talk follow as before. The old "Or an 11-minute guided meditation" link is gone. Today's page was republished with it, so it's live now.
+
+---
+
+### It moves up and down by itself
+
+It's a habit on the existing ladder (`ladder.json`, `meditation`, levels 1, 2, 3, 5, 7, 10, 15, 20 minutes), on its own weekly clock like the study block:
+- Up one level after a full week of finishing the track every day.
+- One missed check-in day undoes the newest step up; two or more missed days drop everything back to the smallest version, so meditation goes back to 1 minute.
+- Stopping early two days in a row eases it down a level (the page saves the whole minutes heard).
+I kept the ladder's weekly pace rather than inventing a faster one, so 20 minutes is at least seven weeks away.
+
+---
+
+### Audio inside the check-in page
+
+Claude pages can't load audio from other sites, and their file store only takes images and video, so each level track is stored as an mp4 with a tiny still frame (80 kbps, 0.6 MB for 1 minute, 12 MB for 20). The page now also declares the `assets` capability. The track ids are in `services/checkin/meditation/assets.json`.
+
+---
+
+### Untested on the phone
+
+I checked the page flow headless (Sit shows first, Next goes on to Breathe, no errors) and the ladder with tests, but I haven't heard the track play inside the real Claude page on the iPhone. If it doesn't play, tell me.

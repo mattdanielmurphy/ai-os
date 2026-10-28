@@ -1,0 +1,11 @@
+{
+ "_about": "Meditation level tracks stored in the check-in Artifact's asset store (level -> url). Uploaded as audio-only-ish mp4 (64px still frame) because the store takes video, not m4a. Re-upload with the Artifact tool (asset: true) if a level track is rebuilt.",
+ "1": "/_blob/381c0abf4db7dcef121145209ed73537",
+ "2": "/_blob/91013304dae873f4f32ded3e921250e5",
+ "3": "/_blob/3a9dbab457165fb66f363b57e3e76d70",
+ "4": "/_blob/a46a9888fd4caa7498455a7abc2c1efd",
+ "5": "/_blob/a14c315bdf4aa5223c8ed08f49f3880e",
+ "6": "/_blob/ce1d040272f4601fc73fd664c7a1df6d",
+ "7": "/_blob/f9f396e6e25b22cbeaa6d74f35795fdc",
+ "8": "/_blob/a76b1464f9fb71da61aaeaa37a7ee202"
+}

@@ -24,7 +24,7 @@ def simulate(days, cfg=None):
 class LadderTest(unittest.TestCase):
     def test_starts_at_current_doses(self):
         _, plans = simulate(["hit"])
-        self.assertEqual(plans[0]["doses"], {"breaths": 3, "gratitude": 1, "cards": 1, "reflection": 1})  # Sunday
+        self.assertEqual(plans[0]["doses"], {"meditation": 1, "breaths": 3, "gratitude": 1, "cards": 1, "reflection": 1})  # Sunday
 
     def test_weekday_habit_only_on_its_days(self):
         _, plans = simulate(["hit"] * 7)  # Sun Oct 18 .. Sat Oct 24
@@ -68,9 +68,10 @@ class LadderTest(unittest.TestCase):
         state, plans = simulate(["hit"] * 8 + [None, "hit"])
         grew = plans[7]
         self.assertEqual(grew["changes"][0], "Slow breaths goes up to 4 breaths.")
+        self.assertIn("Guided meditation goes up to 2 minutes.", grew["changes"])
         after = plans[9]
         self.assertEqual(after["status"], "red")
-        self.assertEqual(after["doses"]["breaths"], 3)
+        self.assertEqual(after["doses"]["meditation"], 1)  # the newest growth is undone first
         # growth frozen for a week after the miss
         state, plans = simulate(["hit"] * 8 + [None] + ["hit"] * 7)
         self.assertFalse(any(p["changes"] for p in plans[10:16]))
@@ -80,7 +81,19 @@ class LadderTest(unittest.TestCase):
         p = plans[10]
         self.assertEqual(p["status"], "panic")
         self.assertEqual({k: v for k, v in p["doses"].items() if k != "study"},
-                         {"breaths": 1, "gratitude": 1, "cards": 1, "reflection": 1})
+                         {"meditation": 1, "breaths": 1, "gratitude": 1, "cards": 1, "reflection": 1})
+
+    def test_meditation_grows_weekly_and_drops_back(self):
+        state, plans = simulate(["hit"] * 22)
+        self.assertEqual([plans[i]["doses"]["meditation"] for i in (0, 7, 14, 21)], [1, 2, 3, 5])
+        _, plans = simulate(["hit"] * 15 + [None, None, "hit"])  # two missed days: back to one minute
+        self.assertEqual(plans[17]["doses"]["meditation"], 1)
+
+    def test_meditation_stopped_early_twice_eases_it(self):
+        day = lambda m: {"meditation": m, "breaths": 3, "gratitude": 1, "cards": 1, "reflection": 1}
+        _, plans = simulate(["hit"] * 8 + [day(1), day(1), "hit"])
+        self.assertEqual(plans[8]["doses"]["meditation"], 2)
+        self.assertEqual(plans[10]["doses"]["meditation"], 1)
 
     def test_penalty_applies_once_not_every_day(self):
         state, plans = simulate(["hit"] * 8 + [None] + ["hit"] * 3)

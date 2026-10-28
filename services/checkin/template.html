@@ -61,6 +61,10 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 .extra label { display: flex; gap: 10px; align-items: center; font-weight: 600; }
 .extra input[type=checkbox] { width: 22px; height: 22px; }
 
+/* Meditate */
+.medlevel { font: 500 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+audio { width: 100%; }
+
 /* Breathe */
 .breath { display: grid; place-items: center; padding-block: 8px; }
 .orb { width: 9rem; height: 9rem; max-width: 100%; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--accent), var(--sky) 75%); transform: scale(.55); opacity: .9; }
@@ -109,7 +113,19 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
   <p class="ladder" id="ladder" hidden></p>
   <nav class="progress" id="progress" aria-label="Check-in steps"></nav>
 
-  <section class="step" id="s-breathe">
+  <section class="step" id="s-meditate">
+    <span class="medlevel" id="mlevel"></span>
+    <h2 id="mtitle">One-minute meditation</h2>
+    <p class="lede">Press play and close your eyes. When you hear the bell, come back to the&nbsp;breath.</p>
+    <audio id="maudio" controls preload="auto"></audio>
+    <p class="lede" id="mnote">It grows a little after a week of daily sits, and eases back after a missed&nbsp;day.</p>
+    <div class="row">
+      <button class="btn" id="mskip" type="button">Skip today</button>
+      <button class="btn" id="mnext" type="button">Next</button>
+    </div>
+  </section>
+
+  <section class="step" id="s-breathe" hidden>
     <h2 id="btitle">Three slow breaths</h2>
     <p class="lede">Unclench your jaw. Drop your shoulders. Follow the circle: in for four, out for six.</p>
     <div class="breath"><div class="orb" id="orb"></div></div>
@@ -119,7 +135,6 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
       <button class="btn primary" id="bstart" type="button">Start breathing</button>
       <button class="btn" id="bnext" type="button" hidden>Skip</button>
     </div>
-    <a class="btn" id="bmed" href="https://matt-pages.vercel.app/3a22db06-7d4d-4779-adde-1e377c22caa3/#morning" target="_blank" rel="noopener">Or an 11-minute guided meditation</a>
   </section>
 
   <section class="step" id="s-grateful" hidden>
@@ -175,11 +190,13 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 const DATA = __DATA__;
 const PLAN = DATA.plan || { doses: { breaths: 3, cards: 3, gratitude: 1 }, steps: [], changes: [] };
 const BREATHS = PLAN.doses.breaths || 3;
-const EXTRAS = (PLAN.steps || []).filter(x => !x.when && !["breaths", "gratitude", "cards", "reflection"].includes(x.habit));
+const EXTRAS = (PLAN.steps || []).filter(x => !x.when && !["meditation", "breaths", "gratitude", "cards", "reflection"].includes(x.habit));
+/* Guided meditation, always the first step: today's level comes from the habit ladder (build.py). */
+const MED = DATA.meditation || null;
 /* Practice mode (habit gate's study page, practice.py): just the cards, no breaths/gratitude, no FSRS ratings. */
 const PRACTICE = DATA.mode === "practice";
 const STEPS = PRACTICE ? [["recall","Practice"],["done","Done"]]
-  : [["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
+  : [...(MED ? [["meditate","Sit"]] : []), ["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
 const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
 const TARGET = PLAN.doses.cards || 3; // after this many cards the Done button becomes the main call to action
 const $ = id => document.getElementById(id);
@@ -257,8 +274,24 @@ $("bstart").onclick = () => {
   cycle(0);
 };
 $("bnext").onclick = () => go("grateful");
-/* The guided meditation opens in the browser (an Artifact page can't host the audio); remember that he went. */
-$("bmed").onclick = () => { state.meditation = true; save(); };
+/* Meditation: the track is a page asset. Finishing it records the full minutes; stopping early records the
+   whole minutes heard, so the ladder eases the length if it keeps being too long. */
+let medButtons = () => {};
+if (MED) {
+  const a = $("maudio"), MW = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+  $("mtitle").textContent = (MW[MED.minutes] ? MW[MED.minutes] + "-minute" : MED.minutes + "-minute") + " meditation";
+  $("mlevel").textContent = `Level ${MED.level} of ${MED.levels}`;
+  if (MED.src) a.src = MED.src;
+  else { a.hidden = true; $("mnote").textContent = "Today's track isn't on this page. Open it on the Still page instead."; }
+  let heard = 0;
+  medButtons = () => { const done = (state.meditation || 0) >= MED.minutes; $("mnext").classList.toggle("primary", done); $("mskip").hidden = done; };
+  a.addEventListener("timeupdate", () => { heard = Math.max(heard, a.currentTime); });
+  a.addEventListener("ended", () => { state.meditation = MED.minutes; medButtons(); save(); });
+  const leave = () => { if (!a.paused) a.pause(); state.meditation = Math.max(state.meditation || 0, Math.floor(heard / 60)); save(); go("breathe"); };
+  $("mnext").onclick = leave;
+  $("mskip").onclick = leave;
+  medButtons();
+}
 /* Newly unlocked steps from the habit ladder */
 $("extras").replaceChildren(...EXTRAS.map(x => {
   const box = document.createElement("div"); box.className = "extra";
@@ -398,8 +431,8 @@ $("moreCards").onclick = () => go("recall");
 async function renderDone() {
   const right = state.reviews.filter(r => r.correct).length;
   const lines = PRACTICE ? [["Questions", `${right} of ${state.reviews.length} correct`]] : [
+    ...(MED ? [["Meditation", state.meditation >= MED.minutes ? `${MED.minutes} min` : state.meditation ? `${state.meditation} of ${MED.minutes} min` : "skipped"]] : []),
     ["Breaths", `${state.breaths} of ${BREATHS}`],
-    ...(state.meditation ? [["Meditation", "opened"]] : []),
     ["Grateful for", state.gratitude || "skipped"],
     ["Cards", state.reviews.length ? `${right} of ${state.reviews.length} correct` : "none today"],
   ];
@@ -457,7 +490,7 @@ function save() {
       for (const [h, v] of Object.entries(state.extras)) { const c = $("x-" + h); if (c) c.checked = v > 0; }
       if (d.intention && $("x-intention-text")) $("x-intention-text").value = d.intention;
       if (state.gratitude && !$("grat").value) { $("grat").value = state.gratitude; $("gnext").disabled = false; }
-      $("bcount").textContent = `${state.breaths} of ${BREATHS}`; breathButtons();
+      $("bcount").textContent = `${state.breaths} of ${BREATHS}`; breathButtons(); medButtons();
       if (!touched) go(STEPS[saved][0]);
       else if (state.step === "recall" && picked === null) renderCard();
       else renderProgress();

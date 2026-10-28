@@ -51,3 +51,13 @@ half in voice mode. Shell-only steps (reminders, sleep shift) go through `send_t
 
 ## Early events (2026-10-20)
 The task also fetches the next 10 days and passes timed events before 7 AM as `early: true` items. The talk thread then offers a gradual sleep shift via `scripts/hue.py shift` (lights, Night Time, Wake up, bed/wake reminders).
+
+## Guided meditation, always the first step (2026-10-28)
+
+- The page opens on "Sit": a guided mindfulness track with a bell (`meditation/levels.py`, 8 levels from 1 to 20 min).
+- Its length is the ladder habit `meditation` (`ladder.json`, own track): one level up after a week of full sits,
+  the newest growth undone after a missed day, back to 1 minute after two missed days, and eased a level after two
+  days of stopping early. The page saves the whole minutes heard as `meditation`; `daily.py` records it.
+- The tracks live in the Artifact's asset store (`meditation/assets.json`, level -> `/_blob/...`), as mp4 with a
+  tiny still frame because the store takes video, not m4a. The page declares `assets` alongside `db` and `user`.
+
