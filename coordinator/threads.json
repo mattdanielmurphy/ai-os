@@ -288,6 +288,18 @@
    "asked": "Android TV essentials, shared backend, self-update, error reports",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_d4074c0d-fc62-4cf8-b37f-0e5f39dc66ea",
+   "title": "Glass TV \u00b7 iPad essentials on shared backend",
+   "chain": "glass-tv-ipad",
+   "seq": 1,
+   "cwd": "~/projects/glass-tv",
+   "model": "opus",
+   "state": "working",
+   "asked": "Minimal iPad app, sideloaded, shared backend",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   }
  ]
 }
