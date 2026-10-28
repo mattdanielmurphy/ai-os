@@ -1,1 +1,1 @@
-{"name": "action-bar", "version": "0.3.0", "description": "Buttons above the prompt for the numbered actions an agent's latest reply offers ('Actions: 1. X · 2. Y'); a click sends '1', '2' or '1 2' as Matt's reply", "types": "./types/index.d.ts"}
+{"name": "action-bar", "version": "0.4.0", "description": "Buttons above the prompt for the numbered actions an agent's latest reply offers ('Actions: 1. X · 2. Y'); a click sends '1', '2' or '1 2' as Matt's reply", "types": "./types/index.d.ts"}

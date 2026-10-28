@@ -50,9 +50,6 @@ export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[]
   return out.slice(0, k.maxActions)
 }
 
-// Gap only between two rows; alone, the band is exactly its own row.
-const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
-
 /** The reply without its Actions line: the buttons say it already, and Read aloud shouldn't. */
 export const hideActions = (text: string): string =>
   text
@@ -92,26 +89,18 @@ export const register: Register = on => {
     }
     const all = `Yes to all: ${list.map(a => a.text.replace(/^yes,?\\s*/i, '').replace(/[.!]$/, '')).join('; ')}.`
     const above = await next(e)
+    // One compact row, shared with the other bands (read-aloud's speaker joins it).
     return (
-      <Box flexDirection="column" rowGap={hasAbove(above) ? 'xs' : 0}>
+      <Box flexWrap="wrap" rowGap="xs" alignItems="center">
         {above}
-        <Box flexWrap="wrap" rowGap="xs" alignItems="center">
-          <Text dimColor>Reply: </Text>
-          {list.map((a, i) => (
-            <Box key={`b${i}`}>
-              <Button
-                key={`a${i + 1}`}
-                label={a.label}
-                variant="secondary"
-                onPress={() => send(a.text)}
-              />
-              <Text> </Text>
-            </Box>
-          ))}
-          {list.length > 2 && !list.some(a => a.either) && <Button key="all" label="All of these" variant="secondary" onPress={() => send(all)} />}
-          <Button key="hide" label="✕" variant="secondary" onPress={() => update($, actions, () => [])} />
-        </Box>
-        <Text dimColor>A button sends its sentence as your reply, e.g. "{list[0].text}". Or type your own answer.</Text>
+        {list.map((a, i) => (
+          <Box key={`b${i}`}>
+            <Button key={`a${i + 1}`} label={a.label} variant="secondary" onPress={() => send(a.text)} />
+            <Text> </Text>
+          </Box>
+        ))}
+        {list.length > 2 && !list.some(a => a.either) && <Button key="all" label="All of these" variant="secondary" onPress={() => send(all)} />}
+        <Button key="hide" label="✕" plain dimColor onPress={() => update($, actions, () => [])} />
       </Box>
     )
   })
