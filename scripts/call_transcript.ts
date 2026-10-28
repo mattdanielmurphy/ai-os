@@ -114,12 +114,22 @@ connect();
 // Hang-up reminder: a toast when FaceTime closes or nobody has spoken for a while.
 // (Starting/stopping on its own when a FaceTime call to Tyler begins/ends is the next step.)
 const SILENT_MS = Number(flag("silence", "120")) * 1000;
+// Past this much silence the call is surely over: stop for real (through the tool, so the
+// supervisor doesn't restart us). On Oct 27 a hand-started transcript ran 8 hours after the call.
+const AUTOSTOP_MS = Number(flag("autostop", "900")) * 1000;
 let lastSpeech = Date.now();
 let reminded = false;
 const notify = (title: string, body: string) =>
   Bun.spawn([join(homedir(), ".hammerspoon/bin/claude-notify"), title, body, "--kind", "needs"], { stdout: "ignore", stderr: "ignore" });
 setInterval(async () => {
-  if (stopping || reminded) return;
+  if (stopping) return;
+  if (Date.now() - lastSpeech > AUTOSTOP_MS) {
+    console.log(`auto-stop: no speech for ${AUTOSTOP_MS / 1000}s`);
+    notify("Call transcript stopped", `No one spoke for ${Math.round(AUTOSTOP_MS / 60000)} minutes, so it stopped itself.`);
+    Bun.spawn([join(homedir(), ".local/bin/call-transcript"), "stop"], { stdout: "ignore", stderr: "ignore" });
+    return;
+  }
+  if (reminded) return;
   const p = Bun.spawn(["pgrep", "-x", "FaceTime"], { stdout: "ignore" });
   const facetime = (await p.exited) === 0;
   const quiet = Date.now() - lastSpeech > SILENT_MS;

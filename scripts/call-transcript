@@ -10,7 +10,7 @@ notify="$HOME/.hammerspoon/bin/claude-notify"
 mkdir -p "$HOME/calls"
 running() { [[ -f $pidf ]] && kill -0 "$(cat $pidf)" 2>/dev/null; }
 alert() { [[ -x $notify ]] && "$notify" "$1" "$2" --kind "${3:-needs}" >/dev/null 2>&1; print -r -- "$(date +%T) $1: $2"; }
-case "${1:-start}" in
+case "${1:-}" in
   start)
     if running; then echo "already running (pid $(cat $pidf))"; exit 0; fi
     who="${2:-tyler}"; shift $(( $# > 1 ? 2 : 1 ))
