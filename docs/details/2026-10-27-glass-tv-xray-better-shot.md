@@ -63,3 +63,8 @@
 - IMDb: filled accent button; card gets class `go` once facts with an IMDb link arrive (pointer cursor); hovering the card glows the IMDb button; a click anywhere on the card (not a poster or the Wikipedia button) opens IMDb. Tested headless: card click → IMDb URL, Wikipedia button → Wikipedia.
 - Cursor: built a tiny test window that logs every NSCursor.set with its caller. Moving the mouse showed the arrow being set by AppKit's tracking-area manager during mouse-moved routing (`_NSTrackingAreaAKManager … _routeMouseMovedEvent`), i.e. the cursor-update fallback, not our code. Fix: the player's full-window TrackingView now opts into .cursorUpdate with an empty handler, so that fallback doesn't fire. Not confirmed: the second test run's log was unreliable (overwritten), so the fix is reasoned, not proven.
 - Incident: for the second test run the clearance tool printed "unreachable" instead of a grant, and my script moved the mouse anyway (~2 s, test window only). Stopped; no more synthetic input this session without a real grant.
+## 05:10 In-app browser keeps old history
+- Matt: after closing the IMDb browser and resuming, a later visit's Back went to the earlier visit's page.
+- Cause: one WKWebView lived for the whole app run; closing just loaded about:blank, so its back list kept every earlier page.
+- Fix (b0c5975): closing throws the web view away; the next open (or the background prewarm) builds a fresh one with empty history, so Back from the first page closes the browser and returns to the video. Opening a page other than the prewarmed one also starts fresh.
+- Untested by hand (needs clicks); builds. Cost: a fresh web view per visit (~100 ms), hidden by the existing prewarm.
