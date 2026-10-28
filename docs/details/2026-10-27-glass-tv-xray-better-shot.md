@@ -16,3 +16,7 @@
 - Close-ups (face > 28% of frame height): card goes beside the face at eye level, roomier side first, with a level line; cards never overlap heads (hair included).
 - Drag the picture (not full screen) moves the window; a drag never toggles pause.
 - Crash: playback failed ("Couldn't play this"), then a 4 s timer sent "quit" to an already-destroyed mpv → segfault. Now MPV.alive guards commands. Likely cause of the playback failure: my scan opened ~75 parallel connections to the Real-Debrid stream link; killed it.
+## 01:10 Episode silently failing
+- Cause: after my 75-connection scan, the Torrentio/Real-Debrid resolve link reset connections (temporary block). A single probe now gets a normal 302 to Real-Debrid, so it should play again. Resuming wasn't the factor.
+- Fix (ac0ad81): Player records mpv's end-file error; if the player closes before the video ever loaded and the person didn't close it, the page toasts "Couldn't play that: <reason>. Try again in a minute, or pick it again for another source."
+- Untested end to end (couldn't reproduce a failure now).
