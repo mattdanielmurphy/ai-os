@@ -109,3 +109,39 @@ Glass TV already used two Stremio add-ons hard-coded (Cinemeta for catalogs, Tor
 - Settings section checked in light and dark (headless).
 - **Not tested:** the add-on subtitles inside a visible Glass Player window (Hammerspoon was unreachable for screen clearance; tested with the same engine headless).
 - Live: server restarted at 18:28 while nothing was playing. Undo: `git revert 3f7404a`.
+
+## 19:40 Explore feed, peek, scrollbars and IMDb browser
+
+**Asked:** Explore should come from Cinemeta and any catalog add-on (replacing TMDB trending), not be folded, peek below a library that fills the first screen with a hero, macOS scrollbars, and an IMDb button opening a clean in-app browser.
+
+---
+
+### Explore from add-ons
+
+Explore now lists every catalog of every installed add-on that needs no extra input (Cinemeta's Popular and Featured, plus your Netflix, HBO Max, Disney+ and Prime Video shelves from the catalog add-on you added), then genre shelves from the first catalog that offers genres (knob `home.exploreGenreRows`, default 8; `home.explorePerShelf`, default 20). Titles already in your library are left out. Cinemeta is now a default add-on (installed once; removing it keeps it removed). A new catalog add-on shows up here by itself. Shelf labels name the add-on when more than one add-on fills Explore. The old TMDB trending is gone from home (TMDB still powers search and artwork).
+
+---
+
+### Unfolded with a peek
+
+Explore is a normal section now, no fold. The library area takes at least the first screen minus a peek (`ui.explorePeek`, default 190 px), so Explore's heading, first shelf label and the tops of its posters show at the bottom. The hero that fills that space is still to come (three options being made).
+
+---
+
+### Scrollbars
+
+The rows had `scrollbar-width: thin`, which draws WebKit's old non-native bar. Removing it gives the normal macOS overlay scrollbars (they appear while scrolling, per System Settings).
+
+---
+
+### IMDb button and clean browser
+
+Hovering a poster shows a small IMDb button (top right). It asks the server for the title's IMDb id (own id, Cinemeta id, or a TMDB lookup) and opens it in a reusable in-app window (`app/browser.swift`): about 40 ad and tracker hosts are blocked with a WebKit content blocker, IMDb ad slots, "More like this", news, video gallery, sign-in promos and the footer are hidden, videos don't autoplay. Back/forward/open-in-browser buttons sit in the title bar (⌘[ ⌘] work, Go menu). Outside the app it opens a normal browser tab.
+
+**Not verified:** how clean IMDb actually looks. IMDb shows a robot check to automated browsers, so I couldn't load it in a test; the hidden-element list is best-effort. Tell me what still distracts and I'll hide it.
+
+---
+
+### Tested
+
+Explore API returned 10 shelves of 20; IMDb link lookup worked; home checked headless in light and dark (peek visible, IMDb button on hover, no errors); 22 tests pass; app and player build. Live at 19:38 (server restarted while nothing played; app reinstalled). Undo: `git revert 80f67e3`.
