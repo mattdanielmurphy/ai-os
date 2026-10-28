@@ -53,7 +53,21 @@ export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[]
 // Gap only between two rows; alone, the band is exactly its own row.
 const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
 
+/** The reply without its Actions line: the buttons say it already, and Read aloud shouldn't. */
+export const hideActions = (text: string): string =>
+  text
+    .split('\n')
+    .filter(l => !/^\s*actions\s*:/i.test(strip(l)))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd()
+
 export const register: Register = on => {
+  on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
+    const text = hideActions(e.props.text)
+    return text === e.props.text ? next(e) : next({ ...e, props: { ...e.props, text } })
+  })
+
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
       const found = parseActions(e.answer, await knobs($))

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { parseActions } from './register'
+import { hideActions, parseActions } from './register'
 
 const BAND = {
   component: 'AbovePrompt',
@@ -38,4 +38,9 @@ test('either/or items are marked, so no All button', async () => {
   const list = parseActions('Actions: Build it → Yes, build it | Skip it → No, skip it')
   expect(list.every(a => a.either)).toBe(true)
   expect(parseActions('Actions: A · B · C').some(a => a.either)).toBe(false)
+})
+
+test('the Actions line is hidden from the drawn reply', async () => {
+  expect(hideActions('Done.\n\n**Actions:** Ship it → Yes, ship it\n\nDetails: x')).toBe('Done.\n\nDetails: x')
+  expect(hideActions('No actions here.')).toBe('No actions here.')
 })
