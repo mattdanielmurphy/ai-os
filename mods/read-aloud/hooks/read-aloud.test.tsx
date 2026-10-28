@@ -27,3 +27,13 @@ test('a stopped turn reads nothing', async ($, on) => {
   await $.turn.complete({ answer: 'new reply', reason: 'answer', durationMs: 1 } as never)
   expect(ran.some(c => c.includes('replyDone'))).toBe(true)
 })
+
+test('band has a Dictate after toggle', async ($, on) => {
+  on('process.run', () => ({ value: { exitCode: 0, stdout: 'on', stderr: '' } }) as never)
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box /> })
+  const ui = await $.ui.mount({ plugin: 'read-aloud', surface: 'desktop', ...BAND })
+  const b = await ui.find({ key: 'dictate' })
+  expect(b).toBeDefined()
+  await ui.press({ key: 'dictate' })
+  await ui.unmount()
+})
