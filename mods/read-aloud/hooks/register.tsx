@@ -91,8 +91,8 @@ const watchSpeaking = ($: EngineInterface) => {
   stopWatch = () => { t.cancel(); stopWatch = null }
 }
 
-const SLOT = 9
-const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
+// Claude's listening-mic tint: its blue at low opacity, so it works in light and dark.
+const TINT = 'rgba(37, 99, 235, 0.14)'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -161,26 +161,23 @@ export const register: Register = on => {
     const dict = await read($, dictate)
     const talking = on_ && (await read($, speaking))
     const { Box, Button, Text } = $.ui.resolve(e)
-    // Left: this mod's own controls in a fixed-width group (three equal slots, so the reply
-    // buttons on the right never move). On = filled light button; off = dim icon, no fill.
-    // Right, after a divider: the reply buttons (other bands). Widths are in text cells.
-    const slot = (key: string, lit: boolean, show: boolean, label: string, press: () => unknown) => (
-      <Box key={`s-${key}`} width={SLOT} flexShrink={0}>
-        {show && (lit
-          ? <Button key={key} label={label} variant="secondary" onPress={press} />
-          : <Button key={key} label={label} plain dimColor onPress={press} />)}
+    // This mod's controls sit first; on = tinted rounded chip with a blue glyph, like Claude's own
+    // mic button when it's listening; off = the same size, no tint, dim glyph (so nothing shifts).
+    // Interrupt sits after the reply buttons, so showing or hiding it never moves them.
+    const chip = (key: string, lit: boolean, glyph: string, press: () => unknown) => (
+      <Box key={`c-${key}`} borderStyle="round" borderColor={lit ? TINT : 'transparent'} backgroundColor={lit ? TINT : 'transparent'} marginRight="xs">
+        <Button key={key} plain onPress={press}>
+          <Text color={lit ? 'suggestion' : 'inactive'}>{glyph}</Text>
+        </Button>
       </Box>
     )
     const stopHere = async () => { await update($, choice, () => !on_); if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`) }
     return (
-      <Box flexWrap="nowrap" alignItems="center">
-        <Box key="mine" flexShrink={0} alignItems="center">
-          {slot('toggle', on_, true, on_ ? '🔊' : '🔇', stopHere)}
-          {slot('dictate', dict, true, '🎙', () => setDictate($, !dict))}
-          {slot('interrupt', true, talking, '✋', () => hs($, 'interrupt()'))}
-        </Box>
-        {hasAbove(above) && <Text key="div" color="subtle"> │ </Text>}
+      <Box flexWrap="wrap" alignItems="center">
+        {chip('toggle', on_, on_ ? '🕪' : '🕨', stopHere)}
+        {chip('dictate', dict, '🎙\uFE0E', () => setDictate($, !dict))}
         {above}
+        {talking && chip('interrupt', true, '⏸\uFE0E', () => hs($, 'interrupt()'))}
       </Box>
     )
   })
