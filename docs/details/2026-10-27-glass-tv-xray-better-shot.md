@@ -28,3 +28,7 @@
 - Slow: the refined pass took ~10 s on streams (server log). Two separate ffmpeg decodes ran at once (±3 s and 10 s back), both software-decoding 4K. Now one decode, `-hwaccel videotoolbox`, window 6 s back (+3 s ahead only when a face is unclear), one connection. Local test: refined in ~0.9 s.
 - Turned away: Vision finds no face and often no body on the back of a head. Now, if someone was named earlier in the same shot (no cut since), their tag stays where their face last was, faded "behind" style, unless someone named now is there. Look-back runs when a body has no face or nobody at all is named. Body-detect confidence lowered 0.5 → 0.3.
 - Tested with a synthetic clip (face gradually covered): paused on covered face → "Javier Bardem (behind)". Not tested on real streams (no bulk requests; one decode per pause).
+## 02:30 "Searching" indicator
+- Matt wants to see that a face was found and is being searched.
+- Overlay: while the server says `refining`, each found-but-unnamed face gets a softly pulsing ring (existing --onscreen colour) with "LOOKING…" under it, and the key-hint row adds "Looking for a clearer view…". If nobody is named yet, the "faces not recognised" cast list waits until the search finishes. The refined answer re-renders and the rings go away.
+- Untested visually (browser preview couldn't run the page's script); JS syntax checked, app built (e110886). Needs Glass TV relaunch.
