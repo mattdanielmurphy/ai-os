@@ -11,6 +11,7 @@ The mod also touches a heartbeat, so senders know whether the Coordinator is lis
   coordinator_inbox.py alive            exit 0 if the Coordinator's mod polled in the last 3 min
   coordinator_inbox.py put < text       queue a message for the Coordinator
   coordinator_inbox.py poll <session>   (the mod) heartbeat + print and take pending messages as JSON
+  coordinator_inbox.py is-coordinator <session>  exit 0 if it is the Coordinator or a project coordinator
   coordinator_inbox.py tweaks           (the mod) print context-alert's tweak values as JSON, seeding the file
 """
 import json
@@ -107,6 +108,18 @@ def tweaks():
     return {key: knobs[key].get("value", KNOBS[key]["default"]) for key in KNOBS}
 
 
+def is_coordinator(session):
+    """The central Coordinator (session.txt) or any coordinator in coordinator/threads.json."""
+    if session and session == who():
+        return True
+    try:
+        threads = json.loads((AIOS / "coordinator" / "threads.json").read_text())["threads"]
+    except (OSError, ValueError, KeyError):
+        return False
+    return any(t.get("id") == f"local_{session}" and t.get("role") in ("central", "project-coordinator")
+               for t in threads)
+
+
 def main(argv):
     cmd = argv[1] if len(argv) > 1 else ""
     if cmd == "claim":
@@ -118,6 +131,8 @@ def main(argv):
         SESSION_FILE.write_text(sid + "\n")
         print(f"Coordinator is now {sid}")
         return 0
+    if cmd == "is-coordinator":
+        return 0 if is_coordinator(argv[2] if len(argv) > 2 else "") else 1
     if cmd == "who":
         print(who())
         return 0

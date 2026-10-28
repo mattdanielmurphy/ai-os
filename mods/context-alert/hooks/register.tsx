@@ -27,6 +27,10 @@ const handoff = atom({ plugin: 'context-alert', key: 'handoff' } as const, null)
 const sendAnywayUntil = atom({ plugin: 'context-alert', key: 'sendAnywayUntil' } as const, 0)
 const held = atom({ plugin: 'context-alert', key: 'held' } as const, '')
 const projectHeld = atom({ plugin: 'context-alert', key: 'projectHeld' } as const, '')
+// Coordinators (central + project) never see the cache band: they compact while idle instead.
+const isCoord = atom({ plugin: 'context-alert', key: 'isCoord' } as const, false)
+/** Smallest idle coordinator worth compacting, whatever the compact.minTokens knob says. */
+export const COORD_COMPACT_MIN = 50_000
 const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
 const threadId = atom({ plugin: 'context-alert', key: 'threadId' } as const, '')
 const backLinked = atom({ plugin: 'context-alert', key: 'backLinked' } as const, false)
@@ -520,13 +524,16 @@ const idleCompact = async ($: EngineInterface) => {
   const at = await $.clock.now()
   // Cheap gate before reading the knobs: no thread under 10 min idle or 50k tokens qualifies.
   if (agentRunning || c === null || at - c.lastAt < 10 * 60_000 || c.tokens < 50_000) return
-  if (!compactDue(c, at, await knobs($), compactedAt)) return
+  const kn = await knobs($)
+  const coord = await read($, isCoord)
+  const k2 = coord ? { ...kn, 'compact.minTokens': Math.min(kn['compact.minTokens'], COORD_COMPACT_MIN) } : kn
+  if (!compactDue(c, at, k2, compactedAt)) return
   compactedAt = at
   const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => ({ skip: 'failed' }))
   if (out.skip !== undefined) return
   const tokens = (await read($, fill))?.tokens ?? 0
   await update($, cache, old => ({ lastAt: at, ttlMs: old?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
-  $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
+  if (!coord) $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
 }
 
 /** In the Coordinator session only: submit what scripts queued for it (voice tasks). */
@@ -571,6 +578,10 @@ export const register: Register = on => {
           .catch(() => undefined)
       })
     })
+    void $.session.id()
+      .then(sid => $.process.run(['python3', INBOX, 'is-coordinator', sid]))
+      .then(run => (run.exitCode === 0 ? update($, isCoord, () => true) : undefined))
+      .catch(() => undefined)
     // A resumed thread: read when it last answered, and its cache lifetime, from its file.
     void (async () => {
       const t = await $.clock.now()
@@ -672,6 +683,7 @@ export const register: Register = on => {
     const tokens = Math.max((await read($, fill))?.tokens ?? 0, c?.tokens ?? 0)
     const left = cacheLeft(c, at, tokens)
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
+    if (await read($, isCoord)) return next(e) // coordinators stay compact on their own; never hold
     // Cold but small: resuming beats a handoff on recall at about the same cost (2026-10-27 research).
     if (tokens < (await knobs($))['hold.minTokens']) return next(e)
 
@@ -732,8 +744,9 @@ export const register: Register = on => {
     const job = await read($, handoff)
     const tokens = Math.max(current?.tokens ?? 0, c?.tokens ?? 0)
     const left = cacheLeft(c, at, tokens)
-    const showCache = left !== null && left <= CACHE_SOON_MS
-    const showSize = current !== null && current.tokens >= WARN
+    const coord = await read($, isCoord)
+    const showCache = !coord && left !== null && left <= CACHE_SOON_MS
+    const showSize = !coord && current !== null && current.tokens >= WARN
     if (!showCache && !showSize && job === null) return next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)

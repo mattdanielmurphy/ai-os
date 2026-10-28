@@ -530,3 +530,25 @@ test('a cold thread under the hold size just resumes; idle compaction waits for 
   expect(compactDue(c, 61 * 60_000, k, -1)).toBe(false) // cache already expired
   expect(compactDue(c, 50 * 60_000, k, 0)).toBe(false) // already compacted since the last turn
 })
+
+test('coordinators never see the cache band or the size band', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  on('process.run', (_$: unknown, e: any) => ({
+    value: { exitCode: e.argv?.[2] === 'is-coordinator' ? 0 : 1, stdout: '', stderr: '', isStdoutTruncated: false },
+  }))
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box /> })
+  on('session.start', (_$: unknown, e: any) => e)
+  on('command.register', () => ({ value: undefined }))
+  on('session.id', () => ({ value: 'sid-coord' }))
+  await $.session.start({ source: 'resume', cwd: '/tmp' } as any)
+  for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+  await $.session.measure(measure(262_000))
+  await $.turn.complete(answered)
+  await clock.advance(8 * 60 * MIN)
+  const ui = await $.ui.mount({ plugin: 'context-alert', surface: 'desktop', ...BAND })
+  expect(await ui.find({ type: 'Text', text: /Cache|Context: / })).toBeUndefined()
+  expect(await ui.find({ key: 'sonnet' })).toBeUndefined()
+  await ui.unmount()
+})
