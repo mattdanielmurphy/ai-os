@@ -96,6 +96,8 @@ const SPEAKER = '🔊'
 const SPEAKER_OFF = '🔇'
 const MIC = '🎙️'
 const PAUSE = '✋'
+// Claude's blue at low opacity: reads as a glow in light and dark.
+const TINT = 'rgba(37, 99, 235, 0.22)'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -168,9 +170,12 @@ export const register: Register = on => {
     // whole chip is clickable. On = blue icon; off = dim icon. The pause slot exists only while
     // read-aloud is on and does nothing until Claude is actually speaking.
     // Right: the reply buttons (other bands), right-aligned, so the left never pushes them.
+    // On = the app's chip with a soft blue fill behind the icon (Claude's listening-mic look);
+    // off = the plain grey chip, dimmed. Same chip either way, so nothing moves and the whole
+    // chip stays clickable.
     const chip = (key: string, lit: boolean, glyph: string, press: () => unknown) => (
       <Button key={key} variant="secondary" onPress={press}>
-        <Text color={lit ? 'suggestion' : undefined} dimColor={!lit}>{glyph}</Text>
+        <Text backgroundColor={lit ? TINT : undefined} dimColor={!lit}>{` ${glyph} `}</Text>
       </Button>
     )
     const stopHere = async () => { await update($, choice, () => !on_); if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`) }
