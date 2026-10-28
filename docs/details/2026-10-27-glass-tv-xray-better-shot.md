@@ -32,3 +32,9 @@
 - Matt wants to see that a face was found and is being searched.
 - Overlay: while the server says `refining`, each found-but-unnamed face gets a softly pulsing ring (existing --onscreen colour) with "LOOKING…" under it, and the key-hint row adds "Looking for a clearer view…". If nobody is named yet, the "faces not recognised" cast list waits until the search finishes. The refined answer re-renders and the rings go away.
 - Untested visually (browser preview couldn't run the page's script); JS syntax checked, app built (e110886). Needs Glass TV relaunch.
+## 03:00 Always-on face memory + no spoilers
+- Player: once a second while playing (knob xray-memory-seconds), right after drawing a frame, the GPU blits just the picture into a ~960 px framebuffer and reads it back; JPEG → POST /api/xray/frame?t= to the local server. Skips a frame if the last is still in flight. No internet traffic.
+- Server: remember() finds faces, keeps sure matches with boxes for the last 30 s per episode, and records first-seen time per person (xray/seen.json). bin/xray-faces now stays running (--serve) → ~35 ms per frame instead of ~200 ms.
+- Pause: if memory covers the last 1.6 s, the answer uses it directly (no decode, ~0.1 s): unclear faces overlapping someone named in the last 2 s get that name; someone named in the last 2 s with no face now keeps a faded tag; the two-shot rule uses the last 6 s. After a seek (no memory yet) the old decode path still runs.
+- No spoilers (Matt): the "faces not recognised" list shows only people already seen at or before this point; empty → "No one recognised here yet".
+- Tested: synthetic clip, pause on covered face → "Javier Bardem (behind)" in 74 ms; cast list empty before first appearance. NOT tested: the GL frame grab in the real player (compiles; needs relaunch). Risk: if the grab reads the wrong region, memory just names nothing.
