@@ -188,3 +188,7 @@ Status: idea; build on Matt 👍.
 ## Coordinator of coordinators (Matt, 2026-10-28) — BUILDING
 - Every project gets its own coordinator session; the pinned central Coordinator is the front desk that forwards project asks via SendMessage and keeps the big picture. Project coordinators own ground-floor detail (worker side threads). Coordinators can tell each other "you deal with this". One shared registry (`coordinator/threads.json`, `coordinator` owner field).
 - Honest take: good fit; it keeps the central context light and gives a per-project view in the sidebar. Risks: messages bouncing between coordinators (extra tokens, slower), registry write races, and idle coordinator sessions for quiet projects. Start coordinators only for projects with ongoing work. Instructions: `docs/coordinator/project-coordinator.md`.
+
+## Sing with live auto-tune as pitch feedback (Matt, 2026-10-28)
+Practice singing while hearing your own voice auto-tuned, as instant "this is the target pitch" feedback.
+**Honest take:** fun and motivating, but hard tuning hides your errors, so you can learn to lean on it. Better as a pitch display or gentle/partial correction you fade out over time. Cheap to try with existing apps.
