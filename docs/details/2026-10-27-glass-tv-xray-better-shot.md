@@ -51,3 +51,7 @@
 - Matt's screenshot: Nathan close-up correctly named, plus "Ted Lasso · seen from behind · named from the last shot" on empty blurred background. That's the two-shot rule: a weak body detection (confidence 0.3) on the background + Ted seen in the previous shot.
 - Fix (see commit): body detection back to confidence > 0.6 and height > 20% of frame; the two-shot carry-over across cuts is now off by default (tweak xray.twoShot = 1 turns it back on). Same-shot turned-away names still work, but need a visible person.
 - Checked Matt's actual paused frame: one face, one body, the face is inside that body → nobody "behind". Cut test clip still names only the new actor.
+## 04:10 Tags jumped after appearing (coordinator task)
+- Cause: cards were laid out small (no facts yet), then facts arrived, the card grew and relayout moved it (e.g. above → below).
+- Fix: at full density, missing facts are held by two invisible placeholder lines, so placement (with collisions) uses the final size; arriving facts fill the card in place with no relayout. Facts are kept across answers. When a refined answer moves a card, it glides from its old spot (0.35 s ease); stems/dots fade in.
+- Tested headless (Chrome via playwright): card positions identical before/after facts; moved card animates. Needs Glass TV relaunch.
