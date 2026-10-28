@@ -183,3 +183,12 @@ Matt can't start any new threads in Everything, so he is switching to the Code-t
 - Could not start the Coordinator session myself: this session was started by another session, and the app refuses `user_asked` starts from it. Proposed it as a card instead (one click for Matt). It runs in the ai-os folder, since a card can't take a different `cwd`; it can still start threads in any folder.
 - Its first turn pins itself and asks to turn on Remote Control.
 - Undo: archive the Coordinator session; `git revert` this commit.
+
+## 23:10 Remaining pieces: voice tasks, idle compaction, rules
+
+- **Voice tasks go to the Coordinator.** Nothing outside the desktop app can type into a Code-tab session, so `scripts/coordinator_inbox.py` keeps an outbox (`tmp/coordinator-inbox/pending`). The context-alert mod, in the session named in `coordinator/session.txt` (the Coordinator's CLI id `9093268e-…`), polls it every 30 s and submits each message as a prompt; each poll touches a heartbeat. `voice_task_inbox.py` tries this route first when the heartbeat is under 3 min old, else falls back to the old Everything routes. A successor coordinator runs `coordinator_inbox.py claim`; every session re-reads the owner file each poll, so the handover is live. Rejected: `claude -p --cloud` (needs a cloud session id; the Coordinator is local), the messaging socket env var (per session, not reachable from launchd).
+- **Idle compaction (mod 0.6.0).** Each minute: if the thread is ≥ 50 min idle, ≥ 200k tokens, cache still warm, and not compacted since its last turn, call `$.session.compact` with instructions to keep Matt's rules, corrections, current task and next step verbatim; small toast after. Knobs `compact.idleMinutes`, `compact.minTokens`, `hold.minTokens` in `~/.hammerspoon/tweaks/context_alert.json` (Tweaks panel "Context alert").
+- **Cold threads under 250k aren't held any more**; tests moved to 300k threads, plus a test for when compaction is due. 33/33 pass; `claude plugin validate` passes. Installed 0.6.0.
+- **Rules**: `.rules/core_safety.md` Coordinator Routing now names the Code-tab Coordinator, adds the resume-under-250k rule, marks the 30-thread rule Projects-only. Rebuilt with `build_rules.py`.
+- **Untested**: the mod loads 0.6.0 only after the app or session restarts, so the live poll and compaction haven't run in the real Coordinator yet; whether `$.clock.every` keeps firing while a desktop session sits idle is still unknown.
+- Undo: `git revert` this commit, then `claude plugin update context-alert@ai-os-mods` after reverting the version.

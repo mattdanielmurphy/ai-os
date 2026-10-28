@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { asksMatt, queueCommand } from './register'
+import { KNOB_DEFAULTS, asksMatt, compactDue, queueCommand } from './register'
 
 const BAND = {
   component: 'AbovePrompt',
@@ -95,7 +95,7 @@ test('a message sent into a cold thread is held once, then goes through', async 
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on("prompt.fill", () => ({ isFilled: true }))
   on('prompt.submit', (_$, e) => { entered.push(e.text); return { text: e.text } })
-  await $.session.measure(measure(180_000))
+  await $.session.measure(measure(300_000))
   await $.turn.complete(answered)
 
   await clock.advance(30 * MIN)
@@ -103,7 +103,7 @@ test('a message sent into a cold thread is held once, then goes through', async 
 
   await clock.advance(2 * 60 * MIN)
   const held = await $.prompt.submit(phone('cold'))
-  expect(held.drop).toMatch(/expired 1h ago.*180k tokens.*\/cold-handoff/)
+  expect(held.drop).toMatch(/expired 1h ago.*300k tokens.*\/cold-handoff/)
   expect((await $.prompt.submit(phone('cold'))).drop).toBeUndefined()
   expect(entered).toEqual(['warm', 'cold'])
 })
@@ -131,7 +131,7 @@ const projectSetup = async ($: any, on: any) => {
     const stdout = JSON.stringify({ path: '/h.md', prompt: 'Read /h.md and continue. Then: is it done?' })
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
   })
-  await $.session.measure(measure(180_000))
+  await $.session.measure(measure(300_000))
   await $.turn.complete(answered)
   await clock.advance(3 * 60 * MIN)
   const settle = async () => { finish(); for (let i = 0; i < 50; i++) await new Promise(r => setTimeout(r, 0)) }
@@ -144,7 +144,7 @@ test('a cold project message is held and Matt is asked in the thread; "here" sen
   expect(out.drop).toMatch(/Held \(project thread\)/)
   expect(entered).toHaveLength(0)
   const ask = calls.find(c => c.tool === 'mcp__hearthbot__reply')
-  expect(String(ask?.text)).toMatch(/expired 2h ago, so this moves to a fresh thread.*~180k tokens/s)
+  expect(String(ask?.text)).toMatch(/expired 2h ago, so this moves to a fresh thread.*~300k tokens/s)
 
   expect((await $.prompt.submit(phone(wake('here', 'cmsg_M2')))).drop).toBeUndefined()
   expect(entered).toHaveLength(1)
@@ -341,7 +341,7 @@ test('a cold project message goes through when the thread reply cannot be posted
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on('prompt.submit', (_$, e) => { entered.push(e.text); return { text: e.text } })
   on('tool.call', () => { throw new Error('no such tool') })
-  await $.session.measure(measure(180_000))
+  await $.session.measure(measure(300_000))
   await $.turn.complete(answered)
   await clock.advance(3 * 60 * MIN)
   expect((await $.prompt.submit(phone(wake('hi')))).drop).toBeUndefined()
@@ -363,7 +363,7 @@ test('/haiku-handoff after a held message carries that message into the new thre
     const stdout = JSON.stringify({ path: '/h.md', prompt: 'Read /h.md and continue. Then: fix the bug' })
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
   })
-  await $.session.measure(measure(180_000))
+  await $.session.measure(measure(300_000))
   await $.turn.complete(answered)
   await clock.advance(2 * 60 * MIN)
 
@@ -380,7 +380,7 @@ test('a held message names attachments it could not save', async ($, on) => {
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on('prompt.fill', () => ({ isFilled: true }))
   on('prompt.submit', (_$, e) => ({ text: e.text }))
-  await $.session.measure(measure(180_000))
+  await $.session.measure(measure(300_000))
   await $.turn.complete(answered)
   await clock.advance(2 * 60 * MIN)
 
@@ -518,4 +518,15 @@ test('keyword fallback spots a question or a 👍 offer', async () => {
   expect(m.asksMatt('**Shipped.** Tested.\n\nDetails: [x](y#z?)')).toBe(false)
   expect(m.queueCommand('/q fix it')).toEqual({ kind: 'add', text: 'fix it' })
   expect(m.queueCommand('/quick note')).toBeUndefined()
+})
+
+test('a cold thread under the hold size just resumes; idle compaction waits for size, idle time and a warm cache', async () => {
+  const k = KNOB_DEFAULTS
+  const hour = 60 * 60_000
+  const c = { lastAt: 0, ttlMs: hour, tokens: 220_000 }
+  expect(compactDue(c, 50 * 60_000, k, -1)).toBe(true)
+  expect(compactDue(c, 40 * 60_000, k, -1)).toBe(false) // not idle long enough
+  expect(compactDue({ ...c, tokens: 150_000 }, 50 * 60_000, k, -1)).toBe(false) // too small
+  expect(compactDue(c, 61 * 60_000, k, -1)).toBe(false) // cache already expired
+  expect(compactDue(c, 50 * 60_000, k, 0)).toBe(false) // already compacted since the last turn
 })

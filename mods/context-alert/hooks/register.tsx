@@ -485,6 +485,58 @@ const queueSubmit = async (
   return { drop: 'Listed the queue (/q).' }
 }
 
+// Knobs live in ~/.hammerspoon/tweaks/context_alert.json (⌃⌥⌘T panel); the script seeds the file.
+const INBOX = `${AIOS}/scripts/coordinator_inbox.py`
+export const KNOB_DEFAULTS = { 'compact.idleMinutes': 50, 'compact.minTokens': 200_000, 'hold.minTokens': 250_000 }
+type Knobs = typeof KNOB_DEFAULTS
+
+const knobs = async ($: EngineInterface): Promise<Knobs> => {
+  const run = await $.process.run(['python3', INBOX, 'tweaks']).catch(() => undefined)
+  try {
+    return { ...KNOB_DEFAULTS, ...(JSON.parse(run?.stdout ?? '') as Partial<Knobs>) }
+  } catch {
+    return KNOB_DEFAULTS
+  }
+}
+
+export const COMPACT_INSTRUCTIONS =
+  "Keep verbatim: every rule, preference and correction Matt gave in this thread (his exact words), " +
+  'the current task and its next step, open questions waiting on him, and the ids/links of threads ' +
+  'and files in play. Summarize the rest briefly.'
+
+/** Idle compaction is due: idle long enough, big enough, still warm, and not compacted since. */
+export const compactDue = (c: Cache | null, at: number, k: Knobs, compactedAt: number) =>
+  c !== null &&
+  c.lastAt > compactedAt &&
+  c.tokens >= k['compact.minTokens'] &&
+  at - c.lastAt >= k['compact.idleMinutes'] * 60_000 &&
+  at - c.lastAt < c.ttlMs
+
+let compactedAt = 0
+
+/** Before the cache expires, compact a big idle thread so the next message re-reads a summary. */
+const idleCompact = async ($: EngineInterface) => {
+  const c = await read($, cache)
+  const at = await $.clock.now()
+  // Cheap gate before reading the knobs: no thread under 10 min idle or 50k tokens qualifies.
+  if (agentRunning || c === null || at - c.lastAt < 10 * 60_000 || c.tokens < 50_000) return
+  if (!compactDue(c, at, await knobs($), compactedAt)) return
+  compactedAt = at
+  const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => ({ skip: 'failed' }))
+  if (out.skip !== undefined) return
+  const tokens = (await read($, fill))?.tokens ?? 0
+  await update($, cache, old => ({ lastAt: at, ttlMs: old?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
+  $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
+}
+
+/** In the Coordinator session only: submit what scripts queued for it (voice tasks). */
+const pollInbox = async ($: EngineInterface, sid: string) => {
+  const run = await $.process.run(['python3', INBOX, 'poll', sid]).catch(() => undefined)
+  if (run === undefined || run.exitCode !== 0) return
+  const out = JSON.parse(run.stdout) as { coordinator: boolean; messages?: string[] }
+  for (const text of out.messages ?? []) void $.prompt.submit({ text, wait: false })
+}
+
 export const register: Register = on => {
   on('turn.start', async ($, e, next) => {
     if (e.agentId === undefined) agentRunning = true
@@ -508,6 +560,16 @@ export const register: Register = on => {
     await $.command.register({ name: 'fresh', description: 'Old name for /cold-handoff' })
     $.clock.every(60_000, () => {
       void $.clock.now().then(t => update($, now, () => t))
+      void idleCompact($).catch(() => undefined)
+    })
+    // The Coordinator's inbox: only the session named in coordinator/session.txt acts on it,
+    // checked each time so a successor that runs `coordinator_inbox.py claim` takes over live.
+    void $.session.id().then(sid => {
+      $.clock.every(30_000, () => {
+        void $.fs.read(`${AIOS}/coordinator/session.txt`)
+          .then(owner => (owner.trim() === sid ? pollInbox($, sid) : undefined))
+          .catch(() => undefined)
+      })
     })
     // A resumed thread: read when it last answered, and its cache lifetime, from its file.
     void (async () => {
@@ -610,6 +672,8 @@ export const register: Register = on => {
     const tokens = Math.max((await read($, fill))?.tokens ?? 0, c?.tokens ?? 0)
     const left = cacheLeft(c, at, tokens)
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
+    // Cold but small: resuming beats a handoff on recall at about the same cost (2026-10-27 research).
+    if (tokens < (await knobs($))['hold.minTokens']) return next(e)
 
     // A Claude project thread: the Code tab's hold note never shows on the project page, so the
     // mod says it in the thread itself and moves the message to a fresh thread unless Matt says ⏩.

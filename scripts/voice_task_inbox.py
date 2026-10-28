@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Voice task inbox: pass tasks that voice Claude emails to Matt over to the project coordinator.
+"""Voice task inbox: pass tasks that voice Claude emails to Matt over to his coordinator.
+
+Since 2026-10-27 tasks go first to the Code-tab Coordinator (scripts/coordinator_inbox.py, picked up
+by the context-alert mod inside that session); the Everything project routes below are fallbacks.
 
 Voice Claude (Claude app voice chat) can't reach the Everything project directly; it can
 only send email from Matt's Gmail. So it emails Matt's own address with the subject
@@ -169,6 +172,16 @@ def coordinator_id():
     return sid if re.fullmatch(r"(cse|session)_[A-Za-z0-9]+", sid) else ""
 
 
+def deliver_coordinator(text):
+    """Queue the task for the Code-tab Coordinator (its mod submits it within 30 s). True if it's listening."""
+    inbox = AIOS / "scripts" / "coordinator_inbox.py"
+    if subprocess.run(["python3", str(inbox), "alive"]).returncode != 0:
+        log("  -> Coordinator's mod hasn't polled in 3 min; trying the old routes")
+        return False
+    r = subprocess.run(["python3", str(inbox), "put"], input=text, capture_output=True, text=True)
+    return r.returncode == 0
+
+
 def deliver_cloud(text):
     """Queue the task into the coordinator's cloud session; no screen input. True on success."""
     sid = coordinator_id()
@@ -239,7 +252,9 @@ def run(dry_run=False):
             return 0
         log(f"delivering {len(tasks)} task(s): {[t[1] for t in tasks]}")
         text = compose(tasks)
-        if deliver_cloud(text):
+        if deliver_coordinator(text):
+            route = "Code-tab Coordinator"
+        elif deliver_cloud(text):
             route = "coordinator's cloud session"
         elif screen_locked():
             return 0  # the paste fallback needs an unlocked screen; retry next minute

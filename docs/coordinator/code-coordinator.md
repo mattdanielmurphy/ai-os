@@ -41,7 +41,11 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 ## Housekeeping (no asking)
 - Archive superseded threads and threads that only answered a question (`mcp__ccd_session_mgmt__archive_session`). Unstarted ideas: park in Linear (team MAT, label "Parked idea", thread link) and archive.
 - Lists for Matt to answer: show 5 at a time, with "5 of N, the rest come later".
-- Your own context: past ~200k, write `/_handoff` (open threads come from the registry) and start your successor with the same instructions; tell Matt in one line with its link, then pin the new one and unpin yourself.
+- Your own context: the context-alert mod compacts you after ~50 min idle above 200k, so you rarely need a handoff. If you do: write `/_handoff` (open threads come from the registry), start your successor with the same instructions and tell it to run `python3 ~/projects/ai-os/scripts/coordinator_inbox.py claim` first (voice tasks follow the claim); tell Matt in one line with its link, then pin the new one and unpin yourself.
+
+## Voice tasks
+- They arrive as a prompt starting "🎙️ Voice task": the context-alert mod in this session picks them up from `scripts/coordinator_inbox.py` every 30 s. Route them like any ask; the thread (or you) reports back with `voice_reply.py`.
+- Your session id is in `ai-os/coordinator/session.txt`. Never edit it except through `claim`.
 
 ## Registry: `~/projects/ai-os/coordinator/threads.json`
 Plain JSON so Codex or Gemini could read it later. One entry per thread you started or adopted:
