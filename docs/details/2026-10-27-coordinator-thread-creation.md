@@ -30,3 +30,37 @@
 - If that also dies instantly, it's an app/server bug: report it via the app's feedback with session id cse_01UsR2dniMTqrPBYuVEt3QGH.
 
 Undo: nothing changed.
+
+## 21:50 It is not Glass TV: the coordinator chat hit 30 threads
+
+**Asked:** Matt's unrelated new-thread request also failed, even after fully quitting and relaunching Claude. It worked earlier today. Find what's really wrong.
+
+---
+
+### Every new thread fails since 5:55 pm
+- `~/Library/Logs/Claude/remote-control.log`: every coordinator-started new thread since 17:55 ends the same way: the Mac acks it, then ~150 ms later `not attached (session_ended)`. 13 failures in a row (17:55–18:16, then 21:33–21:34 after the relaunch), on both `~/projects` and `~/projects/ai-os`, for different tasks.
+- Resumed threads still attach fine (18:17, 18:19, 19:56, 21:39). So the Mac, folders, account and the app are fine.
+- `main.log`: for the failed ones the app never gets to "Starting local session"; it goes straight from "Acknowledging work" to "Stopping work". The server already closed the session. The coordinator's tool error says the session "could not be made this thread's session and was closed", i.e. the server refused to link the new session to the thread.
+- That's why relaunching Claude didn't help: the refusal is on Anthropic's side.
+- So the earlier "torrent/debrid wording" theory is wrong: unrelated tasks fail the same way.
+
+---
+
+### The 30-thread pattern
+- Before 10-26 22:44 every new thread had its own random-looking id. Since then every thread id starts `cse_01UsR2d…`, which looks like they all hang off one parent: the coordinator chat that started at 10-26 22:44.
+- That coordinator started exactly **30** threads successfully (10-26 22:44 → 10-27 17:46). Every coordinator start after that (13 tries) failed.
+- The one success after 17:55 (18:01) was a Code-tab session being published, a different path, not a coordinator start.
+- Inference, not confirmed: the server caps how many threads one coordinator chat can start, and the cap is 30. Neither the logs nor any doc state this limit.
+
+---
+
+### Fix to try
+- Start a **new coordinator chat** in the Everything project and ask it to start one small thread. If it works, the cap theory holds.
+- If a new coordinator chat also fails, it's a wider server problem: report it from the app's feedback with session id `cse_01UsR2dm2M8nDUa29N4wMyX8` (21:33 failure).
+
+---
+
+### Follow-up worth doing
+- A rule so the coordinator hands itself off before it hits the cap (e.g. at ~25 threads started), and tells Matt plainly when start fails instead of guessing. Also tell Tyler about the cap, since he'll use the same one-coordinator setup. Not done yet; offered to Matt.
+
+Undo: nothing changed on the Mac.
