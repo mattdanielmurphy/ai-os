@@ -18,7 +18,7 @@ DROP = re.compile(r"identity\.md|private/|SCHOOL\.md|school|PHIL|student|Kristy|
 SUBS = [
     (re.compile(r"/Users/matt(hewmurphy)?"), "~"),
     (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"), "<email>"),
-    (re.compile(r"\+?\d[\d\s().-]{8,}\d"), "<phone>"),
+    (re.compile(r"(?<![\w-])(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}(?![\w-])"), "<phone>"),
     (re.compile(r"\b(cmsg|chan|local|session)_[A-Za-z0-9-]{6,}"), r"\1_<id>"),
 ]
 SECRET = re.compile(r"(sk-|ghp_|AKIA|AIza)[A-Za-z0-9_-]{12,}|BEGIN [A-Z ]*PRIVATE KEY")
