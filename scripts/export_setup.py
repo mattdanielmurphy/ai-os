@@ -77,6 +77,35 @@ CHANGES_HEAD = ("# New rules from Matt\n\n"
                 "and asks Yes / No / Ask me later (see ../INSTALL.md). Entry id = the 8 characters after `##`.\n")
 
 
+# Optional desktop mods Tyler's agent can offer (each with the Mac helpers it needs).
+MODS = ["read-aloud", "action-bar"]
+MOD_HELPERS = [  # (source, path under setup/matt/mods/)
+    (HOME / ".hammerspoon/modules/claude_read_aloud.lua", "hammerspoon/modules/claude_read_aloud.lua"),
+    (HOME / ".hammerspoon/modules/claude_control.lua", "hammerspoon/modules/claude_control.lua"),
+    (HOME / ".hammerspoon/modules/tweaks.lua", "hammerspoon/modules/tweaks.lua"),
+    (HOME / ".hammerspoon/bin/claude-control", "hammerspoon/bin/claude-control"),
+    (AIOS / "scripts/dictate.sh", "scripts/dictate.sh"),
+    (AIOS / "scripts/hooks/live_call.py", "scripts/hooks/live_call.py"),
+]
+
+
+def export_mods():
+    root = OUT / "mods"
+    for name in MODS:
+        for f in (AIOS / "mods" / name).rglob("*"):
+            if f.is_file() and "node_modules" not in f.parts:
+                put(f, root / name / f.relative_to(AIOS / "mods" / name))
+    names = set(MODS)
+    mk = __import__("json").loads((AIOS / "mods/.claude-plugin/marketplace.json").read_text())
+    mk["name"], mk["owner"] = "slub-mods", {"name": "Matt (via slub-hq)"}
+    mk["plugins"] = [p for p in mk["plugins"] if p["name"] in names]
+    (root / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+    (root / ".claude-plugin/marketplace.json").write_text(__import__("json").dumps(mk, indent=2) + "\n")
+    for src, rel in MOD_HELPERS:
+        if src.exists():
+            put(src, root / rel)
+
+
 def main():
     if not HQ.exists():
         print("export_setup: slub-hq not found, skipping"); return
@@ -94,6 +123,7 @@ def main():
     if old_changes is not None:
         (OUT / "CHANGES.md").write_text(old_changes)
     log_changes(old_rules, (OUT / "rules.md").read_text(), OUT / "CHANGES.md")
+    export_mods()
     for skill in sorted((AIOS / "skills").glob("_*/SKILL.md")):
         put(skill, OUT / "skills" / skill.parent.name / "SKILL.md")
     (OUT / "README.md").write_text(
@@ -103,6 +133,7 @@ def main():
         "- `coordinator.md`: how his Code-tab coordinator session routes work to threads.\n"
         "- `project-coordinator.md`: per-project coordinators under the central one.\n"
         "- `CHANGES.md`: new rules, one entry each; Tyler's agent offers them to him (Yes / No / Ask me later).\n"
+        "- `mods/`: optional Claude desktop mods (read-aloud, action-bar) + the Mac helpers they need; see ../INSTALL.md step 8.\n"
         "- `skills/`: his custom skills (`_` prefix).\n\n"
         "Tyler: setup is in `../INSTALL.md`. Shared Slub rules (`../core.md`) sync automatically; "
         "everything here is optional. Skip Mac-specific bits (Hammerspoon, do.test, claude-control) unless you set those up too.\n")
