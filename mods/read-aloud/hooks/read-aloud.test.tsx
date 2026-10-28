@@ -64,7 +64,7 @@ test('queue keeps every real reply in order, skips short notes, and cuts before 
 
 test('Interrupt shows while speaking and pauses for dictation', async ($, on) => {
   const ran: string[] = []
-  on('process.run', (_$, e) => { ran.push(e.argv.join(' ')); return { value: { exitCode: 0, stdout: '', stderr: '' } } as never })
+  on('process.run', (_$, e) => { const c = e.argv.join(' '); ran.push(c); return { value: { exitCode: 0, stdout: c.includes('isReading') ? 'true' : '', stderr: '' } } as never })
   on('session.id', () => ({ value: 'abcdef1234' }) as never)
   on('session.messages', () => ({ value: [] }) as never)
   on('fs.write', () => ({ value: undefined }) as never)
@@ -75,7 +75,7 @@ test('Interrupt shows while speaking and pauses for dictation', async ($, on) =>
   const ui = await $.ui.mount({ plugin: 'read-aloud', surface: 'desktop', ...BAND })
   expect(await ui.find({ key: 'interrupt' })).toBeUndefined()
   await $.turn.complete({ answer: 'a reply', reason: 'answer', durationMs: 1 } as never)
-  await new Promise(r => setTimeout(r, 10))
+  await new Promise(r => setTimeout(r, 1300))
   await ui.press({ key: 'interrupt' })
   expect(ran.some(c => c.includes('interrupt()'))).toBe(true)
   await ui.unmount()

@@ -75,6 +75,25 @@ export const queueItems = (texts: string[], minChars = 160) =>
     })
     .filter(x => x.key.length > 0)
 
+// Keeps `speaking` true only while Claude is really reading (or paused for an Interrupt),
+// so the Interrupt button shows only then. Gives up after 15 min of waiting.
+let stopWatch: (() => void) | null = null
+const watchSpeaking = ($: EngineInterface) => {
+  stopWatch?.()
+  let seen = false, ticks = 0
+  const t = $.clock.every(1000, async () => {
+    ticks++
+    const now = (await hs($, 'isReading()')) === 'true'
+    if (now !== (await read($, speaking))) await update($, speaking, () => now)
+    if (now) seen = true
+    if ((seen && !now && (await hs($, 'isPending()')) !== 'true') || ticks > 900) stopWatch?.()
+  })
+  stopWatch = () => { t.cancel(); stopWatch = null }
+}
+
+const SLOT = 44
+const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const r = await next(e)
@@ -114,6 +133,7 @@ export const register: Register = on => {
       }
       await update($, speaking, () => true)
       await hs($, 'replyDone()')
+      watchSpeaking($)
     }
     return r
   })
@@ -141,29 +161,27 @@ export const register: Register = on => {
     const dict = await read($, dictate)
     const talking = on_ && (await read($, speaking))
     const { Box, Button, Text } = $.ui.resolve(e)
-    // One compact row: speaker toggle, dictate-after toggle, then the other bands (reply buttons).
-    return (
-      <Box flexWrap="wrap" rowGap="xs" alignItems="center">
-        {/* Filled (primary) = on, so the state reads at a glance; dim outline = off. */}
-        <Button
-          key="toggle"
-          label={on_ ? '🔊' : '🔇'}
-          variant={on_ ? 'primary' : 'secondary'}
-          dimColor={!on_}
-          onPress={async () => {
-            await update($, choice, () => !on_)
-            if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
-          }}
-        />
-        <Text> </Text>
-        <Button key="dictate" label="🎙" variant={dict ? 'primary' : 'secondary'} dimColor={!dict} onPress={() => setDictate($, !dict)} />
-        <Text> </Text>
-        {talking && (
-          <Box key="int">
-            <Button key="interrupt" label="✋ Interrupt" variant="secondary" onPress={() => hs($, 'interrupt()')} />
-            <Text> </Text>
+    // Left: this mod's own controls in a fixed-width group (three equal slots, so the reply
+    // buttons on the right never move). On = a ring in the theme's suggestion colour.
+    // Right, after a divider: the reply buttons (other bands).
+    const slot = (key: string, lit: boolean, show: boolean, label: string, press: () => unknown) => (
+      <Box key={`s-${key}`} width={SLOT} alignItems="center" justifyContent="center">
+        {show && (
+          <Box key={`r-${key}`} borderStyle="round" borderColor={lit ? 'suggestion' : 'subtle'} borderDimColor={!lit}>
+            <Button key={key} label={label} plain dimColor={!lit} onPress={press} />
           </Box>
         )}
+      </Box>
+    )
+    const stopHere = async () => { await update($, choice, () => !on_); if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`) }
+    return (
+      <Box flexWrap="wrap" rowGap="xs" alignItems="center">
+        <Box key="mine" width={SLOT * 3} flexShrink={0} alignItems="center">
+          {slot('toggle', on_, true, on_ ? '🔊' : '🔇', stopHere)}
+          {slot('dictate', dict, true, '🎙', () => setDictate($, !dict))}
+          {slot('interrupt', true, talking, '✋', () => hs($, 'interrupt()'))}
+        </Box>
+        {hasAbove(above) && <Text key="div" color="subtle"> │ </Text>}
         {above}
       </Box>
     )
