@@ -42,3 +42,8 @@
 - Replaced the "LOOKING…" label and "Looking for a clearer view…" hint with no-text animation: faint ring with a light line + dark halo (readable on bright and dark pictures), and a soft lavender-to-pink comet with a white head sweeping round it (conic gradient masked to a 3 px ring), gently breathing; fades in. Light-mode media query strengthens the halo; reduced-motion keeps only the breathing.
 - Tweaks: xray.seekSpinSeconds (1.1), xray.seekPulseSeconds (2.4), sent to the overlay with each X-Ray answer.
 - Checked in a demo page on light, dark and mid backgrounds (static snapshot; animation not watched live). 45c4303.
+## 03:40 Memory named someone from the previous shot (coordinator task)
+- Bug: memory treated "the last 2 s" as the same shot, so after a cut Jason Sudeikis stayed tagged.
+- Fix: xray-faces returns a 16x9 grey thumbnail per frame; a remembered frame starts a new shot when it differs from the previous one by more than xray.memoryCut (28/255 mean) or after a gap >3 s; the paused frame must also match the latest remembered frame. Turned-away names come only from frames since that cut, and only where a person is still visible now (a body box or an unnamed face under their last spot). Two-shot rule unchanged (needs a faceless body present).
+- Tested: clip with actor A, then a cut to actor B elsewhere in frame → only B (before: A would get a "behind" tag). Blur-within-shot clip still names the actor.
+- Risk: fast camera moves within a shot may count as cuts (only makes it forget sooner).
