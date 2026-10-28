@@ -68,3 +68,10 @@
 - Cause: one WKWebView lived for the whole app run; closing just loaded about:blank, so its back list kept every earlier page.
 - Fix (b0c5975): closing throws the web view away; the next open (or the background prewarm) builds a fresh one with empty history, so Back from the first page closes the browser and returns to the video. Opening a page other than the prewarmed one also starts fresh.
 - Untested by hand (needs clicks); builds. Cost: a fresh web view per visit (~100 ms), hidden by the existing prewarm.
+## 05:40 Subtitles: language, official first, dialogue-only, recap
+- Only tracks in the chosen language (knob sub-lang, default en/eng/english; by lang tag, else by title).
+- Ranked: came with the video (not external) +100, title says WEB-DL/Blu-ray/official +20, SDH/CC −10, forced −200; OpenSubtitles downloads last.
+- Menu: Off · Dialogue (best non-SDH) · Hearing impaired (SDH) (best SDH/CC/hearing-impaired flag) · "Other English tracks" submenu · "Hide sound descriptions" toggle (default on; mpv sub-filter-sdh, off automatically when SDH is picked) · hint "R shows what was just said". S cycles Off → Dialogue → Hearing impaired → Off.
+- Recap: the best dialogue track stays selected but hidden when subtitles are off (sub-visibility), so sub-text keeps flowing; lines are kept 2 min; R / speech-bubble button shows the last exchange (lines back to the first ≥4 s pause, max 15 s), descriptions stripped, in a dark box above the bar for 7 s. Knobs recap-seconds, recap-gap-seconds, recap-display-seconds.
+- Tested: ranking and stripping logic in a Swift snippet (Apple TV+ WEB-DL → Dialogue, SDH BluRay → Hearing impaired). Not tested in the player (needs playback); builds.
+- Risk: if a video has image-based subtitles (PGS), sub-text is empty, so recap says nothing was said.
