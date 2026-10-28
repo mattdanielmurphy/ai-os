@@ -1,5 +1,20 @@
 {
   "name": "ai-os-mods",
-  "owner": { "name": "Matt" },
-  "plugins": [{ "name": "context-alert", "source": "./context-alert" }, { "name": "action-bar", "source": "./action-bar" }]
+  "owner": {
+    "name": "Matt"
+  },
+  "plugins": [
+    {
+      "name": "context-alert",
+      "source": "./context-alert"
+    },
+    {
+      "name": "action-bar",
+      "source": "./action-bar"
+    },
+    {
+      "name": "read-aloud",
+      "source": "./read-aloud"
+    }
+  ]
 }

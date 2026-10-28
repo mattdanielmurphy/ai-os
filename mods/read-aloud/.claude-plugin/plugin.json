@@ -1,0 +1,1 @@
+{"name": "read-aloud", "version": "0.1.0", "description": "Speaks each finished reply aloud (macOS voice); on by default in the Coordinator, /read-aloud toggles it per session; stops when you type, dictate or are on a call", "types": "./types/index.d.ts"}
