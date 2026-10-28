@@ -1,1 +1,57 @@
-{"threads": []}
+{
+ "threads": [
+  {
+   "id": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
+   "title": "Coordinator",
+   "chain": "coordinator",
+   "seq": 1,
+   "cwd": "~/projects",
+   "model": "opus",
+   "state": "working",
+   "asked": "Be Matt's coordinator (replaces Projects 'Everything')",
+   "started": "2026-10-27T17:30",
+   "last_turn": "2026-10-27T17:30",
+   "parent": "local_6760f793-026f-453a-9208-aafd7211bde4",
+   "role": "central"
+  },
+  {
+   "id": "local_06780b6f-fa7a-4cee-8363-68c502ceb004",
+   "title": "Connectors on demand, not in every thread",
+   "chain": "connectors",
+   "seq": 1,
+   "cwd": "~/projects/ai-os",
+   "model": "opus",
+   "state": "waiting-on-matt",
+   "asked": "Stop connectors costing tokens in every thread, keep them available",
+   "started": "2026-10-27T17:32",
+   "last_turn": "2026-10-27T17:32",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+  },
+  {
+   "id": "local_4b486978-6346-4e5d-b925-78ba31a5e267",
+   "title": "Glass TV \u00b7 x-ray face-quality search",
+   "chain": "glass-tv",
+   "seq": 1,
+   "cwd": "~/projects/glass-tv",
+   "model": "opus",
+   "state": "working",
+   "asked": "Record x-ray buffer/face-quality + script ideas, plan the first",
+   "started": "2026-10-27T17:45",
+   "last_turn": "2026-10-27T17:45",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+  },
+  {
+   "id": "local_3fc72b34-2a7c-49f5-ae4d-d40258ae622b",
+   "title": "Ideas rule, global + shared with Tyler",
+   "chain": "ai-os",
+   "seq": 1,
+   "cwd": "~/projects/ai-os",
+   "model": "opus",
+   "state": "working",
+   "asked": "Ideas+honest take rule, confirm global, share setup via slub-hq",
+   "started": "2026-10-27T17:45",
+   "last_turn": "2026-10-27T17:45",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+  }
+ ]
+}

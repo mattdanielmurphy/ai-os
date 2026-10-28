@@ -184,3 +184,7 @@ Status: idea; build on Matt 👍.
 - Hovering a control in the ⌃⌥⌘T Tweaks panel outlines the matching UI element in the app, when there is one.
 - Feasibility: doable. Knobs (hud-kit `Tweaks.swift`, `modules/tweaks.lua`) have no link to a UI element yet. Add an optional `target` id per knob, and have the panel send "hover <app> <target>" to the app (a small IPC file or distributed notification). Each app then draws a brief outline on that element; the shared Knobs component would own the outline helper so apps just register targets. Knobs with no visible element (timings, curves) get no highlight.
 - Status: idea; parked in Linear. Build nothing until he 👍s.
+
+## Coordinator of coordinators (Matt, 2026-10-28) — BUILDING
+- Every project gets its own coordinator session; the pinned central Coordinator is the front desk that forwards project asks via SendMessage and keeps the big picture. Project coordinators own ground-floor detail (worker side threads). Coordinators can tell each other "you deal with this". One shared registry (`coordinator/threads.json`, `coordinator` owner field).
+- Honest take: good fit; it keeps the central context light and gives a per-project view in the sidebar. Risks: messages bouncing between coordinators (extra tokens, slower), registry write races, and idle coordinator sessions for quiet projects. Start coordinators only for projects with ongoing work. Instructions: `docs/coordinator/project-coordinator.md`.

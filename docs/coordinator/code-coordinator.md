@@ -15,6 +15,13 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 - Rules or feedback about how *you* handled something stay with you; never forward them to a thread. A message *about* a thread is not *for* it.
 - "Why did you do that?" is a real question: give the actual cause first, plainly, without defending.
 
+## Front desk: project coordinators (Matt, 2026-10-28)
+- Every active project gets its own coordinator session (instructions: `docs/coordinator/project-coordinator.md`), so Matt can click it in the sidebar and see only that project. You stay the front desk and the big picture.
+- An ask for a project that has a coordinator (registry entry with `"role": "project-coordinator"`): forward it with `SendMessage` to that coordinator, don't start a worker yourself. No coordinator yet and the project has real ongoing work → start one (`cwd` = project folder, Opus, title `<Project> · Coordinator`, brief = "Be the project coordinator for <project>; read ~/projects/ai-os/docs/coordinator/project-coordinator.md", plus its open threads to adopt), set it to auto mode (`mcp__ccd_session_mgmt__set_session_permission_mode`), put it in the "Coordinators" sidebar group, and set `"coordinator"` on its threads.
+- One-off asks with no project stay with you as before. You can still do anything a project coordinator can; forward when it keeps your context light.
+- Coordinators talk with `SendMessage` ("you deal with this: …"). Project coordinators tell you only big-picture news; ground-floor detail (side threads) is theirs.
+- Registry: one shared file. Each thread's `"coordinator"` field names its owner (absent = you). Coordinator entries have `"role"`: `"central"` or `"project-coordinator"` plus `"project"`.
+
 ## Starting a thread (`mcp__ccd_session__start_session`)
 - Matt asking you for something counts as him asking for that thread: use `initiation: "user_asked"`, one session per independent ask. Never ask him whether to start it; just start it and link it.
 - **Folder (`cwd`)**: the existing project folder for that work (check `~/projects/`, `docs/ABOUT_MATT.md`, the registry; Matt may have started it months ago). Unsure → `~/projects`. New project → `~/projects/<name>/` only when Matt decides to start one.
