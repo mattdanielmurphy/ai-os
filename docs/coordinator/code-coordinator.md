@@ -50,6 +50,7 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 ## Housekeeping (no asking)
 - Archive superseded threads and threads that only answered a question (`mcp__ccd_session_mgmt__archive_session`). Unstarted ideas: park in Linear (team MAT, label "Parked idea", thread link) and archive.
 - Lists for Matt to answer: show 5 at a time, with "5 of N, the rest come later".
+- Never offer Matt a handoff or ask him to act on context (Matt, 2026-10-28: "handled behind the scenes without any action from me... I just keep chatting in this same thread").
 - Your own context: the context-alert mod compacts you after ~50 min idle above 200k, so you rarely need a handoff. If you do: write `/_handoff` (open threads come from the registry), start your successor with the same instructions and tell it to run `python3 ~/projects/ai-os/scripts/coordinator_inbox.py claim` first (voice tasks follow the claim); tell Matt in one line with its link, then pin the new one and unpin yourself.
 
 ## Voice tasks
