@@ -47,6 +47,34 @@ const onCall = async ($: EngineInterface) => {
   }
 }
 
+// Every text the assistant wrote since Matt's last real message (tool results are user rows too).
+export const turnTexts = (msgs: { role: string; text: string; toolResults?: unknown[] }[]) => {
+  let i = msgs.length - 1
+  while (i >= 0 && !(msgs[i].role === 'user' && msgs[i].text.trim() && !(msgs[i].toolResults?.length))) i--
+  return msgs.slice(i + 1).filter(m => m.role === 'assistant' && m.text.trim()).map(m => m.text)
+}
+
+// What gets spoken: markdown and links flattened, as Claude's Read aloud says it.
+export const plain = (md: string) =>
+  md.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').trim()
+
+// Lines only mods read (hidden by the action bar), never meant to be heard.
+const MOD_LINE = /^\s*(\*\*)?Actions:(\*\*)?/
+
+// Queue items, oldest first. key: the reply's opening words, to find its own Read aloud button.
+// cut: spoken characters before the first mod-only line (null = read it all).
+// Short progress notes before the real reply are skipped; the turn's last text always stays.
+export const queueItems = (texts: string[], minChars = 160) =>
+  texts
+    .filter((t, i) => i === texts.length - 1 || plain(t).length >= minChars)
+    .map(t => {
+      const lines = t.split('\n')
+      const at = lines.findIndex(l => MOD_LINE.test(l))
+      const spoken = plain(at < 0 ? t : lines.slice(0, at).join('\n'))
+      return { key: plain(t).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40), cut: at < 0 ? null : spoken.length, chars: spoken.length }
+    })
+    .filter(x => x.key.length > 0)
+
 // Gap only between two rows; alone, the band is exactly its own row.
 const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
 
@@ -63,7 +91,7 @@ export const register: Register = on => {
   on('command.run', { name: 'read-aloud' }, async ($, e, next) => {
     const now = !(await isOn($))
     await update($, choice, () => now)
-    if (!now) await hs($, 'cancel()')
+    if (!now) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
     return { text: now ? 'Replies will be read aloud in this session.' : 'Read-aloud is off in this session.' }
   })
 
@@ -78,6 +106,15 @@ export const register: Register = on => {
     if (e.agentId === undefined && e.reason === 'answer' && e.answer.trim() && (await isOn($))) {
       // A live call stays quiet unless Matt turned it on in this session himself.
       if ((await read($, choice)) !== true && (await onCall($))) return r
+      let texts: string[] = [e.answer]
+      try { texts = turnTexts(await $.session.messages()) } catch {}
+      const session = (await $.session.id()).slice(0, 8)
+      const dir = `${await home($)}/.hammerspoon/tmp/read_aloud_queue`
+      await $.process.run(['mkdir', '-p', dir])
+      let n = 0
+      for (const item of queueItems(texts.length ? texts : [e.answer])) {
+        await $.fs.write(`${dir}/${Date.now()}-${n++}-${session}.json`, JSON.stringify({ ...item, session }))
+      }
       await update($, speaking, () => true)
       await hs($, 'replyDone()')
     }
@@ -88,14 +125,14 @@ export const register: Register = on => {
   on('prompt.change', async ($, e, next) => {
     if ((await read($, speaking)) && e.origin.kind !== 'clear' && e.text.length > 0) {
       await update($, speaking, () => false)
-      await hs($, 'cancel()')
+      await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
     }
     return next(e)
   })
   on('prompt.submit', async ($, e, next) => {
     if (await read($, speaking)) {
       await update($, speaking, () => false)
-      await hs($, 'cancel()')
+      await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
     }
     return next(e)
   })
@@ -116,7 +153,7 @@ export const register: Register = on => {
             variant="secondary"
             onPress={async () => {
               await update($, choice, () => !on_)
-              if (on_) await hs($, 'cancel()')
+              if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
             }}
           />
           <Text dimColor> · Dictate after: </Text>
