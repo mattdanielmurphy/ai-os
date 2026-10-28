@@ -171,3 +171,7 @@ Nothing to undo: research only. `VISION.md` got a short entry for the idea.
 ## 22:45 Short version of the Readthrough
 
 Matt asked for another version of the Readthrough with only what he really needs to know, all details cut. Wrote `docs/details/2026-10-27-coordinator-migration-short.md`: the four findings, the four-step plan, what he'd lose (threads with the Mac off, phone card view), the one untested risk, and the 👍 ask. Published it as its own Readthrough (`--thread coordinator-migration-short`) so the full one stays as it was. Dropped: sources, the feature table, portability, rejected options, agent teams and agent view, cost maths.
+
+## 22:55 Switching over now; handoff to a fresh thread
+
+Matt can't start any new threads in Everything, so he is switching to the Code-tab coordinator right away. This thread was at 330k tokens and he left the handoff to me. Chose to hand off: above ~250k a fresh context pays off (per the benchmark), and the build is a new phase. Wrote `docs/handoffs/2026-10-27_code-tab-coordinator.md` (seq 1 of chain `code-coordinator`) and started the next session automatically, since Matt wants new threads opened for him, not offered. Its order: coordinator instructions and session first (unblocks him), then voice tasks, then idle compaction in the mod, then rules. Also noted his correction: when he asks for a report, put it in the reply instead of making him wait for a Vercel deploy.
