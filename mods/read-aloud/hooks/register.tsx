@@ -173,18 +173,25 @@ export const register: Register = on => {
     // On = the app's chip with a soft blue fill behind the icon (Claude's listening-mic look);
     // off = the plain grey chip, dimmed. Same chip either way, so nothing moves and the whole
     // chip stays clickable.
-    const chip = (key: string, lit: boolean, glyph: string, press: () => unknown) => (
-      <Button key={key} variant="secondary" onPress={press}>
-        <Text backgroundColor={lit ? TINT : undefined} dimColor={!lit}>{` ${glyph} `}</Text>
-      </Button>
+    // Hovering a chip reveals its tip: a hidden, absolutely placed label in the same hover group.
+    const chip = (key: string, lit: boolean, glyph: string, press: () => unknown, tip: string) => (
+      <Box key={`w-${key}`} position="relative">
+        <Button key={key} variant="secondary" onPress={press} hover={{ scope: `tip-${key}` }}>
+          <Text backgroundColor={lit ? TINT : undefined} dimColor={!lit}>{` ${glyph} `}</Text>
+        </Button>
+        <Box key={`t-${key}`} position="absolute" bottom={40} left={0} display="none" hover={{ scope: `tip-${key}`, display: 'flex' }}
+          backgroundColor="text" paddingX="sm" paddingY="xs">
+          <Text color="inverseText" size="footnote" wrap="end">{tip}</Text>
+        </Box>
+      </Box>
     )
     const stopHere = async () => { await update($, choice, () => !on_); if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`) }
     return (
       <Box flexDirection="row" alignItems="center" justifyContent="space-between">
         <Box key="mine" flexDirection="row" alignItems="center" columnGap="xs" flexShrink={0} marginRight="lg">
-          {chip('toggle', on_, on_ ? SPEAKER : SPEAKER_OFF, stopHere)}
-          {chip('dictate', dict, MIC, () => setDictate($, !dict))}
-          {on_ && chip('interrupt', talking, PAUSE, () => (talking ? hs($, 'interrupt()') : undefined))}
+          {chip('toggle', on_, on_ ? SPEAKER : SPEAKER_OFF, stopHere, on_ ? 'Read aloud is on: replies are spoken. Click to turn off (/read-aloud).' : 'Read aloud is off. Click to have replies spoken (/read-aloud).')}
+          {chip('dictate', dict, MIC, () => setDictate($, !dict), dict ? 'Dictate after is on: Claude dictation starts when reading ends. Click to turn off.' : 'Dictate after is off. Click to start Claude dictation when reading ends.')}
+          {on_ && chip('interrupt', talking, PAUSE, () => (talking ? hs($, 'interrupt()') : undefined), talking ? 'Interrupt: pause the reading and dictate; reading resumes when you stop.' : 'Interrupt works while a reply is being read. Typing stops the reading.')}
         </Box>
         <Box key="replies" flexDirection="row" flexGrow={1} justifyContent="flex-end">
           {above}
