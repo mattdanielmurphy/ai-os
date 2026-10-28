@@ -20,3 +20,7 @@
 - Cause: after my 75-connection scan, the Torrentio/Real-Debrid resolve link reset connections (temporary block). A single probe now gets a normal 302 to Real-Debrid, so it should play again. Resuming wasn't the factor.
 - Fix (ac0ad81): Player records mpv's end-file error; if the player closes before the video ever loaded and the person didn't close it, the page toasts "Couldn't play that: <reason>. Try again in a minute, or pick it again for another source."
 - Untested end to end (couldn't reproduce a failure now).
+## 01:40 Source fallback + Sources menu
+- Server `src/sources.ts`: remembers the ranked list when a stream is chosen; `/api/sources` lists it in plain words (picture: Best/Great/Good/Okay; 1-3 signal bars: provider-cached or 50+ peers = 3, 10+ = 2); `POST /api/sources/use[?i=]` switches; with no i it picks the next copy on a different Real-Debrid server, checking hosts with one HEAD request each, at most 3, sequentially.
+- Player: buffering 8 s (knob fallback-seconds) → corner note "This copy is slow. Trying another: Great picture" → loadfile replace at the same time → "Now playing: …". If that copy errors, tries the next. Control bar gets a signal-bars button (hidden unless 2+ copies) opening a native menu: picture + signal + "Playing now", note "More bars = more people sharing it".
+- Only one stream open at a time (replace closes the old). Untested live: Matt to try on the buffering episode after relaunch.
