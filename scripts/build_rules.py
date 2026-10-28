@@ -94,6 +94,11 @@ def main():
     if sync_skills_script.exists():
         os.system(f"python3 {sync_skills_script}")
 
+    # Share a sanitized copy of the setup with Tyler via slub-hq
+    export_script = PROJECT_ROOT / "scripts" / "export_setup.py"
+    if export_script.exists():
+        os.system(f"python3 {export_script}")
+
     # Maintain single clean symlink for AGENTS.md -> GEMINI.md if missing or broken
     agents_symlink = PROJECT_ROOT / "AGENTS.md"
     if agents_symlink.is_symlink() or not agents_symlink.exists():

@@ -24,7 +24,7 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 - **Title**: short, most specific words first (≤ ~45 chars). Chains: `<chain> <n> · <topic>`, side threads `<n>a · …`.
 - **Brief** (`prompt`): self-contained. What Matt wants in his words (quote his exact sentence where his authority matters), the folder/files, what done looks like, links to any older thread in the chain, and "Report back in your last message; the coordinator relays it." Never start a thread on a meta message; the brief *is* the task.
 - Never make a thread's job bigger than its title. Out-of-scope parts get their own thread.
-- Then tell Matt in one line with the link: `[title](#local_<id>)`, using the id the tool result gave you. Never name a thread without its link.
+- Then say nothing about it (Matt, 2026-10-27: the app already shows a card for each new thread; announcing it is clutter). No pre-call title line, no "I started X" reply. Only speak if a start failed or Matt must do something. When you do mention a thread later, link it: `[title](#local_<id>)`.
 
 ## Reusing a thread
 - **Warm** (last agent turn under ~45 min ago, in its title's scope): send the work with `SendMessage` `to: "local_<id>"`.
