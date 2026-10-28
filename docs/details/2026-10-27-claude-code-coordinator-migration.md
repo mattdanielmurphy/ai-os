@@ -167,3 +167,7 @@ Matt's worry is lock-in, especially for Slub. What keeps this flexible:
 ### Undo
 
 Nothing to undo: research only. `VISION.md` got a short entry for the idea.
+
+## 22:45 Short version of the Readthrough
+
+Matt asked for another version of the Readthrough with only what he really needs to know, all details cut. Wrote `docs/details/2026-10-27-coordinator-migration-short.md`: the four findings, the four-step plan, what he'd lose (threads with the Mac off, phone card view), the one untested risk, and the 👍 ask. Published it as its own Readthrough (`--thread coordinator-migration-short`) so the full one stays as it was. Dropped: sources, the feature table, portability, rejected options, agent teams and agent view, cost maths.
