@@ -276,6 +276,18 @@
    "started": "2026-10-28",
    "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_e7f6a944-dd57-4705-a08f-fd6e901a8b5f",
+   "title": "Glass TV \u00b7 Android essentials on shared backend",
+   "chain": "glass-tv-android",
+   "seq": 1,
+   "cwd": "~/projects/glass-tv",
+   "model": "opus",
+   "state": "working",
+   "asked": "Android TV essentials, shared backend, self-update, error reports",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   }
  ]
 }
