@@ -145,3 +145,33 @@ Hovering a poster shows a small IMDb button (top right). It asks the server for 
 ### Tested
 
 Explore API returned 10 shelves of 20; IMDb link lookup worked; home checked headless in light and dark (peek visible, IMDb button on hover, no errors); 22 tests pass; app and player build. Live at 19:38 (server restarted while nothing played; app reinstalled). Undo: `git revert 80f67e3`.
+
+## 20:45 New look after Readthrough and the library wall
+
+**Asked:** the app felt clinical and sterile (light mode especially; posters look bad on anything white), the fonts were disliked, take inspiration from Readthrough, poster gaps were off, and the library should be option C's cards with buttons on every card plus parts of A.
+
+---
+
+### The new look
+
+Taken from Readthrough's player (`pages/site/scroll-read/player/player.css`): Onest for text and Martian Mono for labels, its dark palette (#10120f background, #171a16 surfaces, hairline #2d302b), the lilac accent (#c9a3df) and the lilac-to-pink gradient on the main buttons, pill-shaped buttons and chips, softer 10–12 px corners. Applied to every screen through the shared tokens in `web/base.css`, and to the X-Ray overlay.
+
+**Decision you may veto:** there is one palette now, the dark one, in both system appearances. You said posters don't look good against anything white, so I didn't make a lighter variant. If you want a light mode back, it would be a mid-tone one, not white.
+
+---
+
+### The library wall
+
+Option C's layout (1 title fills the area; 3 = one big card plus two stacked; up to 8 tile in two rows; more than 8 scroll in rows of four) with option A's info on every card, always visible: "Up next" or "Continue", the logo (dark logos turned white), the episode chip, IMDb rating and year, and Play/Resume plus Pick episode. Hover adds the IMDb and remove buttons. A thin gradient line shows progress. The separate "Pick up where you left off" shelf is gone since the cards show it. Backdrops and logos come from metahub by IMDb id (the server now looks up IMDb ids for library items); without a backdrop the poster is used blurred with a sharp copy; without a logo, the title in type.
+
+---
+
+### Poster gaps
+
+Gaps went from 6 to 12 px and poster corners from 3 to 8 px (knobs `ui.posterGap`, `ui.posterRadius`; the wall's own gap is 10 px).
+
+---
+
+### Tested
+
+Home checked headless with a copy of your real library (Nathan for You, Planet Earth, South Park) and the full click-through (onboarding to end of night) passes up to the break-glass wait step, which needs `glass.waitMinutes=0` and was already outside this change. 22 tests pass. Live at 20:44 (server restarted while nothing played, app reinstalled). Undo: `git revert 8d2dc98`.
