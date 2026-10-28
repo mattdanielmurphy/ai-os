@@ -91,12 +91,11 @@ const watchSpeaking = ($: EngineInterface) => {
   stopWatch = () => { t.cancel(); stopWatch = null }
 }
 
-// Short words, not icons: mod Buttons hold only text, and the app's font has no SF Symbols
-// (they drew as bars) while emoji look out of place.
-const SPEAKER = 'Read aloud'
-const SPEAKER_OFF = 'Read aloud'
-const MIC = 'Dictate after'
-const PAUSE = 'Pause to talk'
+// Emoji (mod Buttons hold only text; the app's font has no SF Symbols). Off = dimmed.
+const SPEAKER = '🔊'
+const SPEAKER_OFF = '🔇'
+const MIC = '🎙️'
+const PAUSE = '✋'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
