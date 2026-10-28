@@ -55,3 +55,7 @@
 - Cause: cards were laid out small (no facts yet), then facts arrived, the card grew and relayout moved it (e.g. above → below).
 - Fix: at full density, missing facts are held by two invisible placeholder lines, so placement (with collisions) uses the final size; arriving facts fill the card in place with no relayout. Facts are kept across answers. When a refined answer moves a card, it glides from its old spot (0.35 s ease); stems/dots fade in.
 - Tested headless (Chrome via playwright): card positions identical before/after facts; moved card animates. Needs Glass TV relaunch.
+## 04:30 Cursor flicker (coordinator task)
+- Cause (likely): the player's full-window tracking view calls showControls() on every mouse move, which called NSCursor.setHiddenUntilMouseMoves(false) each time; that resets the cursor to the arrow, then the web view (X-Ray cards, IMDb browser in the same window) sets its pointer again → flicker. Tracking areas fire even under overlapping views, so the IMDb browser was hit too.
+- Fix: only unhide when the player itself hid the cursor (flag set in hideControls).
+- Untested by hand (needs Matt's mouse); builds. IINA's own player isn't ours to change.
