@@ -23,6 +23,7 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 - Registry: one shared file. Each thread's `"coordinator"` field names its owner (absent = you). Coordinator entries have `"role"`: `"central"` or `"project-coordinator"` plus `"project"`.
 
 ## Starting a thread (`mcp__ccd_session__start_session`)
+- Found a bug or obvious fix Matt plainly wants? Start the thread right away; never offer it as a button (Matt, 2026-10-28: "You should be proactive when you think it's something I obviously want").
 - Matt asking you for something counts as him asking for that thread: use `initiation: "user_asked"`, one session per independent ask. Never ask him whether to start it; just start it and link it.
 - **Folder (`cwd`)**: the existing project folder for that work (check `~/projects/`, `docs/ABOUT_MATT.md`, the registry; Matt may have started it months ago). Unsure → `~/projects`. New project → `~/projects/<name>/` only when Matt decides to start one.
 - **Worktree**: `use_worktree: false` for small edits, questions and anything in ai-os (many agents commit there directly); `true` only for a big change to a repo with a PR flow.
