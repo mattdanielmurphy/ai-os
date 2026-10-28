@@ -4,44 +4,14 @@ import type { EngineInterface, Register } from 'claude-code'
 const choice = atom({ plugin: 'read-aloud', key: 'choice' } as const, null as boolean | null)
 const speaking = atom({ plugin: 'read-aloud', key: 'speaking' } as const, false)
 
-// Knobs live in ~/.hammerspoon/tweaks/read_aloud.json (⌃⌥⌘T panel); missing or bad JSON keeps these.
-export const KNOB_DEFAULTS = { rate: 200, volume: 0.7, maxChars: 1500, voice: '' }
-type Knobs = typeof KNOB_DEFAULTS
-
 const home = async ($: EngineInterface) => (await $.process.run(['sh', '-c', 'printf %s "$HOME"'])).stdout
 
-const knobs = async ($: EngineInterface): Promise<Knobs> => {
+// The pressing, waiting and dictation live in Hammerspoon (modules/claude_read_aloud.lua):
+// it presses Claude's own Read aloud button through accessibility, never the system voice.
+const hs = async ($: EngineInterface, fn: 'replyDone' | 'cancel') => {
   try {
-    const file = JSON.parse(await $.fs.read(`${await home($)}/.hammerspoon/tweaks/read_aloud.json`))
-    const out: Knobs = { ...KNOB_DEFAULTS }
-    for (const k of Object.keys(out) as (keyof Knobs)[]) {
-      const v = file?.tweaks?.[k]?.value
-      if (typeof v === typeof out[k]) (out as Record<string, unknown>)[k] = v
-    }
-    return out
-  } catch {
-    return KNOB_DEFAULTS
-  }
-}
-
-/** Reply text as it should sound: no code, links, paths, markup or Actions/Details lines. */
-export const speakable = (answer: string, maxChars = KNOB_DEFAULTS.maxChars): string => {
-  let t = answer
-    .replace(/```[\s\S]*?(```|$)/g, ' ')
-    .split('\n')
-    .filter(l => !/^\s*\**\s*(actions|details)\s*:/i.test(l.replace(/\*\*/g, '')))
-    .join('\n')
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/`[^`]*`/g, ' ')
-    .replace(/https?:\/\/\S+/g, ' ')
-    .replace(/(^|\s)~?\/[\w.~%-]+(\/[\w.~%-]+)+\/?/g, '$1')
-    .replace(/^\s*(#+|>|[-*+]|\d+[.)])\s+/gm, '')
-    .replace(/[*_~#|]+/g, '')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{2,}/g, '\n')
-    .trim()
-  if (t.length > maxChars) t = `${t.slice(0, maxChars).replace(/\s\S*$/, '')}. The rest is on screen.`
-  return t
+    await $.process.run(['/usr/local/bin/hs', '-c', `return require("modules.claude_read_aloud").${fn}()`], { timeoutMs: 5000 })
+  } catch {}
 }
 
 // Defaults on for the Coordinator (its id is in ai-os coordinator/session.txt).
@@ -57,36 +27,14 @@ const isCoordinator = async ($: EngineInterface) => {
 
 const isOn = async ($: EngineInterface) => (await read($, choice)) ?? (await isCoordinator($))
 
-const onCall = async ($: EngineInterface) =>
-  (await $.process.run(['sh', '-c', 'kill -0 "$(cat "$HOME/calls/.transcript.pid" 2>/dev/null)" 2>/dev/null'])).exitCode === 0
-
-let current: { return?: () => unknown } | undefined
-
-const stop = async ($: EngineInterface) => {
-  const c = current
-  current = undefined
-  if (c) await c.return?.()
-  if (await read($, speaking)) await update($, speaking, () => false)
-}
-
-const say = async ($: EngineInterface, text: string) => {
-  await stop($)
-  const k = await knobs($)
-  const argv = ['say', '-r', String(Math.round(k.rate)), '-f', '-']
-  if (k.voice) argv.splice(1, 0, '-v', k.voice)
-  const vol = Math.min(1, Math.max(0, k.volume))
-  const stream = $.process.spawn({ argv, input: `[[volm ${vol.toFixed(2)}]] ${text}` })
-  current = stream as { return?: () => unknown }
-  await update($, speaking, () => true)
-  void (async () => {
-    try {
-      for await (const _ of stream) void _
-    } catch {}
-    if (current === stream) {
-      current = undefined
-      await update($, speaking, () => false)
-    }
-  })()
+// Same test as the live-call hook: a call is live only while its transcript is still growing.
+const onCall = async ($: EngineInterface) => {
+  try {
+    const r = await $.process.run(['python3', `${await home($)}/projects/ai-os/scripts/hooks/live_call.py`])
+    return r.stdout.startsWith('LIVE CALL')
+  } catch {
+    return false
+  }
 }
 
 export const register: Register = on => {
@@ -99,7 +47,7 @@ export const register: Register = on => {
   on('command.run', { name: 'read-aloud' }, async ($, e, next) => {
     const now = !(await isOn($))
     await update($, choice, () => now)
-    if (!now) await stop($)
+    if (!now) await hs($, 'cancel')
     return { text: now ? 'Replies will be read aloud in this session.' : 'Read-aloud is off in this session.' }
   })
 
@@ -108,43 +56,47 @@ export const register: Register = on => {
     if (e.agentId === undefined && (await isOn($))) {
       // A live call stays quiet unless Matt turned it on in this session himself.
       if ((await read($, choice)) !== true && (await onCall($))) return r
-      const text = speakable(e.answer, (await knobs($)).maxChars)
-      if (text) await say($, text)
+      await update($, speaking, () => true)
+      await hs($, 'replyDone')
     }
     return r
   })
 
   // Typing, dictating or sending cuts the voice off.
   on('prompt.change', async ($, e, next) => {
-    if (current && e.origin.kind !== 'clear' && e.text.length > 0) await stop($)
+    if ((await read($, speaking)) && e.origin.kind !== 'clear' && e.text.length > 0) {
+      await update($, speaking, () => false)
+      await hs($, 'cancel')
+    }
     return next(e)
   })
   on('prompt.submit', async ($, e, next) => {
-    if (current) await stop($)
+    if (await read($, speaking)) {
+      await update($, speaking, () => false)
+      await hs($, 'cancel')
+    }
     return next(e)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const above = await next(e)
     const on_ = await isOn($)
-    const talking = await read($, speaking)
     const { Box, Button, Text } = $.ui.resolve(e)
     return (
       <Box flexDirection="column">
         {above}
         <Box flexWrap="wrap">
-          <Text dimColor>{talking ? '🔊 Reading the reply aloud ' : on_ ? '🔊 Replies are read aloud ' : '🔈 Read-aloud off '}</Text>
-          {talking && <Button key="stop" label="Stop" variant="secondary" onPress={() => stop($)} />}
+          <Text dimColor>{on_ ? '🔊 Replies are read aloud ' : '🔈 Read-aloud off '}</Text>
           <Button
             key="toggle"
             label={on_ ? 'Turn off' : 'Turn on'}
             variant="secondary"
             onPress={async () => {
               await update($, choice, () => !on_)
-              if (on_) await stop($)
+              if (on_) await hs($, 'cancel')
             }}
           />
-          <Text dimColor> · /read-aloud toggles · typing stops it</Text>
+          <Text dimColor> · /read-aloud toggles · typing stops it · dictation starts after</Text>
         </Box>
       </Box>
     )
