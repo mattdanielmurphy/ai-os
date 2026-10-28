@@ -73,7 +73,8 @@ test('Interrupt shows while speaking and pauses for dictation', async ($, on) =>
   on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box /> })
   await $.command.run({ name: 'read-aloud' } as never)
   const ui = await $.ui.mount({ plugin: 'read-aloud', surface: 'desktop', ...BAND })
-  expect(await ui.find({ key: 'interrupt' })).toBeUndefined()
+  await ui.press({ key: 'interrupt' })
+  expect(ran.some(c => c.includes('interrupt()'))).toBe(false) // inactive until speaking
   await $.turn.complete({ answer: 'a reply', reason: 'answer', durationMs: 1 } as never)
   await new Promise(r => setTimeout(r, 1300))
   await ui.press({ key: 'interrupt' })

@@ -91,8 +91,11 @@ const watchSpeaking = ($: EngineInterface) => {
   stopWatch = () => { t.cancel(); stopWatch = null }
 }
 
-// Claude's listening-mic tint: its blue at low opacity, so it works in light and dark.
-const TINT = 'rgba(37, 99, 235, 0.14)'
+// SF Symbols: speaker.wave.2, speaker.slash, mic, pause.
+const SPEAKER = '\u{1002A8}'
+const SPEAKER_OFF = '\u{1002A2}'
+const MIC = '\u{1002B0}'
+const PAUSE = '\u{100285}'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -161,23 +164,27 @@ export const register: Register = on => {
     const dict = await read($, dictate)
     const talking = on_ && (await read($, speaking))
     const { Box, Button, Text } = $.ui.resolve(e)
-    // This mod's controls sit first; on = tinted rounded chip with a blue glyph, like Claude's own
-    // mic button when it's listening; off = the same size, no tint, dim glyph (so nothing shifts).
-    // Interrupt sits after the reply buttons, so showing or hiding it never moves them.
+    // Left: three fixed slots (speaker, mic, pause), always the app's own chip Buttons so the
+    // whole chip is clickable. On = blue icon; off = dim icon. The pause slot exists only while
+    // read-aloud is on and does nothing until Claude is actually speaking.
+    // Right: the reply buttons (other bands), right-aligned, so the left never pushes them.
+    // Icons are Apple's SF Symbols (private-use code points the macOS system font draws).
     const chip = (key: string, lit: boolean, glyph: string, press: () => unknown) => (
-      <Box key={`c-${key}`} borderStyle="round" borderColor={lit ? TINT : 'transparent'} backgroundColor={lit ? TINT : 'transparent'} marginRight="xs">
-        <Button key={key} plain onPress={press}>
-          <Text color={lit ? 'suggestion' : 'inactive'}>{glyph}</Text>
-        </Button>
-      </Box>
+      <Button key={key} variant="secondary" onPress={press}>
+        <Text color={lit ? 'suggestion' : undefined} dimColor={!lit}>{glyph}</Text>
+      </Button>
     )
     const stopHere = async () => { await update($, choice, () => !on_); if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`) }
     return (
-      <Box flexWrap="wrap" alignItems="center">
-        {chip('toggle', on_, on_ ? '🕪' : '🕨', stopHere)}
-        {chip('dictate', dict, '🎙\uFE0E', () => setDictate($, !dict))}
-        {above}
-        {talking && chip('interrupt', true, '⏸\uFE0E', () => hs($, 'interrupt()'))}
+      <Box flexDirection="row" alignItems="center" justifyContent="space-between">
+        <Box key="mine" flexDirection="row" alignItems="center" columnGap="xs" flexShrink={0} marginRight="lg">
+          {chip('toggle', on_, on_ ? SPEAKER : SPEAKER_OFF, stopHere)}
+          {chip('dictate', dict, MIC, () => setDictate($, !dict))}
+          {on_ && chip('interrupt', talking, PAUSE, () => (talking ? hs($, 'interrupt()') : undefined))}
+        </Box>
+        <Box key="replies" flexDirection="row" flexGrow={1} justifyContent="flex-end">
+          {above}
+        </Box>
       </Box>
     )
   })
