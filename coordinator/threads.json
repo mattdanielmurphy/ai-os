@@ -1,7 +1,7 @@
 {
  "threads": [
   {
-   "id": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
+   "id": "local_cc656186-076a-49c9-9b70-cea93d86d4d2",
    "title": "Coordinator",
    "chain": "coordinator",
    "seq": 1,
@@ -25,7 +25,7 @@
    "asked": "Stop connectors costing tokens in every thread, keep them available",
    "started": "2026-10-27T17:32",
    "last_turn": "2026-10-27T17:32",
-   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+   "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
   {
    "id": "local_4b486978-6346-4e5d-b925-78ba31a5e267",
@@ -38,7 +38,7 @@
    "asked": "Record x-ray buffer/face-quality + script ideas, plan the first",
    "started": "2026-10-27T17:45",
    "last_turn": "2026-10-27T17:45",
-   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
+   "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
   {
@@ -52,7 +52,7 @@
    "asked": "Ideas+honest take rule, confirm global, share setup via slub-hq",
    "started": "2026-10-27T17:45",
    "last_turn": "2026-10-27T17:45",
-   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+   "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
   {
    "id": "local_a5b2208e-fab7-4e53-8c01-af3c0a195f19",
@@ -82,7 +82,7 @@
    "started": "2026-10-28",
    "role": "project-coordinator",
    "project": "glass-tv",
-   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+   "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
   {
    "id": null,
