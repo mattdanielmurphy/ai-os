@@ -23,7 +23,7 @@ test('bar shows buttons, a click sends the number, sending clears it', async ($,
   on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box /> })
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on('prompt.submit', (_$, e) => { sent.push(e.text); return { text: e.text } })
-  await $.turn.complete({ answer: 'ok\nActions: Ship it → Yes, ship it · Test more → Yes, test it more first', reason: 'answer', durationMs: 1 } as never)
+  await $.turn.complete({ answer: 'ok\nActions: Ship it → Yes, ship it · Test more → Yes, test it more first · Docs → Yes, write docs', reason: 'answer', durationMs: 1 } as never)
   const ui = await $.ui.mount({ plugin: 'action-bar', surface: 'desktop', ...BAND })
   expect(await ui.find({ key: 'a2' })).toBeDefined()
   expect(await ui.find({ key: 'all' })).toBeDefined()
@@ -32,4 +32,10 @@ test('bar shows buttons, a click sends the number, sending clears it', async ($,
   expect(sent).toContain('Yes, test it more first')
   expect(await ui.find({ key: 'a1' })).toBeUndefined()
   await ui.unmount()
+})
+
+test('either/or items are marked, so no All button', async () => {
+  const list = parseActions('Actions: Build it → Yes, build it | Skip it → No, skip it')
+  expect(list.every(a => a.either)).toBe(true)
+  expect(parseActions('Actions: A · B · C').some(a => a.either)).toBe(false)
 })

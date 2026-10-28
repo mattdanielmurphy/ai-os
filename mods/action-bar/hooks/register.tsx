@@ -30,19 +30,22 @@ const strip = (s: string) => s.replace(/\*\*|__|`/g, '').replace(/\[([^\]]+)\]\(
  * The actions line: the last line of the reply that starts with "Actions:" (bold allowed),
  * items split by " · ", each "Short label → Plain sentence sent on click". Without the
  * arrow the click sends "Yes, <label>". Ordinary numbered lists never raise the bar.
+ * Items split by " | " are either/or: those (and any pair of two) get no "All of these".
  */
 export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[] => {
   const lines = answer.split('\n').map(strip).filter(Boolean)
   const line = [...lines].reverse().find(l => /^actions\s*:/i.test(l))
   if (!line) return []
   const out: Action[] = []
-  for (const raw of line.replace(/^actions\s*:/i, '').split(/\s[·•|]\s/)) {
+  const body = line.replace(/^actions\s*:/i, '')
+  const either = /\s\|\s/.test(body)
+  for (const raw of body.split(/\s[·•|]\s/)) {
     const part = raw.replace(/^\s*\d{1,2}[.)]\s+/, '').trim()
     if (!part) continue
     const [head, ...rest] = part.split(/\s*(?:→|->)\s*/)
     const said = rest.join(' ').trim()
     const label = head.length > k.labelChars ? `${head.slice(0, k.labelChars - 1)}…` : head
-    out.push({ label, text: said || `Yes, ${head.charAt(0).toLowerCase()}${head.slice(1)}` })
+    out.push({ label, text: said || `Yes, ${head.charAt(0).toLowerCase()}${head.slice(1)}`, ...(either ? { either } : {}) })
   }
   return out.slice(0, k.maxActions)
 }
@@ -88,7 +91,7 @@ export const register: Register = on => {
               <Text> </Text>
             </Box>
           ))}
-          {list.length > 1 && <Button key="all" label="All of these" variant="secondary" onPress={() => send(all)} />}
+          {list.length > 2 && !list.some(a => a.either) && <Button key="all" label="All of these" variant="secondary" onPress={() => send(all)} />}
           <Button key="hide" label="✕" variant="secondary" onPress={() => update($, actions, () => [])} />
         </Box>
         <Text dimColor>A button sends its sentence as your reply, e.g. "{list[0].text}". Or type your own answer.</Text>
