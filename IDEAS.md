@@ -192,3 +192,7 @@ Status: idea; build on Matt 👍.
 ## Sing with live auto-tune as pitch feedback (Matt, 2026-10-28)
 Practice singing while hearing your own voice auto-tuned, as instant "this is the target pitch" feedback.
 **Honest take:** fun and motivating, but hard tuning hides your errors, so you can learn to lean on it. Better as a pitch display or gentle/partial correction you fade out over time. Cheap to try with existing apps.
+
+## Read-aloud: skip forward by sentence or by message (Matt, 2026-10-28, parked)
+Buttons to jump ahead a sentence, or to the next queued reply, while Claude reads aloud.
+**Honest take:** skipping to the next message is easy and useful (stop the current one, read the next queued one). Skipping by sentence is hard: Claude's Read aloud exposes only play/pause, no position, so it would need our own timing guesses and would often land mid-word. Build "next message" first if wanted; small.
