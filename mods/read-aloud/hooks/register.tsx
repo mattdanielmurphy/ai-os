@@ -37,6 +37,9 @@ const onCall = async ($: EngineInterface) => {
   }
 }
 
+// Gap only between two rows; alone, the band is exactly its own row.
+const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const r = await next(e)
@@ -83,7 +86,7 @@ export const register: Register = on => {
     const on_ = await isOn($)
     const { Box, Button, Text } = $.ui.resolve(e)
     return (
-      <Box flexDirection="column" rowGap="sm">
+      <Box flexDirection="column" rowGap={hasAbove(above) ? 'xs' : 0}>
         {above}
         <Box flexWrap="wrap" rowGap="xs" alignItems="center">
           <Text dimColor>{on_ ? '🔊 Replies are read aloud ' : '🔈 Read-aloud off '}</Text>

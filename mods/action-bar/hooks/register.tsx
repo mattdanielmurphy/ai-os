@@ -50,6 +50,9 @@ export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[]
   return out.slice(0, k.maxActions)
 }
 
+// Gap only between two rows; alone, the band is exactly its own row.
+const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
+
 export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
@@ -76,7 +79,7 @@ export const register: Register = on => {
     const all = `Yes to all: ${list.map(a => a.text.replace(/^yes,?\\s*/i, '').replace(/[.!]$/, '')).join('; ')}.`
     const above = await next(e)
     return (
-      <Box flexDirection="column" rowGap="sm">
+      <Box flexDirection="column" rowGap={hasAbove(above) ? 'xs' : 0}>
         {above}
         <Box flexWrap="wrap" rowGap="xs" alignItems="center">
           <Text dimColor>Reply: </Text>
