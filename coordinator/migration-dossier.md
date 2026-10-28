@@ -30,3 +30,7 @@ For the Everything coordinator: please check this against your project files and
 - **Open threads**: 20 added to `threads.json` as `parked`; ideas parked in Linear MAT-45/46/47 (Figma plugin already MAT-38).
 - **Cloud-only files**, on the Mac already: project-mode.md (docs/), talk-to-synth (~/projects), claude-notify / piano-hud (Hammerspoon modules), piano-airports m4a (claude-ambient/out), voice samples (services/reels/samples), Compustar manual (Documents/Manuals), dad-excel debug notes (docs/details).
 - Missing and worth getting: routing-rules.md, eating-plan.md (private), custodian-state.md (via the export prompt), dad-excel fixed spreadsheets (ask Matt if Dad still needs them). Not worth it: ~200 cloud details files (history only), design screenshots, Arduino tutorial PDFs, menu-cleanup Lua (menu_bar.lua supersedes, unverified).
+
+## Projects memory (copied 2026-10-28)
+- Full verbatim export of Projects memory, custodian state and routing rules: `private/projects-memory/memory-export-2026-10-28.md` (gitignored, has health notes).
+- Gap list from the migration check: `private/projects-memory/migration-gaps-2026-10-28.md`.
