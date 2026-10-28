@@ -31,6 +31,8 @@ const projectHeld = atom({ plugin: 'context-alert', key: 'projectHeld' } as cons
 const isCoord = atom({ plugin: 'context-alert', key: 'isCoord' } as const, false)
 /** Smallest idle coordinator worth compacting, whatever the compact.minTokens knob says. */
 export const COORD_COMPACT_MIN = 50_000
+/** A coordinator past this compacts right after a turn ends, so it never grows big enough to warn. */
+export const COORD_TURN_COMPACT = 250_000
 const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
 const threadId = atom({ plugin: 'context-alert', key: 'threadId' } as const, '')
 const backLinked = atom({ plugin: 'context-alert', key: 'backLinked' } as const, false)
@@ -536,6 +538,17 @@ const idleCompact = async ($: EngineInterface) => {
   if (!coord) $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
 }
 
+/** Is this a coordinator? Checked at start and every minute until yes (a failed first check,
+ *  e.g. python3 not ready at launch, used to leave the band showing for the whole session). */
+const checkCoord = async ($: EngineInterface) => {
+  if (await read($, isCoord)) return
+  const sid = await $.session.id()
+  const owner = await $.fs.read(`${AIOS}/coordinator/session.txt`).catch(() => '')
+  if (owner.trim() === sid) return update($, isCoord, () => true)
+  const run = await $.process.run(['python3', INBOX, 'is-coordinator', sid]).catch(() => undefined)
+  if (run?.exitCode === 0) await update($, isCoord, () => true)
+}
+
 /** Compact a cold coordinator, then submit the message it caught. Sends anyway if compaction fails. */
 const coordCatchUp = async ($: EngineInterface, text: string) => {
   const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => ({ skip: 'failed' }))
@@ -580,6 +593,7 @@ export const register: Register = on => {
     $.clock.every(60_000, () => {
       void $.clock.now().then(t => update($, now, () => t))
       void idleCompact($).catch(() => undefined)
+      void checkCoord($).catch(() => undefined)
     })
     // The Coordinator's inbox: only the session named in coordinator/session.txt acts on it,
     // checked each time so a successor that runs `coordinator_inbox.py claim` takes over live.
@@ -590,10 +604,7 @@ export const register: Register = on => {
           .catch(() => undefined)
       })
     })
-    void $.session.id()
-      .then(sid => $.process.run(['python3', INBOX, 'is-coordinator', sid]))
-      .then(run => (run.exitCode === 0 ? update($, isCoord, () => true) : undefined))
-      .catch(() => undefined)
+    void checkCoord($).catch(() => undefined)
     // A resumed thread: read when it last answered, and its cache lifetime, from its file.
     void (async () => {
       const t = await $.clock.now()
@@ -617,7 +628,7 @@ export const register: Register = on => {
 
       const crossed = TOAST_AT.filter(t => tokens >= t).pop() ?? 0
       const shown = await read($, lastToast)
-      if (crossed > shown) {
+      if (crossed > shown && !(await read($, isCoord))) {
         $.ui.toast(`Context is ${k(tokens)} tokens. At your next stopping point, consider /_handoff.`)
       }
       if (crossed !== shown) await update($, lastToast, () => crossed)
@@ -634,6 +645,11 @@ export const register: Register = on => {
     const out = await next(e)
     agentRunning = false
     // Smart queue: a stopped or failed turn never releases it; Matt looks first.
+    // Coordinators stay small without asking: compact between turns once past the line.
+    if (e.reason === 'answer' && tokens >= COORD_TURN_COMPACT && (await read($, isCoord))) {
+      compactedAt = at
+      void $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => undefined)
+    }
     if (e.reason === 'answer') void checkQueue($)
     else if ((await read($, queued)).length) await queueFile($, await read($, queued), 'the agent stopped or failed')
     return out
