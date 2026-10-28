@@ -47,3 +47,7 @@
 - Fix: xray-faces returns a 16x9 grey thumbnail per frame; a remembered frame starts a new shot when it differs from the previous one by more than xray.memoryCut (28/255 mean) or after a gap >3 s; the paused frame must also match the latest remembered frame. Turned-away names come only from frames since that cut, and only where a person is still visible now (a body box or an unnamed face under their last spot). Two-shot rule unchanged (needs a faceless body present).
 - Tested: clip with actor A, then a cut to actor B elsewhere in frame → only B (before: A would get a "behind" tag). Blur-within-shot clip still names the actor.
 - Risk: fast camera moves within a shot may count as cuts (only makes it forget sooner).
+## 03:55 Phantom "Seen from behind" tag on blurred background
+- Matt's screenshot: Nathan close-up correctly named, plus "Ted Lasso · seen from behind · named from the last shot" on empty blurred background. That's the two-shot rule: a weak body detection (confidence 0.3) on the background + Ted seen in the previous shot.
+- Fix (see commit): body detection back to confidence > 0.6 and height > 20% of frame; the two-shot carry-over across cuts is now off by default (tweak xray.twoShot = 1 turns it back on). Same-shot turned-away names still work, but need a visible person.
+- Checked Matt's actual paused frame: one face, one body, the face is inside that body → nobody "behind". Cut test clip still names only the new actor.
