@@ -38,3 +38,7 @@
 - Pause: if memory covers the last 1.6 s, the answer uses it directly (no decode, ~0.1 s): unclear faces overlapping someone named in the last 2 s get that name; someone named in the last 2 s with no face now keeps a faded tag; the two-shot rule uses the last 6 s. After a seek (no memory yet) the old decode path still runs.
 - No spoilers (Matt): the "faces not recognised" list shows only people already seen at or before this point; empty → "No one recognised here yet".
 - Tested: synthetic clip, pause on covered face → "Javier Bardem (behind)" in 74 ms; cast list empty before first appearance. NOT tested: the GL frame grab in the real player (compiles; needs relaunch). Risk: if the grab reads the wrong region, memory just names nothing.
+## 03:20 Polished searching indicator (coordinator task)
+- Replaced the "LOOKING…" label and "Looking for a clearer view…" hint with no-text animation: faint ring with a light line + dark halo (readable on bright and dark pictures), and a soft lavender-to-pink comet with a white head sweeping round it (conic gradient masked to a 3 px ring), gently breathing; fades in. Light-mode media query strengthens the halo; reduced-motion keeps only the breathing.
+- Tweaks: xray.seekSpinSeconds (1.1), xray.seekPulseSeconds (2.4), sent to the overlay with each X-Ray answer.
+- Checked in a demo page on light, dark and mid backgrounds (static snapshot; animation not watched live). 45c4303.
