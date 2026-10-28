@@ -1,268 +1,280 @@
 {
-  "threads": [
-    {
-      "id": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
-      "title": "Coordinator",
-      "chain": "coordinator",
-      "seq": 1,
-      "cwd": "~/projects",
-      "model": "opus",
-      "state": "working",
-      "asked": "Be Matt's coordinator (replaces Projects 'Everything')",
-      "started": "2026-10-27T17:30",
-      "last_turn": "2026-10-27T17:30",
-      "parent": "local_6760f793-026f-453a-9208-aafd7211bde4",
-      "role": "central"
-    },
-    {
-      "id": "local_06780b6f-fa7a-4cee-8363-68c502ceb004",
-      "title": "Connectors on demand, not in every thread",
-      "chain": "connectors",
-      "seq": 1,
-      "cwd": "~/projects/ai-os",
-      "model": "opus",
-      "state": "waiting-on-matt",
-      "asked": "Stop connectors costing tokens in every thread, keep them available",
-      "started": "2026-10-27T17:32",
-      "last_turn": "2026-10-27T17:32",
-      "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
-    },
-    {
-      "id": "local_4b486978-6346-4e5d-b925-78ba31a5e267",
-      "title": "Glass TV · x-ray face-quality search",
-      "chain": "glass-tv",
-      "seq": 1,
-      "cwd": "~/projects/glass-tv",
-      "model": "opus",
-      "state": "working",
-      "asked": "Record x-ray buffer/face-quality + script ideas, plan the first",
-      "started": "2026-10-27T17:45",
-      "last_turn": "2026-10-27T17:45",
-      "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
-      "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
-    },
-    {
-      "id": "local_3fc72b34-2a7c-49f5-ae4d-d40258ae622b",
-      "title": "Ideas rule, global + shared with Tyler",
-      "chain": "ai-os",
-      "seq": 1,
-      "cwd": "~/projects/ai-os",
-      "model": "opus",
-      "state": "working",
-      "asked": "Ideas+honest take rule, confirm global, share setup via slub-hq",
-      "started": "2026-10-27T17:45",
-      "last_turn": "2026-10-27T17:45",
-      "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
-    },
-    {
-      "id": "local_a5b2208e-fab7-4e53-8c01-af3c0a195f19",
-      "title": "Glass TV · playback",
-      "chain": "glass-tv",
-      "cwd": "~/projects/glass-tv",
-      "state": "idle",
-      "started": "2026-10-28",
-      "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
-    },
-    {
-      "id": "local_9ee295a3-17a7-4482-a95f-46e18a3d82c0",
-      "title": "Glass TV · merged catalog",
-      "chain": "glass-tv",
-      "cwd": "~/projects/glass-tv",
-      "state": "idle",
-      "started": "2026-10-28",
-      "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
-    },
-    {
-      "id": "local_cc656186-076a-49c9-9b70-cea93d86d4d2",
-      "title": "Glass TV coordinator",
-      "chain": "glass-tv",
-      "cwd": "~/projects/glass-tv",
-      "model": "opus",
-      "state": "working",
-      "started": "2026-10-28",
-      "role": "project-coordinator",
-      "project": "glass-tv",
-      "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
-    },
-    {
-      "id": null,
-      "title": "Ask to record FaceTime calls",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "review-ready",
-      "started": "2026-10-27",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Improve guided meditation audio",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "review-ready",
-      "started": "2026-10-27",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Journal: XIME show night + Obsidian note",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "review-ready",
-      "started": "2026-10-26",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Keep Tyler in the loop on Slub",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-26",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Thread backlog review",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-26",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Review Oct 25 voice calls",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-25",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Tailscale box (temporary + cheap mini PC, Kijiji M710q)",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-25",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Lidstay screen brightness",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-25",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Stremio episode limit with binge tokens",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-25",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Project dashboard wants",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "blocked",
-      "started": "2026-10-24",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "UI Mixer onto Knobs",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-24",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Shelf thread links",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-23",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Mixer vs Audio Hijack recording",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-23",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Tyler share package + slub-utils repo",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-23",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Shared app architecture constraints",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-22",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Architecture plan second opinion (top 4 await 👍)",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-22",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Preview buttons for new builds",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-21",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "HUD layout traffic control",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-21",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Voice wake word assistant",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-20",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    },
-    {
-      "id": null,
-      "title": "Plugin crash hunt (qwerty MIDI, crash-ladder step 1 untested)",
-      "source": "projects-everything (cmsg, not readable from Code)",
-      "state": "parked",
-      "old_state": "old",
-      "started": "2026-10-19",
-      "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
-    }
-  ]
+ "threads": [
+  {
+   "id": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
+   "title": "Coordinator",
+   "chain": "coordinator",
+   "seq": 1,
+   "cwd": "~/projects",
+   "model": "opus",
+   "state": "working",
+   "asked": "Be Matt's coordinator (replaces Projects 'Everything')",
+   "started": "2026-10-27T17:30",
+   "last_turn": "2026-10-27T17:30",
+   "parent": "local_6760f793-026f-453a-9208-aafd7211bde4",
+   "role": "central"
+  },
+  {
+   "id": "local_06780b6f-fa7a-4cee-8363-68c502ceb004",
+   "title": "Connectors on demand, not in every thread",
+   "chain": "connectors",
+   "seq": 1,
+   "cwd": "~/projects/ai-os",
+   "model": "opus",
+   "state": "waiting-on-matt",
+   "asked": "Stop connectors costing tokens in every thread, keep them available",
+   "started": "2026-10-27T17:32",
+   "last_turn": "2026-10-27T17:32",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+  },
+  {
+   "id": "local_4b486978-6346-4e5d-b925-78ba31a5e267",
+   "title": "Glass TV \u00b7 x-ray face-quality search",
+   "chain": "glass-tv",
+   "seq": 1,
+   "cwd": "~/projects/glass-tv",
+   "model": "opus",
+   "state": "working",
+   "asked": "Record x-ray buffer/face-quality + script ideas, plan the first",
+   "started": "2026-10-27T17:45",
+   "last_turn": "2026-10-27T17:45",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_3fc72b34-2a7c-49f5-ae4d-d40258ae622b",
+   "title": "Ideas rule, global + shared with Tyler",
+   "chain": "ai-os",
+   "seq": 1,
+   "cwd": "~/projects/ai-os",
+   "model": "opus",
+   "state": "working",
+   "asked": "Ideas+honest take rule, confirm global, share setup via slub-hq",
+   "started": "2026-10-27T17:45",
+   "last_turn": "2026-10-27T17:45",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+  },
+  {
+   "id": "local_a5b2208e-fab7-4e53-8c01-af3c0a195f19",
+   "title": "Glass TV \u00b7 playback",
+   "chain": "glass-tv",
+   "cwd": "~/projects/glass-tv",
+   "state": "idle",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_9ee295a3-17a7-4482-a95f-46e18a3d82c0",
+   "title": "Glass TV \u00b7 merged catalog",
+   "chain": "glass-tv",
+   "cwd": "~/projects/glass-tv",
+   "state": "idle",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_cc656186-076a-49c9-9b70-cea93d86d4d2",
+   "title": "Glass TV coordinator",
+   "chain": "glass-tv",
+   "cwd": "~/projects/glass-tv",
+   "model": "opus",
+   "state": "working",
+   "started": "2026-10-28",
+   "role": "project-coordinator",
+   "project": "glass-tv",
+   "parent": "local_9093268e-bfec-4764-81d7-ef32485fedd5"
+  },
+  {
+   "id": null,
+   "title": "Ask to record FaceTime calls",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "review-ready",
+   "started": "2026-10-27",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Improve guided meditation audio",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "review-ready",
+   "started": "2026-10-27",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Journal: XIME show night + Obsidian note",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "review-ready",
+   "started": "2026-10-26",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Keep Tyler in the loop on Slub",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-26",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Thread backlog review",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-26",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Review Oct 25 voice calls",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-25",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Tailscale box (temporary + cheap mini PC, Kijiji M710q)",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-25",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Lidstay screen brightness",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-25",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Stremio episode limit with binge tokens",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-25",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Project dashboard wants",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "blocked",
+   "started": "2026-10-24",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "UI Mixer onto Knobs",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-24",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Shelf thread links",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-23",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Mixer vs Audio Hijack recording",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-23",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Tyler share package + slub-utils repo",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-23",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Shared app architecture constraints",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-22",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Architecture plan second opinion (top 4 await \ud83d\udc4d)",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-22",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Preview buttons for new builds",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-21",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "HUD layout traffic control",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-21",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Voice wake word assistant",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-20",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": null,
+   "title": "Plugin crash hunt (qwerty MIDI, crash-ladder step 1 untested)",
+   "source": "projects-everything (cmsg, not readable from Code)",
+   "state": "parked",
+   "old_state": "old",
+   "started": "2026-10-19",
+   "note": "Open in the old Everything project; restart as a fresh Code thread with a brief if Matt wants it."
+  },
+  {
+   "id": "local_80ddd54c-a33e-47bd-836c-adca89a4bf2b",
+   "title": "Glass TV \u00b7 Letterboxd + Trakt test version",
+   "chain": "glass-tv",
+   "cwd": "~/projects/glass-tv",
+   "model": "opus",
+   "state": "working",
+   "asked": "Letterboxd/Trakt web view, Play buttons, Trakt scrobble",
+   "started": "2026-10-28",
+   "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  }
+ ]
 }
