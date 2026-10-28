@@ -203,3 +203,31 @@ Embedded player in a test window: plays, goes full screen at 3840×2160, back to
 ### What you need to do
 
 Quit and reopen Glass TV once after your current episode, so the new app is running. The server restarts by itself when nothing is playing. Older app windows keep using the separate player until then. Undo: `git revert 3d4b153`.
+
+## 22:15 Back button, hold Esc, Recently watched, richer X-Ray cards
+
+**Asked:** no clear way to stop watching and get back; the title sat up and to the left; no toolbar to drag. Esc should say "hold Esc to stop watching". X-Ray cards with more info (name first, then ages and best-known-for, posters on hover, IMDb and Wikipedia), never overlapping. Recently watched on top, library below without repeats, shortened with Show more.
+
+---
+
+### Player toolbar and Esc
+
+The top of the player is now a toolbar: drag it to move the window, double-click to zoom. It has a **Back to Glass TV** button after the window buttons and the title centred, and it fades with the other controls. **Esc** now shows a pill, "Hold Esc to stop watching", with a line that fills while you hold it; at 0.8 s (knob `player.escHoldSeconds`) it stops and you're back on the page. Decision: Esc no longer leaves full screen (F, the button, or ⌃⌘F still do), because a tap now shows the hint.
+
+---
+
+### Recently watched and the shorter library
+
+"Recently watched" is a row of the same backdrop cards above the library, newest first, in your library or not (it remembers what you play from now on, and starts from your watch history). Library titles shown there are skipped in the library below. The library shows 6 titles (`home.libraryShown`), with a "Show all N" button that shows every library title. Recently watched holds 6 (`home.recentCount`).
+
+---
+
+### X-Ray cards
+
+Each recognised person gets a card: name (character) first, with the actor under it; then, as facts arrive from TMDB, their age when this episode was made and now (or the age they died at), and "Known for" two titles. Busy scenes: every card tries spots above, below, right and left of the face; if they can't all fit without touching each other or a face, every card steps down to less detail (name and actor, then just the name). Hovering a card (or Return; Tab moves between people) opens it: born date, four best-known posters, and IMDb and Wikipedia buttons that open in Glass TV's clean browser. "Best known for" weighs titles by votes and, for shows, episodes; the show you're watching is left out.
+
+---
+
+### Tested
+
+Hold Esc and the toolbar tested in a stand-in window on your screen (Esc showed the hint; holding it stopped and returned to the page). X-Ray cards rendered headless with real TMDB facts at 1, 3 and 5 people, hover-open included. Home rendered with a copy of your data (Recently watched: Nathan for You, Ted Lasso, Family Guy, Grey's Anatomy, MythBusters, South Park; library: Planet Earth). 22 tests pass. Live: server restarted at 22:13 and the app reinstalled. **Not tested:** X-Ray on a real paused episode, and the toolbar inside the real Glass TV window. Undo: `git revert cd239f5`.
