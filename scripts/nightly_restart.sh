@@ -47,7 +47,7 @@ if [ "${1:-}" = "check" ]; then
   if [ -n "${DRY_RUN:-}" ]; then
     log "dry run: would toast \"The Mac didn't restart last night\""
   else
-    "$NOTIFY" "The Mac didn't restart last night" "$msg" --kind needs
+    "$NOTIFY" "The Mac didn't restart last night" "$msg" --kind info --quiet
   fi
   exit 0
 fi
@@ -100,10 +100,16 @@ fi
 # aevtrrst = Restart without the "Are you sure?" dialog. aevtrest only showed that
 # dialog, so the Mac never restarted (up 4 days, swap 20 GB, 2026-10-23). Apps
 # with unsaved work can still cancel it.
+# loginwindow sometimes refuses it with -1708 (event not handled; Oct 26 and 28,
+# every retry), so fall back to System Events' restart, which goes through the
+# same polite quit-all path. No toast per failed try: six retries made six
+# stacked banners (Oct 28). The 09:00 check sends one quiet notice instead.
 if ! err=$(osascript -e 'tell application "loginwindow" to «event aevtrrst»' 2>&1); then
-  log "restart failed: $err"
-  "$NOTIFY" "Nightly restart failed" "$err" --kind error
-  exit 1
+  log "loginwindow refused ($err); trying System Events"
+  if ! err=$(osascript -e 'tell application "System Events" to restart' 2>&1); then
+    log "restart failed: $err"
+    exit 1
+  fi
 fi
 # Still here after 2 min = something cancelled it. Ask loginwindow who.
 sleep 120
