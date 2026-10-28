@@ -91,11 +91,12 @@ const watchSpeaking = ($: EngineInterface) => {
   stopWatch = () => { t.cancel(); stopWatch = null }
 }
 
-// SF Symbols: speaker.wave.2, speaker.slash, mic, pause.
-const SPEAKER = '\u{1002A8}'
-const SPEAKER_OFF = '\u{1002A2}'
-const MIC = '\u{1002B0}'
-const PAUSE = '\u{100285}'
+// Short words, not icons: mod Buttons hold only text, and the app's font has no SF Symbols
+// (they drew as bars) while emoji look out of place.
+const SPEAKER = 'Read aloud'
+const SPEAKER_OFF = 'Read aloud'
+const MIC = 'Dictate after'
+const PAUSE = 'Pause to talk'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -168,7 +169,6 @@ export const register: Register = on => {
     // whole chip is clickable. On = blue icon; off = dim icon. The pause slot exists only while
     // read-aloud is on and does nothing until Claude is actually speaking.
     // Right: the reply buttons (other bands), right-aligned, so the left never pushes them.
-    // Icons are Apple's SF Symbols (private-use code points the macOS system font draws).
     const chip = (key: string, lit: boolean, glyph: string, press: () => unknown) => (
       <Button key={key} variant="secondary" onPress={press}>
         <Text color={lit ? 'suggestion' : undefined} dimColor={!lit}>{glyph}</Text>
