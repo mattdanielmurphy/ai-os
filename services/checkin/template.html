@@ -187,7 +187,7 @@ const $ = id => document.getElementById(id);
 let state = { date: DATA.date, step: STEPS[0][0], reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], skipped: [], finishedAt: null };
 const stepIndex = k => STEPS.findIndex(([s]) => s === k);
 let cardIdx = 0, picked = null, rating = false, touched = false;
-const BUILD = "v6";
+const BUILD = "v7";
 document.addEventListener("click", () => { touched = true; }, { capture: true });
 const order = DATA.cards.map(c => {
   const idx = c.options.map((_, i) => i);
@@ -332,12 +332,19 @@ function pick(oi) {
   $("answer").textContent = c.answer;
   $("elab").textContent = c.elaboration;
   const suggest = ok ? 3 : 1;
-  $("reveal").querySelector(".eyebrow").hidden = PRACTICE;
   $("mistap").hidden = PRACTICE;
-  $("rates").replaceChildren(...(PRACTICE ? [[ok ? 3 : 1, "Next"]] : RATES).map(([v, label]) => {
+  /* A wrong answer is a miss: record it as Again right away (so closing the page still saves it) and show one Next button. */
+  const single = PRACTICE || !ok;
+  $("reveal").querySelector(".eyebrow").hidden = single;
+  if (!ok && !PRACTICE) {
+    state.reviews = state.reviews.filter(r => r.card_id !== c.card_id);
+    state.reviews.push({ card_id: c.card_id, rating: 1, correct: false, at: new Date().toISOString() });
+    save();
+  }
+  $("rates").replaceChildren(...(single ? [[ok ? 3 : 1, "Next"]] : RATES).map(([v, label]) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "rate" + (v === suggest ? " suggest" : "");
-    b.innerHTML = `${label}<small>${v === suggest && !PRACTICE ? "tip" : "&nbsp;"}</small>`;
+    b.innerHTML = `${label}<small>${single ? (PRACTICE ? "&nbsp;" : "comes back soon") : v === suggest ? "tip" : "&nbsp;"}</small>`;
     b.onclick = () => rate(v, ok, b);
     return b;
   }));
