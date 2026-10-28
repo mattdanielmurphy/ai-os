@@ -91,7 +91,7 @@ const watchSpeaking = ($: EngineInterface) => {
   stopWatch = () => { t.cancel(); stopWatch = null }
 }
 
-const SLOT = 44
+const SLOT = 9
 const hasAbove = (t: unknown) => t != null && t !== false && !(Array.isArray(t) && t.length === 0)
 
 export const register: Register = on => {
@@ -162,21 +162,19 @@ export const register: Register = on => {
     const talking = on_ && (await read($, speaking))
     const { Box, Button, Text } = $.ui.resolve(e)
     // Left: this mod's own controls in a fixed-width group (three equal slots, so the reply
-    // buttons on the right never move). On = a ring in the theme's suggestion colour.
-    // Right, after a divider: the reply buttons (other bands).
+    // buttons on the right never move). On = filled light button; off = dim icon, no fill.
+    // Right, after a divider: the reply buttons (other bands). Widths are in text cells.
     const slot = (key: string, lit: boolean, show: boolean, label: string, press: () => unknown) => (
-      <Box key={`s-${key}`} width={SLOT} alignItems="center" justifyContent="center">
-        {show && (
-          <Box key={`r-${key}`} borderStyle="round" borderColor={lit ? 'suggestion' : 'subtle'} borderDimColor={!lit}>
-            <Button key={key} label={label} plain dimColor={!lit} onPress={press} />
-          </Box>
-        )}
+      <Box key={`s-${key}`} width={SLOT} flexShrink={0}>
+        {show && (lit
+          ? <Button key={key} label={label} variant="secondary" onPress={press} />
+          : <Button key={key} label={label} plain dimColor onPress={press} />)}
       </Box>
     )
     const stopHere = async () => { await update($, choice, () => !on_); if (on_) await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`) }
     return (
-      <Box flexWrap="wrap" rowGap="xs" alignItems="center">
-        <Box key="mine" width={SLOT * 3} flexShrink={0} alignItems="center">
+      <Box flexWrap="nowrap" alignItems="center">
+        <Box key="mine" flexShrink={0} alignItems="center">
           {slot('toggle', on_, true, on_ ? '🔊' : '🔇', stopHere)}
           {slot('dictate', dict, true, '🎙', () => setDictate($, !dict))}
           {slot('interrupt', true, talking, '✋', () => hs($, 'interrupt()'))}
