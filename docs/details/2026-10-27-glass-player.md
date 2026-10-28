@@ -77,3 +77,35 @@ The recording showed the picture staying window-sized in the middle of the full 
 - Built, typechecked, 20 unit tests pass, settings page bundles.
 - **Not tested in full screen:** the clearance banner wasn't reachable (Hammerspoon down), so I didn't take over his screen. The server restarted by itself at 14:07 when nothing was playing, so the next video uses the fixes.
 - Undo: `git revert 020241d 494b19b`.
+
+## 18:30 Stremio add-ons
+
+**Asked:** add support for Stremio add-ons to Glass TV.
+
+---
+
+### What add-ons do now
+
+Glass TV already used two Stremio add-ons hard-coded (Cinemeta for catalogs, Torrentio for streams). Now any add-on works: Settings → Stremio add-ons takes the same link you'd paste in Stremio (`manifest.json` URL or `stremio://` link), checks its manifest, and lists it with what it does and a Remove button. Code: `src/addons.ts`, routes `/api/addons`.
+
+- **Streams:** every add-on with streams for that title is asked alongside the built-in provider; all results are ranked together by the existing quality ranking, so the best playable link wins.
+- **Subtitles:** OpenSubtitles comes installed. When a remote episode or movie plays, up to 6 subtitles (3 English, 1 per other language) are added to the player's subtitle menu, named like "English 2 (OpenSubtitles v3)". They are never switched on by themselves.
+- **Search:** add-ons whose catalogs support search add results TMDB and Cinemeta missed (IMDb-id titles only, since Glass TV plays by IMDb id).
+
+---
+
+### Limits worth knowing
+
+- **Torrent-only add-ons can't play by themselves.** Glass TV has no torrent client, so it only plays web links. An add-on like Torrentio needs its debrid-configured link (set up on its site with Real-Debrid) to be useful. Unconfigured Torrentio added for the test gave 10 torrent results, all skipped.
+- **Catalog browsing isn't on the home screen.** Add-on catalogs only feed search, to keep the anti-binge home (your shows first, trending folded away). Shelves from add-ons could come later if wanted.
+- Add-ons with non-IMDb ids (anime kitsu ids, live TV channels) are ignored for now.
+
+---
+
+### Tested
+
+- 22 unit tests pass (2 new: link normalising, which add-on handles what).
+- Against a test copy of the server: added Cinemeta via a `stremio://` link, a bad URL gave a clear error, Torrentio added; search for "Nathan for You" merged results; streams for Nathan for You S1E1 came from both sources and ranked; OpenSubtitles returned English, Russian, Spanish and Polish subtitles; all 6 loaded into the player engine unselected.
+- Settings section checked in light and dark (headless).
+- **Not tested:** the add-on subtitles inside a visible Glass Player window (Hammerspoon was unreachable for screen clearance; tested with the same engine headless).
+- Live: server restarted at 18:28 while nothing was playing. Undo: `git revert 3f7404a`.
