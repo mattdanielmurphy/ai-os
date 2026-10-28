@@ -83,9 +83,9 @@ export const register: Register = on => {
     const on_ = await isOn($)
     const { Box, Button, Text } = $.ui.resolve(e)
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" rowGap="sm">
         {above}
-        <Box flexWrap="wrap">
+        <Box flexWrap="wrap" rowGap="xs" alignItems="center">
           <Text dimColor>{on_ ? '🔊 Replies are read aloud ' : '🔈 Read-aloud off '}</Text>
           <Button
             key="toggle"

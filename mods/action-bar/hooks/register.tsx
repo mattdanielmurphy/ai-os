@@ -73,16 +73,16 @@ export const register: Register = on => {
     const all = `Yes to all: ${list.map(a => a.text.replace(/^yes,?\\s*/i, '').replace(/[.!]$/, '')).join('; ')}.`
     const above = await next(e)
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" rowGap="sm">
         {above}
-        <Box flexWrap="wrap">
+        <Box flexWrap="wrap" rowGap="xs" alignItems="center">
           <Text dimColor>Reply: </Text>
           {list.map((a, i) => (
             <Box key={`b${i}`}>
               <Button
                 key={`a${i + 1}`}
                 label={a.label}
-                variant={i === 0 ? 'primary' : 'secondary'}
+                variant="secondary"
                 onPress={() => send(a.text)}
               />
               <Text> </Text>
