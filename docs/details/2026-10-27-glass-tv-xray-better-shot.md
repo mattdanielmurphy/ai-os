@@ -75,3 +75,6 @@
 - Recap: the best dialogue track stays selected but hidden when subtitles are off (sub-visibility), so sub-text keeps flowing; lines are kept 2 min; R / speech-bubble button shows the last exchange (lines back to the first ≥4 s pause, max 15 s), descriptions stripped, in a dark box above the bar for 7 s. Knobs recap-seconds, recap-gap-seconds, recap-display-seconds.
 - Tested: ranking and stripping logic in a Swift snippet (Apple TV+ WEB-DL → Dialogue, SDH BluRay → Hearing impaired). Not tested in the player (needs playback); builds.
 - Risk: if a video has image-based subtitles (PGS), sub-text is empty, so recap says nothing was said.
+## 06:00 Recap panel restyle
+- Matt: the R box looked bad (black slab, centred broken lines, too much text, overlapping credits).
+- Now: frosted dark panel (same material as the control bar), 16 px corners, faint border, 22/16 px padding, sitting 14 px above the bar, max 640 px wide; each subtitle cue joined onto one line, left-aligned, 18 pt; older lines 62% white, newest semibold; only the last 4 lines (knob recap-lines). Preview rendered over Matt's screenshot (mock); not seen in the player.
