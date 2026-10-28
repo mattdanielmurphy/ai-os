@@ -175,3 +175,11 @@ Matt asked for another version of the Readthrough with only what he really needs
 ## 22:55 Switching over now; handoff to a fresh thread
 
 Matt can't start any new threads in Everything, so he is switching to the Code-tab coordinator right away. This thread was at 330k tokens and he left the handoff to me. Chose to hand off: above ~250k a fresh context pays off (per the benchmark), and the build is a new phase. Wrote `docs/handoffs/2026-10-27_code-tab-coordinator.md` (seq 1 of chain `code-coordinator`) and started the next session automatically, since Matt wants new threads opened for him, not offered. Its order: coordinator instructions and session first (unblocks him), then voice tasks, then idle compaction in the mod, then rules. Also noted his correction: when he asks for a report, put it in the reply instead of making him wait for a Vercel deploy.
+
+## 23:15 Coordinator instructions written; session proposed
+
+- Wrote `docs/coordinator/code-coordinator.md`: the routing rules from `.rules/core_safety.md` and `project-instructions-slim.md`, ported to Code-tab tools (start_session with `user_asked`, project folder as `cwd`, model from `claude_pace.py`, SendMessage for warm and cold-under-250k threads, fresh brief above 250k, registry, links as `#local_…`). Dropped: the 30-thread count, `/coord` prefix, HANDOFF.md-at-40-messages (Projects-only).
+- Created the empty registry `coordinator/threads.json` (`{"threads": []}`).
+- Could not start the Coordinator session myself: this session was started by another session, and the app refuses `user_asked` starts from it. Proposed it as a card instead (one click for Matt). It runs in the ai-os folder, since a card can't take a different `cwd`; it can still start threads in any folder.
+- Its first turn pins itself and asks to turn on Remote Control.
+- Undo: archive the Coordinator session; `git revert` this commit.
