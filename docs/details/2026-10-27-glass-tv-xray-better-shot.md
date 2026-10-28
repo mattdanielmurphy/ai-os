@@ -11,3 +11,8 @@
 - Fix (ac458b8): quick answer returns at once with `refining`, player re-asks with `wait=1` and swaps in the better names; overlay web view loads during the request; castVectors queued so the first pause awaits the warm-up instead of duplicating it; new actors start with main photo only, extras in background. Esc closes an open card only, else passes to the player.
 - Measured offline: cached show quick answer ~0.3 s; brand-new show paused 0.3 s after start ~2 s (cast lookup + photo downloads ~1 s, fingerprints ~0.7 s).
 - Untested in the real app: needs Glass TV relaunch. Server now logs `xray quick Nms` for each pause.
+## 00:55 From-behind names, close-up layout, window drag, crash
+- From behind: faces.swift also returns Vision upper-body people boxes. A person with no face inside → background decode of the last 10 s at 2 fps; faces in shots before the paused shot's cut, sure matches only; if one cast member from there isn't named now (or is seen 2x more than the next), they're put on that person, faded dashed tag "Seen from behind · named from the last shot". Only when exactly one faceless person. Knob xray.sceneSeconds. Untested on real footage (Matt testing).
+- Close-ups (face > 28% of frame height): card goes beside the face at eye level, roomier side first, with a level line; cards never overlap heads (hair included).
+- Drag the picture (not full screen) moves the window; a drag never toggles pause.
+- Crash: playback failed ("Couldn't play this"), then a 4 s timer sent "quit" to an already-destroyed mpv → segfault. Now MPV.alive guards commands. Likely cause of the playback failure: my scan opened ~75 parallel connections to the Real-Debrid stream link; killed it.
