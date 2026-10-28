@@ -56,7 +56,7 @@ export const register: Register = on => {
 
   on('turn.complete', async ($, e, next) => {
     const r = await next(e)
-    if (e.agentId === undefined && (await isOn($))) {
+    if (e.agentId === undefined && e.reason === 'answer' && e.answer.trim() && (await isOn($))) {
       // A live call stays quiet unless Matt turned it on in this session himself.
       if ((await read($, choice)) !== true && (await onCall($))) return r
       await update($, speaking, () => true)

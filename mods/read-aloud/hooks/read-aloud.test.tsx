@@ -14,3 +14,16 @@ test('band shows a toggle that flips the session setting', async ($, on) => {
   expect(await ui.find({ key: 'toggle' })).toBeDefined()
   await ui.unmount()
 })
+
+test('a stopped turn reads nothing', async ($, on) => {
+  const ran: string[] = []
+  on('process.run', (_$, e) => { ran.push(e.argv.join(' ')); return { value: { exitCode: 0, stdout: '', stderr: '' } } as never })
+  on('command.run', () => ({ text: '' }) as never)
+  on('turn.complete', (_$, e) => ({ text: e.answer }) as never)
+  await $.command.run({ name: 'read-aloud' } as never)
+  ran.length = 0
+  await $.turn.complete({ answer: 'old reply', reason: 'aborted', durationMs: 1 } as never)
+  expect(ran.some(c => c.includes('replyDone'))).toBe(false)
+  await $.turn.complete({ answer: 'new reply', reason: 'answer', durationMs: 1 } as never)
+  expect(ran.some(c => c.includes('replyDone'))).toBe(true)
+})
