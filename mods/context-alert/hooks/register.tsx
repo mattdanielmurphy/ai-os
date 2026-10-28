@@ -536,6 +536,18 @@ const idleCompact = async ($: EngineInterface) => {
   if (!coord) $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
 }
 
+/** Compact a cold coordinator, then submit the message it caught. Sends anyway if compaction fails. */
+const coordCatchUp = async ($: EngineInterface, text: string) => {
+  const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => ({ skip: 'failed' }))
+  const at = await $.clock.now()
+  compactedAt = at
+  if (out.skip === undefined) {
+    const tokens = (await read($, fill))?.tokens ?? 0
+    await update($, cache, old => ({ lastAt: at, ttlMs: old?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
+  }
+  await $.prompt.submit({ text, wait: false })
+}
+
 /** In the Coordinator session only: submit what scripts queued for it (voice tasks). */
 const pollInbox = async ($: EngineInterface, sid: string) => {
   const run = await $.process.run(['python3', INBOX, 'poll', sid]).catch(() => undefined)
@@ -683,9 +695,15 @@ export const register: Register = on => {
     const tokens = Math.max((await read($, fill))?.tokens ?? 0, c?.tokens ?? 0)
     const left = cacheLeft(c, at, tokens)
     if (left === null || left > 0 || at < (await read($, sendAnywayUntil))) return next(e)
-    if (await read($, isCoord)) return next(e) // coordinators stay compact on their own; never hold
     // Cold but small: resuming beats a handoff on recall at about the same cost (2026-10-27 research).
     if (tokens < (await knobs($))['hold.minTokens']) return next(e)
+    // A cold, big coordinator (idle compaction was missed, e.g. the Mac slept): never ask Matt.
+    // Shrink it once, then send his message here; it stays the same pinned thread.
+    if (await read($, isCoord)) {
+      await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
+      void coordCatchUp($, e.text)
+      return { drop: 'Shrinking the coordinator first (it was idle a long time); your message goes out right after.' }
+    }
 
     // A Claude project thread: the Code tab's hold note never shows on the project page, so the
     // mod says it in the thread itself and moves the message to a fresh thread unless Matt says ⏩.

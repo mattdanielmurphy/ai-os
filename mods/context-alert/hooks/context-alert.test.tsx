@@ -552,3 +552,30 @@ test('coordinators never see the cache band or the size band', async ($, on) => 
   expect(await ui.find({ key: 'sonnet' })).toBeUndefined()
   await ui.unmount()
 })
+
+test('a cold, big coordinator compacts itself, then sends the message, without asking', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  const sent: string[] = []
+  let compacted = 0
+  on('process.run', (_$: unknown, e: any) => ({
+    value: { exitCode: e.argv?.[2] === 'is-coordinator' ? 0 : 1, stdout: '', stderr: '', isStdoutTruncated: false },
+  }))
+  on('session.start', (_$: unknown, e: any) => e)
+  on('command.register', () => ({ value: undefined }))
+  on('session.id', () => ({ value: 'sid-coord' }))
+  on('session.compact', () => { compacted++; return { messages: [{ role: 'user', text: 'summary', toolUses: [] }] } })
+  on('ui.toast', () => ({ value: undefined }))
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.submit', (_$: unknown, e: any) => { sent.push(e.text); return { text: e.text } })
+  await $.session.start({ source: 'resume', cwd: '/tmp' } as any)
+  for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+  await $.session.measure(measure(300_000))
+  await $.turn.complete(answered)
+  await clock.advance(8 * 60 * MIN)
+  const out: any = await $.prompt.submit(phone('hello coordinator'))
+  for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0))
+  expect(String(out?.drop ?? '')).toMatch(/Shrinking the coordinator/)
+  expect(compacted).toBe(1)
+  expect(sent.filter(t => t === 'hello coordinator').length).toBeGreaterThanOrEqual(1)
+})
