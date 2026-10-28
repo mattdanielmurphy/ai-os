@@ -78,3 +78,7 @@
 ## 06:00 Recap panel restyle
 - Matt: the R box looked bad (black slab, centred broken lines, too much text, overlapping credits).
 - Now: frosted dark panel (same material as the control bar), 16 px corners, faint border, 22/16 px padding, sitting 14 px above the bar, max 640 px wide; each subtitle cue joined onto one line, left-aligned, 18 pt; older lines 62% white, newest semibold; only the last 4 lines (knob recap-lines). Preview rendered over Matt's screenshot (mock); not seen in the player.
+## 06:20 Blurred Ted not named (Matt's screenshot, S1E9 14:14)
+- Two gaps: (1) when face memory covered the pause, identify returned straight away, so the look-ahead for unclear faces never ran; if memory never surely named him (sunglasses, visor), nothing did. (2) A remembered name only carried over where Vision found a body or face now.
+- Fix: memory first (wider overlap rule: 0.15 or face centre inside), then any face still unnamed gets the one-pass look-ahead (refining) as before. New `still` rule: if the paused frame differs from the last remembered frame (≤1.5 s ago) by ≤ xray.stillDiff (10/255 mean grey), people named there keep their tags even with no face or body found. Cuts still reset.
+- Tested on local clips: always-blurred face → refined pass names him; covered face with nothing detected → kept ("behind"); cut → only the new actor.
