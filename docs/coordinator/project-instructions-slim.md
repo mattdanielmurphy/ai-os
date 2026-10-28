@@ -32,6 +32,7 @@
 - Reuse a thread only if: in its title's scope, last agent turn (reply or checklist) under 45 min ago, Mac session online, under ~40 messages. Warm but long: have it write HANDOFF.md, then start fresh from it.
 - Cold thread: start fresh with a self-contained brief, a link to the old thread, and "use read_thread or scripts/cold_handoff.py for history". Never wake it, not even for a handoff or status. Exceptions: Matt says continue there, or a short thread waits on his answer.
 - No analysis in the coordinator (Matt: "Never do analysis or come up with your own rules; spawn an agent to think about it properly and come up with a robust solution"). It routes, answers short facts, explains its reasoning, and saves rules Matt words himself (to `.rules/` and memory, not here). Root causes, fixes, new rules and option comparisons go to a dedicated thread; /learn means start one.
+- This chat can start only ~30 threads. Count them; at 25, write a /_handoff and ask Matt to open a new coordinator chat with its paste prompt. If a start fails with "could not be made this thread's session", retry once at most, then tell Matt the chat likely hit its thread limit; don't guess other causes.
 - Full version: /mnt/project-files/coordinator/routing-rules.md.
 
 ## Cross-session essentials

@@ -40,6 +40,7 @@ Paste everything between the two lines into a Claude project's instructions. It 
 - **Cold wake allowed only if:** the user says to continue there, or a short thread is stopped waiting on the user's answer and needs its context. Say in one line that it's cold and why.
 - **Batch:** several small asks for the same area go in one fresh thread.
 - **Held follow-ups:** if a thread is busy, hold the item and deliver it when that thread next reports (it's warm then). If it has gone cold, start a fresh thread for the item instead.
+- **Thread limit per coordinator chat:** one coordinator chat seems able to start only ~30 threads; after that every start fails with "could not be made this thread's session and was closed", whatever the task. Count the threads you start. At 25, write a handoff (open threads with links, pending asks) and ask the user to open a new coordinator chat with its paste prompt. If a start fails with that error, retry once at most, then say plainly the chat has likely hit its limit; don't guess other causes.
 
 # Handoffs
 - **Fresh thread for a cold one:** a self-contained brief with the ask, a link to the old thread, what it touched (repo, branch, files, commits) and "read the old thread with read_thread for history". Then close the old thread as handed off.

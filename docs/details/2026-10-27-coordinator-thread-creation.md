@@ -64,3 +64,34 @@ Undo: nothing changed.
 - A rule so the coordinator hands itself off before it hits the cap (e.g. at ~25 threads started), and tells Matt plainly when start fails instead of guessing. Also tell Tyler about the cap, since he'll use the same one-coordinator setup. Not done yet; offered to Matt.
 
 Undo: nothing changed on the Mac.
+
+## 22:00 Added the 25-thread handoff rule
+
+**Asked:** Matt said yes to a rule so the coordinator hands itself off before it hits the thread limit.
+
+---
+
+### Where the rule now lives
+- `.rules/core_safety.md`, Coordinator Routing section: "Hand the coordinator chat off before 30 threads". Compiled into `CLAUDE.md` / `GEMINI.md` with `build_rules.py`.
+- `docs/coordinator/project-instructions-slim.md` (the local copy of the Everything project instructions): one short line, 5,008 chars total, well under the 16k limit.
+- `docs/shared/coordinator-instructions.md` (Tyler's copy) plus its public page mattmurphy.ca/coordinator-instructions, republished.
+
+---
+
+### What the rule says
+- Count threads this coordinator chat has started. At 25: finish routing, write a `/_handoff`, and ask Matt in one line to open a new coordinator chat with the paste prompt.
+- 25, not 30: leaves room for a few starts while Matt gets to it, and the limit of 30 is inferred, not documented.
+- If a start fails with "could not be made this thread's session and was closed": retry once at most, then say plainly the chat likely hit its limit. No guessing other causes, no 7 retries.
+- Rejected: having the coordinator open a new coordinator chat itself. It has no tool for that; only Matt can open a chat in the project.
+
+---
+
+### What Matt still has to do
+- The live coordinator reads the project instructions on claude.ai, which I can't edit from the Mac. Matt pastes the one line into the Everything project instructions (text in the reply). I didn't drive the web UI because he's on a call and it changes a project setting.
+
+---
+
+### Rule-guard false alarm
+- The take-control guard blocked a Bash edit because it saw Python's `open(p)` and read it as the macOS `open` command. Nothing touched the screen; I made the edits with the file editor instead. Worth a small guard fix sometime (ignore `open(` inside Python heredocs).
+
+Undo: remove the bullet from `.rules/core_safety.md`, the line from the slim instructions and Tyler's doc, then `build_rules.py`.
