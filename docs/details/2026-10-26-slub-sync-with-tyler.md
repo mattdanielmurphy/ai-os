@@ -226,3 +226,27 @@ Matt asked "why after the call?" Real cause: I assumed he was too busy on the ca
 - Accepted the folder-trust prompt in the background tmux session (with claude-control light clearance). Tyler will need to do this once; added to bot/README.
 - Group -5505467513 approved in access.json; also in bot/config.sh so install.sh approves it on Tyler's Mac.
 - Still untested: a real reply in the group.
+
+## 00:30 (Oct 28) Bot works; API backup ready to switch on
+
+---
+
+### Why the bot was silent
+
+- Telegram "privacy mode" (on for new bots) hid plain @mentions in the group. Matt disabled it in @BotFather and re-added the bot; the next @ arrived. My earlier line "it just posted a message" was wrong: that hello was from the day before.
+- My watcher consumed Matt's first post-fix @, so he saw no answer; the next @ ("come alive little Slub") got a reply. End-to-end confirmed.
+
+---
+
+### Bot stuck on a hidden prompt
+
+- On the second request (a GIF) the bot tried a Bash command outside its allowlist and sat on a permission prompt nobody can see. Switched the bot session to `--permission-mode auto` (the safety classifier decides; nothing waits on a human). The GIF request was lost in the restart.
+- Bot CLAUDE.md now says ActuallyPrettyCool = Matt (it had guessed Tyler).
+
+---
+
+### API backup (Matt 👍'd)
+
+- `slub-hq/bot/vps/fallback.ts` on the Oracle VPS: checks heartbeats every minute; only when both Macs are stale does it poll Telegram and answer via the Claude API (Sonnet, to stretch the $100). Plain chat only, no tools. Hands back via the same claim rule (vps added as lowest node in config.sh).
+- Deployed code and the bot token to `~/apps/slub-bot-backup/` (.env, mode 600). Not running yet: installing the systemd service was blocked as persistence on the VPS, and it needs Matt's API key anyway, so Matt runs one command that adds the key and enables the service.
+- Untested: the backup has never answered a real message; model ID taken from the current model list (claude-sonnet-5-5).
