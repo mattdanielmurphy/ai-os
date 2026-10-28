@@ -779,9 +779,14 @@ export const register: Register = on => {
     const tokens = Math.max(current?.tokens ?? 0, c?.tokens ?? 0)
     const left = cacheLeft(c, at, tokens)
     const coord = await read($, isCoord)
-    const showCache = !coord && left !== null && left <= CACHE_SOON_MS
-    const showSize = !coord && current !== null && current.tokens >= WARN
-    if (!showCache && !showSize && job === null) return next(e)
+    // Matt (2026-10-28): never show the cache/size warning band; context is handled for him
+    // (auto-compaction), and the band hid the other bands. Only a handoff in progress shows,
+    // in its own row under the other bands.
+    void coord; void left; void WARN; void CACHE_SOON_MS
+    const showCache = false
+    const showSize = false
+    if (job === null) return next(e)
+    const above = await next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)
     const isAlert = current !== null && current.tokens >= ALERT
@@ -793,6 +798,7 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
+        {above}
         {showSize && current !== null && (
           <Text bold color={isAlert ? 'error' : 'warning'}>
             ⚠ Context: {k(current.tokens)} / {k(current.window)} (

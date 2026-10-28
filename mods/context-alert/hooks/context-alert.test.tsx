@@ -25,7 +25,7 @@ const answered = {
   answer: 'done', durationMs: 1000, isAborted: false, turnId: 't1', reason: 'answer' as const,
 }
 
-test('band stays hidden under 250k and appears above it', async ($, on) => {
+test('the warning band never shows, even past 250k', async ($, on) => {
   mock.clock(on)
   on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('ui.render', ($$, e) => { const { Box } = $$.ui.resolve(e); return <Box /> })
@@ -37,15 +37,15 @@ test('band stays hidden under 250k and appears above it', async ($, on) => {
 
     await $.session.measure(measure(262_000))
     ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
-    expect((await ui.find({ type: 'Text', text: /Context: / }))?.text).toMatch(/262k \/ 1000k/)
-    expect(await ui.find({ key: 'handoff' })).toBeDefined()
-    expect(await ui.find({ key: 'sonnet' })).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /This agent: best notes/ }))).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Context: / })).toBeUndefined()
+    expect(await ui.find({ key: 'handoff' })).toBeUndefined()
+    expect(await ui.find({ key: 'sonnet' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /This agent: best notes/ })).toBeUndefined()
     await ui.unmount()
   }
 })
 
-test('cache line counts down after a reply, then says it expired', async ($, on) => {
+test('no cache line ever shows', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('turn.complete', (_$, e) => ({ text: e.answer }))
@@ -62,16 +62,16 @@ test('cache line counts down after a reply, then says it expired', async ($, on)
   await clock.advance(50 * MIN)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
-    expect((await ui.find({ type: 'Text', text: /Cache/ }))?.text).toMatch(/expires in 10 min/)
-    expect(await ui.find({ key: 'sonnet' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Cache/ })).toBeUndefined()
+    expect(await ui.find({ key: 'sonnet' })).toBeUndefined()
     await ui.unmount()
   }
 
   await clock.advance(3 * 60 * MIN)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'context-alert', surface, ...BAND })
-    expect((await ui.find({ type: 'Text', text: /Cache/ }))?.text).toMatch(/expired 2h ago.*80k tokens/)
-    expect(await ui.find({ type: 'Text', text: /Sonnet reads the saved file/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Cache/ })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /Sonnet reads the saved file/ })).toBeUndefined()
     await ui.unmount()
   }
 })
