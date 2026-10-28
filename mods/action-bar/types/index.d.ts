@@ -1,5 +1,5 @@
-/** One numbered action the agent's latest reply offered. */
-export type Action = { n: string; label: string }
+/** One action the agent's latest reply offered. */
+export type Action = { label: string; text: string }
 
 declare module 'claude-code' {
   interface PluginState {

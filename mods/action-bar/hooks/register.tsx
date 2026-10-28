@@ -27,21 +27,22 @@ const knobs = async ($: EngineInterface): Promise<Knobs> => {
 const strip = (s: string) => s.replace(/\*\*|__|`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim()
 
 /**
- * The actions line: the last non-empty line of the reply that starts with "Actions:"
- * (bold allowed) and holds "1. X · 2. Y". Nothing else counts, so ordinary numbered
- * lists never raise the bar.
+ * The actions line: the last line of the reply that starts with "Actions:" (bold allowed),
+ * items split by " · ", each "Short label → Plain sentence sent on click". Without the
+ * arrow the click sends "Yes, <label>". Ordinary numbered lists never raise the bar.
  */
 export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[] => {
   const lines = answer.split('\n').map(strip).filter(Boolean)
   const line = [...lines].reverse().find(l => /^actions\s*:/i.test(l))
   if (!line) return []
-  const body = line.replace(/^actions\s*:/i, '')
   const out: Action[] = []
-  for (const part of body.split(/\s[·•|]\s/)) {
-    const m = /^\s*(\d{1,2})[.)]\s+(.+?)\s*$/.exec(part)
-    if (!m) continue
-    const label = m[2].length > k.labelChars ? `${m[2].slice(0, k.labelChars - 1)}…` : m[2]
-    out.push({ n: m[1], label })
+  for (const raw of line.replace(/^actions\s*:/i, '').split(/\s[·•|]\s/)) {
+    const part = raw.replace(/^\s*\d{1,2}[.)]\s+/, '').trim()
+    if (!part) continue
+    const [head, ...rest] = part.split(/\s*(?:→|->)\s*/)
+    const said = rest.join(' ').trim()
+    const label = head.length > k.labelChars ? `${head.slice(0, k.labelChars - 1)}…` : head
+    out.push({ label, text: said || `Yes, ${head.charAt(0).toLowerCase()}${head.slice(1)}` })
   }
   return out.slice(0, k.maxActions)
 }
@@ -69,7 +70,7 @@ export const register: Register = on => {
       void update($, actions, () => [])
       void $.prompt.submit({ text, asUser: true, wait: false })
     }
-    const all = list.map(a => a.n).join(' ')
+    const all = `Yes to all: ${list.map(a => a.text.replace(/^yes,?\\s*/i, '').replace(/[.!]$/, '')).join('; ')}.`
     const above = await next(e)
     return (
       <Box flexDirection="column">
@@ -77,20 +78,20 @@ export const register: Register = on => {
         <Box flexWrap="wrap">
           <Text dimColor>Reply: </Text>
           {list.map((a, i) => (
-            <Box key={a.n}>
+            <Box key={`b${i}`}>
               <Button
-                key={`a${a.n}`}
-                label={`${a.n} · ${a.label}`}
+                key={`a${i + 1}`}
+                label={a.label}
                 variant={i === 0 ? 'primary' : 'secondary'}
-                onPress={() => send(a.n)}
+                onPress={() => send(a.text)}
               />
               <Text> </Text>
             </Box>
           ))}
-          {list.length > 1 && <Button key="all" label={`All (${all})`} variant="secondary" onPress={() => send(all)} />}
+          {list.length > 1 && <Button key="all" label="All of these" variant="secondary" onPress={() => send(all)} />}
           <Button key="hide" label="✕" variant="secondary" onPress={() => update($, actions, () => [])} />
         </Box>
-        <Text dimColor>Each button sends its number as your reply, same as typing "{list[0].n}" + Enter. Type anything else to answer in words.</Text>
+        <Text dimColor>A button sends its sentence as your reply, e.g. "{list[0].text}". Or type your own answer.</Text>
       </Box>
     )
   })
