@@ -119,8 +119,9 @@ export const register: Register = on => {
   })
 
   // Typing, dictating or sending cuts the voice off.
+  // (Not while it's paused for an Interrupt: that dictation is meant to land in the prompt.)
   on('prompt.change', async ($, e, next) => {
-    if ((await read($, speaking)) && e.origin.kind !== 'clear' && e.text.length > 0) {
+    if ((await read($, speaking)) && e.origin.kind !== 'clear' && e.text.length > 0 && (await hs($, 'isPaused()')) !== 'true') {
       await update($, speaking, () => false)
       await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
     }
@@ -138,14 +139,16 @@ export const register: Register = on => {
     const above = await next(e)
     const on_ = await isOn($)
     const dict = await read($, dictate)
+    const talking = on_ && (await read($, speaking))
     const { Box, Button, Text } = $.ui.resolve(e)
     // One compact row: speaker toggle, dictate-after toggle, then the other bands (reply buttons).
     return (
       <Box flexWrap="wrap" rowGap="xs" alignItems="center">
+        {/* Filled (primary) = on, so the state reads at a glance; dim outline = off. */}
         <Button
           key="toggle"
-          label={on_ ? '🔊' : '🔈'}
-          plain
+          label={on_ ? '🔊' : '🔇'}
+          variant={on_ ? 'primary' : 'secondary'}
           dimColor={!on_}
           onPress={async () => {
             await update($, choice, () => !on_)
@@ -153,8 +156,14 @@ export const register: Register = on => {
           }}
         />
         <Text> </Text>
-        <Button key="dictate" label="🎙" plain dimColor={!dict} onPress={() => setDictate($, !dict)} />
+        <Button key="dictate" label="🎙" variant={dict ? 'primary' : 'secondary'} dimColor={!dict} onPress={() => setDictate($, !dict)} />
         <Text> </Text>
+        {talking && (
+          <Box key="int">
+            <Button key="interrupt" label="✋ Interrupt" variant="secondary" onPress={() => hs($, 'interrupt()')} />
+            <Text> </Text>
+          </Box>
+        )}
         {above}
       </Box>
     )
