@@ -531,8 +531,8 @@ const idleCompact = async ($: EngineInterface) => {
   const k2 = coord ? { ...kn, 'compact.minTokens': Math.min(kn['compact.minTokens'], COORD_COMPACT_MIN) } : kn
   if (!compactDue(c, at, k2, compactedAt)) return
   compactedAt = at
-  const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => ({ skip: 'failed' }))
-  if (out.skip !== undefined) return
+  const out = await compactNow($)
+  if (out.skip !== undefined || out.queued) return
   const tokens = (await read($, fill))?.tokens ?? 0
   await update($, cache, old => ({ lastAt: at, ttlMs: old?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
   if (!coord) $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
@@ -542,6 +542,20 @@ const idleCompact = async ($: EngineInterface) => {
 const trace = async ($: EngineInterface, msg: string) => {
   const line = `${new Date(await $.clock.now()).toISOString()} ${await $.session.id()} ${msg}\n`
   await $.process.run(['sh', '-c', `cat >> ${AIOS}/tmp/context-alert.log`], { stdin: line }).catch(() => undefined)
+}
+
+/** Compacts this thread. Desktop Code-tab sessions are SDK sessions where $.session.compact
+ *  throws ("not available in a headless session"), so there it queues a /compact prompt,
+ *  which runs as its own short turn (found live 2026-10-28). */
+export const COMPACT_PROMPT = () => `/compact ${COMPACT_INSTRUCTIONS}`
+const compactNow = async ($: EngineInterface): Promise<{ skip?: unknown; queued?: boolean }> => {
+  try {
+    return await $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
+  } catch (err) {
+    if (!/headless|SDK/i.test(String(err))) return { skip: 'failed' }
+    await $.prompt.submit({ text: COMPACT_PROMPT(), wait: false })
+    return { queued: true }
+  }
 }
 
 /** Is this a coordinator? Checked at start and every minute until yes (a failed first check,
@@ -558,10 +572,10 @@ const checkCoord = async ($: EngineInterface) => {
 
 /** Compact a cold coordinator, then submit the message it caught. Sends anyway if compaction fails. */
 const coordCatchUp = async ($: EngineInterface, text: string) => {
-  const out = await $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => ({ skip: 'failed' }))
+  const out = await compactNow($)
   const at = await $.clock.now()
   compactedAt = at
-  if (out.skip === undefined) {
+  if (out.skip === undefined && !out.queued) {
     const tokens = (await read($, fill))?.tokens ?? 0
     await update($, cache, old => ({ lastAt: at, ttlMs: old?.ttlMs ?? DEFAULT_TTL_MS, tokens }))
   }
@@ -655,10 +669,11 @@ export const register: Register = on => {
     // Coordinators stay small without asking: compact between turns once past the line.
     const coord = await read($, isCoord)
     if (coord) await trace($, `turn.complete reason=${e.reason} tokens=${tokens}`)
-    if (e.reason !== 'aborted' && tokens >= COORD_TURN_COMPACT && coord) {
+    // The /compact turn itself ends here too, maybe before the new size is measured: never loop.
+    if (e.reason !== 'aborted' && tokens >= COORD_TURN_COMPACT && coord && at - compactedAt > 5 * 60_000) {
       compactedAt = at
       // The turn may still be settling; a skipped compaction retries a few times, 20 s apart.
-      const attempt = (left: number): Promise<void> => $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
+      const attempt = (left: number): Promise<void> => compactNow($)
         .then(async out => {
           await trace($, `compact -> ${JSON.stringify(out).slice(0, 200)}`)
           if (out.skip !== undefined && left > 0) setTimeout(() => void attempt(left - 1), 20_000)
