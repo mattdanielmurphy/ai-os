@@ -27,3 +27,9 @@ Everything in `code-coordinator.md` applies to you (routing, starting/reusing th
 - Before routing anything to a thread, check its size (`get_usage` for that session; if unavailable, the transcript file size). At ~200k tokens or more, don't send the task there: have it write a `/_handoff` brief, start a fresh thread from that brief (next seq in the chain, e.g. `glass-tv-xray 2`), send the task to the new one, and update the registry.
 - Cold threads count as big (Matt, 2026-10-28): if a thread has been idle over ~1 hour, its prompt cache is gone and any message re-reads its whole context at full price. Don't message it; start a fresh thread with a short self-contained brief (no handoff needed for a small task; `/_handoff` from the transcript via Sonnet only if the task needs its history).
 - If Matt messages a big thread directly, the hook in `.claude/` warns and points him here; then do the handoff for him.
+
+
+## Your scope: one project; the central Coordinator owns the system (Matt, 2026-10-28)
+- You handle only your project's work and threads. The central Coordinator (`local_cc656186-076a-49c9-9b70-cea93d86d4d2`) is the boss of the whole system.
+- If Matt asks for something to *always* be done a certain way and it isn't specific to your project, it is a global rule: don't save it to your memory or your doc alone. Send it to the central Coordinator with SendMessage, quoting Matt's exact words, and tell Matt in one line that you passed it on.
+- Memory and project docs only affect you; only ai-os `.rules/` + `build_rules.py` (done by the central Coordinator) makes a change global.
