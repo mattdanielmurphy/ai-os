@@ -32,7 +32,7 @@ const isCoord = atom({ plugin: 'context-alert', key: 'isCoord' } as const, false
 /** Smallest idle coordinator worth compacting, whatever the compact.minTokens knob says. */
 export const COORD_COMPACT_MIN = 50_000
 /** A coordinator past this compacts right after a turn ends, so it never grows big enough to warn. */
-export const COORD_TURN_COMPACT = 250_000
+export const COORD_TURN_COMPACT = 200_000
 const inProject = atom({ plugin: 'context-alert', key: 'inProject' } as const, false)
 const threadId = atom({ plugin: 'context-alert', key: 'threadId' } as const, '')
 const backLinked = atom({ plugin: 'context-alert', key: 'backLinked' } as const, false)

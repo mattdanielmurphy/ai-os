@@ -108,16 +108,35 @@ def tweaks():
     return {key: knobs[key].get("value", KNOBS[key]["default"]) for key in KNOBS}
 
 
+DESKTOP_SESSIONS = Path.home() / "Library" / "Application Support" / "Claude" / "claude-code-sessions"
+
+
+def desktop_id(cli_session):
+    """The Code tab's local_ id for a CLI session id. They differ: the mod sees the CLI id,
+    threads.json stores the local_ id, so a plain prefix match never hit (2026-10-28)."""
+    if cli_session.startswith("local_"):
+        return cli_session
+    for f in DESKTOP_SESSIONS.glob("*/*/local_*.json"):
+        try:
+            if cli_session in f.read_text() and json.loads(f.read_text()).get("cliSessionId") == cli_session:
+                return f.stem
+        except (OSError, ValueError):
+            continue
+    return ""
+
+
 def is_coordinator(session):
     """The central Coordinator (session.txt) or any coordinator in coordinator/threads.json."""
-    if session and session == who():
+    if not session:
+        return False
+    if session == who():
         return True
     try:
         threads = json.loads((AIOS / "coordinator" / "threads.json").read_text())["threads"]
     except (OSError, ValueError, KeyError):
         return False
-    return any(t.get("id") == f"local_{session}" and t.get("role") in ("central", "project-coordinator")
-               for t in threads)
+    ids = {t.get("id") for t in threads if t.get("role") in ("central", "project-coordinator")}
+    return session in ids or f"local_{session}" in ids or desktop_id(session) in ids
 
 
 def main(argv):
