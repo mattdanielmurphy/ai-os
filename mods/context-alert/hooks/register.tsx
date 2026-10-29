@@ -545,15 +545,14 @@ const trace = async ($: EngineInterface, msg: string) => {
 }
 
 /** Compacts this thread. Desktop Code-tab sessions are SDK sessions where $.session.compact
- *  throws ("not available in a headless session"), so there it queues a /compact prompt,
+ *  throws ("not available in a headless session"), so there it runs the /compact command,
  *  which runs as its own short turn (found live 2026-10-28). */
-export const COMPACT_PROMPT = () => `/compact ${COMPACT_INSTRUCTIONS}`
 const compactNow = async ($: EngineInterface): Promise<{ skip?: unknown; queued?: boolean }> => {
   try {
     return await $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
   } catch (err) {
     if (!/headless|SDK/i.test(String(err))) return { skip: 'failed' }
-    await $.prompt.submit({ text: COMPACT_PROMPT(), wait: false })
+    await $.command.run({ command: 'compact', args: COMPACT_INSTRUCTIONS })
     return { queued: true }
   }
 }
