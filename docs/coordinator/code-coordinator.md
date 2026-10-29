@@ -41,6 +41,7 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 - Matt saying "continue there" always wins.
 
 ## When a thread reports back
+- Project coordinators report their own project to Matt; never relay their updates (Matt, 2026-10-28: "the project coordinator should be the one keeping me up to date about the project, not you"). Speak up only for cross-project issues or if one asks you to act.
 - Every pending ask names who does what and links to the thread with the detail (Matt, 2026-10-27: "have this whole sentence be a link to the thread"); include the downside if there is one.
 - The app wakes you with a note quoting its report. That note is the thread's claim, not proof: check the file/diff/commit before telling Matt it's done.
 - Relay only what matters to Matt (result, what he must do, failures, untested bits), one line each, with the thread link.
