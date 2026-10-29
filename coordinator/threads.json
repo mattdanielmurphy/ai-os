@@ -69,7 +69,7 @@
    "title": "Glass TV \u00b7 merged catalog",
    "chain": "glass-tv",
    "cwd": "~/projects/glass-tv",
-   "state": "idle",
+   "state": "retired",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
@@ -284,7 +284,7 @@
    "seq": 1,
    "cwd": "~/projects/glass-tv",
    "model": "opus",
-   "state": "working",
+   "state": "retired",
    "asked": "Android TV essentials, shared backend, self-update, error reports",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
@@ -298,6 +298,26 @@
    "model": "opus",
    "state": "working",
    "asked": "Minimal iPad app, sideloaded, shared backend",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_0d7dacc1-f773-4688-93b6-4217513e0706",
+   "title": "Glass TV Home 2 \u00b7 collections with Show more",
+   "chain": "glass-tv-home",
+   "seq": 2,
+   "cwd": "~/projects/glass-tv",
+   "state": "working",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_13511518-2b26-4bad-8824-7d2a473c104f",
+   "title": "Glass TV Android 2 \u00b7 layout, slow start, quality ban",
+   "chain": "glass-tv-android",
+   "seq": 2,
+   "cwd": "~/projects/glass-tv",
+   "state": "working",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   }
