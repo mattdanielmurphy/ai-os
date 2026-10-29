@@ -29,7 +29,7 @@
   },
   {
    "id": "local_4b486978-6346-4e5d-b925-78ba31a5e267",
-   "title": "Glass TV · x-ray face-quality search",
+   "title": "Glass TV \u00b7 x-ray face-quality search",
    "chain": "glass-tv",
    "seq": 1,
    "cwd": "~/projects/glass-tv",
@@ -57,7 +57,7 @@
   },
   {
    "id": "local_a5b2208e-fab7-4e53-8c01-af3c0a195f19",
-   "title": "Glass TV · playback",
+   "title": "Glass TV \u00b7 playback",
    "chain": "glass-tv",
    "cwd": "~/projects/glass-tv",
    "state": "retired",
@@ -66,7 +66,7 @@
   },
   {
    "id": "local_9ee295a3-17a7-4482-a95f-46e18a3d82c0",
-   "title": "Glass TV · merged catalog",
+   "title": "Glass TV \u00b7 merged catalog",
    "chain": "glass-tv",
    "cwd": "~/projects/glass-tv",
    "state": "retired",
@@ -222,7 +222,7 @@
   },
   {
    "id": null,
-   "title": "Architecture plan second opinion (top 4 await 👍)",
+   "title": "Architecture plan second opinion (top 4 await \ud83d\udc4d)",
    "source": "projects-everything (cmsg, not readable from Code)",
    "state": "parked",
    "old_state": "old",
@@ -267,7 +267,7 @@
   },
   {
    "id": "local_80ddd54c-a33e-47bd-836c-adca89a4bf2b",
-   "title": "Glass TV · Letterboxd + Trakt test version",
+   "title": "Glass TV \u00b7 Letterboxd + Trakt test version",
    "chain": "glass-tv",
    "cwd": "~/projects/glass-tv",
    "model": "opus",
@@ -279,7 +279,7 @@
   },
   {
    "id": "local_e7f6a944-dd57-4705-a08f-fd6e901a8b5f",
-   "title": "Glass TV · Android essentials on shared backend",
+   "title": "Glass TV \u00b7 Android essentials on shared backend",
    "chain": "glass-tv-android",
    "seq": 1,
    "cwd": "~/projects/glass-tv",
@@ -291,7 +291,7 @@
   },
   {
    "id": "local_d4074c0d-fc62-4cf8-b37f-0e5f39dc66ea",
-   "title": "Glass TV · iPad essentials on shared backend",
+   "title": "Glass TV \u00b7 iPad essentials on shared backend",
    "chain": "glass-tv-ipad",
    "seq": 1,
    "cwd": "~/projects/glass-tv",
@@ -303,7 +303,7 @@
   },
   {
    "id": "local_0d7dacc1-f773-4688-93b6-4217513e0706",
-   "title": "Glass TV Home 2 · collections with Show more",
+   "title": "Glass TV Home 2 \u00b7 collections with Show more",
    "chain": "glass-tv-home",
    "seq": 2,
    "cwd": "~/projects/glass-tv",
@@ -313,7 +313,7 @@
   },
   {
    "id": "local_13511518-2b26-4bad-8824-7d2a473c104f",
-   "title": "Glass TV Android 2 · layout, slow start, quality ban",
+   "title": "Glass TV Android 2 \u00b7 layout, slow start, quality ban",
    "chain": "glass-tv-android",
    "seq": 2,
    "cwd": "~/projects/glass-tv",
@@ -323,7 +323,7 @@
   },
   {
    "id": "local_9f0f2971-1c67-4108-9023-74b742eac476",
-   "title": "Glass TV Player 2 · R key",
+   "title": "Glass TV Player 2 \u00b7 R key",
    "chain": "glass-tv-player",
    "seq": 2,
    "cwd": "~/projects/glass-tv",
@@ -333,11 +333,11 @@
   },
   {
    "id": "local_40976f70-063a-4669-a442-b97616856fa7",
-   "title": "Glass TV Android 3 · mic via hidden text field",
+   "title": "Glass TV Android 3 \u00b7 mic via hidden text field",
    "chain": "glass-tv-android",
    "seq": 3,
    "cwd": "~/projects/glass-tv",
-   "state": "working",
+   "state": "retiring",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
@@ -352,6 +352,16 @@
    "role": "project-coordinator",
    "project": "slub",
    "parent": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_046427ff-d407-4692-b97b-64dd78bf9af0",
+   "title": "Glass TV Android 4 \u00b7 subtitles missing, episode on pause",
+   "chain": "glass-tv-android",
+   "seq": 4,
+   "cwd": "~/projects/glass-tv",
+   "state": "working",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   }
  ]
 }
