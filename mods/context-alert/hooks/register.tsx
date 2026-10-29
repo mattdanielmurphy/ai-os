@@ -538,6 +538,12 @@ const idleCompact = async ($: EngineInterface) => {
   if (!coord) $.ui.toast(`Compacted while idle (was ~${k(c.tokens)}), so it stays cheap to pick up.`)
 }
 
+/** One line per coordinator decision in ai-os/tmp/context-alert.log, so a live failure is visible. */
+const trace = async ($: EngineInterface, msg: string) => {
+  const line = `${new Date(await $.clock.now()).toISOString()} ${await $.session.id()} ${msg}\n`
+  await $.process.run(['sh', '-c', `cat >> ${AIOS}/tmp/context-alert.log`], { stdin: line }).catch(() => undefined)
+}
+
 /** Is this a coordinator? Checked at start and every minute until yes (a failed first check,
  *  e.g. python3 not ready at launch, used to leave the band showing for the whole session). */
 const checkCoord = async ($: EngineInterface) => {
@@ -547,6 +553,7 @@ const checkCoord = async ($: EngineInterface) => {
   if (owner.trim() === sid) return update($, isCoord, () => true)
   const run = await $.process.run(['python3', INBOX, 'is-coordinator', sid]).catch(() => undefined)
   if (run?.exitCode === 0) await update($, isCoord, () => true)
+  await trace($, `is-coordinator exit=${run?.exitCode ?? 'failed'}`)
 }
 
 /** Compact a cold coordinator, then submit the message it caught. Sends anyway if compaction fails. */
@@ -646,9 +653,18 @@ export const register: Register = on => {
     agentRunning = false
     // Smart queue: a stopped or failed turn never releases it; Matt looks first.
     // Coordinators stay small without asking: compact between turns once past the line.
-    if (e.reason === 'answer' && tokens >= COORD_TURN_COMPACT && (await read($, isCoord))) {
+    const coord = await read($, isCoord)
+    if (coord) await trace($, `turn.complete reason=${e.reason} tokens=${tokens}`)
+    if (e.reason !== 'aborted' && tokens >= COORD_TURN_COMPACT && coord) {
       compactedAt = at
-      void $.session.compact({ instructions: COMPACT_INSTRUCTIONS }).catch(() => undefined)
+      // The turn may still be settling; a skipped compaction retries a few times, 20 s apart.
+      const attempt = (left: number): Promise<void> => $.session.compact({ instructions: COMPACT_INSTRUCTIONS })
+        .then(async out => {
+          await trace($, `compact -> ${JSON.stringify(out).slice(0, 200)}`)
+          if (out.skip !== undefined && left > 0) setTimeout(() => void attempt(left - 1), 20_000)
+        })
+        .catch(err => trace($, `compact threw ${String(err).slice(0, 200)}`))
+      void attempt(3)
     }
     if (e.reason === 'answer') void checkQueue($)
     else if ((await read($, queued)).length) await queueFile($, await read($, queued), 'the agent stopped or failed')
