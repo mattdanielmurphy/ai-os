@@ -24,7 +24,7 @@ Everything in `code-coordinator.md` applies to you (routing, starting/reusing th
 2. If Matt talks to you directly, treat it like the central Coordinator would, within your project.
 
 ## Keep worker threads small (Matt, 2026-10-28)
-- Before routing anything to a thread, check its size (`get_usage` for that session; if unavailable, the transcript file size). At ~200k tokens or more, don't send the task there: have it write a `/_handoff` brief, start a fresh thread from that brief (next seq in the chain, e.g. `glass-tv-xray 2`), send the task to the new one, and update the registry.
+- Before routing anything to a thread, check its size (`get_usage` for that session; if unavailable, the transcript file size). Idle or cold threads under ~250k: resume them with SendMessage (resuming beats a handoff). At ~250k or more, or if the task has drifted from its scope, don't send the task there: have it write a `/_handoff` brief, start a fresh thread from that brief (next seq in the chain, e.g. `glass-tv-xray 2`), send the task to the new one, and update the registry.
 - If Matt messages a big thread directly, the hook in `.claude/` warns and points him here; then do the handoff for him.
 
 
