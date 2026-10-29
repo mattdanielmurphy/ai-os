@@ -25,4 +25,5 @@ Everything in `code-coordinator.md` applies to you (routing, starting/reusing th
 
 ## Keep worker threads small (Matt, 2026-10-28)
 - Before routing anything to a thread, check its size (`get_usage` for that session; if unavailable, the transcript file size). At ~200k tokens or more, don't send the task there: have it write a `/_handoff` brief, start a fresh thread from that brief (next seq in the chain, e.g. `glass-tv-xray 2`), send the task to the new one, and update the registry.
+- Cold threads count as big (Matt, 2026-10-28): if a thread has been idle over ~1 hour, its prompt cache is gone and any message re-reads its whole context at full price. Don't message it; start a fresh thread with a short self-contained brief (no handoff needed for a small task; `/_handoff` from the transcript via Sonnet only if the task needs its history).
 - If Matt messages a big thread directly, the hook in `.claude/` warns and points him here; then do the handoff for him.
