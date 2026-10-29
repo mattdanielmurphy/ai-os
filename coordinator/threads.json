@@ -60,7 +60,7 @@
    "title": "Glass TV \u00b7 playback",
    "chain": "glass-tv",
    "cwd": "~/projects/glass-tv",
-   "state": "idle",
+   "state": "retired",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
@@ -315,6 +315,16 @@
    "id": "local_13511518-2b26-4bad-8824-7d2a473c104f",
    "title": "Glass TV Android 2 \u00b7 layout, slow start, quality ban",
    "chain": "glass-tv-android",
+   "seq": 2,
+   "cwd": "~/projects/glass-tv",
+   "state": "working",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_9f0f2971-1c67-4108-9023-74b742eac476",
+   "title": "Glass TV Player 2 \u00b7 R key",
+   "chain": "glass-tv-player",
    "seq": 2,
    "cwd": "~/projects/glass-tv",
    "state": "working",
