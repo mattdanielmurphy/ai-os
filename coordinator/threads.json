@@ -317,7 +317,7 @@
    "chain": "glass-tv-android",
    "seq": 2,
    "cwd": "~/projects/glass-tv",
-   "state": "working",
+   "state": "done",
    "started": "2026-10-28",
    "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
   },
@@ -326,6 +326,16 @@
    "title": "Glass TV Player 2 \u00b7 R key",
    "chain": "glass-tv-player",
    "seq": 2,
+   "cwd": "~/projects/glass-tv",
+   "state": "working",
+   "started": "2026-10-28",
+   "coordinator": "local_cc656186-076a-49c9-9b70-cea93d86d4d2"
+  },
+  {
+   "id": "local_40976f70-063a-4669-a442-b97616856fa7",
+   "title": "Glass TV Android 3 \u00b7 mic via hidden text field",
+   "chain": "glass-tv-android",
+   "seq": 3,
    "cwd": "~/projects/glass-tv",
    "state": "working",
    "started": "2026-10-28",
