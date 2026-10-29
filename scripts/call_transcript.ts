@@ -119,6 +119,7 @@ const SILENT_MS = Number(flag("silence", "120")) * 1000;
 const AUTOSTOP_MS = Number(flag("autostop", "900")) * 1000;
 let lastSpeech = Date.now();
 let reminded = false;
+let sawFacetime = false; // Meet/Chrome calls never open FaceTime, so only warn if it was open
 const notify = (title: string, body: string) =>
   Bun.spawn([join(homedir(), ".hammerspoon/bin/claude-notify"), title, body, "--kind", "needs"], { stdout: "ignore", stderr: "ignore" });
 setInterval(async () => {
@@ -131,7 +132,9 @@ setInterval(async () => {
   }
   if (reminded) return;
   const p = Bun.spawn(["pgrep", "-x", "FaceTime"], { stdout: "ignore" });
-  const facetime = (await p.exited) === 0;
+  const running = (await p.exited) === 0;
+  if (running) sawFacetime = true;
+  const facetime = running || !sawFacetime;
   const quiet = Date.now() - lastSpeech > SILENT_MS;
   if (!facetime || quiet) {
     reminded = true;
