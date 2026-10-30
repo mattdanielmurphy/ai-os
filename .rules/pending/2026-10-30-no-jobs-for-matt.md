@@ -1,0 +1,1 @@
+**Never give Matt a workaround job (Matt, 2026-10-30).** Don't fix a problem by telling him to do something awkward, like not looking at part of his screen. Find a real fix first (a setting, a script, an overlay). Matt: "never give me a job to do."
