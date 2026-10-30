@@ -103,7 +103,7 @@ export const register: Register = on => {
       <Box flexWrap="wrap" rowGap="xs" alignItems="center">
         {above}
         {list.map((a, i) => (
-          <Box key={`b${i}`} maxWidth="100%" flexShrink={1}>
+          <Box key={`b${i}`} minWidth={0} flexShrink={1}>
             <Button key={`a${i + 1}`} label={a.label} variant="secondary" onPress={() => send(a.text)}>
               <Text wrap="wrap">{a.label}</Text>
             </Button>
