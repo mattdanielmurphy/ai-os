@@ -43,10 +43,16 @@ async def health():
 @app.get("/voices")
 async def voices():
     """English Speechify voices for the app's picker."""
+    data, cursor = [], None
     async with aiohttp.ClientSession() as session:
-        r = await session.get("https://api.speechify.ai/v1/voices",
-                              headers={"Authorization": "Bearer " + bot.clean("SPEECHIFY_API_KEY")})
-        data = (await r.json())["voices"]
+        while True:
+            r = await session.get("https://api.speechify.ai/v1/voices", params={"cursor": cursor} if cursor else None,
+                                  headers={"Authorization": "Bearer " + bot.clean("SPEECHIFY_API_KEY")})
+            page = await r.json()
+            data += page["voices"]
+            cursor = page.get("next_cursor")
+            if not page.get("has_more"):
+                break
     english = [v for v in data if v.get("locale", "").startswith("en")]
     return sorted(({"id": v["id"], "name": v.get("display_name", v["id"])} for v in english), key=lambda v: v["name"])
 
