@@ -735,6 +735,9 @@ export const register: Register = on => {
       }
     }
     if (!isPerson) return next(e)
+    // App notes aren't Matt's words: never hold one, and never put one back in his composer (2026-10-30).
+    const typed = e.text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim()
+    if (!typed || typed.startsWith('<side-sessions-event>')) return next(e)
 
     const at = await $.clock.now()
     const c = await read($, cache)
@@ -771,11 +774,11 @@ export const register: Register = on => {
 
     await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
     const files = await saveAttachments($, e.attachments ?? [], at)
-    await update($, held, () => withFiles(e.text, files))
+    await update($, held, () => withFiles(typed, files))
     const extra = files.missed.length
       ? ` ${files.missed.length} attachment(s) can't be carried over; re-attach them there.`
       : ''
-    await $.prompt.fill({ text: e.text, mode: 'replace' }).catch(() => undefined)
+    await $.prompt.fill({ text: typed, mode: 'replace' }).catch(() => undefined)
     return {
       drop:
         `Held: this thread's cache expired ${ago(-left)} ago, so this message would re-send ` +

@@ -138,6 +138,21 @@ const projectSetup = async ($: any, on: any) => {
   return { clock, entered, calls, settle }
 }
 
+test('a cold hold restores only Matt\'s words; app notes alone are never held', async ($, on) => {
+  const clock = $.clock.install({ now: 0 })
+  const filled: string[] = []
+  on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.fill', (_$, e) => { filled.push(e.text); return { isFilled: true } })
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  await $.session.measure(measure(300_000))
+  await $.turn.complete(answered)
+  await clock.advance(2 * 60 * MIN)
+  const note = '<system-reminder>\nLinked sessions now\n</system-reminder>'
+  expect((await $.prompt.submit(phone(note))).drop).toBeUndefined()
+  expect((await $.prompt.submit(phone(`hello\n${note}`))).drop).toMatch(/Held:/)
+  expect(filled).toEqual(['hello'])
+})
+
 test('a cold project message is held and Matt is asked in the thread; "here" sends it on', async ($, on) => {
   const { entered, calls } = await projectSetup($, on)
   const out = await $.prompt.submit(phone(wake('is it done?')))
