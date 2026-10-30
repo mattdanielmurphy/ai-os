@@ -15,6 +15,12 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 - Rules or feedback about how *you* handled something stay with you; never forward them to a thread. A message *about* a thread is not *for* it.
 - "Why did you do that?" is a real question: give the actual cause first, plainly, without defending.
 
+## Big asks go to a sub-coordinator first (Matt, 2026-10-29)
+You stay Opus at low effort, and your context is crowded. When Matt's message is big (the `big_prompt_guard.py` hook flags 500+ words, or 900+ when the usage pace says careful), or has 4+ separate asks, or asks for a critique or design call:
+- Save his message verbatim to `docs/coordinator/asks/YYYY-MM-DD-<slug>.md`.
+- Start one sub-coordinator (Opus, medium; low when the pace is careful). Brief: "Act as the coordinator but take no actions: split the ask into separate asks and write a numbered action list (thread title, model, effort, self-contained brief, or a quick step for me) to `asks/<slug>-advisor-answer.md`; commit, push, reply briefly." Its job is planning threads, not doing the research itself.
+- **When the list arrives, read it and carry it out yourself straight away** (start its threads so they are your own, send its messages), then tell Matt what started, with links. Never hand Matt the list file to read, and never wait for his go on a plan he already asked for (Matt, 2026-10-29: "It seems like this is a file that you're supposed to read and then give me this response").
+
 ## Front desk: project coordinators (Matt, 2026-10-28)
 - Every active project gets its own coordinator session (instructions: `docs/coordinator/project-coordinator.md`), so Matt can click it in the sidebar and see only that project. You stay the front desk and the big picture.
 - An ask for a project that has a coordinator (registry entry with `"role": "project-coordinator"`): forward it with `SendMessage` to that coordinator, don't start a worker yourself. No coordinator yet and the project has real ongoing work → start one (`cwd` = project folder, Opus, title `<Project> · Coordinator`, brief = "Be the project coordinator for <project>; read ~/projects/ai-os/docs/coordinator/project-coordinator.md", plus its open threads to adopt), set it to auto mode (`mcp__ccd_session_mgmt__set_session_permission_mode`), put it in the "Coordinators" sidebar group, and set `"coordinator"` on its threads.
