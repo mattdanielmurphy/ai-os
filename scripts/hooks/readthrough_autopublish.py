@@ -37,7 +37,7 @@ def project_for(path: Path, host: str) -> str:
     return "code" if host.startswith("local_") else "everything"
 
 
-def worker(path: Path, host: str):
+def worker(path: Path, host: str, sid: str = ""):
     # Debounce: wait until the file stops changing, and let only the newest worker publish.
     stamp = path.with_name(f".{path.name}.readthrough")
     me = str(os.getpid())
@@ -54,11 +54,19 @@ def worker(path: Path, host: str):
         args += ["--cmsg", host]
     r = subprocess.run(args, capture_output=True, text=True, timeout=300)
     log(f"{'ok' if r.returncode == 0 else 'FAILED'} {path.name}: {(r.stdout + r.stderr).strip()[-400:]}")
+    url = next((l for l in r.stdout.splitlines() if l.startswith("https://")), "")
+    if r.returncode == 0 and url and sid:
+        # Tell the Hammerspoon Readthrough float (modules/readthrough_float.lua) which thread it belongs to.
+        try:
+            subprocess.run(["/usr/local/bin/hs", "-c", f'require("modules.readthrough_float").published({json.dumps(url)}, {json.dumps(sid)})'],
+                           capture_output=True, timeout=10)
+        except Exception as e:
+            log(f"float: {e!r}")
 
 
 def main():
-    if len(sys.argv) == 4 and sys.argv[1] == "--worker":
-        return worker(Path(sys.argv[2]), sys.argv[3])
+    if len(sys.argv) >= 4 and sys.argv[1] == "--worker":
+        return worker(Path(sys.argv[2]), sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else "")
     data = json.load(sys.stdin)
     ti = data.get("tool_input") or {}
     p = ti.get("file_path") or ""
@@ -69,7 +77,7 @@ def main():
     if not path or path.parent != DETAILS.resolve() or path.suffix != ".md" or not path.exists():
         return
     host = os.environ.get("CLAUDE_CODE_HOST_SESSION_ID", "")
-    subprocess.Popen([sys.executable, __file__, "--worker", str(path), host],
+    subprocess.Popen([sys.executable, __file__, "--worker", str(path), host, data.get("session_id") or ""],
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                      start_new_session=True)
 

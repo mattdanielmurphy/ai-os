@@ -13,3 +13,4 @@ Publishing makes no audio. Each paragraph is voiced the first time someone press
 ### Undo
 
 Remove the readthrough_autopublish entry from PostToolUse in ~/.claude/settings.json.
+- test float hook
