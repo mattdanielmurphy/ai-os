@@ -1,0 +1,161 @@
+import ActivityKit
+import AlarmKit
+import AppIntents
+import AVFoundation
+import SwiftUI
+
+let serverURL = URL(string: "ws://macbook-pro.tail491454.ts.net:8798/ws")!
+let startKey = "startSession"
+
+struct WakeMeta: AlarmMetadata {}
+
+/// The alarm's Start button: opens the app and asks it to begin the session.
+struct StartSessionIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Start morning session"
+    static var openAppWhenRun = true
+    func perform() async throws -> some IntentResult {
+        UserDefaults.standard.set(true, forKey: startKey)
+        return .result()
+    }
+}
+
+/// Sends the mic and plays the bot as 16 kHz 16-bit mono PCM over a WebSocket.
+@MainActor final class Session: ObservableObject {
+    @Published var state = "Ready"
+    private var socket: URLSessionWebSocketTask?
+    private let engine = AVAudioEngine()
+    private let player = AVAudioPlayerNode()
+    private let wire = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: true)!
+    private let play = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
+
+    var live: Bool { socket != nil }
+
+    func start() {
+        guard socket == nil else { return }
+        state = "Connecting"
+        do {
+            let audio = AVAudioSession.sharedInstance()
+            try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
+            try audio.setActive(true)
+            let task = URLSession.shared.webSocketTask(with: serverURL)
+            socket = task
+            task.resume()
+            let input = engine.inputNode
+            let mic = input.outputFormat(forBus: 0)
+            let convert = AVAudioConverter(from: mic, to: wire)!
+            input.installTap(onBus: 0, bufferSize: 1600, format: mic) { [wire] buffer, _ in
+                let cap = AVAudioFrameCount(Double(buffer.frameLength) * 16000 / mic.sampleRate) + 16
+                guard let out = AVAudioPCMBuffer(pcmFormat: wire, frameCapacity: cap) else { return }
+                var used = false
+                convert.convert(to: out, error: nil) { _, status in
+                    if used { status.pointee = .noDataNow; return nil }
+                    used = true; status.pointee = .haveData; return buffer
+                }
+                let data = Data(bytes: out.int16ChannelData![0], count: Int(out.frameLength) * 2)
+                task.send(.data(data)) { _ in }
+            }
+            engine.attach(player)
+            engine.connect(player, to: engine.mainMixerNode, format: play)
+            try engine.start()
+            player.play()
+            state = "Connected"
+            receive()
+        } catch {
+            state = "Couldn't start audio"
+            stop()
+        }
+    }
+
+    private func receive() {
+        socket?.receive { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                switch result {
+                case .success(.data(let data)): self.enqueue(data); self.receive()
+                case .success: self.receive()
+                case .failure: self.state = "Session ended"; self.stop()
+                }
+            }
+        }
+    }
+
+    private func enqueue(_ data: Data) {
+        let n = data.count / 2
+        guard n > 0, let buf = AVAudioPCMBuffer(pcmFormat: play, frameCapacity: AVAudioFrameCount(n)) else { return }
+        buf.frameLength = AVAudioFrameCount(n)
+        data.withUnsafeBytes { raw in
+            let s = raw.bindMemory(to: Int16.self)
+            for i in 0..<n { buf.floatChannelData![0][i] = Float(s[i]) / 32768 }
+        }
+        player.scheduleBuffer(buf)
+    }
+
+    func stop() {
+        socket?.cancel(); socket = nil
+        if engine.isRunning { engine.inputNode.removeTap(onBus: 0); engine.stop() }
+        player.stop()
+        try? AVAudioSession.sharedInstance().setActive(false)
+    }
+}
+
+struct ContentView: View {
+    @StateObject private var session = Session()
+    @Environment(\.scenePhase) private var phase
+    @AppStorage("wakeTime") private var wake = Date().timeIntervalSince1970
+    @State private var note = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Wake-up alarm") {
+                    DatePicker("Time", selection: Binding(get: { Date(timeIntervalSince1970: wake) },
+                                                          set: { wake = $0.timeIntervalSince1970 }),
+                               displayedComponents: .hourAndMinute)
+                    Button { Task { await setAlarm() } } label: { Label("Set alarm", systemImage: "alarm") }
+                    if !note.isEmpty { Text(note).foregroundStyle(.secondary) }
+                }
+                Section("Session") {
+                    Button { session.live ? session.stop() : session.start() } label: {
+                        Label(session.live ? "End session" : "Start now",
+                              systemImage: session.live ? "phone.down" : "sunrise")
+                    }
+                    Label(session.state, systemImage: session.live ? "waveform" : "circle")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Morning")
+        }
+        .onChange(of: phase) { _, now in
+            if now == .active, UserDefaults.standard.bool(forKey: startKey) {
+                UserDefaults.standard.set(false, forKey: startKey)
+                session.start()
+            }
+        }
+    }
+
+    private func setAlarm() async {
+        do {
+            guard try await AlarmManager.shared.requestAuthorization() == .authorized else {
+                note = "Alarms are turned off for Morning in Settings."; return
+            }
+            let cal = Calendar.current
+            let parts = cal.dateComponents([.hour, .minute], from: Date(timeIntervalSince1970: wake))
+            let date = cal.nextDate(after: .now, matching: parts, matchingPolicy: .nextTime)!
+            let alert = AlarmPresentation.Alert(
+                title: "Good morning",
+                stopButton: AlarmButton(text: "Stop", textColor: .white, systemImageName: "stop.fill"),
+                secondaryButton: AlarmButton(text: "Start", textColor: .white, systemImageName: "sunrise.fill"),
+                secondaryButtonBehavior: .custom)
+            let attrs = AlarmAttributes<WakeMeta>(presentation: AlarmPresentation(alert: alert), tintColor: .indigo)
+            let config = AlarmManager.AlarmConfiguration<WakeMeta>(
+                schedule: .fixed(date), attributes: attrs, secondaryIntent: StartSessionIntent())
+            for alarm in try AlarmManager.shared.alarms { try? AlarmManager.shared.cancel(id: alarm.id) }
+            _ = try await AlarmManager.shared.schedule(id: UUID(), configuration: config)
+            note = "Set for " + date.formatted(date: .abbreviated, time: .shortened)
+        } catch { note = "Couldn't set it: \(error.localizedDescription)" }
+    }
+}
+
+@main struct MorningApp: App {
+    var body: some Scene { WindowGroup { ContentView() } }
+}

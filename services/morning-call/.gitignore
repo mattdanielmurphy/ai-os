@@ -1,2 +1,7 @@
 .call-token
 .env
+app/build/
+app/build.log
+app/*.xcodeproj/
+__pycache__/
+app/Morning.ipa

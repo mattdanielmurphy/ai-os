@@ -1,0 +1,25 @@
+name: Morning
+options:
+  bundleIdPrefix: ca.mattmurphy
+  deploymentTarget: {iOS: "26.0"}
+targets:
+  Morning:
+    type: application
+    platform: iOS
+    sources: [Morning]
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 457ZKWNUB2
+        PRODUCT_BUNDLE_IDENTIFIER: ca.mattmurphy.morning
+    info:
+      path: Morning/Info.plist
+      properties:
+        CFBundleDisplayName: Morning
+        NSAppTransportSecurity: {NSAllowsArbitraryLoads: true}
+        UIBackgroundModes: [audio]
+        NSMicrophoneUsageDescription: "Morning listens to you during the check-in."
+        NSAlarmKitUsageDescription: "Morning rings your wake-up alarm."
+        UILaunchScreen: {}
+        UIApplicationSceneManifest: {UIApplicationSupportsMultipleScenes: false}

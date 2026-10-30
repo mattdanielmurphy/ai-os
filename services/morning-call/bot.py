@@ -83,46 +83,49 @@ class SpokeWatch(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
+async def run_session(transport, session, rate):
+    tts = SpeechifyHttpTTSService(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
+                                  settings=SpeechifyTTSSettings(voice=VOICE, model="simba-3.2"))
+    context = LLMContext([{"role": "system", "content": SYSTEM}])
+    turns = LLMContextAggregatorPair(context)
+    gate, watch = MicGate(), SpokeWatch()
+    task = PipelineTask(Pipeline([
+        transport.input(), gate, VADProcessor(vad_analyzer=SileroVADAnalyzer()),
+        DeepgramSTTService(api_key=clean("DEEPGRAM_API_KEY")), turns.user(),
+        AnthropicLLMService(api_key=clean("ANTHROPIC_API_KEY"), settings=AnthropicLLMSettings(model=MODEL)),
+        tts, transport.output(), watch, turns.assistant()]),
+        params=PipelineParams(audio_in_sample_rate=rate, audio_out_sample_rate=rate),
+        idle_timeout_secs=None)  # the default 300 s would hang up during meditation
+
+    async def flow():
+        for line, pause in SCRIPT:
+            watch.done.clear()
+            await task.queue_frame(TTSSpeakFrame(spoken(line)))
+            await asyncio.wait_for(watch.done.wait(), 30)
+            await asyncio.sleep(pause)
+        gate.open = True
+        context.add_message({"role": "user", "content": "(The meditation just ended. Begin the check-in.)"})
+        await task.queue_frame(LLMRunFrame())
+
+    @transport.event_handler("on_client_connected")
+    async def connected(_t, _c):
+        asyncio.create_task(flow())
+
+    @transport.event_handler("on_client_disconnected")
+    async def gone(_t, _c):
+        await task.queue_frame(EndFrame())
+
+    await PipelineRunner(handle_sigint=False).run(task)
+
+
 async def run_call(ws):
     _, call = await parse_telephony_websocket(ws)
     async with aiohttp.ClientSession() as session:
-        transport = FastAPIWebsocketTransport(ws, FastAPIWebsocketParams(
+        await run_session(FastAPIWebsocketTransport(ws, FastAPIWebsocketParams(
             audio_in_enabled=True, audio_out_enabled=True, add_wav_header=False, session_timeout=MAX_CALL_SECS,
             serializer=TwilioFrameSerializer(stream_sid=call["stream_id"], call_sid=call["call_id"],
                                              account_sid=os.environ["TWILIO_ACCOUNT_SID"],
-                                             auth_token=os.environ["TWILIO_AUTH_TOKEN"])))
-        tts = SpeechifyHttpTTSService(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
-                                      settings=SpeechifyTTSSettings(voice=VOICE, model="simba-3.2"))
-        context = LLMContext([{"role": "system", "content": SYSTEM}])
-        turns = LLMContextAggregatorPair(context)
-        gate, watch = MicGate(), SpokeWatch()
-        task = PipelineTask(Pipeline([
-            transport.input(), gate, VADProcessor(vad_analyzer=SileroVADAnalyzer()),
-            DeepgramSTTService(api_key=clean("DEEPGRAM_API_KEY")), turns.user(),
-            AnthropicLLMService(api_key=clean("ANTHROPIC_API_KEY"), settings=AnthropicLLMSettings(model=MODEL)),
-            tts, transport.output(), watch, turns.assistant()]),
-            params=PipelineParams(audio_in_sample_rate=8000, audio_out_sample_rate=8000),
-            idle_timeout_secs=None)  # the default 300 s would hang up during meditation
-
-        async def flow():
-            for line, pause in SCRIPT:
-                watch.done.clear()
-                await task.queue_frame(TTSSpeakFrame(spoken(line)))
-                await asyncio.wait_for(watch.done.wait(), 30)
-                await asyncio.sleep(pause)
-            gate.open = True
-            context.add_message({"role": "user", "content": "(The meditation just ended. Begin the check-in.)"})
-            await task.queue_frame(LLMRunFrame())
-
-        @transport.event_handler("on_client_connected")
-        async def connected(_t, _c):
-            asyncio.create_task(flow())
-
-        @transport.event_handler("on_client_disconnected")
-        async def gone(_t, _c):
-            await task.queue_frame(EndFrame())
-
-        await PipelineRunner(handle_sigint=False).run(task)
+                                             auth_token=os.environ["TWILIO_AUTH_TOKEN"]))), session, 8000)
 
 
 app = FastAPI()
