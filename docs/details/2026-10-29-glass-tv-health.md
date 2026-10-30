@@ -30,3 +30,13 @@
 - Rejected doing both: GlitchTip only adds value for native stack traces with symbols, which the current crash reports mostly cover. Revisit if Swift/Kotlin crashes become hard to read.
 
 How to undo: `git revert` the commit; delete `health.jsonl` from the data dir.
+
+## 21:20 Step 2 built: odd events go home to the VPS
+
+- Matt picked the small collector. A server with `GLASS_HOME` appends each odd event (titles, keys and detail stripped) to `health-outbox.jsonl` and posts it to `<home>/health/v1/report`; anything unsent retries every 5 minutes, so an offline TV catches up later. Home dedupes by event id into `health-received.jsonl`.
+- VPS: deployed (`deploy/vps.sh`, `GLASS_DEVICE=vps`). Page: http://100.123.57.17:4747/health (tailnet only). JSON for the daily routine: `/health/v1/events?since=<ms>&all=1`.
+- Tested end to end: a stand-in server sent a fake 22-minute We're the Millers file; it showed on the VPS as "tv parents movie: file runs 22 min, catalog says 110 min" with no title. That test event stays on the VPS page.
+- Mac: launchd plist now sets `GLASS_HOME` + `GLASS_DEVICE=mac`. Not restarted (Ted Lasso was playing); `tmp/health-go-live.sh` (detached) runs `./install.sh` once nothing has played for 10 minutes straight, gives up after 8 h. Log: `tmp/health-go-live.log`.
+- Step 3 plan written in VISION.md.
+- Not done: Android/iPad player-side first-frame/stall timing; the parents' server needs `GLASS_HOME` too when it exists.
+- Undo: `git revert bdefb52 cecb78a`, `deploy/vps.sh`, `./install.sh`.
