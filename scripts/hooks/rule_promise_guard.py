@@ -63,9 +63,9 @@ def main() -> None:
         return
     print(json.dumps({"decision": "block", "reason": (
         f'Your reply promises future behaviour ("{m.group(0)}") but no rule file changed. '
-        "You are ephemeral: a promise is not saved. Add it to ai-os `.rules/*.md`, run "
-        "`python3 ~/projects/ai-os/scripts/build_rules.py`, commit and push, then confirm in one "
-        "line that it's saved as a global rule. If it truly was a one-off, reword the reply.")}))
+        "You are ephemeral: a promise is not saved. Draft it to "
+        "`~/projects/ai-os/.rules/pending/<date>-<slug>.md` and show Matt the exact wording; "
+        "a new draft counts as saved. If it truly was a one-off, reword the reply.")}))
 
 
 if __name__ == "__main__":

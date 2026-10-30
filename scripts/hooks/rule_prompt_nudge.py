@@ -28,10 +28,8 @@ def main() -> None:
         return
     note = (
         "Matt's message has rule language. If it states a standing preference (not a one-off), "
-        "SAVE it this turn: add it to the right ai-os `.rules/*.md` file (dated, his words, why), "
-        "run `python3 ~/projects/ai-os/scripts/build_rules.py`, add a short line to "
-        "`~/.claude/CLAUDE.md` if it's a core preference, then commit and push. Rules are global "
-        "by default (every coordinator and agent). Confirm in one line: \"Saved as a global rule\". "
+        "draft it to `~/projects/ai-os/.rules/pending/<date>-<slug>.md` this turn. Show him the "
+        "exact wording, what it replaces, and why. Do not save it to `.rules/` until he says yes. "
         "Promising to remember is not saving: you are ephemeral."
     )
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": note}}))
