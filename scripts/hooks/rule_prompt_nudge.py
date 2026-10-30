@@ -16,8 +16,14 @@ RULE_WORDS = re.compile(
 )
 
 
+# App/system envelopes are not Matt's words; strip them before matching.
+ENVELOPES = re.compile(
+    r"<(side-sessions-event|cross-session-message|task-notification|system-reminder|wake|ci-monitor-event)\b"
+    r"[^>]*>.*?(?:</\1>|\Z)", re.S)
+
+
 def main() -> None:
-    prompt = json.load(sys.stdin).get("prompt", "")
+    prompt = ENVELOPES.sub("", json.load(sys.stdin).get("prompt", ""))
     if prompt.lstrip().startswith("/") or not RULE_WORDS.search(prompt):
         return
     note = (
