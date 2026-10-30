@@ -156,6 +156,9 @@ export const register: Register = on => {
     if (await read($, speaking)) {
       await update($, speaking, () => false)
       await hs($, `cancel("${(await $.session.id()).slice(0, 8)}")`)
+    } else {
+      // Replying means he's seen this thread's waiting replies: never read them after the send.
+      await hs($, `drop("${(await $.session.id()).slice(0, 8)}")`)
     }
     return next(e)
   })
