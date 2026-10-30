@@ -40,3 +40,13 @@ How to undo: `git revert` the commit; delete `health.jsonl` from the data dir.
 - Step 3 plan written in VISION.md.
 - Not done: Android/iPad player-side first-frame/stall timing; the parents' server needs `GLASS_HOME` too when it exists.
 - Undo: `git revert bdefb52 cecb78a`, `deploy/vps.sh`, `./install.sh`.
+
+## 21:40 Step 3 built: daily check opens investigations through the Coordinator
+
+- `bin/health-triage.ts` + `src/triage.ts` (glass-tv 833f9e9), launchd `ca.mattmurphy.glass-tv-health-triage` daily at 9:00 (installed; also in `install.sh`). Log: `~/Library/Logs/glass-tv-health-triage.log`.
+- How it works: reads `/health/v1/events` from the Mac and the VPS (35 days), groups odd events since the last run by kind + screen + message (numbers blanked), adds "slower this week" trends (7-day median start/find time 50%+ above the 4 weeks before, 5+ plays each). New = not reported in 14 days; worse = 3x the count when reported. Up to 3 a day get a brief in the Glass TV data dir `health-triage/` (titles readable there, never leaves the Mac); the rest are listed. Queues one message via `coordinator_inbox.py put`; the Coordinator starts one fresh glass-tv worktree session per brief and tells Matt. Quiet days send nothing.
+- Why the Coordinator, not `claude -p` from launchd: a scheduled script can't open a visible Code-tab thread; the inbox is how other scripts already hand work to the Coordinator, and it already knows how to start sessions and tell Matt.
+- Tested: unit tests; dry run with test events (made the brief for the fake Millers event); a harmless test message reached the Coordinator (delivered within 45 s).
+- Not tested: a real 9:00 run with a real problem, and whether the Coordinator starts sessions from an inbox message or only proposes them (the app may hold automated starts as proposal cards).
+- Trends only see the full play history of servers that record plays themselves (the Mac today); other servers send only odd events.
+- Undo: `launchctl bootout gui/$(id -u)/ca.mattmurphy.glass-tv-health-triage`, move its plist to ~/.Trash, `git revert 833f9e9`.
