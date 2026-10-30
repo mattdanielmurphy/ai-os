@@ -11,3 +11,6 @@ Rejected: the global setting (you rely on suggestions elsewhere) and the Hammers
 Untested: three throwaway headless sessions produced no suggestions even with the mod off, so the actual hiding has not been seen. Validation and the unit test passed (the only validator failures are plugin-directory listing rules). The Coordinator process predates the install and must restart to load the mod. The band and command are also unseen in the Code tab.
 
 Undo: disable `no-suggestions@ai-os-mods` in settings and delete the flag folder.
+
+## Cold-hold note leak
+You showed a held prompt with an app note restored into your composer. The context-alert mod (0.7.9) now strips app notes before holding, and never holds a message that is only app notes. Undo: revert the 0.7.9 commit.
