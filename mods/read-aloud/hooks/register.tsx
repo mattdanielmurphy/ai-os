@@ -197,7 +197,7 @@ export const register: Register = on => {
           {chip('dictate', dict, MIC, () => setDictate($, !dict), dict ? 'Dictate after is on: Claude dictation starts when reading ends. Click to turn off.' : 'Dictate after is off. Click to start Claude dictation when reading ends.')}
           {on_ && chip('interrupt', talking, PAUSE, () => (talking ? hs($, 'interrupt()') : undefined), talking ? 'Interrupt: pause the reading and dictate; reading resumes when you stop.' : 'Interrupt works while a reply is being read. Typing stops the reading.')}
         </Box>
-        <Box key="replies" flexDirection="row" flexGrow={1} justifyContent="flex-end">
+        <Box key="replies" flexDirection="row" flexGrow={1} flexShrink={1} minWidth={0} justifyContent="flex-end">
           {above}
         </Box>
       </Box>

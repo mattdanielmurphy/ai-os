@@ -6,7 +6,7 @@ import type { Action } from '../types'
 const actions = atom({ plugin: 'action-bar', key: 'actions' } as const, [] as Action[])
 
 // Knobs live in ~/.hammerspoon/tweaks/action_bar.json (⌃⌥⌘T panel); missing or bad JSON keeps these.
-export const KNOB_DEFAULTS = { maxActions: 6, labelChars: 32 }
+export const KNOB_DEFAULTS = { maxActions: 6 }
 type Knobs = typeof KNOB_DEFAULTS
 
 const knobs = async ($: EngineInterface): Promise<Knobs> => {
@@ -40,15 +40,12 @@ export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[]
   const body = line.replace(/^actions\s*:/i, '')
   const either = /\s\|\s/.test(body)
   // New format (2026-10-29): "1, Build our own voice; 2, Try the listening hack". Each item is
-  // the prompt sent on click; the label is its first few words. Read aloud speaks it as written.
+  // the prompt sent on click, and the button shows all of it. Read aloud speaks it as written.
   if (/^\s*1,\s/.test(body)) {
     for (const raw of body.split(/\s*[;|]\s*(?=\d{1,2},\s)/)) {
       const said = raw.replace(/^\s*\d{1,2},\s*/, '').replace(/[.;]\s*$/, '').trim()
       if (!said) continue
-      let label = said.split(/\s+/).slice(0, 4).join(' ')
-      if (label.length > k.labelChars) label = `${label.slice(0, k.labelChars - 1)}…`
-      else if (label.length < said.length) label = `${label}…`
-      out.push({ label, text: said, ...(either ? { either } : {}) })
+      out.push({ label: said, text: said, ...(either ? { either } : {}) })
     }
     return out.slice(0, k.maxActions)
   }
@@ -57,8 +54,7 @@ export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[]
     if (!part) continue
     const [head, ...rest] = part.split(/\s*(?:→|->)\s*/)
     const said = rest.join(' ').trim()
-    const label = head.length > k.labelChars ? `${head.slice(0, k.labelChars - 1)}…` : head
-    out.push({ label, text: said || `Yes, ${head.charAt(0).toLowerCase()}${head.slice(1)}`, ...(either ? { either } : {}) })
+    out.push({ label: head, text: said || `Yes, ${head.charAt(0).toLowerCase()}${head.slice(1)}`, ...(either ? { either } : {}) })
   }
   return out.slice(0, k.maxActions)
 }
@@ -107,8 +103,10 @@ export const register: Register = on => {
       <Box flexWrap="wrap" rowGap="xs" alignItems="center">
         {above}
         {list.map((a, i) => (
-          <Box key={`b${i}`}>
-            <Button key={`a${i + 1}`} label={a.label} variant="secondary" onPress={() => send(a.text)} />
+          <Box key={`b${i}`} maxWidth="100%" flexShrink={1}>
+            <Button key={`a${i + 1}`} label={a.label} variant="secondary" onPress={() => send(a.text)}>
+              <Text wrap="wrap">{a.label}</Text>
+            </Button>
             <Text> </Text>
           </Box>
         ))}
