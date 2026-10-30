@@ -5,7 +5,7 @@
   "freeze_after_miss_days": 7,
   "habits": {
     "meditation": { "label": "Guided meditation",       "unit": "minutes", "levels": [1, 2, 3, 5, 7, 10, 15, 20], "start": 0, "active": true, "own_track": true },
-    "breaths":    { "label": "Slow breaths",            "unit": "breaths", "levels": [1, 2, 3, 4, 5, 6, 8, 10], "start": 2, "active": true },
+    "breaths":    { "label": "Slow breaths",            "unit": "breaths", "levels": [1, 2, 3], "start": 2, "active": true },
     "gratitude":  { "label": "Gratitude",               "unit": "things",  "levels": [1, 2, 3],                  "start": 0, "active": true },
     "cards":      { "label": "Flashcards",              "unit": "cards",   "levels": [1, 2, 3, 5, 8],            "start": 0, "active": true },
     "reflection": { "label": "Morning reflection",      "unit": "minutes", "levels": [1, 2, 3, 5],               "start": 0, "active": true },

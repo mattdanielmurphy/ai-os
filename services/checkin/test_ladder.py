@@ -67,7 +67,7 @@ class LadderTest(unittest.TestCase):
     def test_one_miss_undoes_the_last_increase(self):
         state, plans = simulate(["hit"] * 8 + [None, "hit"])
         grew = plans[7]
-        self.assertEqual(grew["changes"][0], "Slow breaths goes up to 4 breaths.")
+        self.assertEqual(grew["changes"][0], "Gratitude goes up to 2 things.")
         self.assertIn("Guided meditation goes up to 2 minutes.", grew["changes"])
         after = plans[9]
         self.assertEqual(after["status"], "red")

@@ -115,26 +115,13 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 
   <section class="step" id="s-meditate">
     <span class="medlevel" id="mlevel"></span>
-    <h2 id="mtitle">One-minute meditation</h2>
-    <p class="lede">Press play and close your eyes. When you hear the bell, come back to the&nbsp;breath.</p>
-    <audio id="maudio" controls preload="auto"></audio>
-    <p class="lede" id="mnote">It grows a little after a week of daily sits, and eases back after a missed&nbsp;day.</p>
-    <div class="row">
-      <button class="btn" id="mskip" type="button">Skip today</button>
-      <button class="btn" id="mnext" type="button">Next</button>
-    </div>
-  </section>
-
-  <section class="step" id="s-breathe" hidden>
-    <h2 id="btitle">Three slow breaths</h2>
-    <p class="lede">Unclench your jaw. Drop your shoulders. Follow the circle: in for four, out for six.</p>
+    <h2 id="mtitle">Breathe, then sit</h2>
+    <p class="lede" id="mlede">Press play and close your eyes. The voice takes you from here.</p>
+    <audio id="maudio" preload="auto"></audio>
     <div class="breath"><div class="orb" id="orb"></div></div>
-    <div class="cue" id="cue">Tap start when you're ready</div>
-    <div class="count" id="bcount">0 of 3 breaths</div>
-    <div class="row">
-      <button class="btn primary" id="bstart" type="button">Start breathing</button>
-      <button class="btn" id="bnext" type="button" hidden>Skip</button>
-    </div>
+    <div class="cue" id="cue"></div>
+    <div class="row"><button class="btn primary" id="mplay" type="button">Play</button></div>
+    <button class="mistap" id="mstop" type="button" hidden>End early</button>
   </section>
 
   <section class="step" id="s-grateful" hidden>
@@ -159,7 +146,6 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 
   <section class="step" id="s-recall" hidden>
     <div class="cardmeta"><span class="eyebrow" id="deck"></span><span class="tally" id="tally"></span></div>
-    <button class="btn primary" id="todone" type="button" hidden>Done reviewing</button>
     <div class="prompt" id="prompt"></div>
     <p class="key" id="key" hidden></p>
     <div class="opts" id="opts"></div>
@@ -172,6 +158,7 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
       <button class="mistap" id="mistap" type="button">Mistap · don't count this card</button>
     </div>
     <p class="lede" id="nextnote" hidden></p>
+    <button class="mistap" id="todone" type="button" hidden>Done for today</button>
   </section>
 
   <section class="step" id="s-done" hidden>
@@ -189,14 +176,14 @@ textarea { width: 100%; box-sizing: border-box; min-height: 7rem; font: 18px/1.5
 <script>
 const DATA = __DATA__;
 const PLAN = DATA.plan || { doses: { breaths: 3, cards: 3, gratitude: 1 }, steps: [], changes: [] };
-const BREATHS = PLAN.doses.breaths || 3;
+const BREATHS = PLAN.doses.breaths || 3; // the page records this once the track's three breaths have passed
 const EXTRAS = (PLAN.steps || []).filter(x => !x.when && !["meditation", "breaths", "gratitude", "cards", "reflection"].includes(x.habit));
 /* Guided meditation, always the first step: today's level comes from the habit ladder (build.py). */
 const MED = DATA.meditation || null;
 /* Practice mode (habit gate's study page, practice.py): just the cards, no breaths/gratitude, no FSRS ratings. */
 const PRACTICE = DATA.mode === "practice";
 const STEPS = PRACTICE ? [["recall","Practice"],["done","Done"]]
-  : [...(MED ? [["meditate","Sit"]] : []), ["breathe","Breathe"],["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
+  : [...(MED ? [["meditate","Sit"]] : []), ["grateful","Grateful"], ...(EXTRAS.length ? [["extra","New"]] : []), ["recall","Recall"],["done","Talk"]];
 const RATES = [[1,"Again"],[2,"Hard"],[3,"Good"],[4,"Easy"]];
 const TARGET = PLAN.doses.cards || 3; // after this many cards the Done button becomes the main call to action
 const $ = id => document.getElementById(id);
@@ -204,7 +191,7 @@ const $ = id => document.getElementById(id);
 let state = { date: DATA.date, step: STEPS[0][0], reached: 0, breaths: 0, gratitude: "", extras: {}, reviews: [], skipped: [], finishedAt: null };
 const stepIndex = k => STEPS.findIndex(([s]) => s === k);
 let cardIdx = 0, picked = null, rating = false, touched = false;
-const BUILD = "v7";
+const BUILD = "v8";
 document.addEventListener("click", () => { touched = true; }, { capture: true });
 const order = DATA.cards.map(c => {
   const idx = c.options.map((_, i) => i);
@@ -214,8 +201,6 @@ const order = DATA.cards.map(c => {
 
 $("dateline").textContent = DATA.dateline + " · " + BUILD;
 const WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
-$("btitle").textContent = (WORDS[BREATHS] || BREATHS) + (BREATHS === 1 ? " slow breath" : " slow breaths");
-$("bcount").textContent = `0 of ${BREATHS}`;
 if (PLAN.doses.gratitude > 1) $("gtitle").textContent = `${WORDS[PLAN.doses.gratitude]} things you're grateful for`;
 if (PRACTICE) {
   document.title = $("title").textContent = DATA.title || "Practice";
@@ -247,49 +232,44 @@ function renderProgress() {
   }));
 }
 
-/* Breathing */
-let breathing = false;
-/* One primary "Start breathing" at first; "Skip" appears after the first breath; once all are done, "Next" becomes primary. */
-function breathButtons() {
-  const done = state.breaths >= BREATHS, start = $("bstart"), next = $("bnext");
-  start.textContent = breathing ? "Breathing…" : done ? "Go again" : state.breaths ? "Keep breathing" : "Start breathing";
-  start.disabled = breathing;
-  start.classList.toggle("primary", !done);
-  next.textContent = done ? "Next" : "Skip";
-  next.classList.toggle("primary", done && !breathing);
-  next.hidden = !done && state.breaths < 1;
-}
-$("bstart").onclick = () => {
-  if (breathing) return;
-  breathing = true; breathButtons();
-  const orb = $("orb"), cue = $("cue");
-  const cycle = n => {
-    if (n >= BREATHS) { cue.textContent = "Nice. You're here."; breathing = false; breathButtons(); save(); return; }
-    orb.className = "orb in"; cue.textContent = "Breathe in…";
-    setTimeout(() => {
-      orb.className = "orb out"; cue.textContent = "…and out";
-      setTimeout(() => { state.breaths = Math.max(state.breaths, n + 1); $("bcount").textContent = `${state.breaths} of ${BREATHS}`; breathButtons(); cycle(n + 1); }, 6000);
-    }, 4000);
-  };
-  cycle(0);
-};
-$("bnext").onclick = () => go("grateful");
-/* Meditation: the track is a page asset. Finishing it records the full minutes; stopping early records the
-   whole minutes heard, so the ladder eases the length if it keeps being too long. */
+/* Breathing flows into the meditation: one Play press, one track. The circle follows the track's clock, and the
+   next step opens by itself at the end. Stopping early records the whole minutes of the sit heard, so the ladder
+   eases the length if it keeps being too long. */
 let medButtons = () => {};
 if (MED) {
-  const a = $("maudio"), MW = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
-  $("mtitle").textContent = (MW[MED.minutes] ? MW[MED.minutes] + "-minute" : MED.minutes + "-minute") + " meditation";
-  $("mlevel").textContent = `Level ${MED.level} of ${MED.levels}`;
+  const a = $("maudio"), B = MED.breath, orb = $("orb"), cue = $("cue"), play = $("mplay");
+  const sitAt = B.start + B.count * (B["in"] + B.out);
+  $("mlevel").textContent = `Level ${MED.level} of ${MED.levels} · ${MED.minutes} min`;
   if (MED.src) a.src = MED.src;
-  else { a.hidden = true; $("mnote").textContent = "Today's track isn't on this page. Open it on the Still page instead."; }
-  let heard = 0;
-  medButtons = () => { const done = (state.meditation || 0) >= MED.minutes; $("mnext").classList.toggle("primary", done); $("mskip").hidden = done; };
-  a.addEventListener("timeupdate", () => { heard = Math.max(heard, a.currentTime); });
-  a.addEventListener("ended", () => { state.meditation = MED.minutes; medButtons(); save(); });
-  const leave = () => { if (!a.paused) a.pause(); state.meditation = Math.max(state.meditation || 0, Math.floor(heard / 60)); save(); go("breathe"); };
-  $("mnext").onclick = leave;
-  $("mskip").onclick = leave;
+  let heard = 0, loading = false;
+  const sat = () => Math.floor(Math.max(0, heard - MED.lead) / 60);
+  const tick = t => {
+    const inBreaths = t >= B.start && t < sitAt, p = (t - B.start) % (B["in"] + B.out);
+    const cls = !inBreaths ? "orb" : p < B["in"] ? "orb in" : "orb out";
+    if (orb.className !== cls) orb.className = cls;
+    const text = t < B.start ? "" : inBreaths ? (p < B["in"] ? "Breathe in…" : "…and out") : "Just watch your breath";
+    if (cue.textContent !== text) cue.textContent = text;
+    if (t >= sitAt && state.breaths < BREATHS) { state.breaths = BREATHS; save(); }
+    $("mstop").hidden = t < sitAt;
+  };
+  medButtons = () => {
+    const done = (state.meditation || 0) >= MED.minutes;
+    play.textContent = loading ? "Starting…" : !a.paused ? "Pause" : a.currentTime > 0 && !a.ended ? "Keep going" : done ? "Next" : "Play";
+    play.disabled = loading;
+  };
+  a.addEventListener("timeupdate", () => { heard = Math.max(heard, a.currentTime); tick(a.currentTime); });
+  a.addEventListener("playing", () => { loading = false; medButtons(); });
+  a.addEventListener("pause", medButtons);
+  a.addEventListener("ended", () => { state.meditation = MED.minutes; state.breaths = BREATHS; orb.className = "orb"; save(); go("grateful"); });
+  a.addEventListener("error", () => { loading = false; cue.textContent = "The audio didn't load. Press Play to try again."; medButtons(); });
+  play.onclick = async () => {
+    if (!MED.src || (a.paused && (a.ended || !a.currentTime) && (state.meditation || 0) >= MED.minutes)) return go("grateful");
+    if (!a.paused) return a.pause();
+    loading = true; medButtons();
+    try { await a.play(); } catch { loading = false; medButtons(); }
+  };
+  $("mstop").onclick = () => { a.pause(); state.meditation = Math.max(state.meditation || 0, sat()); save(); go("grateful"); };
+  if (!MED.src) cue.textContent = "Today's track isn't on this page.";
   medButtons();
 }
 /* Newly unlocked steps from the habit ladder */
@@ -314,7 +294,7 @@ $("xnext").onclick = () => go("recall");
 /* Gratitude */
 $("grat").addEventListener("input", e => { $("gnext").disabled = !e.target.value.trim(); try { localStorage.setItem("grat-" + DATA.date, e.target.value); } catch {} });
 try { const d = localStorage.getItem("grat-" + DATA.date); if (d) { $("grat").value = d; $("gnext").disabled = !d.trim(); } } catch {}
-$("gback").onclick = () => go("breathe");
+$("gback").onclick = () => go(MED ? "meditate" : "grateful");
 $("gnext").onclick = async () => { state.gratitude = $("grat").value.trim(); go(EXTRAS.length ? "extra" : "recall"); await save(); };
 
 /* Recall */
@@ -342,7 +322,6 @@ function renderCard() {
   $("key").textContent = c.key || ""; $("key").hidden = !c.key;
   $("reveal").hidden = true; $("nextnote").hidden = true;
   $("todone").hidden = state.reviews.length === 0;
-  $("todone").textContent = state.reviews.length >= TARGET ? `${state.reviews.length} done · continue (or keep going below)` : "Done reviewing · continue";
   $("opts").replaceChildren(...order[cardIdx].map(oi => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "opt"; b.textContent = c.options[oi]; b.dataset.oi = oi;
@@ -490,7 +469,7 @@ function save() {
       for (const [h, v] of Object.entries(state.extras)) { const c = $("x-" + h); if (c) c.checked = v > 0; }
       if (d.intention && $("x-intention-text")) $("x-intention-text").value = d.intention;
       if (state.gratitude && !$("grat").value) { $("grat").value = state.gratitude; $("gnext").disabled = false; }
-      $("bcount").textContent = `${state.breaths} of ${BREATHS}`; breathButtons(); medButtons();
+      medButtons();
       if (!touched) go(STEPS[saved][0]);
       else if (state.step === "recall" && picked === null) renderCard();
       else renderProgress();

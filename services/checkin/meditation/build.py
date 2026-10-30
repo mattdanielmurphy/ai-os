@@ -9,6 +9,7 @@ segment per line and `[pause N]` for N seconds of music only. Optional:
   `# minutes: N`           target length; every `[fill]` shares whatever time the lines and pauses leave over
   `# bell_every: S`        inside each `[fill]`, ring the bell every S seconds
   `# fade_out: S`          music fade at the end (default FADE_OUT; short tracks use less)
+  `[at S]`                 skip ahead to S seconds into the track (only before the first [fill])
 Each line is voiced once by Speechify
 (services/reels/tts.py) and cached in tmp/ by its text, so editing one line re-records only that line.
 The music is one of the code-rendered real-instrument loops in ~/projects/claude-ambient (no AI music).
@@ -29,6 +30,9 @@ FADE_IN, FADE_OUT = 6, 12
 VOICE_FX = HERE / "voice_fx.json"  # FabFilter Pro-DS -> Pro-C 2 -> Pro-R 2, gentle; run by fx.swift
 DRONE_DB = -12     # drone level (dB), fixed for the whole track (Matt, 10-27: "a solid drone that basically never wavers")
 BELL_DB = -3       # bell level (dB)
+BELL_DIP = 30      # dB the music drops around each bell, so the bell sounds alone (Matt, 10-30: couldn't tell it from the music)
+BELL_DIP_IN, BELL_DIP_OUT = 1.5, 3   # s the music takes to clear before a bell and to return after it
+BELL_HOLD = 4      # s the music stays out once the bell has rung
 BELL_LEN = 7       # s reserved for a [bell] before the next item
 BELL_CLEAR = 8     # s kept free of auto bells after a spoken line and before the end of a [fill]
 LUFS = -21         # final loudness: quiet, for headphones in bed (Matt: -18 was quite loud)
@@ -44,6 +48,8 @@ def parse(path):
             continue
         elif m := re.match(r"\[pause\s+([\d.]+)\]", line):
             items.append(("pause", float(m[1])))
+        elif m := re.match(r"\[at\s+([\d.]+)\]", line):
+            items.append(("at", float(m[1])))
         elif line in ("[bell]", "[fill]"):
             items.append((line[1:-1], None))
         else:
@@ -78,7 +84,9 @@ def build(script, out=None):
             tts.speak(voice, val, mp3, speed)
         clips[val] = (mp3, dur(mp3))
     fills = sum(k == "fill" for k, _ in items)
-    fixed = sum(clips[v][1] + GAP if k == "say" else v if k == "pause" else BELL_LEN if k == "bell" else 0 for k, v in items)
+    fixed = 0.0
+    for k, v in items:
+        fixed = max(fixed, v) if k == "at" else fixed + (clips[v][1] + GAP if k == "say" else v if k == "pause" else BELL_LEN if k == "bell" else 0)
     fill = max(0.0, (float(head["minutes"]) * 60 - fade_out - fixed) / fills) if fills and "minutes" in head else 0.0
     every = float(head.get("bell_every", 0))
 
@@ -86,6 +94,8 @@ def build(script, out=None):
     for kind, val in items:
         if kind == "pause":
             t += val
+        elif kind == "at":
+            t = max(t, val)
         elif kind == "bell":
             bells.append(t)
             t += BELL_LEN
@@ -125,6 +135,9 @@ def build(script, out=None):
     for r in ramps[1:]:
         env = f"max({env},{r})"
     dip = 1 - 10 ** (-DUCK / 20)
+    clear = "0"
+    for b in bells:
+        clear = f"max({clear},clip((t-{b - BELL_DIP_IN:.2f})/{BELL_DIP_IN},0,1)*clip(({b + BELL_HOLD + BELL_DIP_OUT:.2f}-t)/{BELL_DIP_OUT},0,1))"
     # 1. Voice bus alone (low cut), then through the FabFilter chain.
     vbus, vfx = cache.parent / f"{name}-voice.wav", cache.parent / f"{name}-voice-fx.wav"
     vfc = fc + ["".join(f"[v{i}]" for i in range(n)) + f"amix=inputs={n}:normalize=0,apad=whole_dur={total},highpass=f=70[vo]"]
@@ -135,6 +148,7 @@ def build(script, out=None):
     fc = [f"[0]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{total}[vo]"]
     fc.append(f"[1]aresample=48000,aformat=channel_layouts=stereo,atrim=0:{total},volume={MUSIC_DB}dB,"
               f"volume='1-{dip:.4f}*({env})':eval=frame,"
+              + (f"volume='{10 ** (-BELL_DIP / 20):.4f}+(1-{10 ** (-BELL_DIP / 20):.4f})*(1-({clear}))':eval=frame," if bells else "") +
               f"afade=t=in:d={FADE_IN},afade=t=out:st={total - fade_out}:d={fade_out}[m]")
     mix = ["[vo]", "[m]"]
     if "drone" in head:

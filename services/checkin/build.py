@@ -5,13 +5,15 @@ Usage: build.py [--date YYYY-MM-DD] [--cards F] [--out morning-checkin.html]
 Today's doses come from ladder.py (habit ladder). Without --cards the fixture (cards.json) is used.
 The comic and the day ahead live in the talk thread, not on the page.
 """
-import argparse, json
+import argparse, json, sys
 from datetime import date
 from pathlib import Path
 
 import ladder
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE / "meditation"))
+import levels as track  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--date", default=date.today().isoformat())
@@ -40,7 +42,7 @@ def meditation():
     level = levels.index(minutes) + 1
     assets = HERE / "meditation" / "assets.json"
     src = json.loads(assets.read_text()).get(str(level)) if assets.exists() else None
-    return {"minutes": minutes, "level": level, "levels": len(levels), "src": src}
+    return {"minutes": minutes, "level": level, "levels": len(levels), "src": src, "breath": track.BREATHS, "lead": track.LEAD}
 
 
 data = {

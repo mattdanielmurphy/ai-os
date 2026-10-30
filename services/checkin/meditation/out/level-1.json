@@ -2,22 +2,47 @@
  "title": "level-1",
  "voice": "marian",
  "music": "loop-breath-20m.flac",
- "seconds": 60,
- "bells": [
-  18.1,
-  33.1
- ],
+ "seconds": 108,
+ "bells": [],
  "lines": [
   {
-   "t": 3.0,
-   "text": "Just one minute. Close your eyes, and feel one breath."
+   "t": 2.0,
+   "text": "Three slow breaths. Follow the voice."
   },
   {
-   "t": 12.78,
-   "text": "When you hear this sound, come back to the breath."
+   "t": 9.0,
+   "text": "Breathe in."
   },
   {
-   "t": 49.28,
+   "t": 13.0,
+   "text": "And out."
+  },
+  {
+   "t": 19.0,
+   "text": "Breathe in."
+  },
+  {
+   "t": 23.0,
+   "text": "And out."
+  },
+  {
+   "t": 29.0,
+   "text": "Breathe in."
+  },
+  {
+   "t": 33.0,
+   "text": "And out."
+  },
+  {
+   "t": 39.0,
+   "text": "Okay. Now let your breathing return to normal, and just watch it."
+  },
+  {
+   "t": 48.0,
+   "text": "Just one minute. Let your eyes stay closed."
+  },
+  {
+   "t": 97.11,
    "text": "And open your eyes."
   }
  ]

@@ -5,7 +5,7 @@ iMessage link on Matt's phone. The thread's first message links the page; the pa
 of the thread, and closing it lands him back in the chat:
 
 1. **Page** (Artifact https://claude.ai/artifact/5CLZnpsQVxcFDP7bmALrNC, `template.html` built by `build.py`):
-   breathing animation → gratitude (typed) → newly unlocked habits → flashcards (instant ✅/❌, then
+   one Play press: three guided breaths that flow into the meditation → gratitude (typed) → newly unlocked habits → flashcards (instant ✅/❌, then
    Again/Hard/Good/Easy) → "close this page and go back to the thread for part two". No model runs here. Results save to the page's db
    (`checkins/<date>`).
 2. **Talk thread** (Sonnet, Remote Control CLI in tmux): plain conversation, no question menus, so Matt can use
@@ -54,7 +54,7 @@ The task also fetches the next 10 days and passes timed events before 7 AM as `e
 
 ## Guided meditation, always the first step (2026-10-28)
 
-- The page opens on "Sit": a guided mindfulness track with a bell (`meditation/levels.py`, 8 levels from 1 to 20 min).
+- The page opens on "Sit": one Play press starts one track, three guided slow breaths (the circle follows the audio), then the mindfulness sit with a tingsha bell (`meditation/levels.py`, 8 levels from 1 to 20 min). The bell clears the music around it and never rings in the sit's first minute. The next step opens by itself at the end. Breaths stay at three (`ladder.json`).
 - Its length is the ladder habit `meditation` (`ladder.json`, own track): one level up after a week of full sits,
   the newest growth undone after a missed day, back to 1 minute after two missed days, and eased a level after two
   days of stopping early. The page saves the whole minutes heard as `meditation`; `daily.py` records it.
