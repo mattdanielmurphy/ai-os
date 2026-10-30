@@ -217,3 +217,7 @@ A really good dictionary utility for the suite. Take: worthwhile and small. macO
 
 ## Movie-line soundboard for voice agents (Matt, 2026-10-30)
 Tags: morning check-in, meeting bot, Glass TV. Make the check-in call hilarious; the AI replies with film clips. Full entry and honest take: `~/projects/glass-tv/IDEAS.md`.
+
+## Train small local models on Matt's taste (Matt, 2026-10-30)
+Tags: movie-line soundboard, morning check-in, Glass TV. Inspired by his brother's custom local audio-clip sorter. Claude offers 5 clips, Matt says funny or not, and the next round predicts his taste better.
+**Honest take: strong and very doable on a Mac.** No big GPU needed: turn clips into embeddings with an existing model, then train a tiny classifier on his yes/no answers, which takes seconds. Useful when the judgment is personal or repetitive and he can label a few hundred examples; not worth it when a plain prompt or rule already works. Risks: humour is hard, so it may narrow to one kind of joke; keep some random picks in each round.
