@@ -1,0 +1,1 @@
+{"name": "no-suggestions", "version": "0.1.1", "description": "Hides the prompt box's grey suggestions in chosen threads only, for practice where they give away answers; /no-suggestions toggles it", "types": "./types/index.d.ts"}

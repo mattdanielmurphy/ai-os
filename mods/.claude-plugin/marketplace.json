@@ -15,6 +15,10 @@
     {
       "name": "read-aloud",
       "source": "./read-aloud"
+    },
+    {
+      "name": "no-suggestions",
+      "source": "./no-suggestions"
     }
   ]
 }
