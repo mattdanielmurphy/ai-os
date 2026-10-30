@@ -18,5 +18,6 @@ drops the prompt below into the Coordinator inbox; the context-alert mod submits
    unstarted ideas in Linear (team MAT, label "Parked idea") and set their registry state to `parked`.
 3. **Long-thread flags**: threads over ~200k tokens get a `/_handoff` suggestion (once, not daily).
 4. **Dates**: compare `docs/SCHOOL.md` due dates in the next 3 days against Apple Reminders; add missing ones.
+4b. **Agent brief heartbeat**: if the newest file in `docs/learning/briefs/` is over 9 days old (`ls -t docs/learning/briefs | head -1`, check its mtime), tell Matt once (log `brief-missing <date>` so it isn't repeated) that the weekly agent brief didn't run; the task is `weekly-agent-brief`, prompt in `docs/learning/weekly-brief-job.md`.
 5. Update `coordinator/custodian-state.md` (last run, what was flagged) so the next run doesn't repeat itself.
 6. Say nothing to Matt if nothing needs him.
