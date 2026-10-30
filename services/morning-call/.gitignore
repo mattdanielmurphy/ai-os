@@ -5,3 +5,4 @@ app/build.log
 app/*.xcodeproj/
 __pycache__/
 app/Morning.ipa
+app/build-sim/

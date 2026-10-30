@@ -5,7 +5,12 @@ import AVFoundation
 import CoreLocation
 import SwiftUI
 
-let serverBase = "ws://macbook-pro.tail491454.ts.net:8798/ws?stages="
+#if targetEnvironment(simulator)
+let serverHost = "127.0.0.1"
+#else
+let serverHost = "macbook-pro.tail491454.ts.net"
+#endif
+let serverBase = "ws://\(serverHost):8798/ws?stages="
 let startKey = "startSession"
 let voiceGain: Float = 3  // loudness boost for the bot's voice
 let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at home
@@ -91,7 +96,6 @@ struct StartSessionIntent: LiveActivityIntent {
             socket = task
             task.resume()
             let input = engine.inputNode
-            try input.setVoiceProcessingEnabled(true)  // echo cancellation, so the mic doesn't hear the speaker
             let mic = input.outputFormat(forBus: 0)
             let convert = AVAudioConverter(from: mic, to: wire)!
             input.installTap(onBus: 0, bufferSize: 1600, format: mic) { [wire] buffer, _ in
