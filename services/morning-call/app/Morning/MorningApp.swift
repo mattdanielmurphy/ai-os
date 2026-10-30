@@ -12,6 +12,7 @@ let serverHost = "macbook-pro.tail491454.ts.net"
 #endif
 let serverBase = "ws://\(serverHost):8798/ws?stages="
 let startKey = "startSession"
+let pingEvery = 4.0  // s between checks that the line is alive
 let voiceGain: Float = 1  // loudness boost for the bot's voice
 let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at home
 
@@ -79,6 +80,7 @@ struct StartSessionIntent: LiveActivityIntent {
     @Published var state = "Ready"
     @Published var speaker = false { didSet { route() } }
     private var socket: URLSessionWebSocketTask?
+    private var ending = false
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let wire = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: true)!
@@ -118,10 +120,49 @@ struct StartSessionIntent: LiveActivityIntent {
             route()  // starting the engine can reset the output
             state = "Connected"
             receive()
+            watchLine(task)
         } catch {
             state = "Couldn't start audio"
             stop()
         }
+    }
+
+    /// A dead network sends no close, so ping to notice it.
+    private func watchLine(_ task: URLSessionWebSocketTask) {
+        Task {
+            while socket === task {
+                try? await Task.sleep(for: .seconds(pingEvery))
+                guard socket === task else { return }
+                task.sendPing { [weak self] error in
+                    if error != nil { Task { @MainActor in self?.dropped() } }
+                }
+            }
+        }
+    }
+
+    /// The line died: say so out loud, then shut down.
+    private func dropped() {
+        guard socket != nil, !ending else { return }
+        ending = true
+        state = "Session dropped"
+        for _ in 0..<3 { enqueueTone() }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            ending = false
+            stop()
+            state = "Session dropped"
+        }
+    }
+
+    private func enqueueTone() {
+        let rate = play.sampleRate, n = AVAudioFrameCount(rate * 0.45)
+        guard let buf = AVAudioPCMBuffer(pcmFormat: play, frameCapacity: n) else { return }
+        buf.frameLength = n
+        for i in 0..<Int(n) {
+            let t = Double(i) / rate
+            buf.floatChannelData![0][i] = t < 0.25 ? Float(sin(2 * .pi * 480 * t)) * 0.5 : 0
+        }
+        player.scheduleBuffer(buf)
     }
 
     func skipToCheckIn() { socket?.send(.string("skip")) { _ in } }
@@ -133,7 +174,7 @@ struct StartSessionIntent: LiveActivityIntent {
                 switch result {
                 case .success(.data(let data)): self.enqueue(data); self.receive()
                 case .success: self.receive()
-                case .failure: self.state = "Session ended"; self.stop()
+                case .failure: self.dropped()
                 }
             }
         }

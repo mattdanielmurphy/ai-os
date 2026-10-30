@@ -54,7 +54,7 @@ async def voices():
             if not page.get("has_more"):
                 break
     english = [v for v in data if v.get("locale", "").startswith("en")]
-    return sorted(({"id": v["id"], "name": v.get("display_name", v["id"])} for v in english), key=lambda v: v["name"])
+    return sorted(({"id": v["id"], "name": v.get("display_name") or v["id"]} for v in english), key=lambda v: v["name"].lower())
 
 
 @app.websocket("/ws")
