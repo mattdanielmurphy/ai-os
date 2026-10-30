@@ -37,7 +37,7 @@ BREATH_IN, BREATH_OUT = 4, 6     # s of quiet after each cue
 SIT_SECS = 45                    # s of silent meditation
 
 BASE = "https://vps.mattmurphy.ca/morning-call"
-SPEED = "+25%"                    # Speechify prosody rate, a change from natural pace
+SPEED = 25                        # % faster than natural pace
 SAY_AS = {"CMPUT": "computing", "PHIL": "philosophy"}  # phone-tested word list
 
 BREATHE = [("Good morning, Matt. Stay where you are for now. We'll start with three slow breaths.", 2)]
@@ -55,9 +55,11 @@ Then say a short goodbye. This is speech: no lists, symbols or markdown; write n
 
 class PacedTTS(SpeechifyHttpTTSService):
     """Speechify takes speed only through SSML, so each line goes out wrapped."""
+    speed = SPEED
+
     def _build_payload(self, text):
         payload = super()._build_payload(text)
-        payload["input"] = f'<speak><prosody rate="{SPEED}">{escape(payload["input"])}</prosody></speak>'
+        payload["input"] = f'<speak><prosody rate="{self.speed:+d}%">{escape(payload["input"])}</prosody></speak>'
         return payload
 
 
@@ -99,10 +101,11 @@ class SpokeWatch(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-async def run_session(transport, session, rate, stages=("breathe", "meditate", "checkin"), skip=None, out_rate=None):
+async def run_session(transport, session, rate, stages=("breathe", "meditate", "checkin"), skip=None, out_rate=None, voice=VOICE, speed=SPEED):
     skip = skip or asyncio.Event()  # set to jump straight to the check-in
     tts = PacedTTS(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
-                                  settings=SpeechifyTTSSettings(voice=VOICE, model="simba-3.2"))
+                                  settings=SpeechifyTTSSettings(voice=voice, model="simba-3.2"))
+    tts.speed = speed
     context = LLMContext([{"role": "system", "content": SYSTEM}])
     turns = LLMContextAggregatorPair(context)
     gate, watch = MicGate(), SpokeWatch()

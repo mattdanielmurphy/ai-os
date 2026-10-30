@@ -60,6 +60,8 @@ let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at
     private func finish(_ l: CLLocation?) { let w = waiting; waiting = []; w.forEach { $0(l) } }
 }
 
+struct Voice: Codable, Hashable { let id: String; let name: String }
+
 struct WakeMeta: AlarmMetadata {}
 
 /// The alarm's Start button: opens the app and asks it to begin the session.
@@ -170,6 +172,9 @@ struct ContentView: View {
     @AppStorage("breathe") private var breathe = false
     @AppStorage("meditate") private var meditate = false
     @AppStorage("checkin") private var checkin = true
+    @AppStorage("voice") private var voice = "marian"
+    @AppStorage("speed") private var speed = 25.0
+    @State private var voices = [Voice(id: "marian", name: "Marian")]
     @State private var note = ""
     @StateObject private var place = Place()
 
@@ -187,6 +192,14 @@ struct ContentView: View {
                     Toggle(isOn: $breathe) { Label("Breathing", systemImage: "wind") }
                     Toggle(isOn: $meditate) { Label("Meditation", systemImage: "leaf") }
                     Toggle(isOn: $checkin) { Label("Check-in", systemImage: "bubble.left.and.bubble.right") }
+                }
+                Section("Voice") {
+                    Picker(selection: $voice) {
+                        ForEach(voices, id: \.id) { Text($0.name).tag($0.id) }
+                    } label: { Label("Voice", systemImage: "person.wave.2") }
+                    LabeledContent {
+                        Slider(value: $speed, in: 0...60, step: 5)
+                    } label: { Label("Speed \(Int(speed + 100))%", systemImage: "speedometer") }
                 }
                 Section("Session") {
                     if session.live {
@@ -206,6 +219,7 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Morning")
+            .task { await loadVoices() }
         }
         .onChange(of: phase) { _, now in
             if now == .active, UserDefaults.standard.bool(forKey: startKey) {
@@ -215,9 +229,15 @@ struct ContentView: View {
         }
     }
 
+    private func loadVoices() async {
+        let url = URL(string: "http://\(serverHost):8798/voices")!
+        if let (data, _) = try? await URLSession.shared.data(from: url),
+           let list = try? JSONDecoder().decode([Voice].self, from: data), !list.isEmpty { voices = list }
+    }
+
     private func begin() {
         let on = [("breathe", breathe), ("meditate", meditate), ("checkin", checkin)].filter(\.1).map(\.0)
-        session.start(stages: on.joined(separator: ","))
+        session.start(stages: on.joined(separator: ",") + "&voice=\(voice)&speed=\(Int(speed))")
     }
 
     private func setAlarm() async {

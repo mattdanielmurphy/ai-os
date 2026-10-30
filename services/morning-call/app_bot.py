@@ -40,12 +40,23 @@ async def health():
     return {"ok": True}
 
 
+@app.get("/voices")
+async def voices():
+    """English Speechify voices for the app's picker."""
+    async with aiohttp.ClientSession() as session:
+        r = await session.get("https://api.speechify.ai/v1/voices",
+                              headers={"Authorization": "Bearer " + bot.clean("SPEECHIFY_API_KEY")})
+        data = await r.json()
+    english = [v for v in data if any(m.get("locale", "").startswith("en") for x in v.get("models", []) for m in x.get("languages", []))]
+    return sorted(({"id": v["id"], "name": v.get("display_name", v["id"])} for v in english), key=lambda v: v["name"])
+
+
 @app.websocket("/ws")
-async def ws(socket: WebSocket, stages: str = "breathe,meditate,checkin"):
+async def ws(socket: WebSocket, stages: str = "breathe,meditate,checkin", voice: str = bot.VOICE, speed: int = bot.SPEED):
     await socket.accept()
     skip = asyncio.Event()
     async with aiohttp.ClientSession() as session:
         transport = bot.FastAPIWebsocketTransport(socket, bot.FastAPIWebsocketParams(
             audio_in_enabled=True, audio_out_enabled=True, add_wav_header=False,
             session_timeout=bot.MAX_CALL_SECS, serializer=RawPCM(skip)))
-        await bot.run_session(transport, session, RATE, tuple(stages.split(",")), skip, 24000)
+        await bot.run_session(transport, session, RATE, tuple(stages.split(",")), skip, 24000, voice, speed)
