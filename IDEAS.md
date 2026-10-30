@@ -211,3 +211,6 @@ A TypeWhisper-style dictation app as good as Claude's, with no silence cutoff, f
 ## Rules dashboard + beta rules (Matt, 2026-10-29) — folded into the rules→hooks plan
 Every rule with on/off, how often it fires, how often it's misread, why it exists, overlaps and gaps. Agents may run experimental "beta" rules that a dot shows, promoted on evidence.
 **Honest take:** strong, and it's the visible face of the Slub concierge idea. Cheap once the rules→hooks plan logs firings (until then there's nothing to show). Beta rules need hard limits (additive only, capped, expiring) or the rule pile regrows. See docs/rules-hooks/PLAN.md.
+
+## Dictionary app for macOS (Matt, 2026-10-29)
+A really good dictionary utility for the suite. Take: worthwhile and small. macOS already has Dictionary.app and ⌃⌘D / force-click lookup (decent data: New Oxford American, Oxford Thesaurus), so the win is the interface, not the data. Check existing apps first (e.g. Lexical, Wordbook) and reuse the system dictionaries via the DictionaryServices API. Needs Matt's list of what bugs him about the built-in one before any design.
