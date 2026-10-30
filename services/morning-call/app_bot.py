@@ -47,7 +47,7 @@ async def voices():
         r = await session.get("https://api.speechify.ai/v1/voices",
                               headers={"Authorization": "Bearer " + bot.clean("SPEECHIFY_API_KEY")})
         data = (await r.json())["voices"]
-    english = [v for v in data if any(m.get("locale", "").startswith("en") for x in v.get("models", []) for m in x.get("languages", []))]
+    english = [v for v in data if v.get("locale", "").startswith("en")]
     return sorted(({"id": v["id"], "name": v.get("display_name", v["id"])} for v in english), key=lambda v: v["name"])
 
 
