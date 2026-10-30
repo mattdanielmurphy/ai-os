@@ -86,11 +86,14 @@ struct StartSessionIntent: LiveActivityIntent {
     private let wire = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: true)!
     private let play = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 24000, channels: 1, interleaved: false)!
 
-    var live: Bool { socket != nil }
+    @Published var live = false
+    @Published var began = Date()
 
     func start(stages: String) {
         guard socket == nil else { return }
         state = "Connecting"
+        live = true
+        began = .now
         do {
             let audio = AVAudioSession.sharedInstance()
             try audio.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothHFP])
@@ -193,6 +196,7 @@ struct StartSessionIntent: LiveActivityIntent {
 
     /// Speaker, or earpiece with the screen going dark against your face.
     private func route() {
+        guard live else { return }
         try? AVAudioSession.sharedInstance().overrideOutputAudioPort(speaker ? .speaker : .none)
         UIDevice.current.isProximityMonitoringEnabled = live && !speaker
     }
@@ -200,9 +204,58 @@ struct StartSessionIntent: LiveActivityIntent {
     func stop() {
         UIDevice.current.isProximityMonitoringEnabled = false
         socket?.cancel(); socket = nil
+        live = false
+        state = "Ended"
         if engine.isRunning { engine.inputNode.removeTap(onBus: 0); engine.stop() }
         player.stop()
         try? AVAudioSession.sharedInstance().setActive(false)
+    }
+}
+
+/// The in-session screen, laid out like a phone call.
+struct CallView: View {
+    @ObservedObject var session: Session
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "sunrise.fill").font(.system(size: 56)).foregroundStyle(.indigo).padding(.top, 80)
+            Text("Morning").font(.largeTitle.weight(.semibold))
+            TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                Text(Duration.seconds(max(0, ctx.date.timeIntervalSince(session.began))).formatted(.time(pattern: .minuteSecond)))
+                    .monospacedDigit().foregroundStyle(.secondary)
+            }
+            Text(session.state).font(.footnote).foregroundStyle(.secondary)
+            Spacer()
+            HStack(spacing: 48) {
+                CallButton(icon: session.speaker ? "speaker.wave.3.fill" : "speaker.fill", label: "Speaker", on: session.speaker) {
+                    session.speaker.toggle()
+                }
+                CallButton(icon: "forward.end.fill", label: "Skip to check-in", on: false) { session.skipToCheckIn() }
+            }
+            Button { session.stop() } label: {
+                Image(systemName: "phone.down.fill").font(.title).foregroundStyle(.white)
+                    .frame(width: 76, height: 76).background(.red, in: Circle())
+            }
+            .accessibilityLabel("Hang up")
+            .padding(.top, 36).padding(.bottom, 56)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct CallButton: View {
+    let icon: String, label: String, on: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon).font(.title2).frame(width: 64, height: 64)
+                    .foregroundStyle(on ? Color(.systemBackground) : .primary)
+                    .background(on ? Color.primary : Color(.secondarySystemFill), in: Circle())
+                Text(label).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }.frame(width: 96)
+        }.buttonStyle(.plain)
     }
 }
 
@@ -243,13 +296,7 @@ struct ContentView: View {
                     } label: { Label("Speed \(Int(speed + 100))%", systemImage: "speedometer") }
                 }
                 Section("Session") {
-                    if session.live {
-                        Button { session.skipToCheckIn() } label: { Label("Skip to check-in", systemImage: "forward.end") }
-                    }
-                    Button { session.live ? session.stop() : begin() } label: {
-                        Label(session.live ? "End session" : "Start now",
-                              systemImage: session.live ? "phone.down" : "sunrise")
-                    }
+                    Button { begin() } label: { Label("Start now", systemImage: "sunrise") }
                     Toggle(isOn: $session.speaker) { Label("Speaker", systemImage: "speaker.wave.2") }
                     Button { place.saveHome() } label: {
                         Label(place.hasHome ? "Update home to here" : "Set home to here", systemImage: "house")
@@ -261,6 +308,7 @@ struct ContentView: View {
             }
             .navigationTitle("Morning")
             .task { await loadVoices() }
+            .fullScreenCover(isPresented: $session.live) { CallView(session: session) }
         }
         .onChange(of: phase) { _, now in
             if now == .active, UserDefaults.standard.bool(forKey: startKey) {
