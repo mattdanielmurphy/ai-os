@@ -39,6 +39,19 @@ export const parseActions = (answer: string, k: Knobs = KNOB_DEFAULTS): Action[]
   const out: Action[] = []
   const body = line.replace(/^actions\s*:/i, '')
   const either = /\s\|\s/.test(body)
+  // New format (2026-10-29): "1, Build our own voice; 2, Try the listening hack". Each item is
+  // the prompt sent on click; the label is its first few words. Read aloud speaks it as written.
+  if (/^\s*1,\s/.test(body)) {
+    for (const raw of body.split(/\s*[;|]\s*(?=\d{1,2},\s)/)) {
+      const said = raw.replace(/^\s*\d{1,2},\s*/, '').replace(/[.;]\s*$/, '').trim()
+      if (!said) continue
+      let label = said.split(/\s+/).slice(0, 4).join(' ')
+      if (label.length > k.labelChars) label = `${label.slice(0, k.labelChars - 1)}…`
+      else if (label.length < said.length) label = `${label}…`
+      out.push({ label, text: said, ...(either ? { either } : {}) })
+    }
+    return out.slice(0, k.maxActions)
+  }
   for (const raw of body.split(/\s[·•|]\s/)) {
     const part = raw.replace(/^\s*\d{1,2}[.)]\s+/, '').trim()
     if (!part) continue

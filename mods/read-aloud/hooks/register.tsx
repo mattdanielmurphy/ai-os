@@ -58,8 +58,9 @@ export const turnTexts = (msgs: { role: string; text: string; toolResults?: unkn
 export const plain = (md: string) =>
   md.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').trim()
 
-// Lines only mods read (hidden by the action bar), never meant to be heard.
-const MOD_LINE = /^\s*(\*\*)?Actions:(\*\*)?/
+// Lines only mods read (hidden by the action bar), never meant to be heard. The numbered
+// format ("Actions: 1, Do X; 2, Do Y", 2026-10-29) is written to be heard, so it's read.
+const MOD_LINE = /^\s*(\*\*)?Actions:(\*\*)?(?!\s*1,\s)/
 
 // Queue items, oldest first. key: the reply's opening words, to find its own Read aloud button.
 // cut: spoken characters before the first mod-only line (null = read it all).

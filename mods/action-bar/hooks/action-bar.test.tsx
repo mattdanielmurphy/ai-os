@@ -44,3 +44,10 @@ test('the Actions line is hidden from the drawn reply', async () => {
   expect(hideActions('Done.\n\n**Actions:** Ship it → Yes, ship it\n\nDetails: x')).toBe('Done.\n\nDetails: x')
   expect(hideActions('No actions here.')).toBe('No actions here.')
 })
+
+test('numbered prompt format', async () => {
+  const a = parseActions('Done.\n\n**Actions:** 1, Build our own voice for read-aloud; 2, Try the listening hack first')
+  expect(a.map(x => x.text)).toEqual(['Build our own voice for read-aloud', 'Try the listening hack first'])
+  expect(a[0].label).toBe('Build our own voice…')
+  expect(parseActions('**Actions:** 1, Ship it | 2, Skip it').every(x => x.either)).toBe(true)
+})
