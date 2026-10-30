@@ -37,7 +37,7 @@ Your global rules (`~/.claude/CLAUDE.md`, compiled from ai-os `.rules/`) apply i
 ## Reusing a thread
 - **Warm** (last agent turn under ~45 min ago, in its title's scope): send the work with `SendMessage` `to: "local_<id>"`.
 - **Cold but under ~250k tokens** (check `mcp__ccd_session_mgmt__get_session` / its usage): resume it with `SendMessage` too. Resuming beat a handoff on recall at about equal cost below ~250k (research 2026-10-27).
-- **Cold and over ~250k**, or its scope has drifted: start a fresh thread with a self-contained brief and a link to the old one (it can read history with `python3 ~/projects/ai-os/scripts/cold_handoff.py`); then archive the old one.
+- **Cold and over ~250k**, or its scope has drifted: start a fresh thread with a self-contained brief and a link to the old one (it can read history with `python3 ~/projects/ai-os/scripts/cold_handoff.py`); then archive the old one. This is enforced: a global hook (`scripts/hooks/thread_size_guard.py`) denies any send into a `local_` thread at 250k+, and shows the target's title on allowed sends so you can check scope.
 - Matt saying "continue there" always wins.
 
 ## When a thread reports back
