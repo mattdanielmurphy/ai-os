@@ -196,3 +196,7 @@ Practice singing while hearing your own voice auto-tuned, as instant "this is th
 ## Read-aloud: skip forward by sentence or by message (Matt, 2026-10-28, parked)
 Buttons to jump ahead a sentence, or to the next queued reply, while Claude reads aloud.
 **Honest take:** skipping to the next message is easy and useful (stop the current one, read the next queued one). Skipping by sentence is hard: Claude's Read aloud exposes only play/pause, no position, so it would need our own timing guesses and would often land mid-word. Build "next message" first if wanted; small.
+
+## 2026-10-29 · Rules as context-triggered hooks (Matt)
+Idea: most rules should be hooks, not text the agent reads once and tries to remember. Maybe a third layer of agents that watch the workers and inject the right hook at the right moment.
+Honest take: the first half is strong. Today's misses (size checks, summaries, lost handoffs) were all "remembered rule" failures. The watcher-agent layer is weak: it's another LLM that can forget, costs tokens on every step, and needs hooks of its own. Better: deterministic triggers. Each rule gets a trigger (tool name, file path, keywords in the prompt or reply), and a hook injects just that rule at that moment, or blocks outright when it's a hard rule. Claude Code PreToolUse/UserPromptSubmit/Stop hooks already support this. The QMD-notes and thread-size hooks are working examples. Size: medium; start by tagging the ~20 most-broken rules with triggers.
