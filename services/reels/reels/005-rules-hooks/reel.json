@@ -1,0 +1,28 @@
+{
+  "title": "Rules become hooks",
+  "page": "rules-hooks",
+  "eyebrow": "The plan, in plain words",
+  "voice": "pandora",
+  "voices": ["pandora"],
+  "theme": "calm",
+  "music": "~/projects/claude-ambient/out/piano-airports-04.m4a",
+  "music_name": "Piano Airports 04",
+  "source": "ai-os docs/rules-hooks/PLAN.md and PLAN-summary.md, merged by thread D (commit 9d32f085).",
+  "takes": 3,
+  "beats": [
+    {"say": "Right now, every agent reads about seventeen thousand words of rules before it starts. ... That's too much, so many get skipped. ... The plan cuts that to about fifty-five lines, and the rest shows up only at the moment it's needed.",
+     "slide": {"layout": "cover", "label": "Rules into hooks", "title": "From *17,000 words* to 55 lines", "lede": "A small core every agent reads. Everything else arrives at the exact moment it matters.", "total": "Six choices you might want to veto."}},
+    {"say": "First, details files. ... Agents will write one only when a reply runs long. ... Readthroughs and reels, like this one, happen only when you ask. ... Second, one simple act or wait rule replaces ten. ... Pushes to main stop asking you, except the crossword.",
+     "slide": {"layout": "list", "label": "Vetoes one and two", "title": "Less paperwork, *fewer OKs*", "items": [{"head": "Details files only for long replies", "sub": "Readthroughs and reels only when you ask"}, {"head": "One act-or-wait rule replaces ten", "sub": "Pushes to main stop asking, except the crossword"}]}},
+    {"say": "Third, the four design steps become one. ... You see three real examples, you pick one, and then it gets built. ... Fourth, learning happens once a week, not every turn, and brings you at most three rule changes.",
+     "slide": {"layout": "list", "label": "Vetoes three and four", "title": "Simpler design, *weekly* learning", "items": [{"head": "Three examples, you pick, it's built", "sub": "Replaces four separate design steps"}, {"head": "Learning runs once a week", "sub": "At most three rule changes for you to OK"}]}},
+    {"say": "Fifth, if an agent wants to edit anything in your school folders, it asks you first. ... That protects your coursework.",
+     "slide": {"layout": "checks", "label": "Veto five", "title": "School folders are *guarded*", "items": ["Agents ask before editing school files", "Comes first in the rollout"], "total": "Protects your graded work."}},
+    {"say": "Sixth, beta rules. ... Agents can write their own small rules and run them without your OK. ... But they can only add reminders, never override a real rule. ... They're tagged, there are five at most, and each one expires in three weeks unless you promote it.",
+     "slide": {"layout": "list", "label": "Veto six: beta rules", "title": "Agents can try *small rules*", "items": [{"head": "Only adds reminders", "sub": "Can never override an official rule"}, {"head": "Tagged and capped at five", "sub": "You can always see which are running"}, {"head": "Expires in three weeks", "sub": "Unless you promote it"}]}},
+    {"say": "Two more things were added. ... A rules dashboard on your Mac shows what each rule does, with on and off switches in your Tweaks panel. ... And coordinators now send big questions to an advisor before acting on them.",
+     "slide": {"layout": "list", "label": "Also added", "title": "A dashboard and an *advisor*", "items": [{"head": "Local rules dashboard", "sub": "Switches live in your Tweaks panel"}, {"head": "Big asks go to an advisor first", "sub": "Coordinators get a second opinion"}]}},
+    {"say": "What comes first? ... The fixes that cost you the most. ... The school guard, and a check at the end of each turn so agents stop asking for OKs they don't need. ... Rules agents already follow, like using bun, come later.",
+     "slide": {"layout": "checks", "label": "What comes first", "title": "Biggest pain, *fixed first*", "items": ["School folder guard", "No more needless OK requests", "Already-followed rules later"], "total": "If none of the six bother you, it goes ahead."}}
+  ]
+}
