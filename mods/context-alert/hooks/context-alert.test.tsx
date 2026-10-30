@@ -139,8 +139,9 @@ const projectSetup = async ($: any, on: any) => {
 }
 
 test('a cold hold restores only Matt\'s words; app notes alone are never held', async ($, on) => {
-  const clock = $.clock.install({ now: 0 })
+  const clock = mock.clock(on, { now: 1_000_000 })
   const filled: string[] = []
+  on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on('prompt.fill', (_$, e) => { filled.push(e.text); return { isFilled: true } })
   on('prompt.submit', (_$, e) => ({ text: e.text }))
