@@ -53,7 +53,7 @@ Design only, 2026-10-29. No rule, hook or setting was changed. Siblings: [B-audi
 | `type: "prompt"` / `"agent"` | Model judge returns `{ok, reason, impossible}`; supported on PreToolUse, PostToolUse, UserPromptSubmit, Stop and more; **not** SessionStart; default timeout 30 s / 60 s; runs on every match (it can't be gated by a cheap precheck) | Rare; see §8 |
 | `async` / `asyncRewake` | Background command hook; its output arrives next turn; `asyncRewake` exiting 2 **wakes an idle session** | The gated judge: no latency for Matt, cost only when it fires |
 | InstructionsLoaded | Observability only (`load_reason` = path_glob_match, compact…) | Measuring which path packs actually load |
-| Plugin `hooks/hooks.json` | Same hooks, shipped with `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}` | Distributing the dispatcher to Tyler (§10) |
+| Plugin `hooks/hooks.json` | Same hooks, shipped with `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PLUGIN_DATA}` | Distributing the dispatcher to Tyler (§11) |
 | `onFailure: "block"` | Turns a hook crash or timeout into a block | Only on the two fail-closed rules, never on the dispatcher |
 
 **Consequence: pick the cheapest channel that works.** A rule that a `permissions.deny` line can express needs no Python. A rule that matters only when certain files are touched should be a path pack, not a keyword guess. Only what needs logic goes through the dispatcher. Only what needs judgment *and* is worth money gets a model.
