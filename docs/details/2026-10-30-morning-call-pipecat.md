@@ -39,3 +39,7 @@ Twilio: 15 × (US$0.014 + $0.0044) = $0.28, plus the $1.15 a month number. Speec
 ### Blockers
 
 Needs a new Twilio account (paid, so asking first). No Anthropic API key is set yet; the Max credit has to be claimed. The Deepgram key in ai-os `.env` has a stray character and returns 401 until it's removed; the spike stripped it in memory, and the file wasn't changed.
+
+## 14:10 Free options for the call
+
+Matt rejected Deepgram for voice and wants Groq speech-to-text and a free Twilio replacement. The voice was already Speechify, so nothing changes there. Groq swaps in for speech-to-text, but it transcribes after he stops talking, so replies start slightly later. Telegram is the free candidate: a second user account can place a real ringing call, though bots can't, and it needs a spare number. Twilio's trial credit is a free way to test a real phone call, not a lasting answer.
