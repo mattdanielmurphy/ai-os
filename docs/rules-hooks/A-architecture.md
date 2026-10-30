@@ -8,7 +8,7 @@ Design only, 2026-10-29. No rule, hook or setting was changed. Siblings: [B-audi
 - **One rule = one Markdown file with frontmatter** (trigger, kind, roles, who, one-line `say`, tests). The body is the human text. The compiler generates everything else: the slim CLAUDE.md, the path packs, the dispatcher's index and Tyler's export. It's plain Markdown, so it fits Slub core rule 7.
 - **The runtime knows who is reading.** It knows the session's role (central coordinator, project coordinator, worker or subagent) and who sent the prompt (Matt, a coordinator relay, a peer, a schedule). Reply-style checks fire only when Matt is the reader, which removes most of the noise C measured.
 - **The end of the turn is where most pain is caught** (C: #1, #3, #4, #5). A Stop dispatcher runs deterministic checks on `last_assistant_message` plus the state of the repos this session touched. It nudges once through `additionalContext`, never loops, and only judges when the reader is Matt.
-- **Matt's watcher idea is right as a tuner, wrong as a live layer.** A live watcher is costly and reacts after the fact. The workable form is an async model judge on the coordinator's Stop (wakes it only on a violation), plus a weekly tuner that proposes tested rule-file diffs where Matt looks.
+- **Matt's watcher idea is right as a tuner, wrong as a live layer.** A live watcher is costly and reacts after the fact. The workable form is an async model judge on the coordinator's Stop (wakes it only on a violation), plus the self-audit-and-learn loop (§13). The loop captures corrections and rule breaks every turn for free, reviews them in batches, and sends Matt at most 3 tested rule changes a week to approve. Hermes's version wrote directly with no approval, and its cleanup bot looped unnoticed for 25 days.
 
 ---
 
@@ -71,6 +71,7 @@ Each rule has exactly one `kind`, which names how it is enforced. This is B's §
 | `nudge` | PreToolUse/PostToolUse/UserPromptSubmit `additionalContext` | One line at the moment it matters; preferably **a fact, not a rule** ("Pace: 61% of week used at 48% of week, Opus OK", not "check the pace") | ~20 rules |
 | `check` | Stop dispatcher | Inspects the reply plus repo state; nudges once | ~8 rules |
 | `core` | always-loaded slim CLAUDE.md | Pure judgment, no trigger exists; must fit the ≤ 60-line budget B proposed | ~15 one-liners |
+| `signal` | dispatcher, silent | Records evidence (corrections, ignored checks, workarounds) for the learn loop (§13); never injects text | ~6 |
 
 A rule may add a secondary `check` to a primary `nudge` (for example: UI pack loads on edit, Stop checks that a dark-mode check ran). A rule that can't name a kind doesn't get in. That gate is what stops the pile regrowing.
 
@@ -173,7 +174,7 @@ test_fn: thread_size              # named Python check: logic lives in code, not
 ```
 
 Field notes:
-- `say` ≤ 200 characters (the compiler fails above that) and must tell the agent what to do. Every injected line is prefixed `[rule:<id>]`, so a transcript reader (Matt, Tyler, the tuner) can trace any behaviour to its file.
+- `say` ≤ 200 characters (the compiler fails above that) and must tell the agent what to do. Every injected line is prefixed `[rule:<id>]`, so a transcript reader (Matt, Tyler, the learn loop) can trace any behaviour to its file.
 - `once`: `turn` (the default for nudges), `session`, `file` (per edited file), or `never`. This is the main noise lever.
 - `test_fn` names a function in `rules/checks.py`. Regex is for triggers; anything with logic is real code with unit tests (the four existing guards become `test_fn`s unchanged).
 - `params` are the per-person knobs. Tyler's call worry ("I set my handoffs to 50% … I'd think it's broken") is answered by overriding a number, not forking a rule.
@@ -259,7 +260,7 @@ Input: `last_assistant_message` (from the docs: "use this field rather than read
 - **Check #1, unneeded OK** (C's top cost). It fires when the reply matches permission phrases (`want me to|should I|shall I|reply 👍|let me know if|if you'd like`) **and** a touched repo is dirty or ahead of upstream. The nudge says "commit and push now (auto_commit.py), or name the real fork in one line". A permission phrase with a clean tree is left to the coordinator's model judge (§8), because only a model can tell a real fork from a lazy one.
 - **Delivery.** It uses `hookSpecificOutput.additionalContext`, not `decision: block`: it shows as "Stop hook feedback", not an error, and it still continues the turn under the same loop protections. If `stop_hook_active` is true, nothing fires. Each check fires at most once per turn, recorded in state, which sits under the platform's 8-continuation cap.
 - **Ordering.** All failing checks are folded into one feedback message (≤ 600 chars), so a bad reply costs one extra model turn, not five.
-- **Escape hatch.** A reply containing `<!-- rules: skip <id> because … -->` (the action-bar mod would need to hide it from display) suppresses one check and logs the reason. Legitimate exceptions then become data for the tuner instead of fights.
+- **Escape hatch.** A reply containing `<!-- rules: skip <id> because … -->` (the action-bar mod would need to hide it from display) suppresses one check and logs the reason. Legitimate exceptions then become data for the learn loop instead of fights.
 
 ---
 
@@ -307,6 +308,7 @@ Hook systems die the way CLAUDE.md is dying: too many lines, all ignored. The gu
 | 6 | UserPromptSubmit nudges (sender = Matt only) | Under 1 nudge per 5 of Matt's prompts | `mode: off` |
 | 7 | Coordinator async judges, shadow one week, then live | Matt agrees with 9 of 10 sampled verdicts | `mode: shadow` |
 | 8 | **Shrink CLAUDE.md**: a rule's text leaves the compiled core once its hook has been live a week; target ≤ 60 lines core + generated packs | Compiled core ≤ 60 lines; C's counts re-run and compared | Rebuild with `--full` |
+| 9 | **Learn loop** (§13): signal capture ships with step 5; triage after 2 weeks of signals; first weekly proposal run after that | Matt keeps or kills it after the first report | `mode: off` on the signal rules; unload the launchd job |
 
 Step 8 is the payoff and the riskiest step, so it goes rule by rule, never in one sweep (Matt's "sustainable marginal change" rule).
 
@@ -341,14 +343,92 @@ Why a live watcher layer fails:
 
 The two forms that do work, and that I recommend:
 1. **A narrow live judge**, built into the hook system: §8's async judge on the coordinator's Stop, which wakes it only on a violation. That is a watcher scoped to the one place where judgment failures are costly and volume is low.
-2. **A weekly rule tuner** (a scheduled worker thread, Sonnet, about one session a week). It reads `fired.jsonl`, the replay report and the week's transcripts, finds (a) repeated mistakes no rule caught, (b) rules that fire uselessly, (c) skips with reasons, and (d) rules past `review`. It **writes rule-file diffs with tests**, runs the compiler, and opens the result where Matt actually looks (a Linear issue in team MAT, with a 👍 to merge), never only a file. New rules from the tuner always start in `shadow`. This is "watchers that write hooks", done safely: the agent proposes code, the compiler and tests gate it, and Matt approves it. It also matches Tyler's suggestion on the call to audit both their Claude usage every month.
+2. **The self-audit-and-learn loop** (§13): every turn records evidence cheaply, and a reviewer works in batches, writing tested rule-file diffs that Matt approves. This is "watchers that write hooks", done safely: the agent proposes code, the compiler and tests gate it, and Matt approves it. It also matches Tyler's suggestion on the call to audit both their Claude usage every month.
 
 ---
 
-## 13. Risks
+## 13. Self-audit-and-learn loop (Hermes-inspired)
+
+Matt's ask: at Stop or PreCompact, an agent reviews the turn for rule breaks and corrections from Matt, then proposes rule or hook changes. Below: how Hermes did it, what went wrong there, and the design.
+
+### 13.1 How Hermes did it (read from `~/.hermes/hermes-agent/agent/` and `~/.hermes/skills/`, read-only)
+
+- **Background review fork** (`background_review.py`, `turn_finalizer.py`). Every 10 user turns (`memory.nudge_interval: 10`) and every 15 tool iterations (`skills.creation_nudge_interval: 15`), Hermes forked the agent in a background thread. The fork replayed the conversation on the same model (cheap prompt-cache reads) with a tool whitelist of only the memory and skill tools, and **wrote straight into the memory and skill stores. There was no approval step.**
+- **The review prompt pushed for writing**: "Be ACTIVE — most sessions produce at least one skill update… A pass that does nothing is a missed learning opportunity." Corrections ("stop doing X", "too verbose") were "FIRST-CLASS" signals.
+- **Good ideas worth stealing.** A "do NOT capture" list: environment failures, negative claims about tools ("X is broken" hardens into refusals for months), transient errors, one-off task narratives. A preference order: patch the skill that was in play before making a new one. And a **curator** (`curator.py`) that runs when the agent is idle, never deletes (only archives), honours pins, and keeps a ledger with before/after hashes.
+- **What it produced for Matt.** 18 agent-created skills since July; 13 are now marked stale, most used 1–13 times. The curator's ledger shows **6,795 archive actions between Sep 26 and Oct 21**: the same 13 skills archived about every hour (`agy-20260926193621`, `agy-20260926203632`, …), apparently because another sync kept putting them back. Two automations fought over the same files for 25 days and nobody noticed.
+
+**Lessons:** a learning loop that writes directly drifts. One told to "be active" produces volume, not value. And a loop nobody watches can run broken for weeks. Matt's own `transcript_evaluator.py` (§1) failed the same way, with unread reports.
+
+### 13.2 Design: capture every turn, review in batches, approve by hand
+
+**Stage 0: capture (deterministic, every turn, about free).** This runs in the existing dispatcher as a sixth rule kind, `signal`: it records evidence and never speaks. It writes to `~/.claude/rule-state/signals.jsonl`, which stays on this Mac, is never exported and is pruned after 60 days.
+
+| Signal | Detected by | Moment |
+|---|---|---|
+| Correction from Matt | UserPromptSubmit, sender = Matt: C's correction patterns (again, why did you, I told you, never, always, stop, should have, you didn't, from now on), ❌/❓, a very short negative reply | Prompt submit |
+| Explicit rule statement ("from now on…", "always…") | Same | Prompt submit |
+| Unsaved explicit rule | Stop: Matt stated a rule this turn, but nothing was written to `.rules/` or the registry | Stop (the same check also nudges the session to save it **now**, which is the fast lane and covers C's 10-29 04:23 incident) |
+| Check ignored | Stop: a check nudged last continuation and the condition still holds (still dirty, still over budget) | Stop |
+| Deny workaround | PreToolUse: a deny followed within 3 calls by an allowed command with the same intent (e.g. `rm` denied, then `find -delete`) | PreToolUse |
+| Skip with reason | Stop: a `rules: skip` comment | Stop |
+
+Each record holds `{ts, session (local_ id), role, kind, rules fired in the previous turn, Matt's text ≤ 300 chars, previous reply excerpt ≤ 500 chars, transcript_path, prompt_id}`. **PreCompact and SessionEnd only flush** a session's pending records (SessionEnd has a 1.5 s budget, so no review can run there). The transcript stays on disk, so nothing is lost by not reviewing at compaction time.
+
+**Why not review at every Stop or PreCompact, as asked:** one turn can't tell a pattern from an anecdote. A model call per turn across 15+ threads costs real usage to say "fine" about 95% of the time, and it would add latency or wake-ups to Matt's threads. Capture at Stop, review in batches.
+
+**Stage 1: triage (daily, Haiku, about 40k tokens a day).** A nightly job (launchd, before the 04:30 restart; skipped when `claude_pace.py` says the week is over pace, with signals kept for later) reads new signals. For each one it pulls only a small window from the transcript (Matt's message, the previous reply and its tool calls). It classifies the signal as **agent-behaviour correction / product feedback about an app / task content / noise**. It names the rule that covers it (or none) and fingerprints it (normalised topic + rule id). Only agent-behaviour corrections go on; product feedback is out of scope (the project's IDEAS/Linear, not rules). Scale: C found 129 regex hits in 10 days, about 60 real, so about 13 a day × about 3k tokens.
+
+**Stage 2: proposals (weekly, Sonnet, one medium worker session).** It groups the week's triaged signals by fingerprint and joins them with `fired.jsonl` stats and the replay report. It proposes only for groups that clear the evidence bar. It works in this order, borrowing Hermes's "patch what was in play first":
+
+1. **Adherence fix** (a rule exists but was broken): move it up a channel (core text → nudge → check → deny) or fix its trigger. **This should be most proposals.** C's evidence says the problem is adherence, not missing rules.
+2. **Trigger fix** for a rule that fired wrongly (false positive) or failed to fire (false negative), with the real transcript moment as a new test case.
+3. **Merge, tighten or retire** a rule contradicted by Matt's correction, past `review` with zero fires, or noisy with low compliance.
+4. **New rule**, only with **≥ 2 independent signals** (different sessions on different days), or one explicit statement from Matt that never got saved.
+
+Each proposal is a **rule-file diff with tests built from the real moments**, evidence links (session links + one quoted line each), the replay's estimated firing rate, and the line count it adds to or removes from the always-loaded core. It must pass the compiler. New rules always start at `mode: shadow`. Hermes's "do NOT capture" list applies, plus: nothing private in shared rules (export sanitizer), and nothing Matt said as a joke.
+
+### 13.3 How proposals reach Matt (nothing changes without a 👍)
+
+- Stage 2 commits proposals to a branch (`learn/<date>`) in ai-os, or in slub-hq for `who: [slub]` rules, plus one summary file `docs/rules-hooks/proposals/<date>.md`. **No live rule changes.**
+- It posts one line to the Coordinator through the existing coordinator inbox (`scripts/coordinator_inbox.py`, which the context-alert mod already polls every 30 s for voice tasks; reusing it for this needs a small test). On Matt's next turn, the Coordinator shows **at most 3 proposals**, one plain sentence each (what changes, how many times it happened, what it would have caught), with an Actions line, e.g. `Apply rule proposal 1 → Yes, apply proposal 1 · Apply all three → … · Skip this week → …`.
+- **Apply** merges that rule file, runs `build_rules.py`, and puts the rule in shadow for 3 days. It goes live on its own only if shadow firing matches the estimate (within 2×); otherwise it comes back as a proposal. **Skip** records the fingerprint and suppresses the same proposal for 60 days unless the evidence doubles. **No answer in 14 days** → it expires quietly and is logged.
+- **Shared rules** go to slub-hq: proposals touching `who: [slub]` rules also land in `inbox/tyler.md`, and core.md's "change it only when Matt and Tyler both agree" holds. Tyler's machine runs its own loop on his own signals; his signals never leave his Mac.
+
+### 13.4 Keeping it from becoming noise
+
+- **Silence by default.** A week with nothing over the evidence bar sends nothing at all (the opposite of Hermes's "be ACTIVE").
+- **Cap of 3 proposals a week**, ranked by evidence count × cost to Matt (C's ranking method).
+- **Rule budget.** While the core is over 60 lines, a new-rule proposal must come with a merge or removal of at least the same size (B §7.1).
+- **The loop measures itself** in `docs/rules-hooks/learn-report.md`, regenerated weekly: proposals, acceptance rate, rules added vs removed, and the real success metric: **did that correction stop recurring** after its rule went live?
+- **Kill date built in.** If acceptance stays under 30% for 4 weeks, or recurrence doesn't drop for accepted proposals within 6 weeks, the loop pauses itself and tells the Coordinator once.
+- **Anti-churn guard (the Hermes curator lesson).** The same action on the same rule file more than 3 times in 30 days stops the loop and alerts. Every write goes to an append-only ledger (before/after hashes, like Hermes's curator).
+
+### 13.5 Cost
+
+| Stage | Model | Rough use |
+|---|---|---|
+| Capture | none | About 1 ms of regex per prompt/Stop inside the dispatcher |
+| Triage | Haiku | About 40k tokens/day |
+| Proposals | Sonnet | One medium session/week (about 100k input incl. tests and compile), skipped when over pace |
+| Matt | — | ≤ 3 one-line proposals a week, one tap each |
+
+For comparison, Hermes replayed the full conversation on the main model every 10 turns in every session.
+
+### 13.6 Honest take
+
+**Worth building, in this narrow form, and later than the hooks themselves.**
+- **The strongest part is cheap and deterministic:** catching explicit rules Matt stated that never got saved, and noticing when a rule exists but keeps being broken. Both feed the hook migration directly ("this text rule keeps failing → make it a check"). That's where the value is: C's evidence is mostly broken rules, not missing ones.
+- **The riskiest part is the one that sounds best:** "the agent writes its own rules". That is how the pile reached 15,000 words, and Hermes shows the end state: direct writes, a bias to write, stale output and a cleanup bot looping unnoticed for 25 days. Hence: approval-gated, silent by default, capped, budgeted, self-measuring, with a kill date.
+- **Timing.** Capture can ship with rollout step 5 (it's a few signal rules in the dispatcher) and should run 2 weeks before any reviewer exists. Then the first Stage 2 run has real data, and Matt can judge from one report whether the loop is worth keeping. If the hooks work, there will be fewer corrections to learn from, which is the point.
+- **One risk to watch:** proposals Matt approves without reading because the buttons are easy. Shadow-first promotion and the recurrence metric limit the damage, but the 3-a-week cap matters most.
+
+---
+
+## 14. Risks
 
 - **A dispatcher bug breaks every session.** Mitigations: fail-open, the kill switch, shadow mode, replay tests, and the fail-closed rules living in separate handlers.
-- **Over-blocking teaches workarounds** (Codex: `find -delete`). Keep `deny` small; every deny's tests include its workarounds; the tuner looks for "denied, then a similar command allowed".
+- **Over-blocking teaches workarounds** (Codex: `find -delete`). Keep `deny` small; every deny's tests include its workarounds; the learn loop records "denied, then a similar command allowed" as a signal (§13).
 - **Stop feedback loops or nags.** Mitigations: one fold-together feedback per turn, `stop_hook_active`, the 8-continuation cap, reader-aware checks and the skip comment.
 - **Role misdetection.** Default to worker. Worst case, a coordinator misses its pack for a session; it still has its brief.
 - **Desktop-metadata dependency.** The role lookup reads an undocumented app file. If its shape changes, `AIOS_ROLE` and the title fallback still work, and the dispatcher logs `role=unknown`.
@@ -356,17 +436,18 @@ The two forms that do work, and that I recommend:
 - **Plugin command hooks in the desktop app.** The current mods are TypeScript modules, not `hooks.json` command hooks. Before relying on the plugin (§11), test that a plugin command hook fires in a desktop Code-tab session and over Remote Control; if not, fall back to a settings merge.
 - **Two sources of truth during migration.** The compiler warns on a rule present in both `.rules/` text and a rule file; step 8 removes the text.
 
-## 14. Decisions for the merge thread
+## 15. Decisions for the merge thread
 
 1. **Details ritual:** B says replace it with an automatic end-of-session file; C says enforce it or drop it (69% missed). Pick one before Stop check #4 exists.
 2. **Input guard when Hammerspoon is unreachable:** fail closed (the written rule) or warn (today's code).
-3. **Distribution:** a plugin (recommended) or settings merge; it depends on the plugin-hook test in §13.
+3. **Distribution:** a plugin (recommended) or settings merge; it depends on the plugin-hook test in §14.
 4. **Registry home:** shared rules in slub-hq `setup/rules/` and Matt-only rules in `ai-os/rules/` (recommended), or everything in ai-os, exported.
 5. **Whether the Codex adapter is in scope now** or after the Claude side is stable (recommended: after).
+6. **Learn loop approval surface:** Coordinator inbox + Action bar (recommended), or a weekly Linear issue.
 
 ---
 
-## 15. What changed from the low-effort pass
+## 16. What changed from the low-effort pass
 
 - **Re-read the sources and verified the platform against today's hooks docs** instead of memory. That added native `permissions.deny`, path-scoped `~/.claude/rules/` packs, PostToolBatch, SubagentStart, `asyncRewake`, `last_assistant_message`, the 8-continuation cap, prompt-hook limits (no SessionStart, no cheap gating) and `onFailure`.
 - **Found Matt's existing prior art and built on it:** the Codex hook engine (shadow/enforce modes, tool_guard, policy packs, audit log) and the dead `transcript_evaluator` watcher. Both give concrete lessons: guards drift from rules, agents route around denials, watcher reports go unread.
@@ -376,5 +457,6 @@ The two forms that do work, and that I recommend:
 - **Grounded latency in measurements** (11–20 ms per Python hook; merging guards makes Bash faster). The first pass guessed 40–60 ms.
 - **Mapped C's top failures and B's keep-list to concrete rules**, with a first assignment of every rule to a kind and trigger. Added the AskUserQuestion deny, the voice-task check, the memory-save nudge and the coordinator-analysis nudge.
 - **Tyler sync is now a plugin in the existing `slub-mods` marketplace**, with rule data read live from slub-hq, new rules in shadow until he says Yes, `[rule:id]` tags and a conflicts report. This answers his worry from the 10-29 call.
-- **The watcher verdict is now evidence-based**, with a concrete weekly tuner that writes tested rule diffs to Linear.
+- **The watcher verdict is now evidence-based.**
+- **Added the self-audit-and-learn loop (§13) at Matt's request**, based on reading Hermes's background review and curator code and outcomes. It has four parts: capture every turn, triage daily on Haiku, propose weekly on Sonnet (≤ 3, tested rule-file diffs), and approve by hand in the Coordinator.
 - **Rollout has a step 0 (delete dead rules before hooking anything)**, done/undo criteria per step, and a list of decisions for the merge thread.
