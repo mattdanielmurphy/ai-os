@@ -6,6 +6,8 @@ Runs on the VPS (morning-call.service) behind Caddy at https://vps.mattmurphy.ca
 import asyncio, os, re
 from pathlib import Path
 
+from xml.sax.saxutils import escape
+
 import aiohttp
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, WebSocket
@@ -35,6 +37,7 @@ BREATH_IN, BREATH_OUT = 4, 6     # s of quiet after each cue
 SIT_SECS = 45                    # s of silent meditation
 
 BASE = "https://vps.mattmurphy.ca/morning-call"
+SPEED = "+25%"                    # Speechify prosody rate, a change from natural pace
 SAY_AS = {"CMPUT": "computing", "PHIL": "philosophy"}  # phone-tested word list
 
 BREATHE = [("Good morning, Matt. Stay where you are for now. We'll start with three slow breaths.", 2)]
@@ -48,6 +51,14 @@ SYSTEM = """You are Matt's warm, plain-spoken morning check-in on a phone call. 
 time, then listen. Ask how he's doing, then what he has to do today, then help him pick the first small step. Your real job
 is getting him out of bed: before ending, ask him to put his feet on the floor and stand up, and wait until he says he has.
 Then say a short goodbye. This is speech: no lists, symbols or markdown; write numbers and course codes as they're said."""
+
+
+class PacedTTS(SpeechifyHttpTTSService):
+    """Speechify takes speed only through SSML, so each line goes out wrapped."""
+    def _build_payload(self, text):
+        payload = super()._build_payload(text)
+        payload["input"] = f'<speak><prosody rate="{SPEED}">{escape(payload["input"])}</prosody></speak>'
+        return payload
 
 
 def spoken(text):
@@ -90,7 +101,7 @@ class SpokeWatch(FrameProcessor):
 
 async def run_session(transport, session, rate, stages=("breathe", "meditate", "checkin"), skip=None, out_rate=None):
     skip = skip or asyncio.Event()  # set to jump straight to the check-in
-    tts = SpeechifyHttpTTSService(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
+    tts = PacedTTS(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
                                   settings=SpeechifyTTSSettings(voice=VOICE, model="simba-3.2"))
     context = LLMContext([{"role": "system", "content": SYSTEM}])
     turns = LLMContextAggregatorPair(context)
