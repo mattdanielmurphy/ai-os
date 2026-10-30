@@ -2,10 +2,49 @@ import ActivityKit
 import AlarmKit
 import AppIntents
 import AVFoundation
+import CoreLocation
 import SwiftUI
 
 let serverURL = URL(string: "ws://macbook-pro.tail491454.ts.net:8798/ws")!
 let startKey = "startSession"
+let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at home
+
+/// One-shot location, used only to tell whether you're at home.
+@MainActor final class Place: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published var hasHome = UserDefaults.standard.object(forKey: "homeLat") != nil
+    private let manager = CLLocationManager()
+    private var waiting: [(CLLocation?) -> Void] = []
+
+    override init() { super.init(); manager.delegate = self; manager.requestWhenInUseAuthorization() }
+
+    func locate(_ done: @escaping (CLLocation?) -> Void) { waiting.append(done); manager.requestLocation() }
+
+    func saveHome() {
+        locate { [self] here in
+            guard let here else { return }
+            UserDefaults.standard.set(here.coordinate.latitude, forKey: "homeLat")
+            UserDefaults.standard.set(here.coordinate.longitude, forKey: "homeLon")
+            hasHome = true
+        }
+    }
+
+    /// True at home. With no saved Home or no location, also true, since mornings start in bed.
+    func atHome(_ done: @escaping (Bool) -> Void) {
+        let d = UserDefaults.standard
+        guard hasHome else { return done(true) }
+        let home = CLLocation(latitude: d.double(forKey: "homeLat"), longitude: d.double(forKey: "homeLon"))
+        locate { here in done(here.map { $0.distance(from: home) < homeRadius } ?? true) }
+    }
+
+    nonisolated func locationManager(_ m: CLLocationManager, didUpdateLocations l: [CLLocation]) {
+        let last = l.last
+        Task { @MainActor in self.finish(last) }
+    }
+    nonisolated func locationManager(_ m: CLLocationManager, didFailWithError e: Error) {
+        Task { @MainActor in self.finish(nil) }
+    }
+    private func finish(_ l: CLLocation?) { let w = waiting; waiting = []; w.forEach { $0(l) } }
+}
 
 struct WakeMeta: AlarmMetadata {}
 
@@ -22,6 +61,7 @@ struct StartSessionIntent: LiveActivityIntent {
 /// Sends the mic and plays the bot as 16 kHz 16-bit mono PCM over a WebSocket.
 @MainActor final class Session: ObservableObject {
     @Published var state = "Ready"
+    @Published var speaker = true { didSet { route() } }
     private var socket: URLSessionWebSocketTask?
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
@@ -35,8 +75,9 @@ struct StartSessionIntent: LiveActivityIntent {
         state = "Connecting"
         do {
             let audio = AVAudioSession.sharedInstance()
-            try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
+            try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
             try audio.setActive(true)
+            route()
             let task = URLSession.shared.webSocketTask(with: serverURL)
             socket = task
             task.resume()
@@ -90,7 +131,14 @@ struct StartSessionIntent: LiveActivityIntent {
         player.scheduleBuffer(buf)
     }
 
+    /// Speaker, or earpiece with the screen going dark against your face.
+    private func route() {
+        try? AVAudioSession.sharedInstance().overrideOutputAudioPort(speaker ? .speaker : .none)
+        UIDevice.current.isProximityMonitoringEnabled = live && !speaker
+    }
+
     func stop() {
+        UIDevice.current.isProximityMonitoringEnabled = false
         socket?.cancel(); socket = nil
         if engine.isRunning { engine.inputNode.removeTap(onBus: 0); engine.stop() }
         player.stop()
@@ -103,6 +151,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var phase
     @AppStorage("wakeTime") private var wake = Date().timeIntervalSince1970
     @State private var note = ""
+    @StateObject private var place = Place()
 
     var body: some View {
         NavigationStack {
@@ -115,9 +164,13 @@ struct ContentView: View {
                     if !note.isEmpty { Text(note).foregroundStyle(.secondary) }
                 }
                 Section("Session") {
-                    Button { session.live ? session.stop() : session.start() } label: {
+                    Button { session.live ? session.stop() : begin() } label: {
                         Label(session.live ? "End session" : "Start now",
                               systemImage: session.live ? "phone.down" : "sunrise")
+                    }
+                    Toggle(isOn: $session.speaker) { Label("Speaker", systemImage: "speaker.wave.2") }
+                    Button { place.saveHome() } label: {
+                        Label(place.hasHome ? "Update home to here" : "Set home to here", systemImage: "house")
                     }
                     Label(session.state, systemImage: session.live ? "waveform" : "circle")
                         .foregroundStyle(.secondary)
@@ -128,9 +181,14 @@ struct ContentView: View {
         .onChange(of: phase) { _, now in
             if now == .active, UserDefaults.standard.bool(forKey: startKey) {
                 UserDefaults.standard.set(false, forKey: startKey)
-                session.start()
+                begin()
             }
         }
+    }
+
+    private func begin() {
+        session.start()
+        place.atHome { session.speaker = $0 }
     }
 
     private func setAlarm() async {

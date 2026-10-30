@@ -21,5 +21,6 @@ targets:
         UIBackgroundModes: [audio]
         NSMicrophoneUsageDescription: "Morning listens to you during the check-in."
         NSAlarmKitUsageDescription: "Morning rings your wake-up alarm."
+        NSLocationWhenInUseUsageDescription: "Morning uses the speaker when you are at home."
         UILaunchScreen: {}
         UIApplicationSceneManifest: {UIApplicationSupportsMultipleScenes: false}

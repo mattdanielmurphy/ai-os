@@ -27,6 +27,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Morning uses the speaker when you are at home.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Morning listens to you during the check-in.</string>
 	<key>UIApplicationSceneManifest</key>
