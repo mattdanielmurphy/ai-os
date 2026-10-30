@@ -214,3 +214,6 @@ Every rule with on/off, how often it fires, how often it's misread, why it exist
 
 ## Dictionary app for macOS (Matt, 2026-10-29)
 A really good dictionary utility for the suite. Take: worthwhile and small. macOS already has Dictionary.app and ⌃⌘D / force-click lookup (decent data: New Oxford American, Oxford Thesaurus), so the win is the interface, not the data. Check existing apps first (e.g. Lexical, Wordbook) and reuse the system dictionaries via the DictionaryServices API. Needs Matt's list of what bugs him about the built-in one before any design.
+
+## Movie-line soundboard for voice agents (Matt, 2026-10-30)
+Tags: morning check-in, meeting bot, Glass TV. Make the check-in call hilarious; the AI replies with film clips. Full entry and honest take: `~/projects/glass-tv/IDEAS.md`.
