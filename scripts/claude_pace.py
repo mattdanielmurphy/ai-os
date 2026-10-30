@@ -2,7 +2,7 @@
 """Claude weekly usage + pace, from the CodexBar CLI (claude.ai usage API).
 
 Prints weekly % used, where an even pace would be by now, and a model call:
-  OPUS    weekly use at or under even pace: Opus is fine
+  OPUS    weekly use within 2 points of even pace: Opus is fine
   CAREFUL up to 5 points over pace: Opus only for hard work
   SONNET  more than 5 points over pace (or session window nearly full)
 
@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("America/Edmonton")
+ON_PACE_SLACK = 2     # points over even pace that still count as on pace (CodexBar shows these as "on pace")
 CAREFUL_OVER = 5      # points over even pace before saying Sonnet
 SESSION_FULL = 85     # 5-hour window % that forces Sonnet for now
 
@@ -45,7 +46,7 @@ def main():
     over = used - expected
     if over > CAREFUL_OVER or session["usedPercent"] >= SESSION_FULL:
         call, code = "SONNET", 2
-    elif over > 0:
+    elif over > ON_PACE_SLACK:
         call, code = "CAREFUL", 1
     else:
         call, code = "OPUS", 0
