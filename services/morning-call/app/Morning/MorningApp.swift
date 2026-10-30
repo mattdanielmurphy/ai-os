@@ -70,7 +70,7 @@ struct StartSessionIntent: LiveActivityIntent {
 /// Sends the mic and plays the bot as 16 kHz 16-bit mono PCM over a WebSocket.
 @MainActor final class Session: ObservableObject {
     @Published var state = "Ready"
-    @Published var speaker = true { didSet { route() } }
+    @Published var speaker = false { didSet { route() } }
     private var socket: URLSessionWebSocketTask?
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
@@ -214,7 +214,6 @@ struct ContentView: View {
     private func begin() {
         let on = [("breathe", breathe), ("meditate", meditate), ("checkin", checkin)].filter(\.1).map(\.0)
         session.start(stages: on.joined(separator: ","))
-        place.atHome { session.speaker = $0 }
     }
 
     private func setAlarm() async {
