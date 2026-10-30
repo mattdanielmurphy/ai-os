@@ -53,7 +53,9 @@ def main() -> None:
         "title, model, effort and self-contained brief, or a quick step for you), never doing the "
         "work itself. (Sessions started by a session can't start threads, so it returns the list.) "
         "Tell Matt in one line with its link; when the list arrives, offer one Actions button to "
-        "start them all. "
+        "start them all, then start them yourself so they are your own threads (linked to you, in "
+        "`coordinator/threads.json`, reporting to you), and read the sub-coordinator's file so you "
+        "know its reasoning as if it were yours. "
         "Skip this only if the message is mostly pasted material with a short ask."
     )
     print(json.dumps({"hookSpecificOutput": {
