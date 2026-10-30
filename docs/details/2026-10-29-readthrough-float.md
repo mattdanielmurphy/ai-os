@@ -18,7 +18,7 @@ Readthrough opens by itself in a floating window tied to Claude's window, per th
 ### Undo
 Remove the `safeRegister("modules.readthrough_float")` line in `~/.hammerspoon/init.lua`; delete `mods/visible-session`.
 
-## 23:20 Less detail, layered Readthrough
+## 23:00 Less detail, layered Readthrough
 
 You wanted details files shorter and less technical, with more detail only when you ask for it, and the Readthrough to open and start talking by itself when a reply lands.
 
@@ -26,3 +26,17 @@ You wanted details files shorter and less technical, with more detail only when 
 - The float now opens wider (640 px). Once you resize it, it keeps your size.
 - The player's own settings sit behind its "Tune" button (bottom right), not in the ⌃⌥⌘T panel yet. Bringing them into the panel is part of the plan below.
 - Planned player behaviour is waiting for your 👍 (see the reply).
+
+## 23:09 The Readthrough now talks you through each reply
+
+When an agent replies, the float opens on the newest reply and starts talking right away. You don't need to press anything. It no longer reads out the page title or the headings, just the text, so it sounds more like someone explaining.
+
+Each part has a small "Hold Enter for more detail" button. Hold Enter, or click it, and that part's extra detail opens and gets read out next. Right arrow and the other keys work exactly as before.
+
+If a new reply lands while it's still reading, the new one waits and starts when the current one finishes. Switching threads pauses it.
+
+#### More
+
+This section is itself a test of the new layout: you're hearing this only because you asked for more. Agents write the extra layer under a "More" heading, and it stays folded until you ask. Pages published before tonight keep the old behaviour until they're published again.
+
+Not tested yet: whether the float can start sound on its own without a first click. If it can't, you'll see "Tap anywhere to start reading" the first time.
