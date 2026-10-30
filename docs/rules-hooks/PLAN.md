@@ -16,6 +16,12 @@ The short version for Matt is [PLAN-summary.md](PLAN-summary.md).
 6. **The per-reply details file, Readthrough and reel go.** A details file is written only when a reply overflows its budget; Readthroughs and reels are made on request. The ritual died on its own when the coordinator moved to the Code tab, with zero complaints (C).
 7. **Matt's watcher idea becomes a weekly tuner, not a live layer.** Every turn records evidence for free. Once a week one review proposes at most 3 tested rule changes for Matt's 👍. A heartbeat line makes sure it can't die unnoticed the way Hermes's curator and `transcript_evaluator.py` did.
 8. **Tyler gets rules by circles.** The shared core is live for both of them. Matt's recommended defaults arrive switched off until Tyler says Yes. Matt-only rules never leave Matt's Mac. This follows today's call decision: "Matt's own rules never apply to Tyler automatically."
+9. **Added after Matt's reply (2026-10-29):**
+   - **Beta rules (§3.10):** agent-written rules can go live without a 👍, but only as tagged, capped, expiring add-ons. They can never block anything or relax another rule.
+   - **A local rules dashboard (§3.11):** v0 at the reassess gate, v1 after the registry migration. Toggles go through the Tweaks panel.
+   - **The advisor rule (§4.4 C):** coordinators get a reminder to send big asks to an advisor first.
+
+   Sources: Matt's message in `docs/coordinator/asks/2026-10-29-rules-dashboard-learning.md` (parts 1–3, 6) and the advisor's critique in `…-advisor-answer.md` (§2, §3, §6).
 
 ---
 
@@ -64,6 +70,7 @@ The short version for Matt is [PLAN-summary.md](PLAN-summary.md).
 | 15 | UI design gates (think alone, exemplars, 3–4 separate options, mixer) | One pack | Merge into one flow | — | **One design flow** (§4.4 D). Separate-agent options only for "for the world" Slub products. *Veto candidate.* |
 | 16 | Registry format | One Markdown file per rule | One source, generated copies | — | **A's format, plus B's tags** (circle, kind, review date). It's plain Markdown, so it fits Slub core rule 7. |
 | 17 | do.test links | — | Re-test whether still needed | No link complaints since 10-24 | **Keep for now; one quick test decides** (§8). |
+| 18 | Agents editing their own rules (Matt's reply: approving every rule won't scale for an end user like his mom) | Every change needs Matt's 👍 | — | — | **A beta tier with hard edges** (§3.10). Additive rules can go live without a 👍. Promotion to official still needs one, until agents' advice has matched Matt's about 9 times in 10. "Never overrides official rules" is enforced by the compiler, not by wording. *Veto candidate.* |
 
 ---
 
@@ -109,10 +116,12 @@ roles: [all]          # central | project-coordinator | worker | subagent | all
 on: { event: PreToolUse, tool: 'Edit|Write|NotebookEdit|Bash', test_fn: school_write }
 decision: ask
 say: "Graded school work: explain, hint or critique only. Never write, fix or add logic. Matt approves this write."
-mode: shadow          # off | shadow | live
+mode: shadow          # off | shadow | beta | live   (beta: §3.10)
 fail: open
 since: 2026-10-23
 review: 2027-01-31
+requires: []          # rule ids this one relies on (feeds the dashboard's dependency view)
+# beta rules only:  target: <the signal it should reduce>   expires: <date, ≤ 21 days out>
 tests: { fire: [...], pass: [...] }
 ---
 Full rule text, why, Matt's words, history (for humans, Tyler and the learn loop; never injected).
@@ -135,7 +144,10 @@ It **refuses to compile** when:
 - a `say` line is over 200 characters, or doesn't tell the agent what to do;
 - the core is over 60 lines (a new core line means an old one moves out);
 - an incident patch is past its `review` date with no fires and no renewal;
-- a rule exported to Tyler contains a Matt-only path (`do.test`, `~/.hammerspoon`, `claude-control`).
+- a rule exported to Tyler contains a Matt-only path (`do.test`, `~/.hammerspoon`, `claude-control`);
+- a beta rule breaks any of §3.10's limits (its kind, a trigger that overlaps an official rule's, the cap, the expiry date, a missing `target:`).
+
+The compiler also writes the facts the dashboard (§3.11) needs: rules that share a trigger (overlaps), and `requires:` links in both directions (relies on / relied on by).
 
 **Rules about rules** (B §6.1) live in a short authoring guide for whoever writes rules. They are never loaded into working agents: one home per rule, firm calm wording ("do X, because Y"), stories go in the body or a changelog and are never injected, proactive behaviour over skills Matt must remember.
 
@@ -215,7 +227,14 @@ Each runs in shadow for a week; Matt checks 10 verdicts before it goes live.
    - skip comments.
    Unsaved rules also trigger the "save it now" action check, which is the fast lane.
 2. **Weekly review, one Sonnet session** (skipped when `claude_pace.py` says the week is over pace). It reads the signals, pulls small transcript windows and proposes **at most 3** rule-file diffs, built from the real moments as tests, all starting in shadow. Proposals come in this order: adherence fixes (move a broken rule up a channel), then trigger fixes, then merges and retirements, then new rules (≥ 2 independent signals, or one explicit unsaved statement). *Change from A:* no daily Haiku triage stage. At about 40 signals a week, one session can read them all directly.
-3. **Approval in the Coordinator:** one plain sentence per proposal, plus an Actions line. Apply = merge, build, shadow for 3 days, then live if it fires as estimated. Skip = suppressed for 60 days. No answer in 14 days = expires quietly. Shared (`slub`) proposals also go to `inbox/tyler.md`.
+
+   The same session also does two more jobs:
+   - It samples a few firings per rule and judges whether the agent understood the rule. Those are the dashboard's "misread" numbers (§3.11). Doing this per turn would cost quota across 15+ threads.
+   - It gives each beta rule's promotion advice (§3.10).
+3. **What happens to a proposal.** It runs silently in shadow for 3 days. Then:
+   - **An additive reminder or action check** may go **beta**: live and tagged, with no 👍 needed, within §3.10's limits.
+   - **Anything else** (a block, a core line, a change to an official rule, a retirement) waits for Matt's 👍 in the Coordinator: one plain sentence per proposal plus an Actions line. Apply = merge, build, shadow for 3 days, then live if it fires as estimated. Skip = suppressed for 60 days. No answer in 14 days = it expires quietly.
+   - **Shared (`slub`) proposals** also go to `inbox/tyler.md`. They never go beta, because a beta rule is `matt-only` until it's promoted.
 4. **It can't die quietly.** The Coordinator's per-turn fact line says "learn loop last ran N days ago" once N > 10. The loop also pauses itself and says so once if acceptance stays under 30% for 4 weeks, or if one rule file gets churned more than 3 times in 30 days (the Hermes curator looped for 25 days unnoticed).
 
 ### 3.9 Testing and measurement
@@ -226,6 +245,62 @@ Each runs in shadow for a week; Matt checks 10 verdicts before it goes live.
 - A golden set of 30 hand-labelled final replies for the Stop checks.
 - A p95 latency test (≤ 30 ms on pure-regex paths).
 - A weekly `rulehook.py report` with fires per rule, compliance (e.g. a commit within 2 calls of the nudge) and skips with reasons. Rules firing more than 50 times a week with low compliance get rewritten. Rules with zero fires in 30 days get their trigger checked, then expire at `review`.
+
+### 3.10 Beta rules: agent-written, live, fenced in
+
+Matt's reply: agents should be able to write rules ("asking my mom to approve rules is useless"), as a lower tier of experimental rules that never override official ones. A dot shows when they're running, and they get promoted on evidence. He also wants to stay in the loop while the system is being designed. The advisor's critique (§2) holds: the idea is right, but each part needs a mechanical edge.
+
+`mode` gains a value between shadow and live: `off | shadow | beta | live`.
+
+**Hard limits.** The compiler refuses any beta rule that breaks one, so none of these depend on wording:
+
+| Limit | Why |
+|---|---|
+| **Additive only:** a just-in-time reminder or an action check. Never a block, never a core line, never a safety, school, secrets or screen-input rule, and never anything that relaxes, exempts or skips another rule. | Stops an agent annoyed by a check from writing its own exception |
+| **No trigger overlap with an official rule** (same event + tool + pattern) | This is how "never overrides official" is enforced. Models don't reliably apply priority between two conflicting injected lines. |
+| **Tagged `[rule:beta:<id>]`** on every injected line | The "dot" is display only and works only in the desktop app (a mod reads `mode: beta` in the index). The tag is visible everywhere: in the CLI, over Remote Control, in transcripts. |
+| **At most 5 beta rules live at once** | Growth is problem #4 (§1). Beta must not regrow the pile. |
+| **Expires 21 days after going beta** unless promoted | No silent accumulation |
+| **`circle: matt-only` until promoted** | Nothing experimental reaches Tyler |
+| **`target:` named when it's written:** which signal it should reduce (a correction type, a check failure) | "Two weeks, no issues" is weak evidence. Matt rarely complains, so silence is the default either way. |
+
+**Promotion to official.**
+- The weekly review compares the rule's `target` signal before and after, and recommends promote, extend or drop. "No issues" only rules out harm; promotion needs the target to have moved.
+- **While the system is being designed, promotion needs Matt's 👍** (shared rules: Tyler's too).
+- Every recommendation and Matt's answer are logged. Once about 9 in 10 of the agent's promotion calls match his, promotion of *additive* rules can go automatic. That's the same calibration as the §3.7 judges, and it's the route to a version his mom could use, based on data rather than hope. Blocks and core lines always need a 👍.
+
+**Rollout.** No change to the step order. `beta` is one more enum value in step 2's format, and the first beta rules can only come from the learn loop (step 9).
+
+### 3.11 The rules dashboard
+
+Matt: "a really fucking good idea". He wants to see every rule; switch rules on and off; see what's enabled, how often each one fires and how often it's misread; why it exists; overlaps, dependencies and clashes; and gaps where a rule is missing.
+
+**It's a view over data the plan already produces.** Building it before that data exists would show nothing.
+
+| Panel | Source |
+|---|---|
+| Every rule: kind, circle, mode (beta shown with its dot and expiry), why, since, review date | Rule files |
+| How often it fires, by role, plus compliance | `fired.jsonl` + the weekly `rulehook.py report` |
+| Troublesome or misread | Sampled judge verdicts from the weekly review (§3.8); never a per-turn audit |
+| Overlaps (shared triggers) and dependencies (relies on / relied on by) | The compiler, from triggers and `requires:` (free and deterministic) |
+| Clashes in meaning | One model check per rule change, at compile time, stored with the rule |
+| Gaps | Signals with no matching rule (corrections the weekly review couldn't map) |
+| Beta rules and their promotion advice | Rule files + the weekly review |
+
+**Versions**
+- **v0, at the ⏸ Reassess gate:** the before/after table of C's numbers, rendered as one page.
+- **v1, after step 5** (the registry migration), when every rule is a file with a mode: the panels above.
+
+**Toggles.** On/off writes the rule's `mode` into `slub-hq/setup/matt/overrides.md` (never into the rule file itself). The first choice is to expose those modes in the existing ⌃⌥⌘T Tweaks panel, which already renders switches from JSON, instead of building new toggles (the shared-modules rule). A toggle takes effect on the dispatcher's next call.
+
+**Local only.** It shows Matt-only rules (school, Mac paths), so it's served at `pages.test` and **never deployed to Vercel**.
+
+**Existing tools checked** (advisor §3.2): none fits.
+- Langfuse's prompt labels are the beta/official idea, so copy the concept. Don't adopt the tool: it's built for API apps, heavy to self-host, and protected labels are paid.
+- Claude Code's OpenTelemetry export and cc-observatory cover usage, not rules.
+- rulesync and agentsync only sync text.
+
+Keep `fired.jsonl` in OTel event shape, so a Grafana view can be added later at no cost.
 
 ---
 
@@ -327,6 +402,7 @@ The kinds below use §3.2's names: **block**, **remind** (just in time), **check
 | No analysis in the coordinator | remind + judge | More than 8 non-registry Read/Grep calls in one turn → "route this to a thread" |
 | Don't relay project coordinators' updates; start the thread for an obvious bug | judge | Coordinator Stop (shadow first) |
 | Project coordinators forward global rules to the central one | remind | Memory-save reminder in project-coordinator sessions |
+| **Big asks go to an advisor first** (Matt, 2026-10-29). The coordinator stays Opus at low effort. For a big ask it saves Matt's message to `docs/coordinator/asks/`, starts one Opus xhigh advisor that writes a numbered action list but takes no actions, then carries the list out as written. Full text: `code-coordinator.md`, "Big asks go to an advisor first". | remind (role pack) | UserPromptSubmit, role `central` or `project-coordinator`, sender = Matt, and the prompt is over ~350 words or has 4+ separate asks → inject the advisor rule (advisor answer §6). Phrases like "correct me if I'm wrong", "think hard" and "critique" trigger it too. Parts that depend on each other stay judgment. |
 | Cloud: blocked sites go through the Mac | remind (role pack) | Cloud sessions only. Caveat: cloud sessions don't run user-level hooks (§9). |
 
 #### D. Building and design
@@ -406,12 +482,13 @@ Ordered by C's cost ranking. Each step is small, testable and can be undone on i
 | **2. Stop dispatcher** (shadow, then live) | `rulehook.py` skeleton (state, log, kill switch, shadow), sender/reader classification, the minimal rule-file format + compiler step. Action checks: OK-ask, Actions lint, voice task, honest saved-rule claim. Prose checks as next-turn reminders. Signal capture starts here. | C #2 (6 complaints), #6, #5, #8 | Replay + golden set ≥ 90% right; 3 days live shadow with < 1 false nudge a day; then live | `mode: shadow`, or the kill switch |
 | **3. Saving rules and handoffs** | Memory-isn't-rules reminder; rule-file write → "run the build"; role resolution; pace fact on `start_session`. Separately, the thread that built the 10-30 inbox forwarder tests it end to end (C #4: delivery must not depend on reading a file at session start). | C #4 | A test write of "always X" to a project memory triggers the reminder; the forwarder delivers a test line to the live Coordinator | `mode: off` |
 | **4. Coordinator role pack** | SessionStart injection for coordinator roles (also after compaction); registry check; "no analysis" reminder; SubagentStart leaf digest | B §4.6, A §6 | Coordinator and worker sessions see different digests; a compacted coordinator still has its pack | `AIOS_RULES_ROLES=off` |
-| **⏸ Reassess** | Re-run C's scripts on the week since step 2 | — | Matt sees one before/after table: OK-asks, reply lengths, Action labels, complaints. **If the main numbers are fixed, steps 5–10 are optional.** | — |
+| **⏸ Reassess** | Re-run C's scripts on the week since step 2. That table is **dashboard v0** (§3.11): one local page. | — | Matt sees one before/after table: OK-asks, reply lengths, Action labels, complaints. **If the main numbers are fixed, steps 5–10 are optional.** | — |
 | **5. Registry migration + low-evidence blocks** | Move `.rules/` text into rule files area by area. Port the Codex `tool_guard` rules *from the rule files* (rm incl. `find -delete`, npm, `/tmp`, `gh --private`, `git init ~`, Bash secret reads) + the quiz `multiSelect` deny. Shadow 2 days. Optionally fold the four old guards into the dispatcher. | B §3.4, C (insurance) | Shadow log clean; the compiler passes with every rule having a kind and tests | `mode: shadow` per rule |
-| **6. Packs and prompt reminders** | UI, HUD, Hammerspoon, school (fold in step 1's hook), reminders/music/old-threads/ideas/rules prompts (sender = Matt), AG_CONTEXT fact, Artifact → pages, skills, model IDs, fan-out cost note, `NOW.md` check. Batches of ≤ 10, shadow each. | B §4 | `InstructionsLoaded` shows the packs loading; < 1 prompt reminder per 5 of Matt's prompts | Delete the generated pack files; `mode: off` |
+| **5b. Dashboard v1** | The local page over the rule files, `fired.jsonl`, `signals.jsonl` and the weekly report; rule modes exposed as switches in the Tweaks panel through the overrides file | Matt's reply, part 2 | Every rule shows its mode, fires and overlaps; flipping a switch changes the dispatcher's next decision | Stop serving the page; the overrides file reverts with git |
+| **6. Packs and prompt reminders** | UI, HUD, Hammerspoon, school (fold in step 1's hook), reminders/music/old-threads/ideas/rules prompts (sender = Matt), the advisor-escalation reminder for coordinators, AG_CONTEXT fact, Artifact → pages, skills, model IDs, fan-out cost note, `NOW.md` check. Batches of ≤ 10, shadow each. | B §4 | `InstructionsLoaded` shows the packs loading; < 1 prompt reminder per 5 of Matt's prompts | Delete the generated pack files; `mode: off` |
 | **7. Shrink the core** | Generate `~/.claude/CLAUDE.md` (≤ 60 lines) from the rule files. `ai-os/CLAUDE.md` becomes ai-os project notes only. A rule's text leaves the core after its hook has been live a week, **rule by rule**. | B §3.1, A §1 | Core ≤ 60 lines; C's numbers re-run and no worse | Rebuild with `--full` |
 | **8. Coordinator judges** | The four async judges, shadow for a week | C #2 (coordinator plain wants), #7 | Matt agrees with 9 of 10 sampled verdicts | `mode: shadow` |
-| **9. Learn loop review** | First weekly review after ≥ 2 weeks of signals | Matt's ask | Matt keeps or kills it after the first report | `mode: off`; unload the job |
+| **9. Learn loop review + beta rules** | First weekly review after ≥ 2 weeks of signals. From then on it may put additive rules in beta (§3.10). | Matt's ask and reply | Matt keeps or kills it after the first report; beta rules stay within the limits, checked by the compiler | `mode: off`; unload the job; all beta rules → `off` via one override |
 | **10. Tyler** | §7: export, plugin or settings install, offers in shadow until he says Yes | Call decisions | Tyler's agent explains the shared rules in plain English, and he says Yes or No to each | Uninstall the plugin |
 | *(later)* Codex adapter | `tool_guard`/classifier read `rules-index.json` | A §1 (guard drift) | — | — |
 
@@ -494,13 +571,15 @@ Built on A §11 and B §3.3, shaped by today's call.
 - **Fail-closed input** blocks every `open`/focus while Hammerspoon is down. That's intended; the deny text gives the restart route.
 - **Allow-rules widen what runs without a check.** Pushes are pre-approved by Matt, crossword `main` stays denied, and nothing else is widened.
 - **The undocumented desktop metadata** used for role lookup may change. The env and title fallbacks still work, and a failure logs `role=unknown`.
+- **Beta rules regrow the pile, or game the checks.** Mitigations: compiler-enforced limits (additive only, no trigger overlap, cap of 5, 21-day expiry, a named target), a one-switch kill for all beta rules, and promotion that needs a 👍 until the agent's calls have proven calibrated.
+- **The dashboard becomes a project of its own.** v0 is one table and v1 is a view over existing files. No new backend, no hosting, toggles reuse the Tweaks panel.
 - **The system itself becomes a project.** The reassess gate after step 4, and the stated targets, keep it honest.
 
 ---
 
 ## 10. Decisions only Matt can make
 
-1. The five in [PLAN-summary.md](PLAN-summary.md) (details file, allow-rules + act-or-wait, one design flow, weekly learn loop, school `ask`).
+1. The six in [PLAN-summary.md](PLAN-summary.md): details file, allow-rules + act-or-wait, one design flow, weekly learn loop, school `ask`, and **beta rules going live without his 👍**.
 2. **The freeze's end condition** (proposed: "until Matt says the Tyler merge has started").
 3. **The palette**, or an interim one. Until then, the colour rules can't be followed or enforced.
 4. **With Tyler:** the circles, the digest cadence, the `core.md` header wording, and the active-project limit.
