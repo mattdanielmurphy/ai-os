@@ -203,3 +203,11 @@ Honest take: the first half is strong. Today's misses (size checks, summaries, l
 
 ## Big prompts go to a sub-coordinator (Matt, 2026-10-29) — built
 Hook `scripts/hooks/big_prompt_guard.py`: in the Coordinator only, prompts ≥500 words (≥900 when pace is CAREFUL, off when it says Sonnet) get handed to a fresh Opus medium/low sub-coordinator that returns a thread plan. Honest take: worthwhile; a dedicated context plans long dumps better than a crowded one. Thresholds are guesses; tune after a few weeks of real use. Pace-aware pattern should be reused by other cost-heavy rules.
+
+## Slub Dictate: dictation app with no silence cutoff (Matt, 2026-10-29) — parked, project freeze
+A TypeWhisper-style dictation app as good as Claude's, with no silence cutoff, for Slub Utils.
+**Honest take:** great personal fix, weak product (Wispr Flow, Superwhisper, VoiceInk, MacWhisper already compete hard). First try TypeWhisper/VoiceInk with a streaming cloud engine (Deepgram, which we already pay for) plus a custom vocabulary, and build only the glue (send to Claude, pause read-aloud). Later; project freeze applies.
+
+## Rules dashboard + beta rules (Matt, 2026-10-29) — folded into the rules→hooks plan
+Every rule with on/off, how often it fires, how often it's misread, why it exists, overlaps and gaps. Agents may run experimental "beta" rules that a dot shows, promoted on evidence.
+**Honest take:** strong, and it's the visible face of the Slub concierge idea. Cheap once the rules→hooks plan logs firings (until then there's nothing to show). Beta rules need hard limits (additive only, capped, expiring) or the rule pile regrows. See docs/rules-hooks/PLAN.md.
