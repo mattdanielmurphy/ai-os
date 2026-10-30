@@ -17,3 +17,12 @@ Readthrough opens by itself in a floating window tied to Claude's window, per th
 
 ### Undo
 Remove the `safeRegister("modules.readthrough_float")` line in `~/.hammerspoon/init.lua`; delete `mods/visible-session`.
+
+## 23:20 Less detail, layered Readthrough
+
+You wanted details files shorter and less technical, with more detail only when you ask for it, and the Readthrough to open and start talking by itself when a reply lands.
+
+- Saved as a global rule: medium detail by default, no back-end talk unless asked, deeper bits in a "More" layer.
+- The float now opens wider (640 px). Once you resize it, it keeps your size.
+- The player's own settings sit behind its "Tune" button (bottom right), not in the ⌃⌥⌘T panel yet. Bringing them into the panel is part of the plan below.
+- Planned player behaviour is waiting for your 👍 (see the reply).
