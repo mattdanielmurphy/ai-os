@@ -7,21 +7,30 @@ import SwiftUI
 
 let serverBase = "ws://macbook-pro.tail491454.ts.net:8798/ws?stages="
 let startKey = "startSession"
+let voiceGain: Float = 3  // loudness boost for the bot's voice
 let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at home
 
 /// One-shot location, used only to tell whether you're at home.
 @MainActor final class Place: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var hasHome = UserDefaults.standard.object(forKey: "homeLat") != nil
+    @Published var status = ""
     private let manager = CLLocationManager()
     private var waiting: [(CLLocation?) -> Void] = []
 
-    override init() { super.init(); manager.delegate = self; manager.requestWhenInUseAuthorization() }
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.requestWhenInUseAuthorization()
+    }
 
     func locate(_ done: @escaping (CLLocation?) -> Void) { waiting.append(done); manager.requestLocation() }
 
     func saveHome() {
+        status = "Finding you…"
         locate { [self] here in
-            guard let here else { return }
+            guard let here else { status = "Couldn't get your location. Check Settings > Morning > Location."; return }
+            status = "Home saved."
             UserDefaults.standard.set(here.coordinate.latitude, forKey: "homeLat")
             UserDefaults.standard.set(here.coordinate.longitude, forKey: "homeLon")
             hasHome = true
@@ -82,6 +91,7 @@ struct StartSessionIntent: LiveActivityIntent {
             socket = task
             task.resume()
             let input = engine.inputNode
+            try input.setVoiceProcessingEnabled(true)  // echo cancellation, so the mic doesn't hear the speaker
             let mic = input.outputFormat(forBus: 0)
             let convert = AVAudioConverter(from: mic, to: wire)!
             input.installTap(onBus: 0, bufferSize: 1600, format: mic) { [wire] buffer, _ in
@@ -99,6 +109,7 @@ struct StartSessionIntent: LiveActivityIntent {
             engine.connect(player, to: engine.mainMixerNode, format: play)
             try engine.start()
             player.play()
+            route()  // starting the engine can reset the output
             state = "Connected"
             receive()
         } catch {
@@ -128,7 +139,7 @@ struct StartSessionIntent: LiveActivityIntent {
         buf.frameLength = AVAudioFrameCount(n)
         data.withUnsafeBytes { raw in
             let s = raw.bindMemory(to: Int16.self)
-            for i in 0..<n { buf.floatChannelData![0][i] = Float(s[i]) / 32768 }
+            for i in 0..<n { buf.floatChannelData![0][i] = max(-1, min(1, Float(s[i]) / 32768 * voiceGain)) }
         }
         player.scheduleBuffer(buf)
     }
@@ -185,6 +196,7 @@ struct ContentView: View {
                     Button { place.saveHome() } label: {
                         Label(place.hasHome ? "Update home to here" : "Set home to here", systemImage: "house")
                     }
+                    if !place.status.isEmpty { Text(place.status).foregroundStyle(.secondary) }
                     Label(session.state, systemImage: session.live ? "waveform" : "circle")
                         .foregroundStyle(.secondary)
                 }

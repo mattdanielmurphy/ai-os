@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, WebSocket
 
 load_dotenv(Path(__file__).with_name(".env"))
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import (BotStoppedSpeakingFrame, EndFrame, InputAudioRawFrame, InterruptionFrame, LLMRunFrame, TTSSpeakFrame)
+from pipecat.frames.frames import (BotStartedSpeakingFrame, BotStoppedSpeakingFrame, EndFrame, InputAudioRawFrame, InterruptionFrame, LLMRunFrame, TTSSpeakFrame)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -61,12 +61,17 @@ def clean(key):
 
 
 class MicGate(FrameProcessor):
-    """Drops his audio during the scripted part, so a cough or a mumble can't start a turn."""
+    """Drops his audio during the scripted part and while the bot talks, so it can't hear and interrupt itself."""
     open = False
+    speaking = False
 
     async def process_frame(self, frame, direction):
         await super().process_frame(frame, direction)
-        if self.open or not isinstance(frame, InputAudioRawFrame):
+        if isinstance(frame, BotStartedSpeakingFrame):
+            self.speaking = True
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            self.speaking = False
+        if not isinstance(frame, InputAudioRawFrame) or (self.open and not self.speaking):
             await self.push_frame(frame, direction)
 
 
