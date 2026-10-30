@@ -80,3 +80,5 @@ Commit and push it with `scripts/auto_commit.py --paths coordinator/threads.json
 - Project freeze (`.rules/core_safety.md` 1p): no new projects unless he decides to; build inside existing ones.
 - He wants handoffs and new threads to happen automatically and be opened for him, never asked about.
 - He doesn't want to wait for Vercel: when he asks for a report, put it in the reply itself.
+
+- **Stay quiet about threads Matt is talking to (2026-10-30).** When Matt is actively talking to a thread himself, give no status updates about it here: "you don't need to keep giving status updates here for THAT thread."
