@@ -48,4 +48,4 @@ async def ws(socket: WebSocket, stages: str = "breathe,meditate,checkin"):
         transport = bot.FastAPIWebsocketTransport(socket, bot.FastAPIWebsocketParams(
             audio_in_enabled=True, audio_out_enabled=True, add_wav_header=False,
             session_timeout=bot.MAX_CALL_SECS, serializer=RawPCM(skip)))
-        await bot.run_session(transport, session, RATE, tuple(stages.split(",")), skip)
+        await bot.run_session(transport, session, RATE, tuple(stages.split(",")), skip, 24000)

@@ -12,7 +12,7 @@ let serverHost = "macbook-pro.tail491454.ts.net"
 #endif
 let serverBase = "ws://\(serverHost):8798/ws?stages="
 let startKey = "startSession"
-let voiceGain: Float = 3  // loudness boost for the bot's voice
+let voiceGain: Float = 1  // loudness boost for the bot's voice
 let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at home
 
 /// One-shot location, used only to tell whether you're at home.
@@ -80,7 +80,7 @@ struct StartSessionIntent: LiveActivityIntent {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let wire = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: true)!
-    private let play = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
+    private let play = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 24000, channels: 1, interleaved: false)!
 
     var live: Bool { socket != nil }
 
@@ -89,7 +89,7 @@ struct StartSessionIntent: LiveActivityIntent {
         state = "Connecting"
         do {
             let audio = AVAudioSession.sharedInstance()
-            try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
+            try audio.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothHFP])
             try audio.setActive(true)
             route()
             let task = URLSession.shared.webSocketTask(with: URL(string: serverBase + stages)!)

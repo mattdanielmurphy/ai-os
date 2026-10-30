@@ -88,7 +88,7 @@ class SpokeWatch(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-async def run_session(transport, session, rate, stages=("breathe", "meditate", "checkin"), skip=None):
+async def run_session(transport, session, rate, stages=("breathe", "meditate", "checkin"), skip=None, out_rate=None):
     skip = skip or asyncio.Event()  # set to jump straight to the check-in
     tts = SpeechifyHttpTTSService(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
                                   settings=SpeechifyTTSSettings(voice=VOICE, model="simba-3.2"))
@@ -100,7 +100,7 @@ async def run_session(transport, session, rate, stages=("breathe", "meditate", "
         DeepgramSTTService(api_key=clean("DEEPGRAM_API_KEY")), turns.user(),
         AnthropicLLMService(api_key=clean("ANTHROPIC_API_KEY"), settings=AnthropicLLMSettings(model=MODEL)),
         tts, transport.output(), watch, turns.assistant()]),
-        params=PipelineParams(audio_in_sample_rate=rate, audio_out_sample_rate=rate),
+        params=PipelineParams(audio_in_sample_rate=rate, audio_out_sample_rate=out_rate or rate),
         idle_timeout_secs=None)  # the default 300 s would hang up during meditation
 
     async def flow():
