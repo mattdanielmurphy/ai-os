@@ -5,7 +5,7 @@ import AVFoundation
 import CoreLocation
 import SwiftUI
 
-let serverURL = URL(string: "ws://macbook-pro.tail491454.ts.net:8798/ws")!
+let serverBase = "ws://macbook-pro.tail491454.ts.net:8798/ws?stages="
 let startKey = "startSession"
 let homeRadius: CLLocationDistance = 200  // m from saved Home that counts as at home
 
@@ -70,7 +70,7 @@ struct StartSessionIntent: LiveActivityIntent {
 
     var live: Bool { socket != nil }
 
-    func start() {
+    func start(stages: String) {
         guard socket == nil else { return }
         state = "Connecting"
         do {
@@ -78,7 +78,7 @@ struct StartSessionIntent: LiveActivityIntent {
             try audio.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
             try audio.setActive(true)
             route()
-            let task = URLSession.shared.webSocketTask(with: serverURL)
+            let task = URLSession.shared.webSocketTask(with: URL(string: serverBase + stages)!)
             socket = task
             task.resume()
             let input = engine.inputNode
@@ -106,6 +106,8 @@ struct StartSessionIntent: LiveActivityIntent {
             stop()
         }
     }
+
+    func skipToCheckIn() { socket?.send(.string("skip")) { _ in } }
 
     private func receive() {
         socket?.receive { [weak self] result in
@@ -150,6 +152,9 @@ struct ContentView: View {
     @StateObject private var session = Session()
     @Environment(\.scenePhase) private var phase
     @AppStorage("wakeTime") private var wake = Date().timeIntervalSince1970
+    @AppStorage("breathe") private var breathe = false
+    @AppStorage("meditate") private var meditate = false
+    @AppStorage("checkin") private var checkin = true
     @State private var note = ""
     @StateObject private var place = Place()
 
@@ -163,7 +168,15 @@ struct ContentView: View {
                     Button { Task { await setAlarm() } } label: { Label("Set alarm", systemImage: "alarm") }
                     if !note.isEmpty { Text(note).foregroundStyle(.secondary) }
                 }
+                Section("Stages") {
+                    Toggle(isOn: $breathe) { Label("Breathing", systemImage: "wind") }
+                    Toggle(isOn: $meditate) { Label("Meditation", systemImage: "leaf") }
+                    Toggle(isOn: $checkin) { Label("Check-in", systemImage: "bubble.left.and.bubble.right") }
+                }
                 Section("Session") {
+                    if session.live {
+                        Button { session.skipToCheckIn() } label: { Label("Skip to check-in", systemImage: "forward.end") }
+                    }
                     Button { session.live ? session.stop() : begin() } label: {
                         Label(session.live ? "End session" : "Start now",
                               systemImage: session.live ? "phone.down" : "sunrise")
@@ -187,7 +200,8 @@ struct ContentView: View {
     }
 
     private func begin() {
-        session.start()
+        let on = [("breathe", breathe), ("meditate", meditate), ("checkin", checkin)].filter(\.1).map(\.0)
+        session.start(stages: on.joined(separator: ","))
         place.atHome { session.speaker = $0 }
     }
 

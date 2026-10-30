@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, WebSocket
 
 load_dotenv(Path(__file__).with_name(".env"))
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import (BotStoppedSpeakingFrame, EndFrame, InputAudioRawFrame, LLMRunFrame, TTSSpeakFrame)
+from pipecat.frames.frames import (BotStoppedSpeakingFrame, EndFrame, InputAudioRawFrame, InterruptionFrame, LLMRunFrame, TTSSpeakFrame)
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -37,14 +37,14 @@ SIT_SECS = 45                    # s of silent meditation
 BASE = "https://vps.mattmurphy.ca/morning-call"
 SAY_AS = {"CMPUT": "computing", "PHIL": "philosophy"}  # phone-tested word list
 
-SCRIPT = [("Good morning, Matt. Stay where you are for now. We'll start with three slow breaths.", 2)]
+BREATHE = [("Good morning, Matt. Stay where you are for now. We'll start with three slow breaths.", 2)]
 for _ in range(3):
-    SCRIPT += [("Breathe in.", BREATH_IN), ("And out.", BREATH_OUT)]
-SCRIPT += [("Good. Now let your breathing go back to normal, and just watch it. I'll stay quiet for a little while.", SIT_SECS),
-           ("Okay. Gently open your eyes.", 3)]
+    BREATHE += [("Breathe in.", BREATH_IN), ("And out.", BREATH_OUT)]
+MEDITATE = [("Let your breathing go back to normal, and just watch it. I'll stay quiet for a little while.", SIT_SECS),
+            ("Okay. Gently open your eyes.", 3)]
+STAGES = {"breathe": BREATHE, "meditate": MEDITATE}
 
-SYSTEM = """You are Matt's warm, plain-spoken morning check-in on a phone call. He has just done breathing and a short
-meditation. Sound like a good therapist who is also a friend: curious, brief, never chirpy. One or two short sentences at a
+SYSTEM = """You are Matt's warm, plain-spoken morning check-in on a phone call. Sound like a good therapist who is also a friend: curious, brief, never chirpy. One or two short sentences at a
 time, then listen. Ask how he's doing, then what he has to do today, then help him pick the first small step. Your real job
 is getting him out of bed: before ending, ask him to put his feet on the floor and stand up, and wait until he says he has.
 Then say a short goodbye. This is speech: no lists, symbols or markdown; write numbers and course codes as they're said."""
@@ -83,7 +83,8 @@ class SpokeWatch(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
-async def run_session(transport, session, rate):
+async def run_session(transport, session, rate, stages=("breathe", "meditate", "checkin"), skip=None):
+    skip = skip or asyncio.Event()  # set to jump straight to the check-in
     tts = SpeechifyHttpTTSService(api_key=clean("SPEECHIFY_API_KEY"), aiohttp_session=session,
                                   settings=SpeechifyTTSSettings(voice=VOICE, model="simba-3.2"))
     context = LLMContext([{"role": "system", "content": SYSTEM}])
@@ -98,13 +99,25 @@ async def run_session(transport, session, rate):
         idle_timeout_secs=None)  # the default 300 s would hang up during meditation
 
     async def flow():
-        for line, pause in SCRIPT:
+        lines = [item for name in stages for item in STAGES.get(name, [])]
+        for line, pause in lines:
+            if skip.is_set():
+                await task.queue_frame(InterruptionFrame())
+                break
             watch.done.clear()
             await task.queue_frame(TTSSpeakFrame(spoken(line)))
             await asyncio.wait_for(watch.done.wait(), 30)
-            await asyncio.sleep(pause)
+            try:
+                await asyncio.wait_for(skip.wait(), pause)
+            except asyncio.TimeoutError:
+                pass
+        if "checkin" not in stages:
+            await task.queue_frame(TTSSpeakFrame("That's all for this morning."))
+            await task.queue_frame(EndFrame())
+            return
         gate.open = True
-        context.add_message({"role": "user", "content": "(The meditation just ended. Begin the check-in.)"})
+        note = "Begin the check-in." if lines and not skip.is_set() else "He went straight to the check-in, with no breathing or meditation. Begin."
+        context.add_message({"role": "user", "content": f"({note})"})
         await task.queue_frame(LLMRunFrame())
 
     @transport.event_handler("on_client_connected")
