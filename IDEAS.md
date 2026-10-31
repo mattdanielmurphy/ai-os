@@ -225,3 +225,7 @@ Tags: movie-line soundboard, morning check-in, Glass TV. Inspired by his brother
 ## Morning check-in as a voice call on Pipecat (Matt, 2026-10-30)
 A call to his iPhone: spoken breathing, guided meditation (no music yet), then a therapist-like check-in on his day that makes sure he gets out of bed. Flashcards stay visual. He prefers FaceTime Audio for quality.
 **Honest take:** strong; a ringing phone is the first version that can actually get him up, which the page can't. FaceTime is the weak part: no API, the Mac prompts before dialing, and it needs a second Apple ID, a virtual audio device and an awake Mac, so it is a hack that fails on the mornings it matters. Use Twilio into Pipecat first (about US$0.35 per 15-minute morning), and build a CallKit app only if phone audio bothers him. Spike passed on silence and latency. Keep scripted phases pre-rendered with the mic off, and the check-in short: a long bot chat in bed can keep him in bed.
+
+## Life Coordinator that catches deadlines early (Matt, 2026-10-31)
+"We need a fucking Life Coordinator who will make sure I don't fuck up so bad in the future. I should have had a draft of this ready like a week ago."
+Honest take: strong need, and small if built on what exists: SCHOOL.md already holds due dates, so the check-in could nudge a first draft 7 days before each big deadline. Risk: nudges are easy to ignore; it should start the work with you (e.g. open an interview), not just remind. Don't build a new app.
