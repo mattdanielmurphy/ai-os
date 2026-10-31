@@ -14,6 +14,12 @@ Everything in `code-coordinator.md` applies to you (routing, starting/reusing th
 - Tell the central Coordinator only what affects the big picture: a project milestone done, something waiting on Matt, a cross-project conflict, a new rule Matt gave you (it saves rules globally, or you do via `.rules/` + `build_rules.py`).
 - You run in auto permission mode so cross-coordinator messages aren't held.
 
+## Worker feed: what Matt types in your workers (2026-10-30)
+- Every message Matt types in one of your workers reaches you without costing a turn: `scripts/hooks/worker_feed.py` queues it and your next turn starts with them as context. Read them; no reply needed. This is how you find "see last msg".
+- Haiku checks each message of 8+ words (Tweaks: `workerFeed.minWords`) against the thread's job. A likely out-of-scope one wakes you within ~30 s as a prompt starting "📥 Possibly out of scope".
+- To flag: if it really is out of scope, route it to the right thread (or central if cross-project) and tell Matt in one line with the link; tell the worker with SendMessage to leave it. If it's fine, do nothing and end the turn. Same when you spot one in the queued list.
+- Routing: by chain to the project coordinator, else the thread's `coordinator`/`parent`, else its folder. Threads in none of these aren't fed. Only human messages count; session messages and briefs are skipped. Log: `tmp/coordinator-inbox/worker-feed.log`.
+
 ## Registry
 - Same shared file: `~/projects/ai-os/coordinator/threads.json`. No separate project registry, no double tracking.
 - Your own entry: `"role": "project-coordinator"`, `"project": "<chain>"`. Every thread you own: `"coordinator": "<your id>"`.

@@ -9,8 +9,8 @@ The mod also touches a heartbeat, so senders know whether the Coordinator is lis
   coordinator_inbox.py claim            this session ($CLAUDE_CODE_SESSION_ID) becomes the Coordinator
   coordinator_inbox.py who              print the Coordinator's session id
   coordinator_inbox.py alive            exit 0 if the Coordinator's mod polled in the last 3 min
-  coordinator_inbox.py put < text       queue a message for the Coordinator
-  coordinator_inbox.py poll <session>   (the mod) heartbeat + print and take pending messages as JSON
+  coordinator_inbox.py put [id] < text  queue a message for the Coordinator, or for project coordinator <id>
+  coordinator_inbox.py poll <session>   (the mod, any coordinator) heartbeat + print and take its pending messages as JSON
   coordinator_inbox.py is-coordinator <session>  exit 0 if it is the Coordinator or a project coordinator
   coordinator_inbox.py tweaks           (the mod) print context-alert's tweak values as JSON, seeding the file
 """
@@ -37,6 +37,8 @@ KNOBS = {
                           "note": "Smallest context (tokens) worth compacting while idle"},
     "hold.minTokens": {"default": 250000, "min": 0, "max": 1000000, "step": 10000,
                        "note": "A message into a cold thread is held only above this size; smaller ones just resume"},
+    "workerFeed.minWords": {"default": 8, "min": 1, "max": 100, "step": 1,
+                            "note": "Worker messages shorter than this skip the out-of-scope check"},
 }
 
 
@@ -47,30 +49,47 @@ def who():
         return ""
 
 
-def alive():
+def inbox_dirs(coordinator):
+    """(outbox, heartbeat): the shared ones for central, a subfolder for a project coordinator."""
+    if not coordinator or coordinator == central_id():
+        return OUTBOX, HEARTBEAT
+    return OUTBOX / coordinator, BOX / f"alive-{coordinator}"
+
+
+def central_id():
     try:
-        return time.time() - HEARTBEAT.stat().st_mtime < ALIVE_SEC
+        threads = json.loads((AIOS / "coordinator" / "threads.json").read_text())["threads"]
+        return next(t["id"] for t in threads if t.get("role") == "central")
+    except (OSError, ValueError, KeyError, StopIteration):
+        return ""
+
+
+def alive(coordinator=None):
+    try:
+        return time.time() - inbox_dirs(coordinator)[1].stat().st_mtime < ALIVE_SEC
     except OSError:
         return False
 
 
-def put(text):
-    OUTBOX.mkdir(parents=True, exist_ok=True)
+def put(text, coordinator=None):
+    box = inbox_dirs(coordinator)[0]
+    box.mkdir(parents=True, exist_ok=True)
     name = f"{time.strftime('%Y%m%d-%H%M%S')}-{os.getpid()}.txt"
-    tmp = OUTBOX / f".{name}"
+    tmp = box / f".{name}"
     tmp.write_text(text)
-    tmp.rename(OUTBOX / name)  # atomic: the poller never sees half a message
-    return OUTBOX / name
+    tmp.rename(box / name)  # atomic: the poller never sees half a message
+    return box / name
 
 
 def poll(session):
-    if not session or session != who():
+    if not session or not is_coordinator(session):
         return {"coordinator": False}
+    box, beat = inbox_dirs(None if session == who() else desktop_id(session))
     BOX.mkdir(parents=True, exist_ok=True)
-    HEARTBEAT.touch()
+    beat.touch()
     DONE.mkdir(parents=True, exist_ok=True)
     messages = []
-    for f in sorted(OUTBOX.glob("*.txt")) if OUTBOX.exists() else []:
+    for f in sorted(box.glob("*.txt")) if box.exists() else []:
         try:
             messages.append(f.read_text())
             f.rename(DONE / f.name)
@@ -109,6 +128,7 @@ def tweaks():
 
 
 DESKTOP_SESSIONS = Path.home() / "Library" / "Application Support" / "Claude" / "claude-code-sessions"
+ID_CACHE = BOX / "desktop-ids.json"
 
 
 def desktop_id(cli_session):
@@ -116,12 +136,31 @@ def desktop_id(cli_session):
     threads.json stores the local_ id, so a plain prefix match never hit (2026-10-28)."""
     if cli_session.startswith("local_"):
         return cli_session
+    try:
+        cache = json.loads(ID_CACHE.read_text())
+    except (OSError, ValueError):
+        cache = {}
+    if cli_session in cache:
+        return cache[cli_session]
     for f in DESKTOP_SESSIONS.glob("*/*/local_*.json"):
         try:
-            if cli_session in f.read_text() and json.loads(f.read_text()).get("cliSessionId") == cli_session:
+            text = f.read_text()
+            if cli_session in text and json.loads(text).get("cliSessionId") == cli_session:
+                cache[cli_session] = f.stem
+                BOX.mkdir(parents=True, exist_ok=True)
+                ID_CACHE.write_text(json.dumps(cache))
                 return f.stem
         except (OSError, ValueError):
             continue
+    return ""
+
+
+def desktop_title(local_id):
+    for f in DESKTOP_SESSIONS.glob(f"*/*/{local_id}.json"):
+        try:
+            return json.loads(f.read_text()).get("title", "")
+        except (OSError, ValueError):
+            pass
     return ""
 
 
@@ -158,7 +197,7 @@ def main(argv):
     if cmd == "alive":
         return 0 if alive() else 1
     if cmd == "put":
-        print(put(sys.stdin.read()))
+        print(put(sys.stdin.read(), argv[2] if len(argv) > 2 else None))
         return 0
     if cmd == "poll":
         print(json.dumps(poll(argv[2] if len(argv) > 2 else "")))

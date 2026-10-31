@@ -82,3 +82,6 @@ Commit and push it with `scripts/auto_commit.py --paths coordinator/threads.json
 - He doesn't want to wait for Vercel: when he asks for a report, put it in the reply itself.
 
 - **Stay quiet about threads Matt is talking to (2026-10-30).** When Matt is actively talking to a thread himself, give no status updates about it here: "you don't need to keep giving status updates here for THAT thread."
+
+## Worker feed (2026-10-30)
+What Matt types in workers you own reaches your next turn as context, and a likely out-of-scope message wakes you. Same rules as the "Worker feed" section of `project-coordinator.md`. If a project coordinator isn't running, its out-of-scope wakes come to you.

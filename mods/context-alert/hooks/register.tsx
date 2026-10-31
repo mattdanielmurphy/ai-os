@@ -581,7 +581,7 @@ const coordCatchUp = async ($: EngineInterface, text: string) => {
   await $.prompt.submit({ text, wait: false })
 }
 
-/** In the Coordinator session only: submit what scripts queued for it (voice tasks). */
+/** In a coordinator only: submit what scripts queued for it (voice tasks, worker-feed wakes). */
 const pollInbox = async ($: EngineInterface, sid: string) => {
   const run = await $.process.run(['python3', INBOX, 'poll', sid]).catch(() => undefined)
   if (run === undefined || run.exitCode !== 0) return
@@ -615,12 +615,12 @@ export const register: Register = on => {
       void idleCompact($).catch(() => undefined)
       void checkCoord($).catch(() => undefined)
     })
-    // The Coordinator's inbox: only the session named in coordinator/session.txt acts on it,
-    // checked each time so a successor that runs `coordinator_inbox.py claim` takes over live.
+    // Coordinator inboxes: the session named in coordinator/session.txt (checked each time so a
+    // successor that runs `coordinator_inbox.py claim` takes over live) or a project coordinator.
     void $.session.id().then(sid => {
       $.clock.every(30_000, () => {
         void $.fs.read(`${AIOS}/coordinator/session.txt`)
-          .then(owner => (owner.trim() === sid ? pollInbox($, sid) : undefined))
+          .then(async owner => (owner.trim() === sid || (await read($, isCoord)) ? pollInbox($, sid) : undefined))
           .catch(() => undefined)
       })
     })
