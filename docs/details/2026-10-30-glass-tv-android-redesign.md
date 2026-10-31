@@ -11,3 +11,6 @@ You chose B2 Title Colour. Start screen now reads, centred: brought to you by / 
 
 ## All screens, fixed blue
 Dropped per-title colour; B2 look with one fixed blue. Built 19 screens on Figma page "Final B". Figma's Starter plan call limit stopped exports at 11 of 19, and blocks fixes for now. Known flaws: X-ray face box misplaced; pause hint overlaps the art; the screens not exported were never checked.
+
+## Profiles, remote, filters, settings
+Six renders added to the viewer, screens 20-25, because Figma stays limited. Not in Figma yet. Remote drawing is from memory of the Streamer layout, not traced.
