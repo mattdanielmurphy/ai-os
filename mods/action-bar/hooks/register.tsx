@@ -26,17 +26,35 @@ const knobs = async ($: EngineInterface): Promise<Knobs> => {
 
 // A plugin's submit counts as non-typed, and the app won't start threads from those.
 // On desktop, fill the box and have Hammerspoon press Return so it arrives as a typed message.
-const PRESS_RETURN = `
+// The click leaves focus on the button, so focus the box holding this text first.
+const pressReturn = (text: string) => `
+local want = ${JSON.stringify(text)}
 local app = hs.application.frontmostApplication()
 if app and app:name() == "Claude" then
-  claudeControl.withInput("action-bar send", function() hs.eventtap.keyStroke({}, "return", 0, app) end)
+  hs.timer.doAfter(0.2, function()
+    local win = hs.axuielement.applicationElement(app):attributeValue("AXFocusedWindow")
+    local box
+    local function walk(el, depth)
+      if box or depth > 40 then return end
+      if el:attributeValue("AXRole") == "AXTextArea" and el:attributeValue("AXDescription") == "Prompt"
+        and (el:attributeValue("AXValue") or ""):gsub("%s+$", "") == want then box = el; return end
+      for _, kid in ipairs(el:attributeValue("AXChildren") or {}) do walk(kid, depth + 1) end
+    end
+    if win then walk(win, 0) end
+    if not box then return end
+    claudeControl.withInput("action-bar send", function()
+      box:setAttributeValue("AXFocused", true)
+      hs.timer.usleep(80000)
+      hs.eventtap.keyStroke({}, "return", 0, app)
+    end)
+  end)
   print("pressed")
 end`
 
 const pressSend = async ($: EngineInterface, text: string, desktop: boolean) => {
   try {
     if (desktop && !(await $.prompt.read()).text.trim() && (await $.prompt.fill({ text })).isFilled) {
-      const hs = await $.process.run(['/usr/local/bin/hs', '-c', PRESS_RETURN])
+      const hs = await $.process.run(['/usr/local/bin/hs', '-c', pressReturn(text)])
       if (hs.stdout.includes('pressed')) return
       await $.prompt.fill({ text: '' })
     }
