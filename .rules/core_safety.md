@@ -279,3 +279,6 @@
 
 ### Worker effort must be verified (Matt, 2026-10-31)
 `start_session` silently caps `effort` at the parent session's level, so a low-effort coordinator asking for high gets low. After starting any session at a requested effort, read it back with `get_session`; if it is lower, raise it with `set_session_effort` before reporting. Never tell Matt an effort level you haven't read back. Why: "that's the second time you started an agent at the wrong effort level."
+
+### Contradictions: the later statement wins (Matt, 2026-10-31)
+If a message from Matt seems to contradict itself, go with the later statement ("Always go with the latter statement if you believe there's a contradiction. Although i'm happy to clarify regardless"). Act on it; ask only when the wrong guess would be costly.
