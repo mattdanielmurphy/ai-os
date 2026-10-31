@@ -24,6 +24,26 @@ const knobs = async ($: EngineInterface): Promise<Knobs> => {
   }
 }
 
+// A plugin's submit counts as non-typed, and the app won't start threads from those.
+// On desktop, fill the box and have Hammerspoon press Return so it arrives as a typed message.
+const PRESS_RETURN = `
+local app = hs.application.frontmostApplication()
+if app and app:name() == "Claude" then
+  claudeControl.withInput("action-bar send", function() hs.eventtap.keyStroke({}, "return", 0, app) end)
+  print("pressed")
+end`
+
+const pressSend = async ($: EngineInterface, text: string, desktop: boolean) => {
+  try {
+    if (desktop && !(await $.prompt.read()).text.trim() && (await $.prompt.fill({ text })).isFilled) {
+      const hs = await $.process.run(['/usr/local/bin/hs', '-c', PRESS_RETURN])
+      if (hs.stdout.includes('pressed')) return
+      await $.prompt.fill({ text: '' })
+    }
+  } catch {}
+  void $.prompt.submit({ text, asUser: true, wait: false })
+}
+
 const strip = (s: string) => s.replace(/\*\*|__|`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim()
 
 /**
@@ -94,7 +114,7 @@ export const register: Register = on => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const send = (text: string) => {
       void update($, actions, () => [])
-      void $.prompt.submit({ text, asUser: true, wait: false })
+      void pressSend($, text, e.surface === 'desktop')
     }
     const all = `Yes to all: ${list.map(a => a.text.replace(/^yes,?\\s*/i, '').replace(/[.!]$/, '')).join('; ')}.`
     const above = await next(e)
