@@ -8,3 +8,6 @@ Undo: delete the page "Backdrop round 2".
 
 ## B2 picked
 You chose B2 Title Colour. Start screen now reads, centred: brought to you by / Darryl Murphy / Matthew Murphy. Added a Figma frame showing the readable-colour method, and saved it as global rule 1s. No app code changed.
+
+## All screens, fixed blue
+Dropped per-title colour; B2 look with one fixed blue. Built 19 screens on Figma page "Final B". Figma's Starter plan call limit stopped exports at 11 of 19, and blocks fixes for now. Known flaws: X-ray face box misplaced; pause hint overlaps the art; the screens not exported were never checked.
