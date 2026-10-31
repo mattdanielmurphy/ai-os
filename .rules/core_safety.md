@@ -276,3 +276,6 @@
 - **Exception**: a page that needs Artifact runtime features (shared database, viewer identity, asking Claude) stays an Artifact; say why in one line.
 - **Why**: Matt, 2026-10-23, replacing the "Vite instead of HTML artifacts" idea: he wants live reload while building, links that open anywhere, and one click to put a page on his site.
 - **No .docx files (Matt, 2026-10-30: "don't make a docx ever again")**: never produce Word files unless he asks for one that time; give Markdown he can open in the Code tab file pane. Why: he wants to open drafts right in Claude.
+
+### Worker effort must be verified (Matt, 2026-10-31)
+`start_session` silently caps `effort` at the parent session's level, so a low-effort coordinator asking for high gets low. After starting any session at a requested effort, read it back with `get_session`; if it is lower, raise it with `set_session_effort` before reporting. Never tell Matt an effort level you haven't read back. Why: "that's the second time you started an agent at the wrong effort level."
