@@ -772,19 +772,8 @@ export const register: Register = on => {
       return { drop: `Held (project thread): cache expired ${ago(-left)} ago, ~${k(tokens)} tokens. Moving it to a fresh thread.` }
     }
 
-    await update($, sendAnywayUntil, () => at + SEND_ANYWAY_MS)
-    const files = await saveAttachments($, e.attachments ?? [], at)
-    await update($, held, () => withFiles(typed, files))
-    const extra = files.missed.length
-      ? ` ${files.missed.length} attachment(s) can't be carried over; re-attach them there.`
-      : ''
-    await $.prompt.fill({ text: typed, mode: 'replace' }).catch(() => undefined)
-    return {
-      drop:
-        `Held: this thread's cache expired ${ago(-left)} ago, so this message would re-send ` +
-        `~${k(tokens)} tokens at full price. Send it again to go ahead, or send /cold-handoff ` +
-        `to hand off to a new thread cheaply (this message goes with it).` + extra,
-    }
+    // Code threads: Claude auto-compacts on its own now, so nothing is held (Matt, 2026-10-31).
+    return next(e)
   })
 
   // Learn this project thread's id from its first reply, for isStrayWake.

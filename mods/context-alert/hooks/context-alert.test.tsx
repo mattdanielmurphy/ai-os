@@ -88,12 +88,14 @@ test('small threads never get a cache line', async ($, on) => {
   expect(await ui.find({ type: 'Text', text: /Cache/ })).toBeUndefined()
 })
 
-test('a message sent into a cold thread is held once, then goes through', async ($, on) => {
+test('a message sent into a cold Code thread is never held', async ($, on) => {
   const clock = mock.clock(on, { now: 1_000_000 })
   const entered: string[] = []
   on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   on("prompt.fill", () => ({ isFilled: true }))
+  on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
+  on('session.id', () => { throw new Error('handoff unavailable') })
   on('prompt.submit', (_$, e) => { entered.push(e.text); return { text: e.text } })
   await $.session.measure(measure(300_000))
   await $.turn.complete(answered)
@@ -103,8 +105,7 @@ test('a message sent into a cold thread is held once, then goes through', async 
 
   await clock.advance(2 * 60 * MIN)
   const held = await $.prompt.submit(phone('cold'))
-  expect(held.drop).toMatch(/expired 1h ago.*300k tokens.*\/cold-handoff/)
-  expect((await $.prompt.submit(phone('cold'))).drop).toBeUndefined()
+  expect(held.drop).toBeUndefined()
   expect(entered).toEqual(['warm', 'cold'])
 })
 
@@ -137,22 +138,6 @@ const projectSetup = async ($: any, on: any) => {
   const settle = async () => { finish(); for (let i = 0; i < 50; i++) await new Promise(r => setTimeout(r, 0)) }
   return { clock, entered, calls, settle }
 }
-
-test('a cold hold restores only Matt\'s words; app notes alone are never held', async ($, on) => {
-  const clock = mock.clock(on, { now: 1_000_000 })
-  const filled: string[] = []
-  on('session.measure', (_$, e) => ({ changed: e.changed }))
-  on('turn.complete', (_$, e) => ({ text: e.answer }))
-  on('prompt.fill', (_$, e) => { filled.push(e.text); return { isFilled: true } })
-  on('prompt.submit', (_$, e) => ({ text: e.text }))
-  await $.session.measure(measure(300_000))
-  await $.turn.complete(answered)
-  await clock.advance(2 * 60 * MIN)
-  const note = '<system-reminder>\nLinked sessions now\n</system-reminder>'
-  expect((await $.prompt.submit(phone(note))).drop).toBeUndefined()
-  expect((await $.prompt.submit(phone(`hello\n${note}`))).drop).toMatch(/Held:/)
-  expect(filled).toEqual(['hello'])
-})
 
 test('a cold project message is held and Matt is asked in the thread; "here" sends it on', async ($, on) => {
   const { entered, calls } = await projectSetup($, on)
@@ -362,46 +347,6 @@ test('a cold project message goes through when the thread reply cannot be posted
   await clock.advance(3 * 60 * MIN)
   expect((await $.prompt.submit(phone(wake('hi')))).drop).toBeUndefined()
   expect(entered).toHaveLength(1)
-})
-
-test('/haiku-handoff after a held message carries that message into the new thread', async ($, on) => {
-  const clock = mock.clock(on, { now: 1_000_000 })
-  const runs: (readonly string[])[] = []
-  on('session.measure', (_$, e) => ({ changed: e.changed }))
-  on('turn.complete', (_$, e) => ({ text: e.answer }))
-  on('prompt.fill', () => ({ isFilled: true }))
-  on('prompt.read', () => ({ value: { text: '/haiku-handoff', cursor: 14 } }))
-  on('session.id', () => ({ value: 's1' }))
-  on('command.run', () => ({ text: '' }))
-  on('prompt.submit', (_$, e) => ({ text: e.text }))
-  on('process.run', (_$, e) => {
-    runs.push(e.argv)
-    const stdout = JSON.stringify({ path: '/h.md', prompt: 'Read /h.md and continue. Then: fix the bug' })
-    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false } }
-  })
-  await $.session.measure(measure(300_000))
-  await $.turn.complete(answered)
-  await clock.advance(2 * 60 * MIN)
-
-  expect((await $.prompt.submit(phone('fix the bug'))).drop).toMatch(/goes with it/)
-  const out = await $.command.run({ command: 'haiku-handoff', args: '', origin: { kind: 'bridge' } })
-  const write = runs.find(a => a.includes('write'))
-  expect(write?.slice(-2)).toEqual(['--then', 'fix the bug'])
-  expect(JSON.stringify(out)).toMatch(/Then: fix the bug/)
-})
-
-test('a held message names attachments it could not save', async ($, on) => {
-  const clock = mock.clock(on, { now: 1_000_000 })
-  on('session.measure', (_$, e) => ({ changed: e.changed }))
-  on('turn.complete', (_$, e) => ({ text: e.answer }))
-  on('prompt.fill', () => ({ isFilled: true }))
-  on('prompt.submit', (_$, e) => ({ text: e.text }))
-  await $.session.measure(measure(300_000))
-  await $.turn.complete(answered)
-  await clock.advance(2 * 60 * MIN)
-
-  const out = await $.prompt.submit({ ...phone('look at this'), attachments: [{ type: 'image', filename: 'shot.png' }] })
-  expect(out.drop).toMatch(/1 attachment\(s\) can't be carried over/)
 })
 
 // A project-chat message, as the server hands it to a new thread: no <thread> element.
